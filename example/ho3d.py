@@ -23,7 +23,7 @@ class HarmOsc3D(WF):
 			raise ValueError('Position have wrong dimension')
 
 		beta = self.parameters['beta']
-		return np.exp(-beta*np.sum(pos**2,1)).reshape(-1,1)
+		return np.prod(np.exp(-beta*pos**2),1).reshape(-1,1)
 
 	def nuclear_potential(self,pos):
 		return np.sum(0.5*pos**2,1).reshape(-1,1)
@@ -33,14 +33,20 @@ class HarmOsc3D(WF):
 
 
 wf = HarmOsc3D(nelec=1, ncart=3,parameters={'beta' : 0.5})
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 1, boundary = 2)
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 1./3, boundary = 2)
+#opt = MINIMIZE(method='bfgs',tol=1E-6)
+
 vmc = VMC(wf=wf, sampler=sampler, optimizer=None)
-e, psi = vmc.evaluate()
+
+pos = vmc.sample()
+e = vmc.energy(pos)
+v = vmc.variance(pos)
 print('Evmc = ', e)
+print('Vvmc = ', v)
 
 
 
 fig = plt.figure()
 ax = fig.add_subplot(111,projection='3d')
-ax.scatter(psi[:,0],psi[:,1],psi[:,2])
+ax.scatter(pos[:,0],pos[:,1],pos[:,2])
 plt.show()

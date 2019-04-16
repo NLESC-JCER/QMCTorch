@@ -6,21 +6,30 @@ class VMC(object):
 
 		self.wf = wf
 		self.sampler = sampler
-		self.opt = optimizer		
+		self.optimizer = optimizer		
 
-		self.sampler.set_ndim(wf.ndim)
-		self.sampler.set_pdf(self.wf.pdf)
+		if sampler is not None:
+			self.sampler.set_ndim(wf.ndim)
+			self.sampler.set_pdf(self.wf.pdf)
 
-	def evaluate(self):
+		if optimizer is not None:
+			self.optimizer.func = self.func_opt
+
+	def sample(self):
 		pos = self.sampler.generate()
-		return self._total_energy(pos), pos
+		self.wf.pos = pos
+		return pos
 
+	def energy(self,pos):
+		return self.wf.energy(pos)
 
-	def _local_energy(self,pos):
-		# print('Epot : ', np.sum(self.wf.nuclear_potential(pos)))
-		# print('Ekin : ', np.sum(self.wf.kinetic(pos)))
-		return self.wf.applyK(pos)/self.wf.get(pos) + self.wf.nuclear_potential(pos) + self.wf.electronic_potential(pos)
+	def variance(self,pos):
+		return self.wf.variance(pos)
 
-	def _total_energy(self,pos):
-		nsample = pos.shape[0]
-		return 1./nsample * np.sum(self._local_energy(pos))
+	def optimize(self,x0):
+		self.optimizer.run(x0)
+
+	def func_opt(self,parameters) :
+		self.wf.parameters=parameters
+		pos = self.sample()
+		return self.energy(pos)

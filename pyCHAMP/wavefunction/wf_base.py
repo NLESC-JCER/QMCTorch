@@ -3,19 +3,20 @@ from autograd import elementwise_grad as egrad
 
 class WF(object):
 
-    def __init__(self,nelec, ncart, parameters, derivative='autograd'):
+    def __init__(self,nelec, ncart, parameters,derivative='autograd'):
 
         self.ncart = ncart
-        self.parameters = parameters
         self.nelec = nelec
         self.derivative = derivative
-
+        self.parameters = parameters
         self.ndim = self.nelec*self.ncart
+        self.pos = None
 
-    def get(self,pos):
+    def value(self,parameters,pos):
         ''' Compute the value of the wave function.
 
         Args:
+            parameters : variational param of the wf
             pos: position of the electron
 
         Returns: values of psi
@@ -39,6 +40,20 @@ class WF(object):
         Returns: values of V * psi
         '''
         raise NotImplementedError()
+
+
+    def get(self,pos):
+        '''Partial to get the value of the wf with current param for given pos.'''
+        return partial(self.value,self.parameters)(pos)
+
+    def fp(self,parameters):
+        '''Partial to get the value of the wf with current pos for given param.'''
+        return partial(self.value,pos=self.pos)(parameters)
+
+    def jacobian_opt(self,parameters):
+        '''Gradient of the wf wrt the variational parameters 
+        at current positions. '''
+        return egrad(self.fp)(parameters)
 
     def kinetic(self,pos):
         '''Compute the action of the kinetic operator on the we points.
@@ -99,12 +114,44 @@ class WF(object):
         Returns : value of K * pis
         ''' 
         Kpsi = -0.5*self.kinetic(pos) 
-        #Hpsi += self.electronic_potential(pos) 
-        #Hpsi += self.nuclear_potential(pos) 
         return Kpsi
 
+    def local_energy(self,pos):
+        ''' local energy of the sampling points.'''
+        return self.applyK(pos)/self.get(pos) \
+               + self.nuclear_potential(pos)  \
+               + self.electronic_potential(pos)
+
+    def energy(self,pos):
+        '''Total energy for the sampling points.'''
+        return np.mean(self.local_energy(pos))
+
+    def variance(self,pos):
+        '''Variance of the energy at the sampling points.'''
+        return np.var(self.local_energy(pos))
+
     def pdf(self,pos):
+        '''density of the wave function.'''
         return self.get(pos)**2
+
+    def energy_gradient(self,parameters,pos):
+        '''Gradient of the total energy wrt the variational parameters 
+        at the current sampling points.'''
+
+        self.pos = pos
+        self.parameters = parameters
+
+        grad_psi = self.jacobian_opt(parameters)
+        psi0 = self.get(pos)
+        eL = self.local_energy(pos)
+
+        G = []
+        for gi in grad_psi:
+            ratio = gi / psi0
+            G.append(  np.mean(ratio*eL) - np.mean(ratio)*np.mean(eL) )
+
+        return np.array(G)
+
 
 
 
