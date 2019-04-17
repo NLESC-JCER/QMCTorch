@@ -45,7 +45,7 @@ class WF(object):
 
         '''Gradient of the wf wrt the variational parameters 
         at current positions. '''
-        return np.array([egrad(self.value,0)(param,p)[0].tolist() for p in pos])
+        return np.array([egrad(self.value,0)(param,p.reshape(1,-1))[0].tolist() for p in pos])
         #return egrad(self.value,0)(parameters,pos)
 
     def kinetic(self,param,pos):
@@ -93,6 +93,10 @@ class WF(object):
     def pdf(self,param,pos):
         '''density of the wave function.'''
         return self.value(param,pos)**2
+
+
+    def auto_energy_gradient(self,param,pos):
+        return egrad(self.energy,0)(param,pos)
 
     def energy_gradient(self,param,pos):
         '''Gradient of the total energy wrt the variational parameters 

@@ -26,6 +26,7 @@ class METROPOLIS(SAMPLER_BASE):
 		Returns:
 			X (list) : position of the walkers
 		'''
+		eps = 1E-6
 
 		if self.initial_guess is None:
 			X = self.boundary * (-1 + 2*np.random.rand(self.nwalkers,self.ndim))
@@ -33,6 +34,7 @@ class METROPOLIS(SAMPLER_BASE):
 			X = self.initial_guess
 
 		fx = pdf(X)
+		fx[fx==0] = eps
 		ones = np.ones((self.nwalkers,1))
 
 		for istep in range(self.nstep):
@@ -46,7 +48,7 @@ class METROPOLIS(SAMPLER_BASE):
 
 			# new function
 			fxn = pdf(xn)
-			df = fxn/fx
+			df = fxn/(fx)
 
 			# probability
 			P = np.minimum(ones,df)
@@ -56,5 +58,6 @@ class METROPOLIS(SAMPLER_BASE):
 			index = (P-tau>=0).reshape(-1)
 			X[index,:] = xn[index,:]
 			fx[index] = fxn[index]
+			fx[fx==0] = eps
 		
 		return X

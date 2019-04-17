@@ -38,10 +38,8 @@ class VMC(object):
 		for i in range(self.optimizer.maxiter):
 
 			pos = self.sample(param)
-
 			e = self.energy(param,pos)
 			s = self.variance(param,pos)
-
 			print('%d energy = %f, variance = %f (beta=%f)' %(i,e,s,param[0]))
 
 			param, success = self.optimizer.update_parameters(param,pos)

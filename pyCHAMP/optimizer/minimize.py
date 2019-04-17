@@ -3,11 +3,10 @@ from scipy.optimize import minimize
 
 class MINIMIZE(OPT_BASE):
 
-	def __init__(self, method=None, maxiter=100, tol=1E-6, x0=None):
+	def __init__(self, method=None, maxiter=100, tol=1E-6):
 
 		self.method = method
 		self.tol = tol
-		self.parameters = x0
 		self.maxiter = maxiter
 
 		self.func = None

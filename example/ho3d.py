@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.sampler.metropolis import METROPOLIS
+from pyCHAMP.optimizer.minimize import MINIMIZE
 from pyCHAMP.vmc.vmc import VMC
 
 class HarmOsc3D(WF):
@@ -33,18 +34,25 @@ class HarmOsc3D(WF):
 
 opt_param = [0.5]
 wf = HarmOsc3D(nelec=1, ncart=3)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 1./3, boundary = 2)
-#opt = MINIMIZE(method='bfgs',tol=1E-6)
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 1, boundary = 2)
+optimizer = MINIMIZE(method='bfgs', maxiter=20, tol=1E-4)
 
-vmc = VMC(wf=wf, sampler=sampler, optimizer=None)
+vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
 
-pos = vmc.sample(opt_param)
-e = vmc.wf.energy(opt_param,pos)
-v = vmc.wf.variance(opt_param,pos)
-print('Evmc = ', e)
-print('Vvmc = ', v)
+x0 = [0.25]
+vmc.optimize(x0)
 
-fig = plt.figure()
-ax = fig.add_subplot(111,projection='3d')
-ax.scatter(pos[:,0],pos[:,1],pos[:,2])
+plt.plot(vmc.history['energy'])
+plt.plot(vmc.history['variance'])
 plt.show()
+
+# pos = vmc.sample(opt_param)
+# e = vmc.wf.energy(opt_param,pos)
+# v = vmc.wf.variance(opt_param,pos)
+# print('Evmc = ', e)
+# print('Vvmc = ', v)
+
+# fig = plt.figure()
+# ax = fig.add_subplot(111,projection='3d')
+# ax.scatter(pos[:,0],pos[:,1],pos[:,2])
+# plt.show()
