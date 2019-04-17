@@ -1,4 +1,5 @@
 import numpy as np 
+from functools import partial
 
 class VMC(object):
 
@@ -6,30 +7,52 @@ class VMC(object):
 
 		self.wf = wf
 		self.sampler = sampler
-		self.optimizer = optimizer		
+		self.optimizer = optimizer	
+
+		self.history = {'eneregy':[],'variance':[],'param':[]}
 
 		if sampler is not None:
-			self.sampler.set_ndim(wf.ndim)
-			self.sampler.set_pdf(self.wf.pdf)
+			self.sampler.set_ndim(wf.ndim)			
 
 		if optimizer is not None:
-			self.optimizer.func = self.func_opt
+			self.optimizer.func = self.wf.energy
+			self.optimizer.grad = self.wf.energy_gradient
 
-	def sample(self):
-		pos = self.sampler.generate()
-		self.wf.pos = pos
+	def sample(self,param):
+		partial_pdf = partial(self.wf.pdf,param)
+		pos = self.sampler.generate(partial_pdf)
 		return pos
 
-	def energy(self,pos):
-		return self.wf.energy(pos)
+	def energy(self,param,pos):
+		return self.wf.energy(param,pos)
 
-	def variance(self,pos):
-		return self.wf.variance(pos)
+	def variance(self,param,pos):
+		return self.wf.variance(param,pos)
 
-	def optimize(self,x0):
-		self.optimizer.run(x0)
+	def optimize(self,init_param):
 
-	def func_opt(self,parameters) :
-		self.wf.parameters=parameters
-		pos = self.sample()
-		return self.energy(pos)
+		param = init_param
+		self.history['energy'] = []
+		self.history['variance'] = []
+		self.history['param'] = []
+		for i in range(self.optimizer.maxiter):
+
+			pos = self.sample(param)
+
+			e = self.energy(param,pos)
+			s = self.variance(param,pos)
+
+			print('%d energy = %f, variance = %f (beta=%f)' %(i,e,s,param[0]))
+
+			param, success = self.optimizer.update_parameters(param,pos)
+
+			self.history['energy'].append(e)
+			self.history['variance'].append(s)
+			self.history['param'].append(param)
+
+			if success:
+				print('Optimization Done')
+				break
+
+		return success
+

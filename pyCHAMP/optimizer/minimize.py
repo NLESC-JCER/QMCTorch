@@ -1,15 +1,27 @@
 from pyCHAMP.optimizer.opt_base import OPT_BASE
 from scipy.optimize import minimize
 
-class MINIMIZE():
+class MINIMIZE(OPT_BASE):
 
-	def __init__(self, method=None, tol=1E-6, maxiter=100):
+	def __init__(self, method=None, maxiter=100, tol=1E-6, x0=None):
 
 		self.method = method
 		self.tol = tol
-		self.opt = {'maxiter' : maxiter, 'disp':True}
+		self.parameters = x0
+		self.maxiter = maxiter
+
 		self.func = None
 		self.grad = None
 
-	def run(self,x0):
-		return minimize(self.func, x0, method=self.method, options=self.opt, tol=self.tol, jac=self.grad)
+	def update_parameters(self,param,pos):
+		opt = {'maxiter' : 1, 'disp' : False}
+		res = minimize(self.func, 
+					   param, 
+					   args = pos,
+					   method = self.method, 
+					   options = opt,
+					   tol = self.tol, 
+					   jac = self.grad)
+		return res.x, res.success
+
+

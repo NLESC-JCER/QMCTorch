@@ -7,9 +7,6 @@ class SAMPLER_BASE(object):
 	def set_ndim(self,ndim):
 		self.ndim = ndim
 
-	def set_pdf(self,pdf):
-		self.pdf = pdf
-
 	def set_initial_guess(self,guess):
 		self.initial_guess = guess
 

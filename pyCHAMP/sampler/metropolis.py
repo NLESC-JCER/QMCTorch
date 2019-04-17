@@ -17,11 +17,10 @@ class METROPOLIS(SAMPLER_BASE):
 		self.nstep = nstep
 		self.mc_step_size = mc_step_size
 		self.boundary = boundary
-		self.pdf = None
 		self.initial_guess = None
 		self.all_electron_move=all_electron_move
 
-	def generate(self):
+	def generate(self,pdf):
 
 		''' perform a MC sampling of the function f
 		Returns:
@@ -33,7 +32,7 @@ class METROPOLIS(SAMPLER_BASE):
 		else:
 			X = self.initial_guess
 
-		fx = self.pdf(X)
+		fx = pdf(X)
 		ones = np.ones((self.nwalkers,1))
 
 		for istep in range(self.nstep):
@@ -46,7 +45,7 @@ class METROPOLIS(SAMPLER_BASE):
 
 
 			# new function
-			fxn = self.pdf(xn)
+			fxn = pdf(xn)
 			df = fxn/fx
 
 			# probability
