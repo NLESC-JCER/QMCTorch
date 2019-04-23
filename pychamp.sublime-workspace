@@ -4,6 +4,18 @@
 		"selected_items":
 		[
 			[
+				"p",
+				"param"
+			],
+			[
+				"ki",
+				"kinetic_manual"
+			],
+			[
+				"par",
+				"parameters"
+			],
+			[
 				"grad",
 				"grad_psi"
 			],
@@ -351,7 +363,7 @@
 			"file": "pyCHAMP/vmc/vmc.py",
 			"settings":
 			{
-				"buffer_size": 696,
+				"buffer_size": 1304,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -360,7 +372,7 @@
 			"file": "pyCHAMP/sampler/metropolis.py",
 			"settings":
 			{
-				"buffer_size": 1473,
+				"buffer_size": 1501,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -369,7 +381,7 @@
 			"file": "pyCHAMP/wavefunction/wf_base.py",
 			"settings":
 			{
-				"buffer_size": 4379,
+				"buffer_size": 3591,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -378,7 +390,25 @@
 			"file": "pyCHAMP/optimizer/opt_base.py",
 			"settings":
 			{
-				"buffer_size": 55,
+				"buffer_size": 146,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/ho1d.py",
+			"settings":
+			{
+				"buffer_size": 1071,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/sampler/sampler_base.py",
+			"settings":
+			{
+				"buffer_size": 221,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -387,19 +417,7 @@
 			"file": "pyCHAMP/optimizer/minimize.py",
 			"settings":
 			{
-				"buffer_size": 408,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "import autograd.numpy as np\nfrom autograd import elementwise_grad as egrad\nimport matplotlib.pyplot as plt\nfrom functools import partial\nfrom pyCHAMP.optimizer.minimize import MINIMIZE\nfrom pyCHAMP.wavefunction.wf_base import WF\nfrom pyCHAMP.sampler.metropolis import METROPOLIS\nfrom pyCHAMP.vmc.vmc import VMC\n\nclass HarmOsc1D(WF):\n\n\tdef __init__(self,nelec,ncart,derivative,parameters=None):\n\t\tWF.__init__(self, nelec, ncart, parameters,derivative)\n\n\tdef value(self,parameters,pos):\n\t\t''' Compute the value of the wave function.\n\n\t\tArgs:\n\t\t\tparameters : parameters of th wf\n\t\t\tx: position of the electron\n\n\t\tReturns: values of psi\n\t\t'''\n\t\tbeta = parameters[0]\n\t\treturn np.exp(-beta*pos**2)\n\n\n\t\t\n\tdef manual_grad(self,parameters,pos):\n\t\tbeta = parameters[0]\n\t\treturn -2*beta*pos*np.exp(-beta*pos**2)\n\n\tdef nuclear_potential(self,pos):\n\t\treturn 0.5*pos**2 \n\n\tdef electronic_potential(self,pos):\n\t\treturn 0\n\n\nwf = HarmOsc1D(nelec=1,ncart=1,parameters=[0.5], derivative='autograd')\nsampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 3, boundary = 2)\noptimizer = MINIMIZE(method='Nelder-Mead')\n\nvmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)\n\npos = vmc.sample()\ne = vmc.energy(pos)\nv = vmc.variance(pos)\nprint('Energy : ', e)\nprint('Variance : ', v)\nplt.hist(pos)\nplt.show()\n\n#res = vmc.optimize([1.0])\n\n\n",
-			"file": "example/ho1d.py",
-			"file_size": 1541,
-			"file_write_time": 131998983156895837,
-			"settings":
-			{
-				"buffer_size": 1322,
+				"buffer_size": 554,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -408,26 +426,16 @@
 			"file": "example/ho3d.py",
 			"settings":
 			{
-				"buffer_size": 1267,
+				"buffer_size": 1476,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/optimizer/test.py",
-			"settings":
-			{
-				"buffer_size": 300,
-				"encoding": "UTF-8",
-				"line_ending": "Unix",
-				"name": "from scipy.optimize import minimize"
 			}
 		},
 		{
 			"file": "/home/nicolas/Documents/tutorial/autograd/test.py",
 			"settings":
 			{
-				"buffer_size": 414,
+				"buffer_size": 986,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -494,6 +502,7 @@
 	],
 	"file_history":
 	[
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer/test.py",
 		"/home/nicolas/Documents/projects/xtp_benchmark/geometries_tol_normal_update_safe_matrix_free/read_mem.py",
 		"/home/nicolas/Documents/projects/votca/tools/include/votca/tools/property.h",
 		"/home/nicolas/Documents/projects/votca/xtp/include/votca/xtp/qmstate.h",
@@ -620,8 +629,7 @@
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/qmpackage.cc",
 		"/home/nicolas/Documents/projects/votca/tools/src/libtools/matrix.cc",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/numerical_integration/numerical_integrations.cc",
-		"/home/nicolas/Documents/projects/votca/tools/include/votca/tools/vec.h",
-		"/home/nicolas/Documents/projects/votca/tools/include/votca/tools/matrix.h"
+		"/home/nicolas/Documents/projects/votca/tools/include/votca/tools/vec.h"
 	],
 	"find":
 	{
@@ -639,6 +647,7 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"self.parameters"
 		],
 		"highlight": true,
 		"in_selection": false,
@@ -665,15 +674,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 696,
+						"buffer_size": 1304,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								422,
-								422
+								1049,
+								1049
 							]
 						],
 						"settings":
@@ -685,7 +694,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{
@@ -694,15 +703,138 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1473,
+						"buffer_size": 1501,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								454,
-								454
+								776,
+								776
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "pyCHAMP/wavefunction/wf_base.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3591,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1154,
+								1154
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 105.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "pyCHAMP/optimizer/opt_base.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 146,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								138,
+								138
+							]
+						],
+						"settings":
+						{
+							"auto_name": "",
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "example/ho1d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1071,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								107,
+								107
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 3,
+			"sheets":
+			[
+				{
+					"buffer": 5,
+					"file": "pyCHAMP/sampler/sampler_base.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 221,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								104,
+								104
 							]
 						],
 						"settings":
@@ -718,50 +850,20 @@
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "pyCHAMP/wavefunction/wf_base.py",
+					"buffer": 6,
+					"file": "pyCHAMP/optimizer/minimize.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4379,
+						"buffer_size": 554,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3863,
-								3863
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 975.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "pyCHAMP/optimizer/opt_base.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 55,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1,
-								1
+								554,
+								554
 							]
 						],
 						"settings":
@@ -777,84 +879,20 @@
 					"type": "text"
 				},
 				{
-					"buffer": 4,
-					"file": "pyCHAMP/optimizer/minimize.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 408,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								283,
-								283
-							]
-						],
-						"settings":
-						{
-							"auto_name": "",
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 5,
-					"type": "text"
-				}
-			]
-		},
-		{
-			"selected": 0,
-			"sheets":
-			[
-				{
-					"buffer": 5,
-					"file": "example/ho1d.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1322,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1322,
-								1322
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 6,
+					"buffer": 7,
 					"file": "example/ho3d.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1267,
+						"buffer_size": 1476,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1267,
-								1267
+								193,
+								193
 							]
 						],
 						"settings":
@@ -866,36 +904,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
-					"type": "text"
-				},
-				{
-					"buffer": 7,
-					"file": "pyCHAMP/optimizer/test.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 300,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								300,
-								300
-							]
-						],
-						"settings":
-						{
-							"auto_name": "from scipy.optimize import minimize",
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
+					"stack_index": 2,
 					"type": "text"
 				},
 				{
@@ -904,26 +913,27 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 414,
+						"buffer_size": 986,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								55,
-								55
+								578,
+								578
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Python/Python.sublime-syntax"
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -1237,7 +1247,7 @@
 		],
 		"width": 0.0
 	},
-	"selected_group": 0,
+	"selected_group": 1,
 	"settings":
 	{
 	},

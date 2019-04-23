@@ -1,5 +1,6 @@
 import autograd.numpy as np 
 from autograd import elementwise_grad as egrad
+from autograd import hessian, jacobian
 from functools import partial
 
 class WF(object):
@@ -11,16 +12,34 @@ class WF(object):
         self.ndim = self.nelec*self.ncart
 
 
-    def value(self,parameters,pos):
+    def values(self,parameters,pos):
         ''' Compute the value of the wave function.
+        for a multiple conformation of the electrons
 
         Args:
             parameters : variational param of the wf
-            pos: position of the electron
+            pos: position of the electrons
 
         Returns: values of psi
         '''
-        raise NotImplementedError()
+        raise NotImplementedError()      
+
+
+    def _one_value(self,parameters,pos):
+        ''' Compute the value of the wave function.
+        for a single conformation of the electrons
+
+        Args:
+            parameters : variational param of the wf
+            pos: position of the electrons
+
+        Returns: values of psi
+        '''
+        assert pos.ndim == 1
+        v = self.values(parameters,pos)        
+        return v[0]
+
+    
 
     def electronic_potential(self,pos):
         '''Compute the potential of the wf points
@@ -45,25 +64,70 @@ class WF(object):
 
         '''Gradient of the wf wrt the variational parameters 
         at current positions. '''
-        return np.array([egrad(self.value,0)(param,p.reshape(1,-1))[0].tolist() for p in pos])
-        #return egrad(self.value,0)(parameters,pos)
+        return np.array([egrad(self.values,0)(param,p.reshape(1,-1))[0].tolist() for p in pos])
+        
 
-    def kinetic(self,param,pos):
+    def kinetic_egrad(self,param,pos):
         '''Compute the action of the kinetic operator on the we points.
         Args :
             pos : position of the electrons
             metod (string) : mehod to compute the derivatives
         Returns : value of K * psi
         '''
-        # value_partial = partial(self.value,param)
-        # eg = egrad(egrad(value_partial))(pos)
-
-        eg = egrad(egrad(self.value,1),1)(param,pos)
+        eg = egrad(egrad(self.values,1),1)(param,pos)
 
         if self.ndim == 1:
             return eg.reshape(-1,1)
         else :
             return np.sum(eg,1).reshape(-1,1)
+
+    def kinetic_hess(self,param,pos):
+        '''Compute the action of the kinetic operator on the we points.
+        Args :
+            pos : position of the electrons
+            metod (string) : mehod to compute the derivatives
+        Returns : value of K * psi
+        '''
+        h = hessian(self._one_value,1)
+        eg = np.array([np.diag(h(param,p)) for p in pos])
+
+        if self.ndim == 1:
+            return eg.reshape(-1,1)
+        else :
+            return np.sum(eg,1).reshape(-1,1)
+
+    def kinetic_fd(self,param,pos,eps=1E-6):
+
+        '''Compute the action of the kinetic operator on the we points.
+        Args :
+            pos : position of the electrons
+            metod (string) : mehod to compute the derivatives
+        Returns : value of K * psi
+        '''
+
+        ndim = pos.shape[1]
+        out = np.zeros_like(pos)
+
+        for icol in range(ndim):
+
+            pos_tmp = np.copy(pos)
+            feps = -2*self.values(param,pos_tmp)
+
+            pos_tmp = np.copy(pos)
+            pos_tmp[:,icol] += eps
+            feps += self.values(param,pos_tmp)
+
+            pos_tmp = np.copy(pos)
+            pos_tmp[:,icol] -= eps
+            feps += self.values(param,pos_tmp)
+
+            out[:,icol] = feps.reshape(-1)/(eps**2)
+
+        if self.ndim == 1:
+            return out.reshape(-1,1)
+        else :
+            return np.sum(out,1).reshape(-1,1)
+
 
     def applyK(self,param,pos):
         '''Comute the result of H * psi
@@ -73,12 +137,12 @@ class WF(object):
             metod (string) : mehod to compute the derivatives
         Returns : value of K * pis
         ''' 
-        Kpsi = -0.5*self.kinetic(param,pos) 
+        Kpsi = -0.5*self.kinetic_fd(param,pos) 
         return Kpsi
 
     def local_energy(self,param, pos):
         ''' local energy of the sampling points.'''
-        return self.applyK(param,pos)/self.value(param, pos) \
+        return self.applyK(param,pos)/self.values(param, pos) \
                + self.nuclear_potential(pos)  \
                + self.electronic_potential(pos)
 
@@ -92,7 +156,7 @@ class WF(object):
 
     def pdf(self,param,pos):
         '''density of the wave function.'''
-        return self.value(param,pos)**2
+        return self.values(param,pos)**2
 
 
     def auto_energy_gradient(self,param,pos):
@@ -103,7 +167,7 @@ class WF(object):
         at the current sampling points.'''
 
         grad_psi = self.jacobian_opt(param,pos)
-        psi0 = self.value(param,pos)
+        psi0 = self.values(param,pos)
         eL = self.local_energy(param,pos)
 
         if len(param==1):

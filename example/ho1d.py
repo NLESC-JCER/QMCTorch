@@ -11,7 +11,7 @@ class HarmOsc1D(WF):
 	def __init__(self,nelec,ncart):
 		WF.__init__(self, nelec, ncart)
 
-	def value(self,parameters,pos):
+	def values(self,parameters,pos):
 		''' Compute the value of the wave function.
 
 		Args:
@@ -20,6 +20,7 @@ class HarmOsc1D(WF):
 
 		Returns: values of psi
 		'''
+	
 		beta = parameters[0]
 		return np.exp(-beta*pos**2)
 
@@ -32,7 +33,7 @@ class HarmOsc1D(WF):
 opt_param = [0.5]
 wf = HarmOsc1D(nelec=1,ncart=1)
 sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 3, boundary = 2)
-optimizer = MINIMIZE(method='bfgs',maxiter=25, tol=1E-4)
+optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
 
 vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
 
