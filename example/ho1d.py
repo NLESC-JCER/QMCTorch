@@ -1,12 +1,16 @@
 import autograd.numpy as np
 from autograd import elementwise_grad as egrad
 import matplotlib.pyplot as plt
+from functools import partial
 from pyCHAMP.optimizer.minimize import MINIMIZE
 from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.sampler.metropolis import METROPOLIS
 from pyCHAMP.sampler.diffusion import DIFFUSION
+from pyCHAMP.sampler.hamiltonian import HAMILTONIAN
 from pyCHAMP.solver.vmc import VMC
 from pyCHAMP.solver.dmc import DMC
+
+from autograd import elementwise_grad as egrad
 
 class HarmOsc1D(WF):
 
@@ -37,33 +41,40 @@ class HarmOsc1D(WF):
 
 opt_param = [0.5]
 wf = HarmOsc1D(nelec=1, ndim=1)
-metro = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
-optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
+ham = HAMILTONIAN(nwalkers=1000, nstep=1000, nelec=1, ndim=1)
+vmc = VMC(wf=wf, sampler=ham, optimizer=None)
+pos,e,s = vmc.single_point(opt_param)
+print('Energy   : ', e)
+print('Variance : ', s)
+vmc.plot_density(pos)
+
+# metro = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
+# optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
 
 
 
-vmc = VMC(wf=wf, sampler=metro, optimizer=optimizer)
-pos = vmc.sample(opt_param)
+# vmc = VMC(wf=wf, sampler=metro, optimizer=optimizer)
+# pos = vmc.sample(opt_param)
 
 
-diff = DIFFUSION(nwalkers=1000, nstep=1, step_size = 0.5, nelec=1, ndim=1, domain = {'min':-2,'max':2})
-diff.set_initial_guess(pos)
+# diff = DIFFUSION(nwalkers=1000, nstep=1, step_size = 0.5, nelec=1, ndim=1, domain = {'min':-2,'max':2})
+# diff.set_initial_guess(pos)
 
-dmc = DMC(wf=wf, sampler=diff, optimizer=None)
-pos,e,s = dmc.single_point(opt_param)
-dmc.plot_density(pos)
-
-exit()
+# dmc = DMC(wf=wf, sampler=diff, optimizer=None)
+# pos,e,s = dmc.single_point(opt_param)
+# dmc.plot_density(pos)
 
 
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
-optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
-vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
-x0 = [1.25]
-vmc.optimize(x0)
 
-plt.plot(vmc.history['energy'])
-plt.plot(vmc.history['variance'])
-plt.show()
+
+# sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
+# optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
+# vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
+# x0 = [1.25]
+# vmc.optimize(x0)
+
+# plt.plot(vmc.history['energy'])
+# plt.plot(vmc.history['variance'])
+# plt.show()
 
 

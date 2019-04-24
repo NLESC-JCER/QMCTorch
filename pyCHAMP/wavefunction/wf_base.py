@@ -169,7 +169,7 @@ class WF(object):
     def pdf(self,param,pos):
         '''density of the wave function.'''
         vals = self.values(param,pos)**2
-        vals[vals==0] += self.eps
+        #vals[vals==0] += self.eps
         return vals
 
     def auto_energy_gradient(self,param,pos):

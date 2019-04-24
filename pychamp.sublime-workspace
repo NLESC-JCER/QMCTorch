@@ -4,6 +4,54 @@
 		"selected_items":
 		[
 			[
+				"ene",
+				"set_energy_func"
+			],
+			[
+				"opt",
+				"opt_param"
+			],
+			[
+				"in",
+				"set_initial_guess"
+			],
+			[
+				"new",
+				"new_pos"
+			],
+			[
+				"ne",
+				"new_pos"
+			],
+			[
+				"dr",
+				"drift_func"
+			],
+			[
+				"walkers",
+				"walkers"
+			],
+			[
+				"index",
+				"index_dead"
+			],
+			[
+				"nw",
+				"nwalkers"
+			],
+			[
+				"func",
+				"func_el"
+			],
+			[
+				"step",
+				"step_size"
+			],
+			[
+				"ste",
+				"step_size"
+			],
+			[
 				"sum",
 				"sum_grad_output"
 			],
@@ -30,10 +78,6 @@
 			[
 				"py",
 				"pyCHAMP"
-			],
-			[
-				"func",
-				"func_opt"
 			],
 			[
 				"Hqp",
@@ -128,10 +172,6 @@
 				"conservativeResize"
 			],
 			[
-				"new",
-				"new_dim"
-			],
-			[
 				"max",
 				"maxCoeff"
 			],
@@ -162,10 +202,6 @@
 			[
 				"reor",
 				"reorder_coeffs"
-			],
-			[
-				"index",
-				"index_ori"
 			],
 			[
 				"blo",
@@ -364,19 +400,10 @@
 	"buffers":
 	[
 		{
-			"file": "pyCHAMP/vmc/vmc.py",
+			"file": "pyCHAMP/sampler/walkers.py",
 			"settings":
 			{
-				"buffer_size": 1304,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/sampler/metropolis.py",
-			"settings":
-			{
-				"buffer_size": 1501,
+				"buffer_size": 1866,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -385,7 +412,7 @@
 			"file": "pyCHAMP/wavefunction/wf_base.py",
 			"settings":
 			{
-				"buffer_size": 5351,
+				"buffer_size": 5839,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -400,10 +427,37 @@
 			}
 		},
 		{
-			"file": "example/ho1d.py",
+			"file": "pyCHAMP/sampler/metropolis.py",
 			"settings":
 			{
-				"buffer_size": 1075,
+				"buffer_size": 1767,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/sampler/diffusion.py",
+			"settings":
+			{
+				"buffer_size": 3970,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/solver/vmc.py",
+			"settings":
+			{
+				"buffer_size": 366,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/solver/solver_base.py",
+			"settings":
+			{
+				"buffer_size": 1897,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -418,6 +472,24 @@
 			}
 		},
 		{
+			"file": "example/ho1d.py",
+			"settings":
+			{
+				"buffer_size": 1704,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/home/nicolas/Documents/tutorial/pyMC3/test.py",
+			"settings":
+			{
+				"buffer_size": 475,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
 			"file": "pyCHAMP/optimizer/minimize.py",
 			"settings":
 			{
@@ -427,34 +499,19 @@
 			}
 		},
 		{
+			"file": "pyCHAMP/solver/dmc.py",
+			"settings":
+			{
+				"buffer_size": 569,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
 			"file": "example/ho3d.py",
 			"settings":
 			{
-				"buffer_size": 1217,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "import numpy as np\n\nclass DMC(object):\n\n\tdef __init__(self,wf=None, diffuser=None, optimizer=None):\n\n\t\tself.wf = wf\n\t\tself.diffuser = diffuser\n\t\tself.optimizer = optimizer\n\n\t\tself.history = {'eneregy':[],'variance':[],'param':[]}\n\n\t\tif optimizer is not None:\n\t\t\tself.optimizer.func = self.wf.energy\n\t\t\tself.optimizer.grad = self.wf.energy_gradient\n\n\t\t",
-			"file": "pyCHAMP/dmc/dmc.py",
-			"file_size": 348,
-			"file_write_time": 132005081328533978,
-			"settings":
-			{
-				"buffer_size": 351,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "import numpy as np\n\nclass DIFFUSER(object):\n\n\tdef __init__(self, nwalkers=1000, nstep=1000, ndim=3, tau = 0.1, boundary = 2, all_electron_move=True):\n\t\t''' METROPOLIS HASTING SAMPLER\n\t\tArgs:\n\t\t\tf (func) : function to sample\n\t\t\tnstep (int) : number of mc step\n\t\t\tnwalkers (int) : number of walkers\n\t\t\teps (float) : size of the mc step\n\t\t\tboudnary (float) : boudnary of the space\n\t\t'''\n\n\t\tself.nwalkers = nwalkers\n\t\tself.nstep = nstep\n\t\tself.tau = tau\n\t\tself.boundary = boundary\n\t\tself.initial_guess = None\n\t\tself.all_electron_move=all_electron_move\n\n\tdef set_ndim(self,ndim):\n\t\tself.ndim = ndim\n\n\tdef set_potential(self,func):\n\t\tself.potential = func\n\n\tdef generate(self):\n\n\t\tif self.initial_guess is None:\n\t\t\tX = np.zeros((self.nwalkers,self.ndim))\n\t\telse:\n\t\t\tX = self.initial_guess\n\n\n\t\tfor istep in range(self.nstep):\n\t\t\t\n\n\n\n\n\n\n",
-			"file": "pyCHAMP/diffuser/diffuser.py",
-			"file_size": 788,
-			"file_write_time": 132005085506617446,
-			"settings":
-			{
-				"buffer_size": 829,
+				"buffer_size": 1245,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -467,7 +524,6 @@
 			"settings":
 			{
 				"buffer_size": 1121,
-				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		}
@@ -528,11 +584,18 @@
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/vmc",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/wavefunction"
 	],
 	"file_history":
 	[
+		"/home/nicolas/Documents/tutorial/pyMC3/tesa",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/vmc/vmc.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/dmc.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/vmc.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho3d.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/dmc/dmc.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/diffuser/diffuser.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer/test.py",
 		"/home/nicolas/Documents/projects/xtp_benchmark/geometries_tol_normal_update_safe_matrix_free/read_mem.py",
 		"/home/nicolas/Documents/projects/votca/tools/include/votca/tools/property.h",
@@ -653,18 +716,11 @@
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/diis.cc",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/adiis.cc",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/threecenter_gwbse.cc",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/convergenceacc.cc",
-		"/home/nicolas/host/adf_folder/adf/adf.f90",
-		"/home/nicolas/host/adf_folder/adf/rt_tddft/RTmain.f90",
-		"/home/nicolas/Documents/projects/LinAlg/benchmark/diag/benchmarks/plot_performance.py",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/qmpackage.cc",
-		"/home/nicolas/Documents/projects/votca/tools/src/libtools/matrix.cc",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/numerical_integration/numerical_integrations.cc",
-		"/home/nicolas/Documents/projects/votca/tools/include/votca/tools/vec.h"
+		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/convergenceacc.cc"
 	],
 	"find":
 	{
-		"height": 39.0
+		"height": 40.0
 	},
 	"find_in_files":
 	{
@@ -697,82 +753,52 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 4,
 			"sheets":
 			[
 				{
 					"buffer": 0,
-					"file": "pyCHAMP/vmc/vmc.py",
+					"file": "pyCHAMP/sampler/walkers.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1304,
+						"buffer_size": 1866,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								324,
-								324
+								1765,
+								1765
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": false
+							"syntax": "Packages/Python/Python.sublime-syntax"
 						},
-						"translation.x": 0.0,
+						"translation.x": 56.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "pyCHAMP/sampler/metropolis.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1501,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								778,
-								778
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
 					"file": "pyCHAMP/wavefunction/wf_base.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5351,
+						"buffer_size": 5839,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4114,
-								4114
+								3678,
+								3678
 							]
 						],
 						"settings":
@@ -782,14 +808,14 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1596.0,
+						"translation.y": 1485.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
-					"buffer": 3,
+					"buffer": 2,
 					"file": "pyCHAMP/optimizer/opt_base.py",
 					"semi_transient": false,
 					"settings":
@@ -814,30 +840,82 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 11,
+					"stack_index": 12,
 					"type": "text"
-				}
-			]
-		},
-		{
-			"selected": 5,
-			"sheets":
-			[
+				},
 				{
-					"buffer": 4,
-					"file": "example/ho1d.py",
+					"buffer": 3,
+					"file": "pyCHAMP/sampler/metropolis.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1075,
+						"buffer_size": 1767,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								383,
-								383
+								1767,
+								1767
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "pyCHAMP/sampler/diffusion.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3970,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1745,
+								1745
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 591.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "pyCHAMP/solver/vmc.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 366,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								349,
+								349
 							]
 						],
 						"settings":
@@ -853,7 +931,41 @@
 					"type": "text"
 				},
 				{
-					"buffer": 5,
+					"buffer": 6,
+					"file": "pyCHAMP/solver/solver_base.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1897,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								971,
+								971
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 10,
+					"type": "text"
+				}
+			]
+		},
+		{
+			"selected": 2,
+			"sheets":
+			[
+				{
+					"buffer": 7,
 					"file": "pyCHAMP/sampler/sampler_base.py",
 					"semi_transient": false,
 					"settings":
@@ -865,8 +977,8 @@
 						"selection":
 						[
 							[
-								59,
-								59
+								169,
+								169
 							]
 						],
 						"settings":
@@ -878,11 +990,69 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 11,
 					"type": "text"
 				},
 				{
-					"buffer": 6,
+					"buffer": 8,
+					"file": "example/ho1d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1704,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1340,
+								1340
+							]
+						],
+						"settings":
+						{
+							"history_list_is_closing": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
+					"file": "/home/nicolas/Documents/tutorial/pyMC3/test.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 475,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								190,
+								190
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
+					"type": "text"
+				},
+				{
+					"buffer": 10,
 					"file": "pyCHAMP/optimizer/minimize.py",
 					"semi_transient": false,
 					"settings":
@@ -911,20 +1081,48 @@
 					"type": "text"
 				},
 				{
-					"buffer": 7,
+					"buffer": 11,
+					"file": "pyCHAMP/solver/dmc.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 569,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								555,
+								555
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 12,
 					"file": "example/ho3d.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1217,
+						"buffer_size": 1245,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1217,
-								1217
+								28,
+								28
 							]
 						],
 						"settings":
@@ -936,96 +1134,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
-					"file": "pyCHAMP/dmc/dmc.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 351,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								351,
-								351
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 3,
-					"type": "text"
-				},
-				{
-					"buffer": 9,
-					"file": "pyCHAMP/diffuser/diffuser.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 829,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								822,
-								822
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"type": "text"
-				},
-				{
-					"buffer": 0,
-					"file": "pyCHAMP/vmc/vmc.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1304,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								732,
-								732
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 10,
-					"type": "text"
-				},
-				{
-					"buffer": 10,
+					"buffer": 13,
 					"file": "/home/nicolas/Documents/tutorial/autograd/test.py",
 					"semi_transient": false,
 					"settings":
@@ -1050,7 +1163,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
+					"stack_index": 13,
 					"type": "text"
 				}
 			]
@@ -1084,7 +1197,7 @@
 		"cols":
 		[
 			0.0,
-			0.5,
+			0.476665281068,
 			1.0
 		],
 		"rows":
@@ -1115,6 +1228,10 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"h",
+				"example/ho3d.py"
+			],
 			[
 				"test_bse",
 				"xtp/src/tests/test_bse.cc"

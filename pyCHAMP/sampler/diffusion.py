@@ -17,13 +17,7 @@ class DIFFUSION(SAMPLER_BASE):
             boudnary (float) : boudnary of the space
         '''
 
-        self.nwalkers = nwalkers
-        self.nstep = nstep
-        self.step_size = step_size
-        self.domain = domain
-        self.move = move
-
-        self.walkers = WALKERS(nwalkers,nelec,ndim,domain)
+        SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
 
 
     def set_wf(self,func):
