@@ -23,7 +23,7 @@ class WALKERS(object):
 				raise ValueError('method %s not recognized. Options are : %s ' %(method, ' '.join(options)) )
 
 			if method == options[0]:
-				self.pos = np.zeros((self.nwalkers, self.nelec*self.ndim )) + eps
+				self.pos = np.zeros((self.nwalkers, self.nelec*self.ndim ))
 
 			elif method == options[1]:
 				self.pos = np.random.rand(self.nwalkers, self.nelec*self.ndim) 
@@ -35,7 +35,7 @@ class WALKERS(object):
 	def move(self, step_size, method='one'):
 
 		if method == 'one':
-			new_pos = self._move_one(step_size,index)
+			new_pos = self._move_one(step_size)
 
 		elif method == 'all':
 			new_pos = self._move_all(step_size)
@@ -48,7 +48,7 @@ class WALKERS(object):
 	def _move_one(self,step_size):
 
 		new_pos = np.copy(self.pos)
-		ielec =  np.random.ranint(0,self.nelec,self.nwalkers)
+		ielec =  np.random.randint(0,self.nelec,self.nwalkers)
 		for iw in range(self.nwalkers):
 			if self.status[iw] == 1:
 				index = [self.ndim*ielec[iw],self.ndim*(ielec[iw]+1)]
@@ -58,6 +58,13 @@ class WALKERS(object):
 	def _random(self,step_size,size):
 		return step_size * (2 * np.random.random(size) - 1)
 
+
+	def move_dmc(self,step_size,drift,ielec):
+
+		new_pos = self.pos
+		new_pos[:,self.ndim*ielec:(self.ndim+1)*ielec] += step_size*drift[:,self.ndim*ielec:(self.ndim+1)*ielec]
+		new_pos[:,self.ndim*ielec:(self.ndim+1)*ielec] += np.random.normal(loc=0.0,scale=step_size,size=self.ndim)
+		return new_pos
 
 
 

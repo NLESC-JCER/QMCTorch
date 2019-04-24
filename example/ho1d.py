@@ -4,7 +4,9 @@ import matplotlib.pyplot as plt
 from pyCHAMP.optimizer.minimize import MINIMIZE
 from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.sampler.metropolis import METROPOLIS
+from pyCHAMP.sampler.diffusion import DIFFUSION
 from pyCHAMP.solver.vmc import VMC
+from pyCHAMP.solver.dmc import DMC
 
 class HarmOsc1D(WF):
 
@@ -30,13 +32,33 @@ class HarmOsc1D(WF):
 	def electronic_potential(self,pos):
 		return 0
 
+
+
+
 opt_param = [0.5]
 wf = HarmOsc1D(nelec=1, ndim=1)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
+metro = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
 optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
 
-vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
 
+
+vmc = VMC(wf=wf, sampler=metro, optimizer=optimizer)
+pos = vmc.sample(opt_param)
+
+
+diff = DIFFUSION(nwalkers=1000, nstep=1, step_size = 0.5, nelec=1, ndim=1, domain = {'min':-2,'max':2})
+diff.set_initial_guess(pos)
+
+dmc = DMC(wf=wf, sampler=diff, optimizer=None)
+pos,e,s = dmc.single_point(opt_param)
+dmc.plot_density(pos)
+
+exit()
+
+
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
+optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
+vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
 x0 = [1.25]
 vmc.optimize(x0)
 

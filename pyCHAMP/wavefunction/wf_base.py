@@ -111,6 +111,35 @@ class WF(object):
         else :
             return np.sum(out,1).reshape(-1,1)
 
+    def drift_fd(self,param,pos,eps=1E-6):
+
+        '''Compute the drift force on the points.
+        Args :
+            pos : position of the electrons
+            metod (string) : mehod to compute the derivatives
+        Returns : value of Grad Psi
+        '''
+
+        ndim = pos.shape[1]
+        out = np.zeros_like(pos)
+
+        for icol in range(ndim):
+
+            pos_tmp = np.copy(pos)
+            pos_tmp[:,icol] += eps
+            feps = self.values(param,pos_tmp)
+
+            pos_tmp = np.copy(pos)
+            pos_tmp[:,icol] -= eps
+            feps -= self.values(param,pos_tmp)
+
+            out[:,icol] = feps.reshape(-1)/(2*eps)
+
+        if self.ndim_tot == 1:
+            return 2*out.reshape(-1,1)/self.values(param,pos)
+        else :
+            return 2*out/self.values(param,pos)
+
 
     def applyK(self,param,pos):
         '''Comute the result of H * psi

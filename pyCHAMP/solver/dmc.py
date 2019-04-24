@@ -1,16 +1,22 @@
 import numpy as np
+from functools import partial
+from pyCHAMP.solver.solver_base import SOLVER_BASE
 
-class DMC(object):
+class DMC(SOLVER_BASE):
 
-	def __init__(self,wf=None, diffuser=None, optimizer=None):
+	def __init__(self,wf=None, sampler=None, optimizer=None):
+		SOLVER_BASE.__init__(self,wf,sampler,optimizer)
 
-		self.wf = wf
-		self.diffuser = diffuser
-		self.optimizer = optimizer
+	def sample(self,param):
+		
+		wf_func = partial(self.wf.values,param)
+		self.sampler.set_wf(wf_func)
 
-		self.history = {'eneregy':[],'variance':[],'param':[]}
+		drift_func = partial(self.wf.drift_fd,param)
+		self.sampler.set_drift_func(drift_func)
 
+		energy_func = partial(self.wf.local_energy,param)
+		self.sampler.set_energy_func(energy_func)
 
-		if optimizer is not None:
-			self.optimizer.func = self.wf.energy
-			self.optimizer.grad = self.wf.energy_gradient
+		pos = self.sampler.generate()
+		return pos
