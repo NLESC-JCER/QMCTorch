@@ -4,12 +4,12 @@ import matplotlib.pyplot as plt
 from pyCHAMP.optimizer.minimize import MINIMIZE
 from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.sampler.metropolis import METROPOLIS
-from pyCHAMP.vmc.vmc import VMC
+from pyCHAMP.solver.vmc import VMC
 
 class HarmOsc1D(WF):
 
-	def __init__(self,nelec,ncart):
-		WF.__init__(self, nelec, ncart)
+	def __init__(self,nelec,ndim):
+		WF.__init__(self, nelec, ndim)
 
 	def values(self,parameters,pos):
 		''' Compute the value of the wave function.
@@ -22,7 +22,7 @@ class HarmOsc1D(WF):
 		'''
 	
 		beta = parameters[0]
-		return np.exp(-beta*pos**2)
+		return np.exp(-beta*pos**2).reshape(-1,1)
 
 	def nuclear_potential(self,pos):
 		return 0.5*pos**2 
@@ -31,8 +31,8 @@ class HarmOsc1D(WF):
 		return 0
 
 opt_param = [0.5]
-wf = HarmOsc1D(nelec=1,ncart=1)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 3, boundary = 2)
+wf = HarmOsc1D(nelec=1, ndim=1)
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
 optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
 
 vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)

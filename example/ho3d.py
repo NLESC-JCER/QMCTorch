@@ -1,15 +1,16 @@
 import autograd.numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+
 from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.sampler.metropolis import METROPOLIS
 from pyCHAMP.optimizer.minimize import MINIMIZE
-from pyCHAMP.vmc.vmc import VMC
+from pyCHAMP.solver.vmc import VMC
 
 class HarmOsc3D(WF):
 
-	def __init__(self,nelec,ncart):
-		WF.__init__(self, nelec, ncart)
+	def __init__(self,nelec,ndim):
+		WF.__init__(self, nelec, ndim)
 
 	def values(self,parameters,pos):
 		''' Compute the value of the wave function.
@@ -33,8 +34,8 @@ class HarmOsc3D(WF):
 		return 0
 
 opt_param = [0.5]
-wf = HarmOsc3D(nelec=1, ncart=3)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, mc_step_size = 1, boundary = 2)
+wf = HarmOsc3D(nelec=1, ndim=3)
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size=3, nelec=1, ndim=3, domain = {'min':-2,'max':2})
 optimizer = MINIMIZE(method='bfgs', maxiter=20, tol=1E-4)
 
 vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
@@ -47,8 +48,3 @@ plt.plot(vmc.history['variance'])
 plt.show()
 
 
-
-# fig = plt.figure()
-# ax = fig.add_subplot(111,projection='3d')
-# ax.scatter(pos[:,0],pos[:,1],pos[:,2])
-# plt.show()

@@ -5,12 +5,12 @@ from functools import partial
 
 class WF(object):
 
-    def __init__(self,nelec, ncart):
+    def __init__(self,nelec, ndim):
 
-        self.ncart = ncart
+        self.ndim = ndim
         self.nelec = nelec
-        self.ndim = self.nelec*self.ncart
-
+        self.ndim_tot = self.nelec*self.ndim
+        self.eps = 1E-6
 
     def values(self,parameters,pos):
         ''' Compute the value of the wave function.
@@ -23,23 +23,6 @@ class WF(object):
         Returns: values of psi
         '''
         raise NotImplementedError()      
-
-
-    def _one_value(self,parameters,pos):
-        ''' Compute the value of the wave function.
-        for a single conformation of the electrons
-
-        Args:
-            parameters : variational param of the wf
-            pos: position of the electrons
-
-        Returns: values of psi
-        '''
-        assert pos.ndim == 1
-        v = self.values(parameters,pos)        
-        return v[0]
-
-    
 
     def electronic_potential(self,pos):
         '''Compute the potential of the wf points
@@ -76,7 +59,7 @@ class WF(object):
         '''
         eg = egrad(egrad(self.values,1),1)(param,pos)
 
-        if self.ndim == 1:
+        if self.ndim_tot == 1:
             return eg.reshape(-1,1)
         else :
             return np.sum(eg,1).reshape(-1,1)
@@ -91,7 +74,7 @@ class WF(object):
         h = hessian(self._one_value,1)
         eg = np.array([np.diag(h(param,p)) for p in pos])
 
-        if self.ndim == 1:
+        if self.ndim_tot == 1:
             return eg.reshape(-1,1)
         else :
             return np.sum(eg,1).reshape(-1,1)
@@ -123,7 +106,7 @@ class WF(object):
 
             out[:,icol] = feps.reshape(-1)/(eps**2)
 
-        if self.ndim == 1:
+        if self.ndim_tot == 1:
             return out.reshape(-1,1)
         else :
             return np.sum(out,1).reshape(-1,1)
@@ -156,8 +139,9 @@ class WF(object):
 
     def pdf(self,param,pos):
         '''density of the wave function.'''
-        return self.values(param,pos)**2
-
+        vals = self.values(param,pos)**2
+        vals[vals==0] += self.eps
+        return vals
 
     def auto_energy_gradient(self,param,pos):
         return egrad(self.energy,0)(param,pos)
