@@ -33,18 +33,27 @@ class HarmOsc3D(WF):
 	def electronic_potential(self,pos):
 		return 0
 
-opt_param = [0.5]
-wf = HarmOsc3D(nelec=1, ndim=3)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size=3, nelec=1, ndim=3, domain = {'min':-2,'max':2})
-optimizer = MINIMIZE(method='bfgs', maxiter=20, tol=1E-4)
 
-vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
+if __name__ == "__main__":
 
-x0 = [0.25]
-vmc.optimize(x0)
+	
+	wf = HarmOsc3D(nelec=1, ndim=3)
+	sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size=3, nelec=1, ndim=3, domain = {'min':-2,'max':2})
+	optimizer = MINIMIZE(method='bfgs', maxiter=20, tol=1E-4)
 
-plt.plot(vmc.history['energy'])
-plt.plot(vmc.history['variance'])
-plt.show()
+	# VMC solver
+	vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
+
+	# single point
+	opt_param = [0.5]
+	pos,e,s = vmc.single_point(opt_param)
+	print('Energy   : ', e)
+	print('Variance : ', s)
+	vmc.plot_density(pos)
+
+	# optimiztaion
+	init_param = [0.25]
+	vmc.optimize(init_param)
+	vmc.plot_history()
 
 

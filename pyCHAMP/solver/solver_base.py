@@ -48,7 +48,13 @@ class SOLVER_BASE(object):
 			fig = plt.figure()
 			ax = fig.add_subplot(111,projection='3d')
 			for ielec in range(self.wf.nelec):
-				ax.satter(pos[ielec*3,:],pos[ielec*3+1,:],pos[ielec*3+2,:])
+				ax.scatter(pos[:,ielec*3],pos[:,ielec*3+1],pos[:,ielec*3+2])
+		plt.show()
+
+	def plot_history(self):
+
+		plt.plot(self.history['energy'])
+		plt.plot(self.history['variance'])
 		plt.show()
 
 	def optimize(self,init_param):

@@ -43,14 +43,19 @@ class WF(object):
         raise NotImplementedError()
 
 
-    def jacobian_opt(self,param,pos):
+    def jacobian_opt(self,param,pos,normalized=False):
 
         '''Gradient of the wf wrt the variational parameters 
         at current positions. '''
-        return np.array([egrad(self.values,0)(param,p.reshape(1,-1))[0].tolist() for p in pos])
+        jac = np.array([egrad(self.values,0)(param,p.reshape(1,-1),normalized=normalized)[0].tolist() for p in pos])
+
+        if jac.ndim == 1:
+            jac = jac.reshape(-1,1)
+        return jac
         
 
     def kinetic_egrad(self,param,pos):
+        
         '''Compute the action of the kinetic operator on the we points.
         Args :
             pos : position of the electrons
@@ -152,6 +157,7 @@ class WF(object):
         Kpsi = -0.5*self.kinetic_fd(param,pos) 
         return Kpsi
 
+    
     def local_energy(self,param, pos):
         ''' local energy of the sampling points.'''
         return self.applyK(param,pos)/self.values(param, pos) \
