@@ -21,6 +21,7 @@ class MINIMIZE(OPT_BASE):
 					   options = opt,
 					   tol = self.tol, 
 					   jac = self.grad)
+		
 		return res.x, res.success
 
 
