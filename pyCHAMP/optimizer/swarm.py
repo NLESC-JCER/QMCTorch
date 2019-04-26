@@ -15,8 +15,8 @@ class SWARM(OPT_BASE):
 
 	def update_parameters(self,param,pos):
 		
-		lower_bound = [0.45]
-		upper_boud = [0.55]
+		lower_bound = [param[0] - 0.1]
+		upper_boud = [param[0] + 0.1]
 		xopt, fopt = pso(self.func, 
 						 lower_bound, 
 						 upper_boud,
