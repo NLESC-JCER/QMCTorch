@@ -16,17 +16,18 @@ class LINEAR(OPT_BASE):
 
     def update_parameters(self,param,pos):
         
-        eps = 1E-4
+        eps = 0.1
 
         S = self.get_overlap(param,pos)
         H = self.get_hamiltonian(param,pos)
-        
-        evals, evects = spla.eigh(H,S)
+        print(H)
+        print(S)
 
+        evals, evects = spla.eig(H,S)
         evals[evals<0] = np.float('Inf')        
         index_min = np.argmin(evals)
 
-        return param + eps*evects[1:,index_min], False
+        return param + eps*evects[1:,index_min]/evects[0,index_min], False
 
     def get_overlap(self,param,pos):
 
@@ -34,9 +35,9 @@ class LINEAR(OPT_BASE):
 
         n = basis.shape[1]
         S = np.eye(n,n)
-        for ib1 in range(n-1):
-            for ib2 in range(ib1+1,n):
-                S[ib1,ib2] = S[ib2,ib1] = np.dot(basis[:,ib1],basis[:,ib2])
+        for ib1 in range(n):
+            for ib2 in range(n):
+                S[ib1,ib2] =  np.dot(basis[:,ib1],basis[:,ib2])
 
         return S
 
@@ -49,14 +50,14 @@ class LINEAR(OPT_BASE):
         H = np.zeros((n,n))
 
         for ib1 in range(n):
-            for ib2 in range(ib1,n):
-                H[ib1,ib2] = H[ib2,ib1] = np.dot(basis[:,ib1],HPsi[:,ib2])
+            for ib2 in range(n):
+                H[ib1,ib2]  = np.dot(basis[:,ib1],HPsi[:,ib2])
         return H
 
     def applyHtoBasis(self,param,pos):
 
         K = self.applyKtoBasis(param,pos)
-        V = self.wf.nuclear_potential(pos) + self.wf.electronic_potential(pos)
+        V = (self.wf.nuclear_potential(pos) + self.wf.electronic_potential(pos)) * self.wf.values(param,pos)
         return K + V
 
 
@@ -91,7 +92,11 @@ class LINEAR(OPT_BASE):
         return -0.5*KPsi
         
     def get_basis(self,param,pos):
-        b = np.hstack((self.wf.values(param,pos),self.wf.jacobian_opt(param,pos,normalized=True)))
-        b[:,0] /= np.linalg.norm(b[:,0])
+        psi0 = self.wf.values(param,pos)
+        psi0 /= np.linalg.norm(psi0)
+
+        psi = self.wf.jacobian_opt(param,pos)
+
+        b = np.hstack((psi0,psi))
         return b
 

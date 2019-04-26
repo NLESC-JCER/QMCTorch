@@ -1,6 +1,6 @@
 import numpy as np
 from pyCHAMP.sampler.sampler_base import SAMPLER_BASE
-from pyCHAMP.sampler.walkers import WALKERS
+
 
 class DIFFUSION(SAMPLER_BASE):
 

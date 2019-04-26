@@ -24,7 +24,6 @@ class HAMILTONIAN(SAMPLER_BASE):
     def generate(self,func):
 
         def logprob(pos,func):
-
             f_logp = lambda x: np.log(func(x))
             logp = f_logp(pos)
             grad = egrad(f_logp)(pos)

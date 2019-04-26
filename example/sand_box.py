@@ -11,7 +11,7 @@ class HarmOsc1D(WF):
 	def __init__(self,nelec,ndim):
 		WF.__init__(self, nelec, ndim)
 
-	def values(self,parameters,pos,normalized=False):
+	def values(self,parameters,pos):
 		''' Compute the value of the wave function.
 
 		Args:
@@ -23,10 +23,13 @@ class HarmOsc1D(WF):
 	
 		beta = parameters[0]
 		wf = np.exp(-beta*pos**2).reshape(-1,1)
-		if normalized:
-			wf/=np.linalg.norm(wf)
+
 		return wf
-		
+	
+	# def jacobian_opt(self,param,pos):
+	# 	psi = self.values(param,pos)
+	# 	psi /= np.linalg.norm(psi)
+	# 	return pos**2*psi
 
 	def nuclear_potential(self,pos):
 		return 0.5*pos**2 
