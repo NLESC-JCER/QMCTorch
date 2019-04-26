@@ -59,8 +59,6 @@ if __name__ == "__main__":
 	vmc.plot_history()
 	
 
-
-
 	# metro = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
 	# optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
 
