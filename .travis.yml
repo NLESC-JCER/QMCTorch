@@ -1,11 +1,56 @@
 # Config file for automatic testing at travis-ci.org
 language: python
 python:
-  - "2.7"
+  - "3.7"
+
+before_install:
+
+  # Install python
+  - wget https://repo.continuum.io/miniconda/Miniconda3-latest-Linux-x86_64.sh -O miniconda.sh
+  - bash miniconda.sh -b -p $HOME/miniconda
+  - export PATH="$HOME/miniconda/bin:$PATH"
+  - hash -r
+  - conda config --set always_yes yes --set changeps1 no --set auto_update_conda False
+  - conda update -q conda
+
+  # Useful for debugging any issues with conda
+  - conda info -a
+
+  # pytest
+  - conda install -c anaconda pytest
+  - conda install -c conda-forge pytest-cov
+  - conda install python=3.6
+
+
+  # dependencies
+  - conda install -c anaconda numpy
+  - conda install -c anaconda scipy
+  - conda install -c conda-forge autograd
+
+  # pip
+  - pip install -q --upgrade pip
+
+  # pyhmc
+  - pip install pyhmc
+
+  # codacy coverage
+  - pip install -q coverage
+  - pip install -q codacy-coverage
+  - pip install -q coveralls
 
 # command to install dependencies
 install:
-  - pip install -r requirements.txt
+  - pip install -qe .
 
 # command to run tests
-script: python setup.py test
+script:
+  - cd test/
+  - pytest --cov=pyCHAMP --cov-report xml:coverage.xml
+  - mv coverage.xml ../
+  - mv .coverage ../
+  - cd ../
+
+after_script:
+- python-codacy-coverage -r coverage.xml
+- coveralls
+
