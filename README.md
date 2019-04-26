@@ -62,10 +62,16 @@ print('Variance : ', s)
 vmc.plot_density(pos)
 ```
 
-
 This script will output :
 
+```
+Energy   :  0.5000007216288713
+Variance :  2.8121093888720785e-09
+``` 
 
+and plot the following distribution 
+
+![alt-text][./pics/ho1dDist.png]
 
 Example : 3D Harmonic oscillator with 1-electron
 *****************************************************
