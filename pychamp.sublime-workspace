@@ -416,7 +416,7 @@
 			"file": "pyCHAMP/wavefunction/wf_base.py",
 			"settings":
 			{
-				"buffer_size": 5845,
+				"buffer_size": 5974,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -440,13 +440,10 @@
 			}
 		},
 		{
-			"contents": "import numpy as np\nfrom pyCHAMP.optimizer.opt_base import OPT_BASE\nfrom scipy.optimize import minimize\nimport scipy.linalg as spla\n\n\nclass LINEAR(OPT_BASE):\n\n    def __init__(self, wf, maxiter=100, init_param=None, tol=1E-6):\n        \n        self.wf = wf\n        self.tol = tol\n        self.maxiter = maxiter\n        self.init_param = init_param\n\n\n    def update_parameters(self,param,pos):\n        \n        eps = 1E-4\n        S = self.get_overlap(param,pos)\n        H = self.get_hamiltonian(param,pos)\n        evals, evects = spla.eigh(H,S)\n\n        evals[evals<0] = np.float('Inf')        \n        index_min = np.argmin(evals)\n\n        return param + eps*evects[1:,index_min], True\n\n    def get_overlap(self,param,pos):\n\n        basis = self.get_basis(param,pos)\n        n = len(basis)\n        S = np.eye(n,n)\n        for ib1 in range(n-1):\n            for ib2 in range(b1+1,n):\n                S[ib1,ib2] = S[b2,ib1] = np.dot(basis[ib1,:],basis[ib2,:])\n\n        return S\n\n    def get_hamiltonian(self,param,pos):\n        \n        HPsi = self.applyHtoBasis(para,pos)\n        basis = self.get_basis(param,pos)\n        n = len(basis)\n        \n        H = np.zeros((n,n))\n\n        for ib1 in range(n-1):\n            for ib2 in range(b1,n):\n                H[ib1,ib2] = H[ib2,ib1] = np.dot(basis[ib1,:],Hpsi[ib2,:])\n        return H\n\n    def applyHtoBasis(self,param,pos):\n\n        K = self.applyKtoBasis(param,pos)\n        V = self.wf.nuclear_potential(pos) + self.wf.electronic_potential(pos)\n        return K + V\n\n\n    def applyKtoBasis(self,param,pos):\n\n        '''Compute the action of the kinetic operator on the we points.\n        Args :\n            pos : position of the electrons\n            metod (string) : mehod to compute the derivatives\n        Returns : value of K * psi\n        '''\n\n        ndim = pos.shape[1]\n        KPsi = np.zeros_like(pos.shape[0],len(param)+1)\n\n        for icol in range(ndim):\n\n            pos_tmp = np.copy(pos)\n            feps = -2*self.get_basis(param,pos_tmp)\n\n            pos_tmp = np.copy(pos)\n            pos_tmp[:,icol] += eps\n            feps += self.get_basis(param,pos_tmp)\n\n            pos_tmp = np.copy(pos)\n            pos_tmp[:,icol] -= eps\n            feps += self.get_basis(param,pos_tmp)\n\n            KPsi += feps.reshape(-1)/(eps**2)\n\n        return -0.5*KPsi\n        \n    def get_basis(self,param,pos):\n        a = self.wf.values(param,pos)\n        b = self.wf.jacobian_opt(param,pos)\n        print(a.shape)\n        print(b.shape)\n        return np.stack((self.wf.values(param,pos),self.wf.jacobian_opt(param,pos)))\n\n",
 			"file": "pyCHAMP/optimizer/linear.py",
-			"file_size": 2589,
-			"file_write_time": 132006665869294683,
 			"settings":
 			{
-				"buffer_size": 2577,
+				"buffer_size": 2547,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -497,7 +494,6 @@
 			"settings":
 			{
 				"buffer_size": 1328,
-				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
@@ -514,7 +510,7 @@
 			"file": "example/sand_box.py",
 			"settings":
 			{
-				"buffer_size": 2172,
+				"buffer_size": 2245,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -784,7 +780,7 @@
 	"groups":
 	[
 		{
-			"selected": 4,
+			"selected": 1,
 			"sheets":
 			[
 				{
@@ -821,15 +817,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5845,
+						"buffer_size": 5974,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								5014,
-								5014
+								859,
+								859
 							]
 						],
 						"settings":
@@ -839,10 +835,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1797.0,
+						"translation.y": 105.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 14,
+					"stack_index": 0,
 					"type": "text"
 				},
 				{
@@ -899,7 +895,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 10,
+					"stack_index": 11,
 					"type": "text"
 				},
 				{
@@ -908,15 +904,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2577,
+						"buffer_size": 2547,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2400,
-								2400
+								2484,
+								2484
 							]
 						],
 						"settings":
@@ -925,10 +921,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 351.0,
+						"translation.y": 468.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 1,
 					"type": "text"
 				},
 				{
@@ -1015,7 +1011,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 9,
+					"stack_index": 10,
 					"type": "text"
 				},
 				{
@@ -1043,7 +1039,7 @@
 						"translation.y": 78.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
+					"stack_index": 9,
 					"type": "text"
 				},
 				{
@@ -1073,13 +1069,13 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 5,
 					"type": "text"
 				}
 			]
 		},
 		{
-			"selected": 4,
+			"selected": 9,
 			"sheets":
 			[
 				{
@@ -1108,7 +1104,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 12,
+					"stack_index": 13,
 					"type": "text"
 				},
 				{
@@ -1137,7 +1133,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
@@ -1166,7 +1162,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 7,
 					"type": "text"
 				},
 				{
@@ -1194,7 +1190,7 @@
 						"translation.y": 195.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 6,
 					"type": "text"
 				},
 				{
@@ -1203,15 +1199,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2172,
+						"buffer_size": 2245,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								701,
-								701
+								916,
+								916
 							]
 						],
 						"settings":
@@ -1221,10 +1217,10 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 78.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 1,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
@@ -1254,7 +1250,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 13,
+					"stack_index": 14,
 					"type": "text"
 				},
 				{
@@ -1341,7 +1337,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 11,
+					"stack_index": 12,
 					"type": "text"
 				},
 				{
@@ -1350,15 +1346,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2172,
+						"buffer_size": 2245,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								27,
-								27
+								665,
+								665
 							]
 						],
 						"settings":
@@ -1371,7 +1367,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 2,
 					"type": "text"
 				},
 				{
@@ -1380,15 +1376,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5845,
+						"buffer_size": 5974,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3045,
-								3045
+								1542,
+								1542
 							]
 						],
 						"settings":
@@ -1398,10 +1394,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1248.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{

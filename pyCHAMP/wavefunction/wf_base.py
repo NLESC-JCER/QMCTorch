@@ -47,7 +47,7 @@ class WF(object):
 
         '''Gradient of the wf wrt the variational parameters 
         at current positions. '''
-        jac = np.array([egrad(self.values,0)(param,p.reshape(1,-1),normalized=normalized)[0].tolist() for p in pos])
+        jac = np.array([egrad(self.values,0)(param,p.reshape(1,-1))[0].tolist() for p in pos])
 
         if jac.ndim == 1:
             jac = jac.reshape(-1,1)
