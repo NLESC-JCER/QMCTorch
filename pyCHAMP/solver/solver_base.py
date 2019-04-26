@@ -69,9 +69,10 @@ class SOLVER_BASE(object):
 			pos = self.sample(param)
 			e = self.energy(param,pos)
 			s = self.variance(param,pos)
-			print('%d energy = %f, variance = %f (beta=%f)' %(i,e,s,param[0]))
 
 			param, success = self.optimizer.update_parameters(param,pos)
+
+			print('%d energy = %f, variance = %f (beta=%f)' %(i,e,s,param[0]))
 
 			self.history['energy'].append(e)
 			self.history['variance'].append(s)

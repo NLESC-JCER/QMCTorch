@@ -27,7 +27,7 @@ class Hydrogen(WF):
 		beta = parameters[0]
 		if pos.ndim == 1:
 			pos = pos.reshape(1,-1)
-			
+
 		r1 = np.sqrt(np.sum((pos-self.x1)**2,1))
 		r2 = np.sqrt(np.sum((pos-self.x2)**2,1))
 

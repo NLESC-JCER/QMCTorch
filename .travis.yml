@@ -26,6 +26,7 @@ before_install:
   # dependencies
   - conda install -c anaconda numpy
   - conda install -c anaconda scipy
+  - conda install -c anaconda cython
   - conda install -c conda-forge autograd
 
   # pip

@@ -30,7 +30,11 @@ class HAMILTONIAN(SAMPLER_BASE):
 
             return logp, grad
 
-        return hmc(logprob, x0=np.random.randn(self.nelec*self.ndim),args=(func,),n_samples=self.nwalkers)
+        return hmc(logprob, x0=np.random.randn(self.nelec*self.ndim),
+                   args=(func,),
+                   n_samples=self.nwalkers,
+                   epsilon=1,
+                   n_burn=int(self.nstep/10))
 
     # def generate(self,pdf):
 
