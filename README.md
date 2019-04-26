@@ -1,18 +1,18 @@
-#pyCHAMP
+# pyCHAMP
 
 Quantum Monte Carlo code in Python
 
-##Introduction
+## Introduction
 
 
 pyCHAMP allows to run small Variational QMC calculations in Python. Diffusion Monte Carlo is currently under developement Only a few features are currently supported : 
 
-###Sampler : 
+### Sampler : 
 
   * Metropolis-Hasting
   * Hamiltonian Monte-Carlo
 
-###Optimizers :
+### Optimizers :
 
   * Scipy Minimize routines (BFGS, Simplex, .... )
   * Linear Method
@@ -20,7 +20,7 @@ pyCHAMP allows to run small Variational QMC calculations in Python. Diffusion Mo
   
 `pyChamp` tries to use `autograd` as much as possible to define the partial derivatives of the wave function, alleviating the necessaity to derive analytic expressions
 
-##Example : VMC Single point calculation 1D Harmonic oscillator with 1-electron
+## Example : VMC Single point calculation 1D Harmonic oscillator with 1-electron
 
 ```python
 
