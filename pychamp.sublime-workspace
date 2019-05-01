@@ -4,6 +4,30 @@
 		"selected_items":
 		[
 			[
+				"O",
+				"ORBITAL_1S"
+			],
+			[
+				"at",
+				"atomic_pos"
+			],
+			[
+				"nw",
+				"nwalker"
+			],
+			[
+				"upp",
+				"upper_boud"
+			],
+			[
+				"low",
+				"lower_bound"
+			],
+			[
+				"ve",
+				"values"
+			],
+			[
 				"plot",
 				"plot_density"
 			],
@@ -38,10 +62,6 @@
 			[
 				"index",
 				"index_dead"
-			],
-			[
-				"nw",
-				"nwalkers"
 			],
 			[
 				"func",
@@ -288,10 +308,6 @@
 				"_coeff_Hd2"
 			],
 			[
-				"ve",
-				"VectorXd"
-			],
-			[
 				"get",
 				"get_full_matrix"
 			],
@@ -413,10 +429,139 @@
 			}
 		},
 		{
+			"contents": "import autograd.numpy as np \nfrom autograd import elementwise_grad as egrad\nfrom autograd import hessian, jacobian\nfrom functools import partial\n\nclass WF(object):\n\n    def __init__(self,nelec, ndim):\n\n        self.ndim = ndim\n        self.nelec = nelec\n        self.ndim_tot = self.nelec*self.ndim\n        self.eps = 1E-6\n\n    def values(self,parameters,pos):\n        ''' Compute the value of the wave function.\n        for a multiple conformation of the electrons\n\n        Args:\n            parameters : variational param of the wf\n            pos: position of the electrons\n\n        Returns: values of psi\n        '''\n        raise NotImplementedError()      \n\n    def electronic_potential(self,pos):\n        '''Compute the potential of the wf points\n        Args:\n            pos: position of the electron\n\n        Returns: values of Vee * psi\n        '''\n        raise NotImplementedError()        \n\n    def nuclear_potential(self,pos):\n        '''Compute the potential of the wf points\n        Args:\n            pos: position of the electron\n\n        Returns: values of V * psi\n        '''\n        raise NotImplementedError()\n\n\n    def jacobian_opt(self,param,pos):\n\n        '''Gradient of the wf wrt the variational parameters \n        at current positions. '''\n        jac = np.array([egrad(self.values,0)(param,p.reshape(1,-1))[0].tolist() for p in pos])\n\n        if jac.ndim == 1:\n            jac = jac.reshape(-1,1)\n        return jac\n        \n\n    def kinetic_egrad(self,param,pos):\n        \n        '''Compute the action of the kinetic operator on the we points.\n        Args :\n            pos : position of the electrons\n            metod (string) : mehod to compute the derivatives\n        Returns : value of K * psi\n        '''\n        eg = egrad(egrad(self.values,1),1)(param,pos)\n\n        if self.ndim_tot == 1:\n            return eg.reshape(-1,1)\n        else :\n            return np.sum(eg,1).reshape(-1,1)\n\n    def kinetic_hess(self,param,pos):\n        '''Compute the action of the kinetic operator on the we points.\n        Args :\n            pos : position of the electrons\n            metod (string) : mehod to compute the derivatives\n        Returns : value of K * psi\n        '''\n        h = hessian(self._one_value,1)\n        eg = np.array([np.diag(h(param,p)) for p in pos])\n\n        if self.ndim_tot == 1:\n            return eg.reshape(-1,1)\n        else :\n            return np.sum(eg,1).reshape(-1,1)\n\n    def kinetic_fd(self,param,pos,eps=1E-6):\n\n        '''Compute the action of the kinetic operator on the we points.\n        Args :\n            pos : position of the electrons\n            metod (string) : mehod to compute the derivatives\n        Returns : value of K * psi\n        '''\n\n        ndim = pos.shape[1]\n        out = np.zeros_like(pos)\n\n        for icol in range(ndim):\n\n            pos_tmp = np.copy(pos)\n            feps = -2*self.values(param,pos_tmp)\n\n            pos_tmp = np.copy(pos)\n            pos_tmp[:,icol] += eps\n            feps += self.values(param,pos_tmp)\n\n            pos_tmp = np.copy(pos)\n            pos_tmp[:,icol] -= eps\n            feps += self.values(param,pos_tmp)\n\n            out[:,icol] = feps.reshape(-1)/(eps**2)\n\n        if self.ndim_tot == 1:\n            return out.reshape(-1,1)\n        else :\n            return np.sum(out,1).reshape(-1,1)\n\n    def drift_fd(self,param,pos,eps=1E-6):\n\n        '''Compute the drift force on the points.\n        Args :\n            pos : position of the electrons\n            metod (string) : mehod to compute the derivatives\n        Returns : value of Grad Psi\n        '''\n\n        ndim = pos.shape[1]\n        out = np.zeros_like(pos)\n\n        for icol in range(ndim):\n\n            pos_tmp = np.copy(pos)\n            pos_tmp[:,icol] += eps\n            feps = self.values(param,pos_tmp)\n\n            pos_tmp = np.copy(pos)\n            pos_tmp[:,icol] -= eps\n            feps -= self.values(param,pos_tmp)\n\n            out[:,icol] = feps.reshape(-1)/(2*eps)\n\n        if self.ndim_tot == 1:\n            return 2*out.reshape(-1,1)/self.values(param,pos)\n        else :\n            return 2*out/self.values(param,pos)\n\n\n    def applyK(self,param,pos):\n        '''Comute the result of H * psi\n\n        Args :\n            pos : position of the electrons\n            metod (string) : mehod to compute the derivatives\n        Returns : value of K * pis\n        ''' \n        Kpsi = -0.5*self.kinetic_fd(param,pos) \n        return Kpsi\n\n    \n    def local_energy(self,param, pos):\n        ''' local energy of the sampling points.'''\n        return self.applyK(param,pos)/self.values(param, pos) \\\n               + self.nuclear_potential(pos)  \\\n               + self.electronic_potential(pos)\n\n    def energy(self,param,pos):\n        '''Total energy for the sampling points.'''\n        return np.mean(self.local_energy(param,pos))\n\n    def variance(self,param, pos):\n        '''Variance of the energy at the sampling points.'''\n        return np.var(self.local_energy(param,pos))\n\n    def pdf(self,param,pos):\n        '''density of the wave function.'''\n        vals = self.values(param,pos)**2\n        #vals[vals==0] += self.eps\n        return vals\n\n    def auto_energy_gradient(self,param,pos):\n        return egrad(self.energy,0)(param,pos)\n\n    def energy_gradient(self,param,pos):\n        '''Gradient of the total energy wrt the variational parameters \n        at the current sampling points.'''\n\n        grad_psi = self.jacobian_opt(param,pos)\n        psi0 = self.values(param,pos)\n        eL = self.local_energy(param,pos)\n\n        if len(param==1):\n\n            grad_psi = grad_psi.reshape(-1,1)\n            psi0 = psi0.reshape(-1,1)\n            eL = eL.reshape(-1,1)\n\n        G = []\n        for i in range(len(param)):\n            gi = grad_psi[:,i].reshape(-1,1)\n            ratio = gi / psi0\n            gg = 2 * ( np.mean(ratio*eL) - np.mean(ratio)*np.mean(eL) )\n            G.append( gg )\n\n\n        return np.array(G)\n\n\n\n\n",
 			"file": "pyCHAMP/wavefunction/wf_base.py",
+			"file_size": 5952,
+			"file_write_time": 132007449758334113,
 			"settings":
 			{
-				"buffer_size": 5974,
+				"buffer_size": 5935,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "tests/test_ho3d.py",
+			"settings":
+			{
+				"buffer_size": 1841,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "tests/test_lint.py",
+			"settings":
+			{
+				"buffer_size": 1425,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/h2.py",
+			"settings":
+			{
+				"buffer_size": 2636,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/solver/dmc.py",
+			"settings":
+			{
+				"buffer_size": 569,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "/home/nicolas/Documents/tutorial/pyswarm/test.py",
+			"settings":
+			{
+				"buffer_size": 294,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/optimizer/swarm.py",
+			"settings":
+			{
+				"buffer_size": 546,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "setup.py",
+			"settings":
+			{
+				"buffer_size": 1696,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/solver/vmc.py",
+			"settings":
+			{
+				"buffer_size": 366,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": ".travis.yml",
+			"settings":
+			{
+				"buffer_size": 1283,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/sampler/hamiltonian.py",
+			"settings":
+			{
+				"buffer_size": 2170,
+				"encoding": "UTF-8",
+				"line_ending": "Unix",
+				"name": "import numpy as np"
+			}
+		},
+		{
+			"file": "tests/test_ho1d.py",
+			"settings":
+			{
+				"buffer_size": 1695,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/optimizer/linear.py",
+			"settings":
+			{
+				"buffer_size": 2604,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/sampler/metropolis.py",
+			"settings":
+			{
+				"buffer_size": 1698,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/sampler/sampler_base.py",
+			"settings":
+			{
+				"buffer_size": 693,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -431,77 +576,10 @@
 			}
 		},
 		{
-			"file": "/home/nicolas/Documents/tutorial/pyhmc/test.py",
-			"settings":
-			{
-				"buffer_size": 392,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/optimizer/linear.py",
-			"settings":
-			{
-				"buffer_size": 2547,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/sampler/metropolis.py",
-			"settings":
-			{
-				"buffer_size": 1642,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "import numpy as np\nfrom pyCHAMP.sampler.sampler_base import SAMPLER_BASE\n\n\nclass DIFFUSION(SAMPLER_BASE):\n\n    def __init__(self, nwalkers=1000, nstep=1000, nelec=1, ndim=3, \n                 step_size = 0.1, domain = {'min':-2,'max':2},\n                 move='all'):\n\n        ''' Diffusion  SAMPLER\n        Args:\n            f (func) : function to sample\n            nstep (int) : number of mc step\n            nwalkers (int) : number of walkers\n            eps (float) : size of the mc step\n            boudnary (float) : boudnary of the space\n        '''\n\n        SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)\n\n\n    def set_wf(self,func):\n        self.wf = func\n\n    def set_drift_func(self,func):\n        self.drift_func = func\n\n    def set_energy_func(self,func):\n        self.energy_func = func\n\n    def set_initial_guess(self,pos):\n        self.init_pos = pos\n\n    def generate(self):\n\n        self.walkers.initialize(pos=self.init_pos)\n\n        Ex = self.energy_func(self.walkers.pos)\n        E = np.mean(Ex)\n\n        for istep in range(self.nstep):\n\n            # drift force\n            F = self.drift_func(self.walkers.pos)\n\n            old_pos = self.walkers.pos\n            old_wf = self.wf(old_pos)\n\n            for ielec in range(self.walkers.nelec):\n\n                # proposed move\n                new_pos = self.walkers.move_dmc(self.step_size,F,ielec)\n\n                # wf values\n                new_wf = self.wf(new_pos)    \n                \n                # fixed node\n                FN = np.sign(new_wf) * np.sign(old_wf) \n\n                #weight\n                W = self.weight( new_pos,new_wf,old_pos,old_wf,E )\n                W *= FN\n\n                # accept the moves\n                index = self._accept(W)\n                self.walkers.pos[index,:] = new_pos[index,:]\n\n            # new local energies\n            Exn = self.energy_func(self.walkers.pos)\n\n            # update the walkers\n            self.walkers_death_birth(Exn,Ex,E)\n\n            # update total energy\n            Ex = self.energy_func(self.walkers.pos)\n            E = np.mean(Ex)\n\n        return self.walkers.pos\n\n    def weight(self,new_pos,new_wf,old_pos,old_wf,E):\n        return (new_wf**2 * self.green(new_pos,old_pos,E)) / ( (old_wf**2 * self.green(old_pos,new_pos,E)) + 1E-6 ) \n        \n\n\n    def green(self,rn,r,E):\n        en = self.energy_func(rn)\n        e = self.energy_func(r)\n        Gb = np.exp(-0.5*(en+e-2*E)*self.step_size)\n        Gd = (2*np.pi*self.step_size)**(-3/2*self.nwalkers) *np.exp( -0.5*(r-rn-0.5*self.step_size*self.drift_func(rn)/self.step_size ) )\n        return Gb*Gd\n\n\n    def _accept(self,df):\n        ones = np.ones((self.walkers.nwalkers,1))\n        P = np.minimum(ones,df)\n        tau = np.random.rand(self.walkers.nwalkers,1)\n        return (P-tau>=0).reshape(-1)\n\n\n\n    def walkers_death_birth(self,Exn,Ex,E):\n\n        # number of each walker\n        N = np.exp(-0.5*self.step_size*(Ex+Exn-2*E)).astype('int')\n\n        # kill the walkers\n        index_dead = np.where(N==0)[0]\n        num_dead = len(index_dead)\n        self.walkers.status[index_dead] = 0\n\n        # multiply walkers\n        index_birth = np.where(N>1)[0]\n        num_new = len(index_birth)\n        new_pos = self.walkers.pos[index_birth,:]\n\n        # track number of walkers\n        self.walkers.nwalkers += num_new - num_dead\n        print(self.walkers.nwalkers)\n        \n        # remove dead walkers\n        self.walkers.status = np.delete(self.walkers.status,index_dead,axis=0)\n        self.walkers.pos = np.delete(self.walkers.pos,index_dead,axis=0)\n        \n        #add copies\n        self.walkers.status = np.concatenate((self.walkers.status,np.ones((num_new,1))))\n        self.walkers.pos = np.vstack((self.walkers.pos,new_pos))\n        \n\n\n\n\n\n\n\n\n\n\n\n\n\n",
-			"file": "pyCHAMP/sampler/diffusion.py",
-			"file_size": 3845,
-			"file_write_time": 132006054331731934,
-			"settings":
-			{
-				"buffer_size": 3802,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/solver/vmc.py",
-			"settings":
-			{
-				"buffer_size": 366,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
 			"file": "pyCHAMP/solver/solver_base.py",
 			"settings":
 			{
-				"buffer_size": 2010,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"contents": "import autograd.numpy as np\n\nfrom pyCHAMP.wavefunction.wf_base import WF\nfrom pyCHAMP.sampler.metropolis import METROPOLIS\nfrom pyCHAMP.optimizer.minimize import MINIMIZE\nfrom pyCHAMP.solver.vmc import VMC\n\nclass HarmOsc3D(WF):\n\n\tdef __init__(self,nelec,ndim):\n\t\tWF.__init__(self, nelec, ndim)\n\n\tdef values(self,parameters,pos):\n\t\t''' Compute the value of the wave function.\n\n\t\tArgs:\n\t\t\tparameters : variational param of the wf\n\t\t\tpos: position of the electron\n\n\t\tReturns: values of psi\n\t\t# '''\n\t\t# if pos.shape[1] != self.ndim :\n\t\t# \traise ValueError('Position have wrong dimension')\n\n\t\tbeta = parameters[0]\n\t\treturn np.exp(-beta*np.sum(pos**2,1)).reshape(-1,1)\n\n\tdef nuclear_potential(self,pos):\n\t\treturn np.sum(0.5*pos**2,1).reshape(-1,1)\n\n\tdef electronic_potential(self,pos):\n\t\treturn 0\n\n\nif __name__ == \"__main__\":\n\n\t\n\twf = HarmOsc3D(nelec=1, ndim=3)\n\tsampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size=3, nelec=1, ndim=3, domain = {'min':-2,'max':2})\n\toptimizer = MINIMIZE(method='bfgs', maxiter=20, tol=1E-4)\n\n\t# VMC solver\n\tvmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)\n\n\t# single point\n\topt_param = [0.5]\n\tpos,e,s = vmc.single_point(opt_param)\n\tprint('Energy   : ', e)\n\tprint('Variance : ', s)\n\tvmc.plot_density(pos)\n\n\t# optimiztaion\n\tinit_param = [0.25]\n\tvmc.optimize(init_param)\n\tvmc.plot_history()\n\n\n",
-			"file": "example/ho3d.py",
-			"file_size": 1400,
-			"file_write_time": 132006660119566940,
-			"settings":
-			{
-				"buffer_size": 1328,
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/sampler/sampler_base.py",
-			"settings":
-			{
-				"buffer_size": 693,
+				"buffer_size": 2026,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -510,19 +588,18 @@
 			"file": "example/sand_box.py",
 			"settings":
 			{
-				"buffer_size": 2245,
+				"buffer_size": 2306,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "pyCHAMP/sampler/hamiltonian.py",
+			"file": "pyCHAMP/sampler/diffusion.py",
 			"settings":
 			{
-				"buffer_size": 2055,
+				"buffer_size": 3802,
 				"encoding": "UTF-8",
-				"line_ending": "Unix",
-				"name": "import numpy as np"
+				"line_ending": "Unix"
 			}
 		},
 		{
@@ -535,10 +612,28 @@
 			}
 		},
 		{
-			"file": "pyCHAMP/solver/dmc.py",
+			"file": "example/ho1d.py",
 			"settings":
 			{
-				"buffer_size": 569,
+				"buffer_size": 2298,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/ho3d.py",
+			"settings":
+			{
+				"buffer_size": 1581,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/hydrogen.py",
+			"settings":
+			{
+				"buffer_size": 1459,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -612,16 +707,27 @@
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/wavefunction"
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/wavefunction",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/tests"
 	],
 	"file_history":
 	[
+		"/home/nicolas/Documents/pyscf/pyscf/lib/CMakeLists.txt",
+		"/home/nicolas/Documents/projects/votca/CMakeLists.txt",
+		"/home/nicolas/Documents/projects/votca/xtp/CMakeLists.txt",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/dmc.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho3d.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/solver_base.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/vmc.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/diffusion.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/metropolis.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer/opt_base.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/README.md",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/requirements.txt",
+		"/home/nicolas/Documents/tutorial/pyhmc/test.py",
 		"/home/nicolas/Documents/tutorial/pyMC3/test.py",
 		"/home/nicolas/Documents/tutorial/pyMC3/tesa",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/vmc/vmc.py",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/dmc.py",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/vmc.py",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho3d.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/dmc/dmc.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/diffuser/diffuser.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer/test.py",
@@ -656,8 +762,6 @@
 		"/home/nicolas/Documents/projects/votca/build/xtp/scripts/xtp_update_exciton",
 		"/home/nicolas/Documents/projects/votca/xtp/.travis.yml",
 		"/home/nicolas/Documents/projects/votca/xtp/.gitlab-ci.yml",
-		"/home/nicolas/Documents/projects/votca/CMakeLists.txt",
-		"/home/nicolas/Documents/projects/votca/xtp/CMakeLists.txt",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/tools/excitoncoupling.h",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/tools/gencube.h",
 		"/home/nicolas/Documents/projects/votca/xtp/include/votca/xtp/CMakeLists.txt",
@@ -735,19 +839,11 @@
 		"/home/nicolas/Documents/projects/EigenValues/Davidson/eigen/DavidsonSolver.cpp",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/tools/dftgwbse.h",
 		"/home/nicolas/Documents/projects/votca/xtp/src/tools/xtp_tools.cc",
-		"/home/nicolas/Documents/projects/votca/ctp/include/votca/ctp/logger.h",
-		"/home/nicolas/Documents/projects/votca/ctp/include/votca/kmc/kmcapplication.h",
-		"/home/nicolas/Documents/projects/votca/ctp/src/libkmc/kmcapplication.cc",
-		"/home/nicolas/Documents/projects/xtp-tutorials/tools/dftgwbse_CH4/methane.xyz",
-		"/home/nicolas/Documents/projects/xtp-tutorials/guide/README.md",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/CMakeLists.txt",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/diis.cc",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/adiis.cc",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/threecenter_gwbse.cc"
+		"/home/nicolas/Documents/projects/votca/ctp/include/votca/ctp/logger.h"
 	],
 	"find":
 	{
-		"height": 22.0
+		"height": 39.0
 	},
 	"find_in_files":
 	{
@@ -780,7 +876,7 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 4,
 			"sheets":
 			[
 				{
@@ -808,7 +904,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 21,
+					"stack_index": 29,
 					"type": "text"
 				},
 				{
@@ -817,15 +913,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5974,
+						"buffer_size": 5935,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								859,
-								859
+								3867,
+								3867
 							]
 						],
 						"settings":
@@ -835,158 +931,218 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 105.0,
+						"translation.y": 339.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 24,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "tests/test_ho3d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1841,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								842,
+								842
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 14,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "tests/test_lint.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1425,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1100,
+								1100
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 13,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "example/h2.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2636,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1321,
+								1321
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 375.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 0,
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "pyCHAMP/optimizer/opt_base.py",
-					"semi_transient": false,
+					"buffer": 5,
+					"file": "pyCHAMP/solver/dmc.py",
+					"semi_transient": true,
 					"settings":
 					{
-						"buffer_size": 146,
+						"buffer_size": 569,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								138,
-								138
-							]
-						],
-						"settings":
-						{
-							"auto_name": "",
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 20,
-					"type": "text"
-				},
-				{
-					"buffer": 3,
-					"file": "/home/nicolas/Documents/tutorial/pyhmc/test.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 392,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								115,
-								115
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 11,
-					"type": "text"
-				},
-				{
-					"buffer": 4,
-					"file": "pyCHAMP/optimizer/linear.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2547,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								2484,
-								2484
+								0,
+								0
 							]
 						],
 						"settings":
 						{
 							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": true
+							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 468.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
 					"type": "text"
 				},
 				{
-					"buffer": 5,
-					"file": "pyCHAMP/sampler/metropolis.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1642,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								629,
-								629
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 18,
-					"type": "text"
-				},
-				{
 					"buffer": 6,
-					"file": "pyCHAMP/sampler/diffusion.py",
+					"file": "/home/nicolas/Documents/tutorial/pyswarm/test.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3802,
+						"buffer_size": 294,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								579,
-								579
+								292,
+								292
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": true
+							"syntax": "Packages/Python/Python.sublime-syntax"
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 19,
+					"stack_index": 7,
 					"type": "text"
 				},
 				{
 					"buffer": 7,
+					"file": "pyCHAMP/optimizer/swarm.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 546,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								355,
+								355
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
+					"file": "setup.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1696,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1696,
+								1696
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
 					"file": "pyCHAMP/solver/vmc.py",
 					"semi_transient": false,
 					"settings":
@@ -998,8 +1154,8 @@
 						"selection":
 						[
 							[
-								349,
-								349
+								364,
+								364
 							]
 						],
 						"settings":
@@ -1011,75 +1167,163 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 10,
+					"stack_index": 11,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
-					"file": "pyCHAMP/solver/solver_base.py",
+					"buffer": 10,
+					"file": ".travis.yml",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2010,
+						"buffer_size": 1283,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								690,
-								690
+								991,
+								991
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 78.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 9,
-					"type": "text"
-				},
-				{
-					"buffer": 9,
-					"file": "example/ho3d.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1328,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								207,
-								207
-							]
-						],
-						"settings":
-						{
-							"history_list_is_closing": true,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": false
+							"syntax": "Packages/YAML/YAML.sublime-syntax"
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
+					"file": "pyCHAMP/sampler/hamiltonian.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2170,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1110,
+								1110
+							]
+						],
+						"settings":
+						{
+							"auto_name": "import numpy as np",
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 12,
+					"type": "text"
+				},
+				{
+					"buffer": 12,
+					"file": "tests/test_ho1d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1695,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1386,
+								1386
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 2,
+					"type": "text"
+				},
+				{
+					"buffer": 13,
+					"file": "pyCHAMP/optimizer/linear.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2604,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								536,
+								536
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 22,
+					"type": "text"
+				},
+				{
+					"buffer": 14,
+					"file": "pyCHAMP/sampler/metropolis.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1698,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								961,
+								961
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 23,
 					"type": "text"
 				}
 			]
 		},
 		{
-			"selected": 9,
+			"selected": 3,
 			"sheets":
 			[
 				{
-					"buffer": 10,
+					"buffer": 15,
 					"file": "pyCHAMP/sampler/sampler_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1104,11 +1348,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 13,
+					"stack_index": 26,
 					"type": "text"
 				},
 				{
-					"buffer": 2,
+					"buffer": 16,
 					"file": "pyCHAMP/optimizer/opt_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1133,11 +1377,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
+					"stack_index": 25,
 					"type": "text"
 				},
 				{
-					"buffer": 7,
+					"buffer": 9,
 					"file": "pyCHAMP/solver/vmc.py",
 					"semi_transient": false,
 					"settings":
@@ -1162,24 +1406,24 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 10,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
+					"buffer": 17,
 					"file": "pyCHAMP/solver/solver_base.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2010,
+						"buffer_size": 2026,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1775,
-								1775
+								1596,
+								1596
 							]
 						],
 						"settings":
@@ -1187,27 +1431,27 @@
 							"syntax": "Packages/Python/Python.sublime-syntax"
 						},
 						"translation.x": 0.0,
-						"translation.y": 195.0,
+						"translation.y": 287.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
-					"buffer": 11,
+					"buffer": 18,
 					"file": "example/sand_box.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2245,
+						"buffer_size": 2306,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								916,
-								916
+								979,
+								979
 							]
 						],
 						"settings":
@@ -1220,46 +1464,16 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 17,
 					"type": "text"
 				},
 				{
-					"buffer": 12,
-					"file": "pyCHAMP/sampler/hamiltonian.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2055,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								16,
-								16
-							]
-						],
-						"settings":
-						{
-							"auto_name": "import numpy as np",
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 14,
-					"type": "text"
-				},
-				{
-					"buffer": 5,
+					"buffer": 14,
 					"file": "pyCHAMP/sampler/metropolis.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1642,
+						"buffer_size": 1698,
 						"regions":
 						{
 						},
@@ -1279,11 +1493,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 16,
+					"stack_index": 28,
 					"type": "text"
 				},
 				{
-					"buffer": 6,
+					"buffer": 19,
 					"file": "pyCHAMP/sampler/diffusion.py",
 					"semi_transient": false,
 					"settings":
@@ -1308,11 +1522,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 15,
+					"stack_index": 27,
 					"type": "text"
 				},
 				{
-					"buffer": 13,
+					"buffer": 20,
 					"file": "pyCHAMP/optimizer/minimize.py",
 					"semi_transient": false,
 					"settings":
@@ -1324,37 +1538,38 @@
 						"selection":
 						[
 							[
-								557,
-								557
+								0,
+								0
 							]
 						],
 						"settings":
 						{
 							"auto_name": "",
+							"history_list_is_closing": true,
 							"syntax": "Packages/Python/Python.sublime-syntax"
 						},
 						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 12,
+					"stack_index": 9,
 					"type": "text"
 				},
 				{
-					"buffer": 11,
+					"buffer": 18,
 					"file": "example/sand_box.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2245,
+						"buffer_size": 2306,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								665,
-								665
+								495,
+								495
 							]
 						],
 						"settings":
@@ -1364,10 +1579,126 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
+						"translation.y": 273.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 21,
+					"type": "text"
+				},
+				{
+					"buffer": 21,
+					"file": "example/ho1d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2298,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								1072,
+								1072
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 8,
+					"type": "text"
+				},
+				{
+					"buffer": 22,
+					"file": "example/ho3d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1581,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								610,
+								610
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 16,
+					"type": "text"
+				},
+				{
+					"buffer": 23,
+					"file": "example/hydrogen.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1459,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								609,
+								609
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 15,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "example/h2.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2636,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								2184,
+								2184
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 18,
 					"type": "text"
 				},
 				{
@@ -1376,15 +1707,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5974,
+						"buffer_size": 5935,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1542,
-								1542
+								1503,
+								1503
 							]
 						],
 						"settings":
@@ -1397,69 +1728,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 19,
 					"type": "text"
 				},
 				{
-					"buffer": 14,
-					"file": "pyCHAMP/solver/dmc.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 569,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								555,
-								555
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax"
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 22,
-					"type": "text"
-				},
-				{
-					"buffer": 9,
-					"file": "example/ho3d.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 1328,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								28,
-								28
-							]
-						],
-						"settings":
-						{
-							"history_list_is_closing": true,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"translate_tabs_to_spaces": false
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 17,
-					"type": "text"
-				},
-				{
-					"buffer": 15,
+					"buffer": 24,
 					"file": "/home/nicolas/Documents/tutorial/autograd/test.py",
 					"semi_transient": false,
 					"settings":
@@ -1484,7 +1757,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 23,
+					"stack_index": 20,
 					"type": "text"
 				}
 			]
@@ -1550,6 +1823,50 @@
 		"selected_items":
 		[
 			[
+				"hy",
+				"example/hydrogen.py"
+			],
+			[
+				"ho\t",
+				"example/ho3d.py"
+			],
+			[
+				"vmc",
+				"pyCHAMP/solver/vmc.py"
+			],
+			[
+				"ho",
+				"example/ho1d.py"
+			],
+			[
+				"ham",
+				"pyCHAMP/sampler/hamiltonian.py"
+			],
+			[
+				"h",
+				"example/ho1d.py"
+			],
+			[
+				"metr",
+				"pyCHAMP/sampler/metropolis.py"
+			],
+			[
+				"lin",
+				"pyCHAMP/optimizer/linear.py"
+			],
+			[
+				"R",
+				"README.md"
+			],
+			[
+				"sol",
+				"pyCHAMP/solver/solver_base.py"
+			],
+			[
+				"ho1",
+				"example/ho1d.py"
+			],
+			[
 				"so",
 				"pyCHAMP/solver/solver_base.py"
 			],
@@ -1578,24 +1895,12 @@
 				"pyCHAMP/solver/vmc.py"
 			],
 			[
-				"metr",
-				"pyCHAMP/sampler/metropolis.py"
-			],
-			[
 				"di",
 				"pyCHAMP/sampler/diffusion.py"
 			],
 			[
 				"sam",
 				"pyCHAMP/sampler/sampler_base.py"
-			],
-			[
-				"ho1",
-				"example/ho1d.py"
-			],
-			[
-				"h",
-				"example/ho3d.py"
 			],
 			[
 				"test_bse",
@@ -1810,10 +2115,6 @@
 				"tools/include/votca/tools/eigen.h"
 			],
 			[
-				"lin",
-				"tools/src/libtools/linalg.cc"
-			],
-			[
 				"bse_a",
 				"xtp/include/votca/xtp/bse_matrix_free.h"
 			],
@@ -1853,7 +2154,7 @@
 	"show_minimap": true,
 	"show_open_files": false,
 	"show_tabs": true,
-	"side_bar_visible": false,
+	"side_bar_visible": true,
 	"side_bar_width": 205.0,
 	"status_bar_visible": true,
 	"template_settings":

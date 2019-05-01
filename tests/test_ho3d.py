@@ -31,10 +31,11 @@ s
         #   raise ValueError('Position have wrong dimension')
 
         beta = parameters[0]
-        return np.exp(-beta*np.sum(pos**2,1)).reshape(-1,1)
+        pos = pos.T
+        return np.exp(-beta*pos[0]**2)*np.exp(-beta*pos[1]**2)*np.exp(-beta*pos[2]**2) 
 
     def nuclear_potential(self,pos):
-        return np.sum(0.5*pos**2,1).reshape(-1,1)
+        return np.sum(0.5*pos**2,1)
 
     def electronic_potential(self,pos):
         return 0

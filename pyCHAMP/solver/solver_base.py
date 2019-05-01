@@ -42,7 +42,7 @@ class SOLVER_BASE(object):
 
 		elif self.wf.ndim == 2:
 			for ielec in range(self.wf.nelec):
-				plt.satter(pos[ielec*2,:],pos[ielec*2+1,:])
+				plt.scatter(pos[:,ielec*2],pos[:,ielec*2+1])
 
 		elif self.wf.ndim == 3:
 			fig = plt.figure()

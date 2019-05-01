@@ -39,10 +39,10 @@ class METROPOLIS(SAMPLER_BASE):
             # new function
             fxn = pdf(Xn)
             df = fxn/(fx)
-
+            
             # accept the moves
             index = self._accept(df)
-
+            
             # update position/function values
             self.walkers.pos[index,:] = Xn[index,:]
             fx[index] = fxn[index]
@@ -52,8 +52,9 @@ class METROPOLIS(SAMPLER_BASE):
 
     
     def _accept(self,df):
-        ones = np.ones((self.nwalkers,1))
+        
+        ones = np.ones(self.nwalkers)
         P = np.minimum(ones,df)
-        tau = np.random.rand(self.nwalkers,1)
+        tau = np.random.rand(self.nwalkers)
         return (P-tau>=0).reshape(-1)
 

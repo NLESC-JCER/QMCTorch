@@ -43,7 +43,7 @@ class WF(object):
         raise NotImplementedError()
 
 
-    def jacobian_opt(self,param,pos,normalized=False):
+    def jacobian_opt(self,param,pos):
 
         '''Gradient of the wf wrt the variational parameters 
         at current positions. '''
@@ -93,8 +93,9 @@ class WF(object):
         Returns : value of K * psi
         '''
 
+        nwalk = pos.shape[0]
         ndim = pos.shape[1]
-        out = np.zeros_like(pos)
+        out = np.zeros(nwalk)
 
         for icol in range(ndim):
 
@@ -109,12 +110,42 @@ class WF(object):
             pos_tmp[:,icol] -= eps
             feps += self.values(param,pos_tmp)
 
-            out[:,icol] = feps.reshape(-1)/(eps**2)
+            out += feps/(eps**2)
 
-        if self.ndim_tot == 1:
-            return out.reshape(-1,1)
-        else :
-            return np.sum(out,1).reshape(-1,1)
+        return out
+
+
+    # def kinetic_fd(self,param,pos,eps=1E-6):
+
+    #     '''Compute the action of the kinetic operator on the we points.
+    #     Args :
+    #         pos : position of the electrons
+    #         metod (string) : mehod to compute the derivatives
+    #     Returns : value of K * psi
+    #     '''
+
+    #     ndim = pos.shape[1]
+    #     out = np.zeros_like(pos)
+
+    #     for icol in range(ndim):
+
+    #         pos_tmp = np.copy(pos)
+    #         feps = -2*self.values(param,pos_tmp)
+
+    #         pos_tmp = np.copy(pos)
+    #         pos_tmp[:,icol] += eps
+    #         feps += self.values(param,pos_tmp)
+
+    #         pos_tmp = np.copy(pos)
+    #         pos_tmp[:,icol] -= eps
+    #         feps += self.values(param,pos_tmp)
+
+    #         out[:,icol] = feps.reshape(-1)/(eps**2)
+
+    #     if self.ndim_tot == 1:
+    #         return out.reshape(-1,1)
+    #     else :
+    #         return np.sum(out,1).reshape(-1,1)
 
     def drift_fd(self,param,pos,eps=1E-6):
 
@@ -174,9 +205,7 @@ class WF(object):
 
     def pdf(self,param,pos):
         '''density of the wave function.'''
-        vals = self.values(param,pos)**2
-        #vals[vals==0] += self.eps
-        return vals
+        return self.values(param,pos)**2
 
     def auto_energy_gradient(self,param,pos):
         return egrad(self.energy,0)(param,pos)

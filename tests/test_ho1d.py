@@ -28,10 +28,10 @@ class HarmOsc1D(WF):
         '''
     
         beta = parameters[0]
-        return np.exp(-beta*pos**2).reshape(-1,1)
+        return np.exp(-beta*pos**2).flatten()
 
     def nuclear_potential(self,pos):
-        return 0.5*pos**2 
+        return (0.5*pos**2).flatten()
 
     def electronic_potential(self,pos):
         return 0
