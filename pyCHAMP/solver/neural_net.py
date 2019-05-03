@@ -34,9 +34,11 @@ class QMCLoss(nn.Module):
 		pos = pos.T
 
 		if self.method == 'variance':
-			return self.wf.variance(param,pos)
+			l = self.wf.variance(param,pos)
 		elif self.method == 'energy':
-			return self.wf.energy(param,pos)
+			l = self.wf.energy(param,pos)
+		return Variable(l)
+			
 
 class NN(SOLVER_BASE):
 
@@ -64,6 +66,7 @@ class NN(SOLVER_BASE):
 	def train(self,nepoch,param):
 
 		pos = self.super_sample(param)
+		param = Variable(torch.tensor(param))
 
 		dataset = QMC_DataSet(pos)
 		dataloader = DataLoader(dataset,batch_size=self.batchsize)
@@ -74,9 +77,9 @@ class NN(SOLVER_BASE):
 
 			for data in dataloader:
 				
-			
 				data = Variable(data).float()
 				dp = self.net(data)
+				print(dp.shape)
 				param += dp
 
 				loss = qmc_loss(param,data)
@@ -128,4 +131,4 @@ if __name__ == "__main__":
 		                 ndim=3, domain = {'min':-2,'max':2})
 
 	nn = NN(wf=wf,sampler=sampler,model=PointNetfeat)
-	nn.train(100,[1.0])	
+	nn.train(100,[1.0])
