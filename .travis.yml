@@ -28,6 +28,7 @@ before_install:
   - conda install -c anaconda scipy
   - conda install -c anaconda cython
   - conda install -c conda-forge autograd
+  - conda install -c conda-forge pymc3
 
   # pip
   - pip install -q --upgrade pip

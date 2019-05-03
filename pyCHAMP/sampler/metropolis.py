@@ -1,6 +1,7 @@
 import numpy as np 
 from pyCHAMP.sampler.sampler_base import SAMPLER_BASE
 from pyCHAMP.sampler.walkers import WALKERS
+from tqdm import tqdm 
 
 class METROPOLIS(SAMPLER_BASE):
 
@@ -31,7 +32,7 @@ class METROPOLIS(SAMPLER_BASE):
         fx[fx==0] = 1E-6
         ones = np.ones((self.nwalkers,1))
 
-        for istep in range(self.nstep):
+        for istep in (range(self.nstep)):
 
             # new positions
             Xn = self.walkers.move(self.step_size,method=self.move)
