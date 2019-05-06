@@ -7,128 +7,109 @@ from torch.utils.data import Dataset, DataLoader
 from functools import partial
 from pyCHAMP.solver.solver_base import SOLVER_BASE
 
-
+import matplotlib.pyplot as plt
 
 class QMC_DataSet(Dataset):
 
-	def __init__(self, data):
-		self.data = data
-	def __len__(self):
-		return self.data.shape[0]
+    def __init__(self, data):
+        self.data = data
 
-	def __getitem__(self,index):
-		return self.data[index,:]
+    def __len__(self):
+        return self.data.shape[1]
+
+    def __getitem__(self,index):
+        return self.data[:,index]
 
 class QMCLoss(nn.Module):
 
-	def __init__(self,wf,method='energy'):
+    def __init__(self,wf,method='energy'):
 
-		super(QMCLoss,self).__init__()
-		self.wf = wf
-		self.method = method
+        super(QMCLoss,self).__init__()
+        self.wf = wf
+        self.method = method
 
-	def forward(self,param,input_pos):
+    def forward(self,out,pos):
 
-		ndim = input_pos.shape[1]
-		pos = input_pos.view(-1,ndim).data.numpy()
-		pos = pos.T
+        if self.method == 'variance':
+            loss = self.wf.variance(pos)
 
-		if self.method == 'variance':
-			l = self.wf.variance(param,pos)
-		elif self.method == 'energy':
-			l = self.wf.energy(param,pos)
-		return Variable(l)
-			
+        elif self.method == 'energy':
+            loss = self.wf.energy(pos)
+
+        return loss
+            
 
 class NN(SOLVER_BASE):
 
-	def __init__(self, wf=None, sampler=None, model=None, optimizer=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None):
 
-		SOLVER_BASE.__init__(self,wf,sampler,None)
-		self.net = model()
-		self.opt = optim.SGD(self.net.parameters(),lr=0.005, momentum=0.9, weight_decay=0.001)
-		self.batchsize = 32
+        SOLVER_BASE.__init__(self,wf,sampler,None)
+        self.opt = optim.SGD(self.wf.model.parameters(),lr=0.005, momentum=0.9, weight_decay=0.001)
+        self.batchsize = 32
 
 
-	def sample(self,param):
+    def sample(self):
+        pos = self.sampler.generate(self.wf.pdf)
+        return pos
 
-		partial_pdf = partial(self.wf.pdf,param)
-		pos = self.sampler.generate(partial_pdf)
-		return pos
+    def train(self,nepoch):
 
-	def super_sample(self,param,n=100):
+        pos = self.sample()
+        pos = torch.rand(3,self.sampler.nwalkers)
+        dataset = QMC_DataSet(pos)
 
-		pos = []
-		for _ in range(n):
-			pos.append(self.sample(param).T)
-		return np.array(pos)
+        dataloader = DataLoader(dataset,batch_size=self.batchsize)
+        qmc_loss = QMCLoss(self.wf,method='variance')
+        
+        cumulative_loss = []
+        for n in range(nepoch):
 
-	def train(self,nepoch,param):
+            cumulative_loss.append(0) 
+            for data in dataloader:
+                
+                data = Variable(data).float()
+                out = self.wf.model(data)
+                
+                self.wf.model = self.wf.model.eval()
+                loss = qmc_loss(out,data)
+                cumulative_loss[n] += loss
+                self.wf.model = self.wf.model.train()
 
-		pos = self.super_sample(param)
-		param = Variable(torch.tensor(param))
+                self.opt.zero_grad()
+                loss.backward()
+                self.opt.step()
 
-		dataset = QMC_DataSet(pos)
-		dataloader = DataLoader(dataset,batch_size=self.batchsize)
-		qmc_loss = QMCLoss(self.wf,method='energy')
-		
-    
-		for n in range(nepoch):
+            print('epoch %d loss %f' %(n,cumulative_loss[n]))
+            pos = self.sample()
+            dataloader.dataset.data = pos.T
 
-			for data in dataloader:
-				
-				data = Variable(data).float()
-				dp = self.net(data)
-				print(dp.shape)
-				param += dp
-
-				loss = qmc_loss(param,data)
-				self.opt.zero_grad()
-				loss.backward()
-				self.opt.step()
-
-				pos = self.super_sample(param)
-				dataloader.dataset.data = pos
-
+        plt.plot(cumulative_loss)
+        plt.show()
 
 if __name__ == "__main__":
 
-	from pyCHAMP.solver.vmc import VMC
-	from pyCHAMP.wavefunction.wf_base import WF
-	from pyCHAMP.sampler.metropolis import METROPOLIS
-	from pyCHAMP.optimizer.PointNet import PointNetCls, PointNetfeat
+    from pyCHAMP.solver.vmc import VMC
+    from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF, WaveNet
+    from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 
-	class HarmOsc3D(WF):
 
-		def __init__(self,nelec,ndim):
-			WF.__init__(self, nelec, ndim)
+    class HarmOsc3D(NEURAL_WF):
 
-		def values(self,parameters,pos):
-			''' Compute the value of the wave function.
+        def __init__(self,model,nelec,ndim):
+            NEURAL_WF.__init__(self, model, nelec, ndim)
 
-			Args:
-				parameters : variational param of the wf
-				pos: position of the electron
+        def nuclear_potential(self,pos):
+            return torch.sum(0.5*pos**2,1)
 
-			Returns: values of psi
-			# '''
-			# if pos.shape[1] != self.ndim :
-			# 	raise ValueError('Position have wrong dimension')
+        def electronic_potential(self,pos):
+            return 0
 
-			beta = parameters[0]
-			pos = pos.T
-			return np.exp(-beta*pos[0]**2)*np.exp(-beta*pos[1]**2)*np.exp(-beta*pos[2]**2) 
+    wf = HarmOsc3D(model=WaveNet,nelec=1, ndim=3)
+    sampler = METROPOLIS(nwalkers=250, nstep=100, 
+                         step_size = 3, nelec=1, 
+                         ndim=3, domain = {'min':-2,'max':2})
 
-		def nuclear_potential(self,pos):
-			return np.sum(0.5*pos**2,1)
-
-		def electronic_potential(self,pos):
-			return 0
-
-	wf = HarmOsc3D(nelec=1, ndim=2)
-	sampler = METROPOLIS(nwalkers=100, nstep=100, 
-		                 step_size = 3, nelec=1, 
-		                 ndim=3, domain = {'min':-2,'max':2})
-
-	nn = NN(wf=wf,sampler=sampler,model=PointNetfeat)
-	nn.train(100,[1.0])
+    nn = NN(wf=wf,sampler=sampler)
+    nn.train(100)
+    #pos = torch.tensor(nn.sample()).float()
+    #x = nn.wf.model(pos)

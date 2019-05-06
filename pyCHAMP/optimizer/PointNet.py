@@ -7,7 +7,6 @@ from torch.autograd import Variable
 import numpy as np
 import torch.nn.functional as F
 
-
 class STN3d(nn.Module):
     def __init__(self):
         super(STN3d, self).__init__()
@@ -44,7 +43,6 @@ class STN3d(nn.Module):
         x = x + iden
         x = x.view(-1, 3, 3)
         return x
-
 
 class STNkd(nn.Module):
     def __init__(self, k=64):
