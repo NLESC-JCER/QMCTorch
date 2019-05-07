@@ -94,7 +94,6 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
 
             # new positions
             Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
-
             
             # new function
             fxn = pdf(Xn)
@@ -113,10 +112,10 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
     
     def _accept(self,df):
         
-        ones = torch.ones(self.nwalkers,1)
+        ones = torch.ones(self.nwalkers)
         P = torch.tensor(df).double()
         P[P>1]=1.0
-        tau = torch.rand(self.nwalkers,1).double()
+        tau = torch.rand(self.nwalkers).double()
         index = (P-tau>=0).reshape(-1)
         return torch.tensor(index,dtype=torch.bool)
 
