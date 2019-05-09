@@ -6,7 +6,7 @@ from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.sampler.metropolis import METROPOLIS
 from pyCHAMP.optimizer.minimize import MINIMIZE
 from pyCHAMP.sampler.pymc3 import PYMC3
-#from pyCHAMP.sampler.hamiltonian import HAMILTONIAN
+
 from pyCHAMP.solver.vmc import VMC
 
 class HarmOsc3D(WF):
@@ -55,9 +55,9 @@ if __name__ == "__main__":
 	print('Variance : ', s)
 	vmc.plot_density(pos)
 
-	# # optimiztaion
-	# init_param = [0.25]
-	# vmc.optimize(init_param)
-	# vmc.plot_history()
+	# optimiztaion
+	init_param = [0.25]
+	vmc.optimize(init_param)
+	vmc.plot_history()
 
 

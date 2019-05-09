@@ -5,6 +5,8 @@ import torch.nn.functional as F
 import numpy as np
 from pyscf import scf, gto, mcscf
 
+from tqdm import tqdm
+import time
 
 class NEURAL_PYSCF_WF(nn.Module):
 
@@ -126,7 +128,10 @@ class NEURAL_PYSCF_WF(nn.Module):
         return pot
 
     def pdf(self,pos):
-        return self.forward(pos)**2
+        t0 = time.time()
+        x = self.forward(pos)**2
+        print(" __ pdf : %f " %(time.time()-t0))
+        return x
 
     def kinetic_fd(self,pos,eps=1E-6):
 
@@ -137,10 +142,11 @@ class NEURAL_PYSCF_WF(nn.Module):
         Returns : value of K * psi
         '''
 
+        print(pos.shape)
         nwalk = pos.shape[0]
         ndim = pos.shape[1]
         out = torch.zeros(nwalk)
-        for icol in range(ndim):
+        for icol in tqdm(range(ndim)):
 
             pos_tmp = pos.clone()
             feps = -2*self.forward(pos_tmp)            

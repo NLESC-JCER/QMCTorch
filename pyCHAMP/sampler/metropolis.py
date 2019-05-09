@@ -90,14 +90,14 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
         fx = pdf(torch.tensor(self.walkers.pos).float())
         fx[fx==0] = 1E-6
 
-        for istep in (range(self.nstep)):
+        for istep in tqdm(range(self.nstep)):
 
             # new positions
             Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
             
             # new function
             fxn = pdf(Xn)
-            df = fxn/(fx)
+            df = (fxn/(fx)).double()
             
             # accept the moves
             index = self._accept(df)
@@ -106,16 +106,14 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             self.walkers.pos[index,:] = Xn[index,:]
             fx[index] = fxn[index]
             fx[fx==0] = 1E-6
-        
+            
         return self.walkers.pos
 
     
-    def _accept(self,df):
-        
+    def _accept(self,P):
         ones = torch.ones(self.nwalkers)
-        P = torch.tensor(df).double()
         P[P>1]=1.0
         tau = torch.rand(self.nwalkers).double()
         index = (P-tau>=0).reshape(-1)
-        return torch.tensor(index,dtype=torch.bool)
+        return index.type(torch.bool)
 

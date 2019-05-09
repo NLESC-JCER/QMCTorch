@@ -9,6 +9,8 @@ from pyCHAMP.solver.solver_base import SOLVER_BASE
 
 import matplotlib.pyplot as plt
 
+import time
+
 class QMC_DataSet(Dataset):
 
     def __init__(self, data):
@@ -50,11 +52,12 @@ class NN(SOLVER_BASE):
 
     def sample(self):
         pos = self.sampler.generate(self.wf.pdf)
+        
         return pos
 
     def train(self,nepoch):
 
-        pos = self.sample()
+        #pos = self.sample()
         pos = torch.rand(3,self.sampler.nwalkers)
         dataset = QMC_DataSet(pos)
 
@@ -97,20 +100,27 @@ class NN4PYSCF(SOLVER_BASE):
 
 
     def sample(self):
+        t0 = time.time()
         pos = self.sampler.generate(self.wf.pdf)
+        print("Sampling done in %f" %(time.time()-t0))
         return pos
 
     def train(self,nepoch):
 
-        #pos = self.sample()
-        pos = torch.rand(self.sampler.nwalkers,self.wf.ndim*self.wf.nelec)
-        dataset = QMC_DataSet(pos)
 
+        self.wf = self.wf.eval()
+        pos = self.sample()
+        self.wf = self.wf.train()
+        exit()
+        #pos = torch.rand(self.sampler.nwalkers,self.wf.ndim*self.wf.nelec)
+
+        dataset = QMC_DataSet(pos)
         dataloader = DataLoader(dataset,batch_size=self.batchsize)
         qmc_loss = QMCLoss(self.wf,method='energy')
         
         cumulative_loss = []
         for n in range(nepoch):
+            print('epoch %d' %n)
 
             cumulative_loss.append(0) 
             for data in dataloader:
@@ -118,14 +128,25 @@ class NN4PYSCF(SOLVER_BASE):
                 data = Variable(data.transpose(0,1)).float()
                 out = self.wf(data)
                 
+                t0 = time.time()
                 self.wf = self.wf.eval()
+                print("WF done in %f" %(time.time()-t0))
+
+                t0 = time.time()
                 loss = qmc_loss(out,data)
                 cumulative_loss[n] += loss
+                print("loss done in %f" %(time.time()-t0))
                 self.wf = self.wf.train()
 
                 self.opt.zero_grad()
+
+                t0 = time.time()
                 loss.backward()
+                print("backward done in %f" %(time.time()-t0))
+
+                t0 = time.time()
                 self.opt.step()
+                print("opt done in %f" %(time.time()-t0))
 
             print('epoch %d loss %f' %(n,cumulative_loss[n]))
             pos = self.sample()
