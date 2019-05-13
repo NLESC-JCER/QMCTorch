@@ -1,6 +1,6 @@
 import numpy as np
 
-@staticmethod
+
 def pairwise_distance(pos,pos2=None):
 	'''Returns the pairwise distance of all electrons.
 	Args:

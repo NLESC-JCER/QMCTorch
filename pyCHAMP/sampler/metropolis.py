@@ -3,6 +3,7 @@ from pyCHAMP.sampler.sampler_base import SAMPLER_BASE
 from pyCHAMP.sampler.walkers import WALKERS
 from tqdm import tqdm 
 import torch
+import time
 
 class METROPOLIS(SAMPLER_BASE):
 
@@ -96,6 +97,7 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
             
             # new function
+            t0 = time.time()
             fxn = pdf(Xn)
             df = (fxn/(fx)).double()
             

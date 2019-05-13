@@ -11,16 +11,18 @@ import matplotlib.pyplot as plt
 
 import time
 
+
+
 class QMC_DataSet(Dataset):
 
     def __init__(self, data):
         self.data = data
 
     def __len__(self):
-        return self.data.shape[1]
+        return self.data.shape[0]
 
     def __getitem__(self,index):
-        return self.data[:,index]
+        return self.data[index,:]
 
 class QMCLoss(nn.Module):
 
@@ -51,14 +53,14 @@ class NN(SOLVER_BASE):
 
 
     def sample(self):
-        pos = self.sampler.generate(self.wf.pdf)
-        
+        pos = tensor.torch(self.sampler.generate(self.wf.pdf))
+        pos.requires_grad = True
         return pos
 
     def train(self,nepoch):
 
-        #pos = self.sample()
-        pos = torch.rand(3,self.sampler.nwalkers)
+        pos = self.sample()
+        pos = torch.rand(self.sampler.nwalkers,3)
         dataset = QMC_DataSet(pos)
 
         dataloader = DataLoader(dataset,batch_size=self.batchsize)
@@ -72,7 +74,7 @@ class NN(SOLVER_BASE):
                 
                 data = Variable(data).float()
                 out = self.wf.model(data)
-                
+
                 self.wf.model = self.wf.model.eval()
                 loss = qmc_loss(out,data)
                 cumulative_loss[n] += loss
@@ -102,53 +104,49 @@ class NN4PYSCF(SOLVER_BASE):
     def sample(self):
         t0 = time.time()
         pos = self.sampler.generate(self.wf.pdf)
-        print("Sampling done in %f" %(time.time()-t0))
+        print("Sampling on ", pos.shape, "done in %f" %(time.time()-t0))
         return pos
 
     def train(self,nepoch):
 
 
-        self.wf = self.wf.eval()
+        
         pos = self.sample()
-        self.wf = self.wf.train()
-        exit()
-        #pos = torch.rand(self.sampler.nwalkers,self.wf.ndim*self.wf.nelec)
-
         dataset = QMC_DataSet(pos)
         dataloader = DataLoader(dataset,batch_size=self.batchsize)
-        qmc_loss = QMCLoss(self.wf,method='energy')
+        qmc_loss = QMCLoss(self.wf,method='variance')
         
         cumulative_loss = []
         for n in range(nepoch):
-            print('epoch %d' %n)
+            print('\n === epoch %d' %n)
 
             cumulative_loss.append(0) 
             for data in dataloader:
                 
-                data = Variable(data.transpose(0,1)).float()
-                out = self.wf(data)
-                
+                print("\n data ", data.shape)
+
+                data = Variable(data).float()
                 t0 = time.time()
-                self.wf = self.wf.eval()
-                print("WF done in %f" %(time.time()-t0))
+                out = self.wf(data)
+                print("\t WF done in %f" %(time.time()-t0))
 
                 t0 = time.time()
                 loss = qmc_loss(out,data)
                 cumulative_loss[n] += loss
-                print("loss done in %f" %(time.time()-t0))
+                print("\t Loss (%f) done in %f" %(loss,time.time()-t0))
                 self.wf = self.wf.train()
 
                 self.opt.zero_grad()
 
                 t0 = time.time()
                 loss.backward()
-                print("backward done in %f" %(time.time()-t0))
+                print("\t Backward done in %f" %(time.time()-t0))
 
                 t0 = time.time()
                 self.opt.step()
-                print("opt done in %f" %(time.time()-t0))
+                print("\t opt done in %f" %(time.time()-t0))
 
-            print('epoch %d loss %f' %(n,cumulative_loss[n]))
+            print('=== epoch %d loss %f \n' %(n,cumulative_loss[n]))
             pos = self.sample()
             dataloader.dataset.data = pos
 
@@ -178,11 +176,15 @@ if __name__ == "__main__":
 
     wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',
                          basis='dzp',
-                         active_space=(4,4))
+                         active_space=(2,2))
 
-    sampler = METROPOLIS(nwalkers=250, nstep=100, 
+    sampler = METROPOLIS(nwalkers=64, nstep=10, 
                          step_size = 3, nelec=wf.nelec, 
                          ndim=3, domain = {'min':-5,'max':5})
 
     nn = NN4PYSCF(wf=wf,sampler=sampler)
-    nn.train(100)
+
+    pos = nn.sample()
+    dataset = QMC_DataSet(pos)
+    dataloader = DataLoader(dataset,batch_size=nn.batchsize)
+    qmc_loss = QMCLoss(nn.wf,method='variance')

@@ -1,12 +1,13 @@
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.autograd import grad, Variable
 
 import numpy as np
 from pyscf import scf, gto, mcscf
 
 from tqdm import tqdm
-import time
+from time import time
 
 class NEURAL_PYSCF_WF(nn.Module):
 
@@ -35,9 +36,12 @@ class NEURAL_PYSCF_WF(nn.Module):
         # get the configs
         self.configs, self.ci_coeffs, self.nci = self.select_configuration()
         
+        # transform pos in AO
+        self.layer_ao = AOLayer(self.mol)
+
         # transofrm the AO in MO
         self.layer_mo = nn.Linear(self.nao,self.nmo,bias=False)
-        self.layer_mo.weight = nn.Parameter(torch.tensor(self.rhf.mo_coeff))
+        self.layer_mo.weight = nn.Parameter(torch.tensor(self.rhf.mo_coeff).transpose(0,1))
 
         # determinant pooling
         self.sdpool = SlaterPooling(self.configs)
@@ -50,10 +54,24 @@ class NEURAL_PYSCF_WF(nn.Module):
         
         batch_size = x.shape[0]
         x = x.view(batch_size,-1,3)
-        x = self.ao_values(x)
+
+        #t0 = time()
+        #x = self.ao_values(x)
+        x = AOFunction.apply(x,self.mol)
+        #x = self.layer_ao(x)
+        #print(" __ __ AO : %f" %(time()-t0))
+
+        #t0 = time()
         x = self.layer_mo(x)
+        #print(" __ __ MO : %f" %(time()-t0))
+
+        #t0 = time()
         x = self.sdpool(x)
+        #print(" __ __ SD : %f" %(time()-t0))
+
+        #t0 = time()
         x = self.layer_ci(x)
+        #print(" __ __ CI : %f" %(time()-t0))
         
         return x
 
@@ -128,10 +146,7 @@ class NEURAL_PYSCF_WF(nn.Module):
         return pot
 
     def pdf(self,pos):
-        t0 = time.time()
-        x = self.forward(pos)**2
-        print(" __ pdf : %f " %(time.time()-t0))
-        return x
+        return self.forward(pos)**2
 
     def kinetic_fd(self,pos,eps=1E-6):
 
@@ -142,11 +157,10 @@ class NEURAL_PYSCF_WF(nn.Module):
         Returns : value of K * psi
         '''
 
-        print(pos.shape)
         nwalk = pos.shape[0]
         ndim = pos.shape[1]
         out = torch.zeros(nwalk)
-        for icol in tqdm(range(ndim)):
+        for icol in (range(ndim)):
 
             pos_tmp = pos.clone()
             feps = -2*self.forward(pos_tmp)            
@@ -163,6 +177,15 @@ class NEURAL_PYSCF_WF(nn.Module):
 
         return out
 
+    def kinetic_autograd(self,pos):
+
+        out = self.forward(pos)
+        z = Variable(torch.ones(out.shape))
+        jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
+        hess = grad(jacob.sum(),pos,create_graph=True)[0]
+        return hess.sum(1)
+
+
     def applyK(self,pos):
         '''Comute the result of H * psi
 
@@ -171,7 +194,7 @@ class NEURAL_PYSCF_WF(nn.Module):
             metod (string) : mehod to compute the derivatives
         Returns : value of K * pis
         ''' 
-        Kpsi = -0.5*self.kinetic_fd(pos) 
+        Kpsi = -0.5*self.kinetic_autograd(pos) 
         return Kpsi
 
     
@@ -209,9 +232,49 @@ class SlaterPooling(nn.Module):
                 out[isample,ic] = torch.det(mo)
         return out
 
+class AOFunction(torch.autograd.Function):
+
+    @staticmethod
+    def forward(ctx, input, mol):
+        ctx.save_for_backward(input)
+        ctx.mol = mol
+        output = [mol.eval_gto("GTOval_sph",p.detach().numpy()) for p in input]
+        return torch.tensor(output,requires_grad=True)
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input = ctx.saved_tensors[0]
+        deriv_ao = torch.tensor([ctx.mol.eval_gto("GTOval_ip_sph",p.detach().numpy()) for p in input])
+
+        out = torch.zeros(input.shape)
+        for k in range(3):
+            (grad_output * deriv_ao[:,k,:,:]).sum(-1)
+            out[:,:,k] = (grad_output * deriv_ao[:,k,:,:]).sum(-1)
+        return out, None
+
+class AOLayer(nn.Module):
+
+    def __init__(self,mol):
+        super(AOLayer,self).__init__()
+        self.mol = mol
+
+    def forward(self,input):
+        return AOFunction.apply(input,self.mol)
+
+class AOLayer(nn.Module):
+
+    def __init__(self,mol):
+        super(AOLayer,self).__init__()
+        self.mol = mol
+
+    def forward(self,input):
+        return AOFunction.apply(input,self.mol)
+
 
 if __name__ == "__main__" :
 
     wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',basis='dzp',active_space=(4,4))
     nwalkers = 10
     pos = torch.rand(nwalkers,wf.ndim*wf.nelec)
+    pos.requires_grad = True
+    out = wf(pos)
