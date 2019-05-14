@@ -34,14 +34,16 @@ class NEURAL_PYSCF_WF(nn.Module):
         #self.nci = self.mc.ci
 
         # get the configs
-        self.configs, self.ci_coeffs, self.nci = self.select_configuration()
+        self.configs, self.ci_coeffs, self.nci = self.select_configuration()    
+        self.configs = self.select_configuration_singlet()
+
         
         # transform pos in AO
         self.layer_ao = AOLayer(self.mol)
 
         # transofrm the AO in MO
         self.layer_mo = nn.Linear(self.nao,self.nmo,bias=False)
-        self.layer_mo.weight = nn.Parameter(torch.tensor(self.rhf.mo_coeff).transpose(0,1))
+        self.layer_mo.weight = nn.Parameter(Variable(torch.tensor(self.rhf.mo_coeff).transpose(0,1)))
 
         # determinant pooling
         self.sdpool = SlaterPooling(self.configs)
@@ -114,6 +116,24 @@ class NEURAL_PYSCF_WF(nn.Module):
                 nci += 1
 
         return torch.LongTensor(confs), coeffs, nci
+
+    def select_configuration_singlet(self):
+
+        ground_state =  list(self.rhf.mo_occ)
+        configs = []
+        configs.append(ground_state)
+
+        nocc = int(np.ceil(self.active_space[0]/2))
+        nvirt = int(self.active_space[0]/2)
+
+        for iocc in range(nocc):
+            for ivirt in range(nvirt):
+                c = ground_state.copy()
+                c[iocc] -= 1
+                c[ivirt] += 1
+                configs.append(c)
+
+        return configs
 
     def nuclear_potential(self,pos):
         
@@ -227,10 +247,45 @@ class SlaterPooling(nn.Module):
         out = torch.zeros(input.shape[0],self.nconfs)
         for isample in range(input.shape[0]):
             for ic in range(self.nconfs):
+
                 c = self.configs[ic]
-                mo = input[isample].index_select(0,c).index_select(1,c)
+                #mo = input[isample].index_select(0,c).index_select(1,c)
+
+
+                print(c)
+                print(input[isample])
+
+                mo = get_mo(input[isample,c])               
+                print(mo)
+                
                 out[isample,ic] = torch.det(mo)
         return out
+
+    @staticmethod
+    def duplicate_orbitals(mo):
+        nelec,norb_ = mo.shape
+        norb = 2*norb_
+        return torch.stack( (mo,mo),dim=0).view(nelec,norb).t().contiguous().view(nelec,norb)
+
+    @staticmethod
+    def get_index_configs(config):
+        norb = len(config)
+        index = []
+        for i in range(norb):
+            if config[i] == 2:
+                index.append(2*i)
+                index.append(2*i+1)
+            elif config[i] == 1:
+                index.append(2*i)
+        return index
+
+    @staticmethod
+    def get_mo(mo,conf):
+        all_mos = self.duplicate_orbitals(mo)
+        index = self.get_index_configs(conf)
+        return all_mos.index_select(0,c).index_select(1,c)
+
+
 
 class AOFunction(torch.autograd.Function):
 
@@ -238,18 +293,22 @@ class AOFunction(torch.autograd.Function):
     def forward(ctx, input, mol):
         ctx.save_for_backward(input)
         ctx.mol = mol
-        output = [mol.eval_gto("GTOval_sph",p.detach().numpy()) for p in input]
+        pos = input.detach().numpy().astype('float64') 
+        output = [mol.eval_gto("GTOval_sph",p) for p in pos]
         return torch.tensor(output,requires_grad=True)
 
     @staticmethod
     def backward(ctx, grad_output):
         input = ctx.saved_tensors[0]
-        deriv_ao = torch.tensor([ctx.mol.eval_gto("GTOval_ip_sph",p.detach().numpy()) for p in input])
+        pos = input.detach().numpy().astype('float64')
+        deriv_ao = torch.tensor([ctx.mol.eval_gto("GTOval_ip_sph",p) for p in pos])
+        print('GRAD OUT\n', grad_output)
+        print('DERIV AO\n', deriv_ao.shape)
 
         out = torch.zeros(input.shape)
         for k in range(3):
-            (grad_output * deriv_ao[:,k,:,:]).sum(-1)
             out[:,:,k] = (grad_output * deriv_ao[:,k,:,:]).sum(-1)
+        print(out)
         return out, None
 
 class AOLayer(nn.Module):
@@ -273,8 +332,12 @@ class AOLayer(nn.Module):
 
 if __name__ == "__main__" :
 
-    wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',basis='dzp',active_space=(4,4))
+    #wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',basis='dzp',active_space=(4,4))
+    wf = NEURAL_PYSCF_WF(atom='H 0 0 0; H 0 0 1',basis='dzp',active_space=(1,1))
     nwalkers = 10
-    pos = torch.rand(nwalkers,wf.ndim*wf.nelec)
+    pos = torch.rand(nwalkers,wf.ndim*wf.nelec).float()
     pos.requires_grad = True
-    out = wf(pos)
+    #out = wf(pos)
+    #out.backward(torch.ones(out.shape).float())
+    inp = pos.view(nwalkers,-1,3)
+    #k = wf.kinetic_autograd(inp)
