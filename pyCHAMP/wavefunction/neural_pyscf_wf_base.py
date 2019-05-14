@@ -255,9 +255,9 @@ class SlaterPooling(nn.Module):
                 print(c)
                 print(input[isample])
 
-                mo = get_mo(input[isample,c])               
+                mo = self.get_mo(input[isample],c)               
                 print(mo)
-                
+
                 out[isample,ic] = torch.det(mo)
         return out
 
@@ -277,13 +277,13 @@ class SlaterPooling(nn.Module):
                 index.append(2*i+1)
             elif config[i] == 1:
                 index.append(2*i)
-        return index
+        return torch.LongTensor(index)
 
-    @staticmethod
-    def get_mo(mo,conf):
+    
+    def get_mo(self,mo,conf):
         all_mos = self.duplicate_orbitals(mo)
         index = self.get_index_configs(conf)
-        return all_mos.index_select(0,c).index_select(1,c)
+        return all_mos.index_select(0,index).index_select(1,index)
 
 
 
@@ -337,7 +337,8 @@ if __name__ == "__main__" :
     nwalkers = 10
     pos = torch.rand(nwalkers,wf.ndim*wf.nelec).float()
     pos.requires_grad = True
-    #out = wf(pos)
+    out = wf(pos)
     #out.backward(torch.ones(out.shape).float())
     inp = pos.view(nwalkers,-1,3)
+
     #k = wf.kinetic_autograd(inp)
