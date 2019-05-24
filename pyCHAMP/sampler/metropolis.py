@@ -80,22 +80,25 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
 
         SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
 
-    def generate(self,pdf):
+    def generate(self,pdf,ntherm=10):
 
         ''' perform a MC sampling of the function f
         Returns:
             X (list) : position of the walkers
         '''
 
+
         self.walkers.initialize(method='uniform')
         fx = pdf(torch.tensor(self.walkers.pos).float())
         fx[fx==0] = 1E-6
-
+        POS = []
+        rate = 0
         for istep in tqdm(range(self.nstep)):
 
             # new positions
             Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
-            
+            #print(Xn)
+
             # new function
             t0 = time.time()
             fxn = pdf(Xn)
@@ -103,13 +106,20 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             
             # accept the moves
             index = self._accept(df)
+
+            # acceptance rate
+            rate += len(index==True)/self.walkers.nwalkers
             
-            # update position/function values
+            # update position/function value
             self.walkers.pos[index,:] = Xn[index,:]
             fx[index] = fxn[index]
             fx[fx==0] = 1E-6
-            
-        return self.walkers.pos
+        
+            if istep>ntherm:
+                POS.append(self.walkers.pos.copy())
+
+        print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
+        return POS
 
     
     def _accept(self,P):

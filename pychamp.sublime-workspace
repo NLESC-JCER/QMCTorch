@@ -4,6 +4,42 @@
 		"selected_items":
 		[
 			[
+				"init",
+				"init_pos"
+			],
+			[
+				"n",
+				"nrj"
+			],
+			[
+				"ga",
+				"grad_weight"
+			],
+			[
+				"out",
+				"output"
+			],
+			[
+				"we",
+				"weight"
+			],
+			[
+				"stat",
+				"static_weight"
+			],
+			[
+				"inp",
+				"input"
+			],
+			[
+				"index_",
+				"index_up"
+			],
+			[
+				"index",
+				"index_up"
+			],
+			[
 				"ci",
 				"ci_coeffs"
 			],
@@ -150,10 +186,6 @@
 			[
 				"walkers",
 				"walkers"
-			],
-			[
-				"index",
-				"index_dead"
 			],
 			[
 				"func",
@@ -482,26 +514,6 @@
 			[
 				"A",
 				"AliasFreeProduct"
-			],
-			[
-				"OpS",
-				"OpSizeVal"
-			],
-			[
-				"comm",
-				"commSize"
-			],
-			[
-				"real",
-				"real_gwbse"
-			],
-			[
-				"x",
-				"x"
-			],
-			[
-				"Mt",
-				"Matrix3d"
 			]
 		]
 	},
@@ -520,7 +532,7 @@
 			"file": "pyCHAMP/solver/neural_net.py",
 			"settings":
 			{
-				"buffer_size": 5298,
+				"buffer_size": 5359,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -556,7 +568,7 @@
 			"file": "pyCHAMP/sampler/metropolis.py",
 			"settings":
 			{
-				"buffer_size": 3465,
+				"buffer_size": 3792,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -573,7 +585,16 @@
 			"file": "pyCHAMP/wavefunction/neural_pyscf_wf_base.py",
 			"settings":
 			{
-				"buffer_size": 10846,
+				"buffer_size": 7235,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/wavefunction/wave_modules.py",
+			"settings":
+			{
+				"buffer_size": 3573,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -811,6 +832,7 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"print",
 			"value(",
 			"self.parameters"
 		],
@@ -830,7 +852,7 @@
 	"groups":
 	[
 		{
-			"selected": 2,
+			"selected": 1,
 			"sheets":
 			[
 				{
@@ -859,7 +881,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 9,
+					"stack_index": 2,
 					"type": "text"
 				},
 				{
@@ -868,15 +890,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 5298,
+						"buffer_size": 5359,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1183,
-								1183
+								2847,
+								2847
 							]
 						],
 						"settings":
@@ -887,10 +909,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 273.0,
+						"translation.y": 1286.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 0,
 					"type": "text"
 				},
 				{
@@ -906,8 +928,8 @@
 						"selection":
 						[
 							[
-								1322,
-								1322
+								1026,
+								1026
 							]
 						],
 						"settings":
@@ -920,7 +942,38 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 1,
+					"file": "pyCHAMP/solver/neural_net.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 5359,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4507,
+								4507
+							]
+						],
+						"settings":
+						{
+							"history_list_is_closing": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 1638.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
@@ -951,13 +1004,13 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 9,
 					"type": "text"
 				}
 			]
 		},
 		{
-			"selected": 3,
+			"selected": 1,
 			"sheets":
 			[
 				{
@@ -985,7 +1038,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
@@ -994,15 +1047,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3465,
+						"buffer_size": 3792,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2908,
-								2908
+								3486,
+								3486
 							]
 						],
 						"settings":
@@ -1012,10 +1065,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 741.0,
+						"translation.y": 975.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
+					"stack_index": 1,
 					"type": "text"
 				},
 				{
@@ -1046,7 +1099,7 @@
 						"translation.y": 898.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{
@@ -1055,15 +1108,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 10846,
+						"buffer_size": 7235,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								208,
-								208
+								7235,
+								7235
 							]
 						],
 						"settings":
@@ -1074,45 +1127,44 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 2847.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
-					"type": "text"
-				},
-				{
-					"buffer": 1,
-					"file": "pyCHAMP/solver/neural_net.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 5298,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1279,
-								1279
-							]
-						],
-						"settings":
-						{
-							"history_list_is_closing": true,
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 1,
+					"stack_index": 5,
 					"type": "text"
 				},
 				{
 					"buffer": 8,
+					"file": "pyCHAMP/wavefunction/wave_modules.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3573,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3392,
+								3392
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 819.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 9,
 					"file": "pyCHAMP/optimizer/PointNet.py",
 					"semi_transient": false,
 					"settings":
@@ -1138,11 +1190,11 @@
 						"translation.y": 858.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 10,
 					"type": "text"
 				},
 				{
-					"buffer": 9,
+					"buffer": 10,
 					"file": "pyCHAMP/wavefunction/wf_pyscf.py",
 					"semi_transient": false,
 					"settings":
@@ -1167,11 +1219,11 @@
 						"translation.y": 819.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 11,
+					"stack_index": 12,
 					"type": "text"
 				},
 				{
-					"buffer": 10,
+					"buffer": 11,
 					"file": "pyCHAMP/wavefunction/wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1197,7 +1249,7 @@
 						"translation.y": 468.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 10,
+					"stack_index": 11,
 					"type": "text"
 				}
 			]
@@ -1231,7 +1283,7 @@
 		"cols":
 		[
 			0.0,
-			0.476665281068,
+			0.429048224159,
 			1.0
 		],
 		"rows":
@@ -1263,6 +1315,14 @@
 		"selected_items":
 		[
 			[
+				"wa",
+				"pyCHAMP/sampler/walkers.py"
+			],
+			[
+				"metr",
+				"pyCHAMP/sampler/metropolis.py"
+			],
+			[
 				"neur",
 				"pyCHAMP/solver/neural_net.py"
 			],
@@ -1273,10 +1333,6 @@
 			[
 				"neua",
 				"pyCHAMP/wavefunction/neural_pyscf_wf_base.py"
-			],
-			[
-				"metr",
-				"pyCHAMP/sampler/metropolis.py"
 			],
 			[
 				"ne",
@@ -1691,7 +1747,7 @@
 		],
 		"width": 0.0
 	},
-	"selected_group": 1,
+	"selected_group": 0,
 	"settings":
 	{
 	},

@@ -9,6 +9,7 @@ from pyCHAMP.solver.solver_base import SOLVER_BASE
 
 import matplotlib.pyplot as plt
 
+from tqdm import tqdm
 import time
 
 
@@ -57,6 +58,11 @@ class NN(SOLVER_BASE):
         pos.requires_grad = True
         return pos
 
+    def sample_(self,export=10):
+        niter = self.sampler.nstep/export
+        self.sampler.nstep = export
+
+
     def train(self,nepoch):
 
         pos = self.sample()
@@ -101,16 +107,22 @@ class NN4PYSCF(SOLVER_BASE):
         self.batchsize = 32
 
 
-    def sample(self):
+    def sample(self,ntherm=10):
+
         t0 = time.time()
-        pos = self.sampler.generate(self.wf.pdf)
-        print("Sampling on ", pos.shape, "done in %f" %(time.time()-t0))
-        return pos
+        pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm)
+        pos = torch.tensor(pos)
+        pos.requires_grad = True
+        return pos.float()
+
+    def observalbe(self,func,pos):
+        obs = []
+        for p in tqdm(pos):
+            obs.append( func(p).data.numpy().tolist() )
+        return obs
 
     def train(self,nepoch):
 
-
-        
         pos = self.sample()
         dataset = QMC_DataSet(pos)
         dataloader = DataLoader(dataset,batch_size=self.batchsize)
@@ -126,6 +138,7 @@ class NN4PYSCF(SOLVER_BASE):
                 print("\n data ", data.shape)
 
                 data = Variable(data).float()
+                data.requires_grad = True
                 t0 = time.time()
                 out = self.wf(data)
                 print("\t WF done in %f" %(time.time()-t0))
@@ -162,29 +175,18 @@ if __name__ == "__main__":
     from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 
 
-    # class HarmOsc3D(NEURAL_WF):
-
-    #     def __init__(self,model,nelec,ndim):
-    #         NEURAL_WF.__init__(self, model, nelec, ndim)
-
-    #     def nuclear_potential(self,pos):
-    #         return torch.sum(0.5*pos**2,1)
-
-    #     def electronic_potential(self,pos):
-    #         return 0
-    # wf = HarmOsc3D(model=WaveNet,nelec=1, ndim=3)
-
-    wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',
+    wf = NEURAL_PYSCF_WF(atom='H 0 1 0; H 0 0 1',
                          basis='dzp',
-                         active_space=(2,2))
+                         active_space=(1,1))
 
-    sampler = METROPOLIS(nwalkers=64, nstep=10, 
-                         step_size = 3, nelec=wf.nelec, 
-                         ndim=3, domain = {'min':-5,'max':5})
+    sampler = METROPOLIS(nwalkers=5, nstep=100, 
+                         step_size = 3., nelec = wf.nelec, 
+                         ndim = 3, domain = {'min':-5,'max':5})
 
     nn = NN4PYSCF(wf=wf,sampler=sampler)
+    pos = nn.sample(ntherm=0)
+    e = nn.observalbe(wf.energy,pos)
 
-    pos = nn.sample()
-    dataset = QMC_DataSet(pos)
-    dataloader = DataLoader(dataset,batch_size=nn.batchsize)
-    qmc_loss = QMCLoss(nn.wf,method='variance')
+    # dataset = QMC_DataSet(pos)
+    # dataloader = DataLoader(dataset,batch_size=nn.batchsize)
+    # qmc_loss = QMCLoss(nn.wf,method='variance')

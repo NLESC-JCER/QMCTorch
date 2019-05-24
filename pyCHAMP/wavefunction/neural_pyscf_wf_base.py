@@ -9,6 +9,7 @@ from pyscf import scf, gto, mcscf
 from tqdm import tqdm
 from time import time
 
+from pyCHAMP.wavefunction.wave_modules import SlaterPooling,ElectronDistance,TwoBodyJastrowFactor,AOLayer
 
 class NEURAL_PYSCF_WF(nn.Module):
 
@@ -49,10 +50,11 @@ class NEURAL_PYSCF_WF(nn.Module):
 
         # transofrm the AO in MO
         self.layer_mo = nn.Linear(self.nao,self.nmo,bias=False)
-        self.layer_mo.weight = nn.Parameter(Variable(torch.tensor(self.rhf.mo_coeff).transpose(0,1)))
+        self.mo_coeff = self.normalize_cols(self.rhf.mo_coeff)
+        self.layer_mo.weight = nn.Parameter(Variable(torch.tensor(self.mo_coeff).transpose(0,1)))
 
         # determinant pooling
-        self.sdpool = SlaterPooling(self.configs)
+        self.sdpool = SlaterPooling(self.configs,self.nup,self.ndown)
 
         # CI Layer
         self.layer_ci = nn.Linear(self.nci,1,bias=False)
@@ -64,25 +66,34 @@ class NEURAL_PYSCF_WF(nn.Module):
         x = x.view(batch_size,-1,3)
 
         #t0 = time()
-        #x = self.ao_values(x)
-        x = AOFunction.apply(x,self.mol)
-        #x = self.layer_ao(x)
+        #x = AOFunction.apply(x,self.mol)
+        x = self.layer_ao(x)
+        #print(x)
         #print(" __ __ AO : %f" %(time()-t0))
 
         #t0 = time()
         x = self.layer_mo(x)
+        #print(x)
         #print(" __ __ MO : %f" %(time()-t0))
 
         #t0 = time()
         x = self.sdpool(x)
+        #print(x)
         #print(" __ __ SD : %f" %(time()-t0))
 
         #t0 = time()
         x = self.layer_ci(x)
+        #print(x)
         #print(" __ __ CI : %f" %(time()-t0))
         
         return x
 
+    @staticmethod
+    def normalize_cols(mat):
+        n,m = mat.shape
+        for i in range(m):
+            mat[:,i] = mat[:,i] / np.linalg.norm(mat[:,i])
+        return mat
 
     def ao_values(self,pos,func='GTOval_sph'):
         '''Returns the values of all atomic orbitals
@@ -98,7 +109,6 @@ class NEURAL_PYSCF_WF(nn.Module):
 
 
     def select_configuration(self):
-        
         
         confs = []
         coeffs = []
@@ -186,35 +196,6 @@ class NEURAL_PYSCF_WF(nn.Module):
     def pdf(self,pos):
         return self.forward(pos)**2
 
-    def kinetic_fd(self,pos,eps=1E-6):
-
-        '''Compute the action of the kinetic operator on the we points.
-        Args :
-            pos : position of the electrons
-            metod (string) : mehod to compute the derivatives
-        Returns : value of K * psi
-        '''
-
-        nwalk = pos.shape[0]
-        ndim = pos.shape[1]
-        out = torch.zeros(nwalk)
-        for icol in (range(ndim)):
-
-            pos_tmp = pos.clone()
-            feps = -2*self.forward(pos_tmp)            
-
-            pos_tmp = pos.clone()
-            pos_tmp[:,icol] += eps
-            feps += self.forward(pos_tmp)
-            
-            pos_tmp = pos.clone()
-            pos_tmp[:,icol] -= eps
-            feps += self.forward(pos_tmp)
-
-            out += feps/(eps**2)
-
-        return out
-
     def kinetic_autograd(self,pos):
 
         out = self.forward(pos)
@@ -250,116 +231,25 @@ class NEURAL_PYSCF_WF(nn.Module):
         '''Variance of the energy at the sampling points.'''
         return torch.var(self.local_energy(pos))
 
-class SlaterPooling(nn.Module):
 
-    """Applies a slater determinant pooling in the active space."""
-
-    def __init__(self,configs,nup,ndown):
-        super(SlaterPooling, self).__init__()
-
-        self.configs = configs
-        self.nconfs = len(configs[0])
-
-        self.index_up = torch.arange(nup)
-        self.index_down = torch.arange(nup,nup+ndown)
-
-    def forward(self,input):
-
-        out = torch.zeros(input.shape[0],self.nconfs)
-        for isample in range(input.shape[0]):
-
-            for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
-
-                #c = self.configs[ic]
-                #mo = input[isample].index_select(0,c).index_select(1,c)
-                #mo = self.get_mo(input[isample],c)               
-                
-                mo_up = input[isample].index_select(0,self.index_up).index_select(0,cup).index_select(1,cup)
-                mo_down = input[isample].index_select(0,self.index_up).index_select(0,cdown).index_select(1,cdown)
-                out[isample,ic] = torch.det(mo_up) * torch.det(mo_down)
-
-        print(out)
-        return out
-
-    @staticmethod
-    def duplicate_orbitals(mo):
-        nelec,norb_ = mo.shape
-        norb = 2*norb_
-        return torch.stack( (mo,mo),dim=0).view(nelec,norb).t().contiguous().view(nelec,norb)
-
-    @staticmethod
-    def get_index_configs(config):
-        norb = len(config)
-        index = []
-        for i in range(norb):
-            if config[i] == 2:
-                index.append(2*i)
-                index.append(2*i+1)
-            elif config[i] == 1:
-                index.append(2*i)
-        return torch.LongTensor(index)
-
-    
-    def get_mo(self,mo,conf):
-        all_mos = self.duplicate_orbitals(mo)
-        index = self.get_index_configs(conf)
-        return all_mos.index_select(0,index).index_select(1,index)
-
-
-
-class AOFunction(torch.autograd.Function):
-
-    @staticmethod
-    def forward(ctx, input, mol):
-        ctx.save_for_backward(input)
-        ctx.mol = mol
-        pos = input.detach().numpy().astype('float64') 
-        output = [mol.eval_gto("GTOval_sph",p) for p in pos]
-        return torch.tensor(output,requires_grad=True)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        input = ctx.saved_tensors[0]
-        pos = input.detach().numpy().astype('float64')
-        deriv_ao = torch.tensor([ctx.mol.eval_gto("GTOval_ip_sph",p) for p in pos])
-        print('GRAD OUT\n', grad_output)
-        print('DERIV AO\n', deriv_ao)
-
-        out = torch.zeros(input.shape)
-        for k in range(3):
-            out[:,:,k] = (grad_output * deriv_ao[:,k,:,:]).sum(-1)
-        print(out)
-        return out, None
-
-class AOLayer(nn.Module):
-
-    def __init__(self,mol):
-        super(AOLayer,self).__init__()
-        self.mol = mol
-
-    def forward(self,input):
-        return AOFunction.apply(input,self.mol)
-
-class AOLayer(nn.Module):
-
-    def __init__(self,mol):
-        super(AOLayer,self).__init__()
-        self.mol = mol
-
-    def forward(self,input):
-        return AOFunction.apply(input,self.mol)
 
 
 if __name__ == "__main__" :
 
-    #wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',basis='dzp',active_space=(4,4))
+    from torch.autograd import gradcheck
+    #wf = NEURAL_PYSCF_WF(atom='O 0 0 0; H 0 1 0; H 0 0 1',basis='dzp',active_space=(1,1))
     wf = NEURAL_PYSCF_WF(atom='H 0 0 0; H 0 0 1',basis='dzp',active_space=(1,1))
-    nwalkers = 10
+    nwalkers = 25
 
-    pos = torch.rand(nwalkers,wf.ndim*wf.nelec).float()
+    pos = -2 + 4*torch.rand(nwalkers,wf.ndim*wf.nelec).float()
     pos.requires_grad = True
     out = wf(pos)
-    #out.backward(torch.ones(out.shape).float())
+    out.backward(torch.ones(out.shape).float())
 
     #inp = pos.view(nwalkers,-1,3)
-    #k = wf.kinetic_autograd(inp)
+    k = wf.kinetic_autograd(pos)
+
+
+    x = pos.view(25,-1,3)
+    D = ElectronDistance.apply(x)
+    J2 = TwoBodyJastrowFactor(1,1)
