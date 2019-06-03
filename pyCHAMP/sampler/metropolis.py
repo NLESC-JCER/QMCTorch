@@ -87,6 +87,8 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             X (list) : position of the walkers
         '''
 
+        if ntherm == -1:
+            ntherm = self.nstep-1
 
         self.walkers.initialize(method='uniform')
         fx = pdf(torch.tensor(self.walkers.pos).float())
@@ -108,14 +110,14 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             index = self._accept(df)
 
             # acceptance rate
-            rate += len(index==True)/self.walkers.nwalkers
+            rate += index.byte().sum().float()/self.walkers.nwalkers
             
             # update position/function value
             self.walkers.pos[index,:] = Xn[index,:]
             fx[index] = fxn[index]
             fx[fx==0] = 1E-6
         
-            if istep>ntherm:
+            if istep>=ntherm:
                 POS.append(self.walkers.pos.copy())
 
         print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )

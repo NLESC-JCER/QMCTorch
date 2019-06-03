@@ -104,7 +104,7 @@ class NN4PYSCF(SOLVER_BASE):
 
         SOLVER_BASE.__init__(self,wf,sampler,None)
         self.opt = optim.SGD(self.wf.parameters(),lr=0.005, momentum=0.9, weight_decay=0.001)
-        self.batchsize = 32
+        self.batchsize = 100
 
 
     def sample(self,ntherm=10):
@@ -112,6 +112,7 @@ class NN4PYSCF(SOLVER_BASE):
         t0 = time.time()
         pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm)
         pos = torch.tensor(pos)
+        pos = pos.view(-1,self.sampler.ndim*self.sampler.nelec)
         pos.requires_grad = True
         return pos.float()
 
@@ -121,9 +122,11 @@ class NN4PYSCF(SOLVER_BASE):
             obs.append( func(p).data.numpy().tolist() )
         return obs
 
-    def train(self,nepoch):
+    def train(self,nepoch,pos=None,ntherm=0):
 
-        pos = self.sample()
+        if pos is None:
+            pos = self.sample(ntherm=ntherm)
+
         dataset = QMC_DataSet(pos)
         dataloader = DataLoader(dataset,batch_size=self.batchsize)
         qmc_loss = QMCLoss(self.wf,method='variance')
@@ -159,9 +162,16 @@ class NN4PYSCF(SOLVER_BASE):
                 self.opt.step()
                 print("\t opt done in %f" %(time.time()-t0))
 
+                q,r = torch.qr(self.wf.layer_mo.weight.transpose(0,1))
+                self.wf.layer_mo.weight.data = q.transpose(0,1)
+                print(self.wf.layer_mo.weight)
+                print(self.wf.layer_ci.weight)
+
             print('=== epoch %d loss %f \n' %(n,cumulative_loss[n]))
-            pos = self.sample()
-            dataloader.dataset.data = pos
+
+            if 1:
+                pos = self.sample(ntherm=ntherm)
+                dataloader.dataset.data = pos
 
         plt.plot(cumulative_loss)
         plt.show()
@@ -176,17 +186,32 @@ if __name__ == "__main__":
 
 
     wf = NEURAL_PYSCF_WF(atom='H 0 1 0; H 0 0 1',
-                         basis='dzp',
+                         #basis='dzp',
+                         basis='sto-3g',
                          active_space=(1,1))
 
-    sampler = METROPOLIS(nwalkers=5, nstep=100, 
+    sampler = METROPOLIS(nwalkers=100, nstep=100, 
                          step_size = 3., nelec = wf.nelec, 
                          ndim = 3, domain = {'min':-5,'max':5})
 
-    nn = NN4PYSCF(wf=wf,sampler=sampler)
-    pos = nn.sample(ntherm=0)
-    e = nn.observalbe(wf.energy,pos)
+    net = NN4PYSCF(wf=wf,sampler=sampler)
 
-    # dataset = QMC_DataSet(pos)
-    # dataloader = DataLoader(dataset,batch_size=nn.batchsize)
-    # qmc_loss = QMCLoss(nn.wf,method='variance')
+    pos = net.sample(ntherm=0)
+    pos = pos.reshape(100,100,6)
+    var = net.observalbe(net.wf.variance,pos)
+    plt.plot(var)
+    
+    
+
+    net.wf.layer_mo.weight.data = torch.eye(net.wf.nao).double()
+    for param in net.wf.layer_ci.parameters():
+        param.requires_grad = False
+
+
+    pos = net.sample(ntherm=0)
+    pos = pos.reshape(100,100,6)
+    var_ = net.observalbe(net.wf.variance,pos)
+    plt.plot(var_)
+    plt.show()
+
+    net.train(50,pos=pos,ntherm=-1)

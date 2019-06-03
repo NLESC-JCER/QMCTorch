@@ -37,8 +37,6 @@ class NEURAL_PYSCF_WF(nn.Module):
         #self.nci = self.mc.ci
 
         # get the configs
-        #self.configs, self.ci_coeffs, self.nci = self.select_configuration()    
-        #self.configs = self.select_configuration_singlet()
         self.configs = self.select_configuration_singlet()
         self.nci = len(self.configs[0])
 
