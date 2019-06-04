@@ -6,18 +6,40 @@ from functools import partial
 import torch
 from torch import nn
 import torch.nn.functional as F
+from torch.autograd import grad, Variable
 
-class NEURAL_WF(object):
+class NEURAL_WF(nn.Module):
 
-    def __init__(self,model,nelec, ndim):
+    def __init__(self,nelec, ndim):
+
+        super(NEURAL_WF, self).__init__()
 
         self.ndim = ndim
         self.nelec = nelec
         self.ndim_tot = self.nelec*self.ndim
+        
         self.eps = 1E-6
-        self.model = model()
+        
+        self.fc1 = nn.Linear(self.ndim_tot, 64)
+        self.fc2 = nn.Linear(64, 32)
+        self.fc3 = nn.Linear(32, 1)
 
-    def values(self,pos):
+        self.dropout = nn.Dropout(p=0.3)
+        self.bn1 = nn.BatchNorm1d(64)
+        self.bn2 = nn.BatchNorm1d(32)
+        
+        self.relu = nn.ReLU()
+
+        nn.init.xavier_uniform_(self.fc1.weight)
+        nn.init.xavier_uniform_(self.fc2.weight)
+        nn.init.xavier_uniform_(self.fc3.weight)
+
+        self.fc1.bias.data.fill_(0.00)
+        self.fc2.bias.data.fill_(0.00)
+        self.fc3.bias.data.fill_(0.00)
+
+    def forward(self,x):
+        
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -27,7 +49,13 @@ class NEURAL_WF(object):
 
         Returns: values of psi
         '''
-        return self.model(pos)
+
+        # x = F.relu(self.bn1(self.fc1(x)))
+        # x = F.relu(self.bn2(self.dropout(self.fc2(x))))
+        x = (self.fc1(x))
+        x = (self.fc2(x))
+        x = torch.exp(-self.fc3(x)**2)
+        return x
 
     def electronic_potential(self,pos):
         '''Compute the potential of the wf points
@@ -45,38 +73,18 @@ class NEURAL_WF(object):
 
         Returns: values of V * psi
         '''
-        raise NotImplementedError()
+        return (0.5*pos**2).flatten()
+        #raise NotImplementedError()
 
 
-    def kinetic_fd(self,pos,eps=1E-6):
+    def kinetic_autograd(self,pos):
 
-        '''Compute the action of the kinetic operator on the we points.
-        Args :
-            pos : position of the electrons
-            metod (string) : mehod to compute the derivatives
-        Returns : value of K * psi
-        '''
+        out = self.forward(pos)
+        z = Variable(torch.ones(out.shape))
+        jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
+        hess = grad(jacob.sum(),pos,create_graph=True)[0]
+        return hess.sum(1)
 
-        nwalk = pos.shape[0]
-        ndim = pos.shape[1]
-        out = torch.zeros(nwalk,1)
-        for icol in range(ndim):
-
-            pos_tmp = pos.clone()
-            feps = -2*self.model(pos_tmp)            
-
-            pos_tmp = pos.clone()
-            pos_tmp[:,icol] += eps
-            feps += self.model(pos_tmp)
-            
-
-            pos_tmp = pos.clone()
-            pos_tmp[:,icol] -= eps
-            feps += self.model(pos_tmp)
-
-            out += feps/(eps**2)
-
-        return out
 
     def applyK(self,pos):
         '''Comute the result of H * psi
@@ -86,15 +94,15 @@ class NEURAL_WF(object):
             metod (string) : mehod to compute the derivatives
         Returns : value of K * pis
         ''' 
-        Kpsi = -0.5*self.kinetic_fd(pos) 
+        Kpsi = -0.5*self.kinetic_autograd(pos) 
         return Kpsi
 
     
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        return self.applyK(pos)/self.values(pos) \
-               + self.nuclear_potential(pos)  \
-               + self.electronic_potential(pos)
+        return self.applyK(pos)/self.forward(pos) \
+             + self.nuclear_potential(pos)  
+               # + self.electronic_potential(pos)
 
     def energy(self,pos):
         '''Total energy for the sampling points.'''
@@ -106,16 +114,16 @@ class NEURAL_WF(object):
 
     def pdf(self,pos):
         '''density of the wave function.'''
-        return self.values(pos)**2
+        return (self.forward(pos)**2).reshape(-1)
 
 
 
-class WaveNet(nn.Module):
+class WaveNet1D(nn.Module):
 
     def __init__(self):
 
-        super(WaveNet, self).__init__()
-        self.fc1 = nn.Linear(3, 64)
+        super(WaveNet1D, self).__init__()
+        self.fc1 = nn.Linear(1, 64)
         self.fc2 = nn.Linear(64, 32)
         self.fc3 = nn.Linear(32, 1)
         self.dropout = nn.Dropout(p=0.3)
