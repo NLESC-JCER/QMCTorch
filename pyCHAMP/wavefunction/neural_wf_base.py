@@ -8,6 +8,27 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd import grad, Variable
 
+
+class RBF(nn.Module):
+
+    def __init__(self,input_features,output_features,centers):
+        super(RBF,self).__init__()
+        self.input_features = input_features
+        self.output_features = output_features
+        self.centers = centers
+        self.sigma = (centers[1]-centers[0])
+
+        self. weight = nn.Parameter(torch.Tensor(output_features,input_features))
+        self.weight.data.uniform_(-0.1,0.1)
+        self.weight.data.fill_(1.)
+        self.weight.requires_grad = False
+
+        self.register_parameter('bias',None)
+
+    def forward(self,input):
+        out = nn.functional.linear(input,self.weight,self.bias)
+        return torch.exp( -(out-self.centers)**2 / self.sigma ) 
+
 class NEURAL_WF(nn.Module):
 
     def __init__(self,nelec, ndim):
@@ -20,9 +41,14 @@ class NEURAL_WF(nn.Module):
         
         self.eps = 1E-6
         
-        self.fc1 = nn.Linear(self.ndim_tot, 64)
-        self.fc2 = nn.Linear(64, 32)
-        self.fc3 = nn.Linear(32, 1)
+        # self.fc1 = nn.Linear(self.ndim_tot, 64)
+        # self.fc2 = nn.Linear(64, 32)
+        # self.fc3 = nn.Linear(32, 1)
+
+        self.ncenter =  51
+        self.c1 = torch.linspace(-5,5,self.ncenter)
+        self.rbf1 = RBF(self.ndim_tot, self.ncenter,centers=self.c1)
+        self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
         self.dropout = nn.Dropout(p=0.3)
         self.bn1 = nn.BatchNorm1d(64)
@@ -30,13 +56,22 @@ class NEURAL_WF(nn.Module):
         
         self.relu = nn.ReLU()
 
-        nn.init.xavier_uniform_(self.fc1.weight)
-        nn.init.xavier_uniform_(self.fc2.weight)
-        nn.init.xavier_uniform_(self.fc3.weight)
+        nn.init.uniform_(self.fc.weight,0,1)
+        # with torch.no_grad():
+        #     for i in range(self.ncenter):
+        #         self.fc.weight.data[0,i] = torch.exp(-self.c1[i]**2/1)
 
-        self.fc1.bias.data.fill_(0.00)
-        self.fc2.bias.data.fill_(0.00)
-        self.fc3.bias.data.fill_(0.00)
+        #nn.init.xavier_uniform_(self.rbf1.weight)
+        #nn.init.xavier_uniform_(self.fc3.weight)
+
+        
+
+        #self.fc.weight.data.fill_(0)
+        #self.fc.weight.data[0,0] = 1.
+
+        #self.fc.bias.data.fill_(0.00)
+        #self.fc2.bias.data.fill_(0.001)
+        #self.fc3.bias.data.fill_(0.001)
 
     def forward(self,x):
         
@@ -50,11 +85,17 @@ class NEURAL_WF(nn.Module):
         Returns: values of psi
         '''
 
+        batch_size = x.shape[0]
+        x = x.view(batch_size,-1,self.ndim)
+
+
         # x = F.relu(self.bn1(self.fc1(x)))
         # x = F.relu(self.bn2(self.dropout(self.fc2(x))))
-        x = (self.fc1(x))
-        x = (self.fc2(x))
-        x = torch.exp(-self.fc3(x)**2)
+        # x = torch.tanh(self.fc1(x))
+        # x = torch.tanh(self.fc2(x))
+        # x = torch.tanh(self.fc3(x))
+        x = self.rbf1(x)
+        x = self.fc(x)
         return x
 
     def electronic_potential(self,pos):
@@ -77,9 +118,11 @@ class NEURAL_WF(nn.Module):
         #raise NotImplementedError()
 
 
-    def kinetic_autograd(self,pos):
+    def kinetic_autograd(self,pos,out=None):
 
-        out = self.forward(pos)
+        if out is None:
+            out = self.forward(pos)
+            
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
         hess = grad(jacob.sum(),pos,create_graph=True)[0]
