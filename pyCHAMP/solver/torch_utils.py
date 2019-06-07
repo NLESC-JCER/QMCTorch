@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.utils.data import Dataset
+from torch.autograd import Variable
 
 class QMCDataSet(Dataset):
 
@@ -28,6 +29,9 @@ class QMCLoss(nn.Module):
 
         elif self.method == 'energy':
             loss = self.wf.energy(pos)
+
+        elif self.method == 'density':
+            loss = 1./(torch.exp(torch.mean(vals**2))+1)
 
         elif callable(self.method):
             loss = nn.MSELoss()

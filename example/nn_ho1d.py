@@ -3,7 +3,7 @@ from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
 from torch.nn.utils.weight_norm import weight_norm
-
+import torch.optim as optim
 
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 from pyCHAMP.wavefunction.rbf import RBF
@@ -67,19 +67,49 @@ def ho1d_sol(pos):
     return np.exp(-0.5*pos**2)
 
 # wavefunction
-wf = RBF_HO1D(ndim=1,nelec=1)
+wf = RBF_HO1D(ndim=1,nelec=1,ncenter=11)
 
 #sampler
-sampler = METROPOLIS(nwalkers=250, nstep=1000, 
+sampler = METROPOLIS(nwalkers=100, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
+# optimizer
+opt = optim.Adam(wf.parameters(),lr=0.005)
+
 # network
-net = DeepQMC(wf=wf,sampler=sampler)
-net.train(250,
-         ntherm=-1,
-         loss = 'variance',
-         sol=ho1d_sol)
+net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
+pos = None
+
+plt.ion()
+fig = plt.figure()
+
+for iiter in range(2):
+
+    net.wf.fc.weight.requires_grad = True
+    net.wf.rbf.centers.requires_grad = False
+
+    pos = net.train(250,
+             batchsize=250,
+             pos = pos,
+             resample=100,
+             ntherm=-1,
+             loss = 'variance',
+             sol=ho1d_sol,
+             fig=fig)
+
+    net.wf.fc.weight.requires_grad = False
+    net.wf.rbf.centers.requires_grad = True
+
+    pos = net.train(10,
+             batchsize=250,
+             pos = pos,
+             resample=100,
+             ntherm=-1,
+             loss = 'density',
+             sol=ho1d_sol,
+             fig=fig)
+
 
 
 

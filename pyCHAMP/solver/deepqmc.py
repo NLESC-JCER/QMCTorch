@@ -20,10 +20,10 @@ class DeepQMC(SOLVER_BASE):
 
         SOLVER_BASE.__init__(self,wf,sampler,None)
         #self.opt = optim.SGD(self.wf.parameters(),lr=0.05, momentum=0.9, weight_decay=0.001)        
-        self.opt = optim.Adam(self.wf.parameters(),lr=0.005)
-        self.batchsize = 100
+        #self.opt = optim.Adam(self.wf.parameters(),lr=0.005)
+        self.opt = optimizer
 
-    def sample(self,ntherm=10,with_tqdm=True,pos=None):
+    def sample(self,ntherm=-1,with_tqdm=True,pos=None):
 
         t0 = time.time()
         pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm,with_tqdm=with_tqdm,pos=pos)
@@ -70,8 +70,14 @@ class DeepQMC(SOLVER_BASE):
         
         plt.show()
 
-    def train(self,nepoch,pos=None,ntherm=10,nresample=100,
-              loss='variance',sol=None):
+    def train(self,nepoch,
+              batchsize=32,
+              pos=None,
+              ntherm=-1,
+              resample=100,
+              loss='variance',
+              sol=None,
+              fig=None):
         '''Train the model.
 
         Arg:
@@ -86,18 +92,22 @@ class DeepQMC(SOLVER_BASE):
         if pos is None:
             pos = self.sample(ntherm=ntherm)
 
+        self.sampler.nstep=resample
+
         dataset = QMCDataSet(pos)
-        dataloader = DataLoader(dataset,batch_size=self.batchsize)
+        dataloader = DataLoader(dataset,batch_size=batchsize)
         qmc_loss = QMCLoss(self.wf,method=loss)
         
         XPLOT = Variable(torch.linspace(-5,5,100).view(100,1,1))
         xp = XPLOT.detach().numpy().flatten()
         vp = self.get_wf(XPLOT)
         
-        plt.ion()
-        fig = plt.figure()
+        # plt.ion()
+        # fig = plt.figure()
+        plt.clf()
         ax = fig.add_subplot(111)
         line1, = ax.plot(xp,vp,color='red')
+        line3, = ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
         if callable(sol):
             line2, = ax.plot(xp,sol(xp),color='blue')
         
@@ -122,18 +132,24 @@ class DeepQMC(SOLVER_BASE):
 
             vp = self.get_wf(XPLOT)
             line1.set_ydata(vp)
+
+            line3.set_xdata(self.wf.rbf.centers.detach().numpy())
+            line3.set_ydata(self.wf.fc.weight.detach().numpy().T)
+
             fig.canvas.draw()            
 
             print('epoch %d loss %f' %(n,cumulative_loss[n]))
             print('variance : %f' %self.wf.variance(pos))
             print('energy : %f' %self.wf.energy(pos))
 
-            self.sampler.nstep=nresample
-            pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
-            dataloader.dataset.data = pos
+            if self.sampler.nstep > 0:
+                pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
+                dataloader.dataset.data = pos
 
-        plt.plot(cumulative_loss)
-        plt.show()
+        # plt.plot(cumulative_loss)
+        # plt.show()
+
+        return pos
 
 
 
