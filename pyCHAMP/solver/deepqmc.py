@@ -1,8 +1,8 @@
 import numpy as np 
 
 import torch
-from torch.autograd import Variable, grad
 from torch import nn
+from torch.autograd import Variable, grad
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
@@ -70,7 +70,18 @@ class DeepQMC(SOLVER_BASE):
         
         plt.show()
 
-    def train(self,nepoch,pos=None,ntherm=10,loss='variance',sol=None):
+    def train(self,nepoch,pos=None,ntherm=10,nresample=100,
+              loss='variance',sol=None):
+        '''Train the model.
+
+        Arg:
+            nepoch : number of epoch
+            pos : presampled electronic poition
+            ntherm : thermalization of the MC sampling
+            nresample : number of MC step during the resampling
+            loss : loss used ('energy','variance' or callable (for supervised)
+            sol : anayltical solution for plotting (callable)
+        '''
 
         if pos is None:
             pos = self.sample(ntherm=ntherm)
@@ -117,7 +128,7 @@ class DeepQMC(SOLVER_BASE):
             print('variance : %f' %self.wf.variance(pos))
             print('energy : %f' %self.wf.energy(pos))
 
-            self.sampler.nstep=100
+            self.sampler.nstep=nresample
             pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
             dataloader.dataset.data = pos
 

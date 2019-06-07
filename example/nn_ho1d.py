@@ -1,6 +1,10 @@
 import torch
 from torch import nn
 from torch.autograd import Variable
+import torch.nn.functional as F
+from torch.nn.utils.weight_norm import weight_norm
+
+
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 from pyCHAMP.wavefunction.rbf import RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
@@ -17,7 +21,8 @@ class RBF_HO1D(NEURAL_WF_BASE):
 
         self.ncenter = ncenter
         self.centers = torch.linspace(-5,5,self.ncenter)
-        self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers)
+        self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers,opt_centers=False)
+        #self.fc = weight_norm(nn.Linear(self.ncenter, 1, bias=False),'weight')
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
         nn.init.uniform_(self.fc.weight,0,1)
@@ -37,7 +42,7 @@ class RBF_HO1D(NEURAL_WF_BASE):
         x = x.view(batch_size,-1,self.ndim)
         x = self.rbf(x)
         x = self.fc(x)
-        return x
+        return x.view(-1,1)
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -58,16 +63,23 @@ class RBF_HO1D(NEURAL_WF_BASE):
         return 0
 
 def ho1d_sol(pos):
+    '''Analytical solution of the 1D harmonic oscillator.'''
     return np.exp(-0.5*pos**2)
 
+# wavefunction
 wf = RBF_HO1D(ndim=1,nelec=1)
 
+#sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
+# network
 net = DeepQMC(wf=wf,sampler=sampler)
-net.train(250,ntherm=-1,loss = 'variance',sol=ho1d_sol)
+net.train(250,
+         ntherm=-1,
+         loss = 'variance',
+         sol=ho1d_sol)
 
 
 

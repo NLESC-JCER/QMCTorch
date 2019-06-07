@@ -1,5 +1,6 @@
+import torch
 from torch import nn
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 
 class QMCDataSet(Dataset):
 
@@ -29,8 +30,9 @@ class QMCLoss(nn.Module):
             loss = self.wf.energy(pos)
 
         elif callable(self.method):
-            loss = torch.nn.MSELoss()
-            return loss(vals,self.method)
+            loss = nn.MSELoss()
+            target = torch.tensor(self.method(pos.detach().numpy()))
+            return loss(vals,target)
 
         else:
             raise ValueError('method must be variance, energy or callable')
