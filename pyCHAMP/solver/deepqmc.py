@@ -61,12 +61,16 @@ class DeepQMC(SOLVER_BASE):
 
         X = Variable(torch.linspace(-5,5,100).view(100,1,1))
         X.requires_grad = True
+        xn = X.detach().numpy().flatten()
+
+        if callable(sol):
+            vs = sol(xn)
+            plt.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--')
 
         vals = self.wf(X)
         vn = vals.detach().numpy().flatten()
         vn /= np.linalg.norm(vn)
-        xn = X.detach().numpy().flatten()
-        plt.plot(xn,vn)
+        plt.plot(xn,vn,color='black',linewidth=2)
 
         if grad:
             kin = self.wf.kinetic_autograd(X)
@@ -78,11 +82,8 @@ class DeepQMC(SOLVER_BASE):
         if hist:
             pos = self.sample(ntherm=-1)
             plt.hist(pos.detach().numpy(),density=False)
-
-        if callable(sol):
-            vs = sol(xn)
-            plt.plot(xn,vs)
         
+        plt.grid()
         plt.show()
 
     def train(self,nepoch,
@@ -130,10 +131,11 @@ class DeepQMC(SOLVER_BASE):
         cumulative_loss = []
         #clipper = UnitNormClipper()
         clipper = ZeroOneClipper()
+        obs_dict = {'energy':[],'variance':[],'loss':[],'local_energy':[]}
 
         for n in range(nepoch):
 
-            cumulative_loss.append(0) 
+            cumulative_loss = 0
             for data in self.dataloader:
                 
                 lpos = Variable(data).float()
@@ -141,15 +143,13 @@ class DeepQMC(SOLVER_BASE):
                 vals = self.wf(lpos)
 
                 loss = self.loss(vals,lpos)
-                cumulative_loss[n] += loss
+                cumulative_loss += loss
 
                 self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
 
                 self.wf.fc.apply(clipper)
-
-            #self.wf.fc.weight.data /= self.wf.fc.weight.data.norm() 
 
             vp = self.get_wf(XPLOT)
             line1.set_ydata(vp)
@@ -164,21 +164,78 @@ class DeepQMC(SOLVER_BASE):
 
             fig.canvas.draw()            
 
-            print('epoch %d loss %f' %(n,cumulative_loss[n]))
-            print('variance : %f' %self.wf.variance(pos))
-            print('energy : %f' %self.wf.energy(pos))
+
+            locale_ = self.wf.local_energy(pos)
+            e_ = locale_.mean()
+            v_ = locale_.var()
+
+            print('epoch %d loss %f' %(n,cumulative_loss))
+            print('variance : %f' %v_)
+            print('energy : %f' %e_)
+
+            obs_dict['energy'].append(e_.detach().numpy().tolist())
+            obs_dict['variance'].append(v_.detach().numpy().tolist())
+            obs_dict['local_energy'].append(locale_.detach().numpy().tolist())
+            obs_dict['loss'].append(cumulative_loss.detach().numpy().tolist())
 
             if self.sampler.nstep > 0:
                 pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
 
-        # plt.plot(cumulative_loss)
-        # plt.show()
-
-        return pos
+        return pos, obs_dict
 
 
+    def plot_observable(self,obs_dict):
+
+        n = len(obs_dict['energy'])
+        epoch = np.arange(n)
+
+        emax = [np.quantile(e,0.75) for e in obs_dict['local_energy'] ]
+        emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
+
+        plt.fill_between(epoch,emin,emax,alpha=0.5,color='#4298f4')
+        plt.plot(epoch,obs_dict['energy'],color='#144477')
+        plt.grid()
+        plt.xlabel('Number of epoch')
+        plt.ylabel('Energy')
+        plt.show()
+
+    def plot_results(self,obs_dict,sol=None,e0=None):
+
+        fig = plt.figure()
+        ax0 = fig.add_subplot(211)
+        ax1 = fig.add_subplot(212)
+
+        X = Variable(torch.linspace(-5,5,100).view(100,1,1))
+        X.requires_grad = True
+        xn = X.detach().numpy().flatten()
+
+        if callable(sol):
+            vs = sol(xn)
+            ax0.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--')
+
+        vals = self.wf(X)
+        vn = vals.detach().numpy().flatten()
+        vn /= np.linalg.norm(vn)
+        ax0.plot(xn,vn,color='black',linewidth=2)
+        ax0.grid()
+        ax0.set_xlabel('X')
+        ax0.set_ylabel('Wavefuntion')
 
 
+        n = len(obs_dict['energy'])
+        epoch = np.arange(n)
 
+        emax = [np.quantile(e,0.75) for e in obs_dict['local_energy'] ]
+        emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
 
+        ax1.fill_between(epoch,emin,emax,alpha=0.5,color='#4298f4')
+        ax1.plot(epoch,obs_dict['energy'],color='#144477')
+        if e0 is not None:
+            ax1.axhline(e0,color='black',linestyle='--')
+
+        ax1.grid()
+        ax1.set_xlabel('Number of epoch')
+        ax1.set_ylabel('Energy')
+
+        plt.show()

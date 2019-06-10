@@ -87,31 +87,18 @@ pos = None
 plt.ion()
 fig = plt.figure()
 
-for iiter in range(1):
+pos,obs_dict = net.train(250,
+         batchsize=250,
+         pos = pos,
+         resample=100,
+         ntherm=-1,
+         loss = 'variance',
+         sol=ho1d_sol,
+         fig=fig)
 
-    net.wf.fc.weight.requires_grad = True
-    net.wf.rbf.centers.requires_grad = False
 
-    pos = net.train(250,
-             batchsize=250,
-             pos = pos,
-             resample=100,
-             ntherm=-1,
-             loss = 'variance',
-             sol=ho1d_sol,
-             fig=fig)
+net.plot_results(obs_dict,ho1d_sol,e0=0.5)
 
-    #net.wf.fc.weight.requires_grad = False
-    #net.wf.rbf.centers.requires_grad = True
-
-    # pos = net.train(10,
-    #          batchsize=250,
-    #          pos = pos,
-    #          resample=100,
-    #          ntherm=-1,
-    #          loss = 'energy',
-    #          sol=ho1d_sol,
-    #          fig=fig)
 
 
 
