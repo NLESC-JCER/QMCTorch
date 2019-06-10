@@ -22,7 +22,7 @@ class METROPOLIS(SAMPLER_BASE):
 
         SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
 
-    def generate(self,pdf,ntherm=10):
+    def generate(self,pdf,ntherm=-1,with_tqdm=True):
 
         ''' perform a MC sampling of the function f
         Returns:
@@ -35,10 +35,15 @@ class METROPOLIS(SAMPLER_BASE):
         self.walkers.initialize(method='uniform')
         fx = pdf(self.walkers.pos)
         fx[fx==0] = 1E-6
-        POS = []
+        POS = None
         ones = np.ones((self.nwalkers,1))
 
-        for istep in (range(self.nstep)):
+        if with_tqdm:
+            rng = tqdm(range(self.nstep))
+        else:
+            rng = range(self.nstep)
+
+        for istep in rng:
 
             # new positions
             Xn = self.walkers.move(self.step_size,method=self.move)
@@ -56,9 +61,12 @@ class METROPOLIS(SAMPLER_BASE):
             fx[fx==0] = 1E-6            
 
             if istep>=ntherm:
-                POS.append(self.walkers.pos.copy())        
+                if POS is None:
+                    POS = self.walkers.pos.copy().tolist()
+                else:
+                    POS += self.walkers.pos.copy().tolist()
 
-        return POS
+        return np.array(POS)
 
     
     def _accept(self,df):

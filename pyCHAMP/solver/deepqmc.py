@@ -13,6 +13,21 @@ import matplotlib.pyplot as plt
 
 from tqdm import tqdm
 import time
+
+
+class UnitNormClipper(object):
+
+    def __call__(self,module):
+        if hasattr(module,'weight'):
+            w = module.weight.data
+            w.div_(torch.norm(w).expand_as(w))
+
+class ZeroOneClipper(object):
+    
+    def __call__(self, module):
+        if hasattr(module,'weight'):
+            w = module.weight.data
+            w.sub_(torch.min(w)).div_(torch.norm(w).expand_as(w))
             
 class DeepQMC(SOLVER_BASE):
 
@@ -94,9 +109,9 @@ class DeepQMC(SOLVER_BASE):
 
         self.sampler.nstep=resample
 
-        dataset = QMCDataSet(pos)
-        dataloader = DataLoader(dataset,batch_size=batchsize)
-        qmc_loss = QMCLoss(self.wf,method=loss)
+        self.dataset = QMCDataSet(pos)
+        self.dataloader = DataLoader(self.dataset,batch_size=batchsize)
+        self.loss = QMCLoss(self.wf,method=loss)
         
         XPLOT = Variable(torch.linspace(-5,5,100).view(100,1,1))
         xp = XPLOT.detach().numpy().flatten()
@@ -108,33 +123,44 @@ class DeepQMC(SOLVER_BASE):
         ax = fig.add_subplot(111)
         line1, = ax.plot(xp,vp,color='red')
         line3, = ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
+        line4, = ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
         if callable(sol):
             line2, = ax.plot(xp,sol(xp),color='blue')
         
         cumulative_loss = []
+        #clipper = UnitNormClipper()
+        clipper = ZeroOneClipper()
+
         for n in range(nepoch):
 
             cumulative_loss.append(0) 
-            for data in dataloader:
+            for data in self.dataloader:
                 
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
                 vals = self.wf(lpos)
 
-                loss = qmc_loss(vals,lpos)
+                loss = self.loss(vals,lpos)
                 cumulative_loss[n] += loss
 
                 self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
 
-            self.wf.fc.weight.data /= self.wf.fc.weight.data.norm() 
+                self.wf.fc.apply(clipper)
+
+            #self.wf.fc.weight.data /= self.wf.fc.weight.data.norm() 
 
             vp = self.get_wf(XPLOT)
             line1.set_ydata(vp)
 
             line3.set_xdata(self.wf.rbf.centers.detach().numpy())
             line3.set_ydata(self.wf.fc.weight.detach().numpy().T)
+
+            line4.set_xdata(self.wf.rbf.centers.detach().numpy())
+            l4 = (self.wf.fc.weight.grad.detach().numpy().T)**2
+            l4 /= np.linalg.norm(l4)
+            line4.set_ydata(l4)
 
             fig.canvas.draw()            
 
@@ -144,7 +170,7 @@ class DeepQMC(SOLVER_BASE):
 
             if self.sampler.nstep > 0:
                 pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
-                dataloader.dataset.data = pos
+                self.dataloader.dataset.data = pos
 
         # plt.plot(cumulative_loss)
         # plt.show()

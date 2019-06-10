@@ -92,7 +92,7 @@ class WF(object):
             metod (string) : mehod to compute the derivatives
         Returns : value of K * psi
         '''
-
+        
         nwalk = pos.shape[0]
         ndim = pos.shape[1]
         out = np.zeros(nwalk)

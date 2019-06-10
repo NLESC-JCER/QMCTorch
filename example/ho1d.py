@@ -42,9 +42,8 @@ if __name__ == "__main__":
 	sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
 	#sampler = PYMC3(nwalkers=1000,ndim=1)
 
-	
 	optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
-	#optimizer = SWARM( maxiter=25)
+
 	
 	# VMC solver
 	vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
@@ -57,9 +56,9 @@ if __name__ == "__main__":
 	vmc.plot_density(pos)
 
 	# optimization
-	init_param = [1.]
-	vmc.optimize(init_param)
-	vmc.plot_history()
+	# init_param = [1.]
+	# vmc.optimize(init_param)
+	# vmc.plot_history()
 	
 
 

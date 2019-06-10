@@ -72,7 +72,7 @@ class NEURAL_WF_BASE(nn.Module):
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
         hess = grad(jacob.sum(),pos,create_graph=True)[0]
-        return -0.5 * hess.sum(1)
+        return -0.5 * hess.sum(1).view(-1,1)
     
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''

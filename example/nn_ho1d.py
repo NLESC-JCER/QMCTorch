@@ -25,7 +25,9 @@ class RBF_HO1D(NEURAL_WF_BASE):
         #self.fc = weight_norm(nn.Linear(self.ncenter, 1, bias=False),'weight')
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
-        nn.init.uniform_(self.fc.weight,0,1)
+        self.fc.weight.data.fill_(1.)
+        #self.fc.weight.data[0,1] = 1.
+        #nn.init.uniform_(self.fc.weight,0,1)
 
     def forward(self,x):
         ''' Compute the value of the wave function.
@@ -51,7 +53,7 @@ class RBF_HO1D(NEURAL_WF_BASE):
 
         Returns: values of V * psi
         '''
-        return (0.5*pos**2).flatten()
+        return (0.5*pos**2).flatten().view(-1,1)
 
     def electronic_potential(self,pos):
         '''Compute the potential of the wf points
@@ -64,13 +66,14 @@ class RBF_HO1D(NEURAL_WF_BASE):
 
 def ho1d_sol(pos):
     '''Analytical solution of the 1D harmonic oscillator.'''
-    return np.exp(-0.5*pos**2)
+    vn = np.exp(-0.5*pos**2)
+    return vn/np.linalg.norm(vn)
 
 # wavefunction
 wf = RBF_HO1D(ndim=1,nelec=1,ncenter=11)
 
 #sampler
-sampler = METROPOLIS(nwalkers=100, nstep=1000, 
+sampler = METROPOLIS(nwalkers=250, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
@@ -84,7 +87,7 @@ pos = None
 plt.ion()
 fig = plt.figure()
 
-for iiter in range(2):
+for iiter in range(1):
 
     net.wf.fc.weight.requires_grad = True
     net.wf.rbf.centers.requires_grad = False
@@ -98,17 +101,17 @@ for iiter in range(2):
              sol=ho1d_sol,
              fig=fig)
 
-    net.wf.fc.weight.requires_grad = False
-    net.wf.rbf.centers.requires_grad = True
+    #net.wf.fc.weight.requires_grad = False
+    #net.wf.rbf.centers.requires_grad = True
 
-    pos = net.train(10,
-             batchsize=250,
-             pos = pos,
-             resample=100,
-             ntherm=-1,
-             loss = 'density',
-             sol=ho1d_sol,
-             fig=fig)
+    # pos = net.train(10,
+    #          batchsize=250,
+    #          pos = pos,
+    #          resample=100,
+    #          ntherm=-1,
+    #          loss = 'energy',
+    #          sol=ho1d_sol,
+    #          fig=fig)
 
 
 
