@@ -72,6 +72,10 @@ class DeepQMC(SOLVER_BASE):
         vn /= np.linalg.norm(vn)
         plt.plot(xn,vn,color='black',linewidth=2)
 
+        if pot:
+            pot = self.wf.nuclear_potential(X).detach().numpy()
+            plt.plot(xn,pot,color='black',linestyle='--')
+
         if grad:
             kin = self.wf.kinetic_autograd(X)
             g = np.gradient(vn,xn)
@@ -89,6 +93,7 @@ class DeepQMC(SOLVER_BASE):
     def train(self,nepoch,
               batchsize=32,
               pos=None,
+              obs_dict=None,
               ntherm=-1,
               resample=100,
               loss='variance',
@@ -105,6 +110,9 @@ class DeepQMC(SOLVER_BASE):
             sol : anayltical solution for plotting (callable)
         '''
 
+        if obs_dict is None:
+            obs_dict = {'energy':[],'variance':[],'loss':[],'local_energy':[]}
+
         if pos is None:
             pos = self.sample(ntherm=ntherm)
 
@@ -118,8 +126,6 @@ class DeepQMC(SOLVER_BASE):
         xp = XPLOT.detach().numpy().flatten()
         vp = self.get_wf(XPLOT)
         
-        # plt.ion()
-        # fig = plt.figure()
         plt.clf()
         ax = fig.add_subplot(111)
         line1, = ax.plot(xp,vp,color='red')
@@ -129,9 +135,8 @@ class DeepQMC(SOLVER_BASE):
             line2, = ax.plot(xp,sol(xp),color='blue')
         
         cumulative_loss = []
-        #clipper = UnitNormClipper()
         clipper = ZeroOneClipper()
-        obs_dict = {'energy':[],'variance':[],'loss':[],'local_energy':[]}
+        
 
         for n in range(nepoch):
 
@@ -212,16 +217,21 @@ class DeepQMC(SOLVER_BASE):
 
         if callable(sol):
             vs = sol(xn)
-            ax0.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--')
+            ax0.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--',label='Solution')
 
         vals = self.wf(X)
         vn = vals.detach().numpy().flatten()
         vn /= np.linalg.norm(vn)
-        ax0.plot(xn,vn,color='black',linewidth=2)
+        ax0.plot(xn,vn,color='black',linewidth=2,label='DeepQMC')
+
+        pot = self.wf.nuclear_potential(X).detach().numpy()
+        ax0.plot(xn,pot/10,color='black',linestyle='--',label='V(x)')
+
+        ax0.set_ylim((np.min(pot/10),np.max(vn)))
         ax0.grid()
         ax0.set_xlabel('X')
         ax0.set_ylabel('Wavefuntion')
-
+        ax0.legend()
 
         n = len(obs_dict['energy'])
         epoch = np.arange(n)

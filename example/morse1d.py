@@ -21,10 +21,10 @@ class Morse1D(WF):
 		'''
 	
 		beta = parameters[0]
-		return np.exp(-np.exp(-beta*pos)-0.5*pos).reshape(-1,1)
+		return np.exp(-np.exp(-beta*pos)-0.5*pos).flatten()
 
 	def nuclear_potential(self,pos):
-		return 0.5*(np.exp(-2*pos) - 2*np.exp(-pos)) 
+		return 0.5*(np.exp(-2*pos) - 2*np.exp(-pos)).flatten()
 
 	def electronic_potential(self,pos):
 		return 0
