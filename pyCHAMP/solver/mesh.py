@@ -7,7 +7,7 @@ import torch
 import numpy as np 
 
 def torchify(func):
-    '''Transform a funtion to accept non torch argument.
+    '''Transform a torch funtion to accept non torch argument.
 
     def func(pos):
         # pos needs here to be a torch tensor
@@ -41,13 +41,10 @@ def adaptive_mesh_1d(func,xmin,xmax,npoints,loss='amplitude'):
 			  'uniform'   : uniform_loss,
 			  'curvature'  : curvature_loss_function()}
 
-	_func = torchify(func)
-	_gfunc = fgradient(_func)
-
-	learner = adaptive.Learner1D(_gfunc, (xmin, xmax), loss_per_interval=losses[loss])
+	learner = adaptive.Learner1D(func, (xmin, xmax), loss_per_interval=losses[loss])
 	npoints_goal = lambda l: l.npoints >= npoints
 	adaptive.runner.simple(learner, goal=npoints_goal)
 	
-	points = list(learner.data.keys())[1:-1]
+	points = list(learner.data.keys())
 
 	return points

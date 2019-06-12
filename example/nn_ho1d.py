@@ -6,10 +6,12 @@ from torch.nn.utils.weight_norm import weight_norm
 import torch.optim as optim
 
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
-from pyCHAMP.wavefunction.rbf import RBF
+from pyCHAMP.wavefunction.rbf import RBF1D as RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
+from pyCHAMP.solver.mesh import torchify
+
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -20,13 +22,19 @@ class RBF_HO1D(NEURAL_WF_BASE):
     def __init__(self,nelec=1,ndim=1,ncenter=51):
         super(RBF_HO1D,self).__init__(nelec,ndim)
 
-        self.ncenter = ncenter
-        #self.centers = torch.linspace(-5,5,self.ncenter)
-        self.centers = torch.tensor(mesh(self.nuclear_potential,-5,5,self.ncenter))
+        # get the RBF centers 
+        self.centers = torch.linspace(-5,5,ncenter)
+        #_func = torchify(self.nuclear_potential)
+        #self.centers = torch.tensor(mesh(_func,-5,5,ncenter,loss='curvature'))
+        self.ncenter = len(self.centers)
+
+        # define the RBF layer
         self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers,opt_centers=False)
-        #self.fc = weight_norm(nn.Linear(self.ncenter, 1, bias=False),'weight')
+        
+        # define the fc layer
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
+        # initiaize the fc layer
         self.fc.weight.data.fill_(1.)
         #self.fc.weight.data[0,1] = 1.
         #nn.init.uniform_(self.fc.weight,0,1)
@@ -90,12 +98,12 @@ obs_dict = None
 plt.ion()
 fig = plt.figure()
 
-for i in range(5):
+for i in range(1):
 
     net.wf.fc.weight.requires_grad = True
     net.wf.rbf.centers.requires_grad = False
 
-    pos,obs_dict = net.train(50,
+    pos,obs_dict = net.train(250,
              batchsize=250,
              pos = pos,
              obs_dict = obs_dict,
@@ -105,18 +113,18 @@ for i in range(5):
              sol=ho1d_sol,
              fig=fig)
 
-    net.wf.fc.weight.requires_grad = False
-    net.wf.rbf.centers.requires_grad = True
+    # net.wf.fc.weight.requires_grad = False
+    # net.wf.rbf.centers.requires_grad = True
 
-    pos,obs_dict = net.train(10,
-             batchsize=250,
-             pos = pos,
-             obs_dict = obs_dict,
-             resample=100,
-             ntherm=-1,
-             loss = 'variance',
-             sol=ho1d_sol,
-             fig=fig)
+    # pos,obs_dict = net.train(10,
+    #          batchsize=250,
+    #          pos = pos,
+    #          obs_dict = obs_dict,
+    #          resample=100,
+    #          ntherm=-1,
+    #          loss = 'variance',
+    #          sol=ho1d_sol,
+    #          fig=fig)
 
 net.plot_results(obs_dict,ho1d_sol,e0=0.5)
 
