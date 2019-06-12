@@ -9,18 +9,21 @@ from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 from pyCHAMP.wavefunction.rbf import RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
+from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
+
 import matplotlib.pyplot as plt
 
 import numpy as np
-
 
 class RBF_MORSE(NEURAL_WF_BASE):
 
     def __init__(self,nelec=1,ndim=1,ncenter=51):
         super(RBF_MORSE,self).__init__(nelec,ndim)
 
-        self.ncenter = ncenter
-        self.centers = torch.linspace(-2,6,self.ncenter)
+        
+        #self.centers = torch.linspace(-2,6,self.ncenter)
+        self.centers = torch.tensor(mesh(self.nuclear_potential,-2,5,ncenter,loss='curvature'))
+        self.ncenter = len(self.centers)
         self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers,opt_centers=False)
         #self.fc = weight_norm(nn.Linear(self.ncenter, 1, bias=False),'weight')
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
@@ -71,12 +74,12 @@ def morse_sol(pos):
     return vn/np.linalg.norm(vn)
 
 # wavefunction
-wf = RBF_MORSE(ndim=1,nelec=1,ncenter=25)
+wf = RBF_MORSE(ndim=1,nelec=1,ncenter=11)
 
 #sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
-                     ndim = wf.ndim, domain = {'min':-2,'max':6})
+                     ndim = wf.ndim, domain = {'min':-2,'max':5})
 
 # optimizer
 opt = optim.Adam(wf.parameters(),lr=0.01,weight_decay=0.0)

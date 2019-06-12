@@ -529,10 +529,22 @@
 			}
 		},
 		{
-			"file": "example/nn_ho1d.py",
+			"file": "example/nn_double_well.py",
 			"settings":
 			{
-				"buffer_size": 2697,
+				"buffer_size": 3090,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"contents": "import torch\nfrom torch import nn\nfrom torch.autograd import Variable\nimport torch.nn.functional as F\nfrom torch.nn.utils.weight_norm import weight_norm\nimport torch.optim as optim\n\nfrom pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE\nfrom pyCHAMP.wavefunction.rbf import RBF\nfrom pyCHAMP.solver.deepqmc import DeepQMC\nfrom pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS\nimport matplotlib.pyplot as plt\n\nimport numpy as np\n\n\ndef AdaptiveMesh(func,X,npoints):\n\n    import autograd.elementwise_grad as egrad\n    \n    deriv = egrad(func)\n    fx = func(X)\n\n    index_min = torcg.ar\n\n\nclass RBF_MORSE(NEURAL_WF_BASE):\n\n    def __init__(self,nelec=1,ndim=1,ncenter=51):\n        super(RBF_MORSE,self).__init__(nelec,ndim)\n\n        self.ncenter = ncenter\n        self.centers = torch.linspace(-2,6,self.ncenter)\n        self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers,opt_centers=False)\n        #self.fc = weight_norm(nn.Linear(self.ncenter, 1, bias=False),'weight')\n        self.fc = nn.Linear(self.ncenter, 1, bias=False)\n\n        #self.fc.weight.data.fill_(1.)\n        nn.init.uniform_(self.fc.weight,0,1)\n        #nn.init.xavier_uniform_(self.fc.weight)\n\n    def forward(self,x):\n        ''' Compute the value of the wave function.\n        for a multiple conformation of the electrons\n\n        Args:\n            parameters : variational param of the wf\n            pos: position of the electrons\n\n        Returns: values of psi\n        '''\n\n        batch_size = x.shape[0]\n        x = x.view(batch_size,-1,self.ndim)\n        x = self.rbf(x)\n        x = self.fc(x)\n        return x.view(-1,1)\n\n    def nuclear_potential(self,pos):\n        '''Compute the potential of the wf points\n        Args:\n            pos: position of the electron\n\n        Returns: values of V * psi\n        '''\n        \n        return 0.5*(torch.exp(-2.*(pos)) - 2.*torch.exp(-pos)).view(-1,1)\n\n    def electronic_potential(self,pos):\n        '''Compute the potential of the wf points\n        Args:\n            pos: position of the electron\n\n        Returns: values of Vee * psi\n        '''\n        return 0\n\ndef morse_sol(pos):\n    '''Analytical solution of the morse oscillator.'''\n    vn = np.exp(-np.exp(-pos)-0.5*pos)\n    return vn/np.linalg.norm(vn)\n\n# wavefunction\nwf = RBF_MORSE(ndim=1,nelec=1,ncenter=25)\n\n#sampler\nsampler = METROPOLIS(nwalkers=250, nstep=1000, \n                     step_size = 3., nelec = wf.nelec, \n                     ndim = wf.ndim, domain = {'min':-2,'max':6})\n\n# optimizer\nopt = optim.Adam(wf.parameters(),lr=0.01,weight_decay=0.0)\n\n# network\nnet = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)\npos = None\nobs_dict = None\n\nplt.ion()\nfig = plt.figure()\n\nfor i in range(1):\n\n    net.wf.fc.weight.requires_grad = True\n    net.wf.rbf.centers.requires_grad = False\n\n    pos,obs_dict = net.train(250,\n             batchsize=250,\n             pos = pos,\n             obs_dict = obs_dict,\n             resample=100,\n             ntherm=-1,\n             loss = 'variance',\n             sol=morse_sol,\n             fig=fig)\n\n    # net.wf.fc.weight.requires_grad = False\n    # net.wf.rbf.centers.requires_grad = True\n\n    # pos,obs_dict = net.train(50,\n    #          batchsize=250,\n    #          pos = pos,\n    #          obs_dict = obs_dict,\n    #          resample=100,\n    #          ntherm=-1,\n    #          loss = 'variance',\n    #          sol=morse_sol,\n    #          fig=fig)\n\nnet.plot_results(obs_dict,morse_sol,e0=-0.125)\n\n\n\n\n\n\n",
+			"file": "example/nn_morse.py",
+			"file_size": 3322,
+			"file_write_time": 132046693393523153,
+			"settings":
+			{
+				"buffer_size": 3477,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -541,8 +553,25 @@
 			"file": "pyCHAMP/solver/deepqmc.py",
 			"settings":
 			{
-				"buffer_size": 7510,
+				"buffer_size": 7870,
 				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/morse1d.py",
+			"settings":
+			{
+				"buffer_size": 2116,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/nn_ho1d.py",
+			"settings":
+			{
+				"buffer_size": 3225,
 				"line_ending": "Unix"
 			}
 		},
@@ -838,7 +867,7 @@
 	"groups":
 	[
 		{
-			"selected": 1,
+			"selected": 2,
 			"sheets":
 			[
 				{
@@ -868,24 +897,24 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "example/nn_ho1d.py",
+					"file": "example/nn_double_well.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2697,
+						"buffer_size": 3090,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2686,
-								2686
+								1931,
+								1931
 							]
 						],
 						"settings":
@@ -895,10 +924,40 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 585.0,
+						"translation.y": 663.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 1,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "example/nn_morse.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3477,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								605,
+								605
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -908,20 +967,20 @@
 			"sheets":
 			[
 				{
-					"buffer": 2,
+					"buffer": 3,
 					"file": "pyCHAMP/solver/deepqmc.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 7510,
+						"buffer_size": 7870,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								7357,
-								7357
+								7222,
+								7222
 							]
 						],
 						"settings":
@@ -931,14 +990,74 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 2214.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 2,
 					"type": "text"
 				},
 				{
-					"buffer": 3,
+					"buffer": 4,
+					"file": "example/morse1d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2116,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								480,
+								480
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "example/nn_ho1d.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3225,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"history_list_is_closing": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 546.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 6,
 					"file": "pyCHAMP/wavefunction/neural_wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -961,14 +1080,14 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 429.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 5,
 					"type": "text"
 				},
 				{
-					"buffer": 4,
+					"buffer": 7,
 					"file": "pyCHAMP/wavefunction/rbf.py",
 					"semi_transient": false,
 					"settings":
@@ -994,11 +1113,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 7,
 					"type": "text"
 				},
 				{
-					"buffer": 5,
+					"buffer": 8,
 					"file": "example/ho1d.py",
 					"semi_transient": false,
 					"settings":
@@ -1027,7 +1146,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 6,
+					"buffer": 9,
 					"file": "pyCHAMP/wavefunction/neural_pyscf_wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1053,11 +1172,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
+					"stack_index": 11,
 					"type": "text"
 				},
 				{
-					"buffer": 7,
+					"buffer": 10,
 					"file": "pyCHAMP/sampler/metropolis.py",
 					"semi_transient": false,
 					"settings":
@@ -1083,11 +1202,11 @@
 						"translation.y": 234.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 10,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
+					"buffer": 11,
 					"file": "pyCHAMP/wavefunction/wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1113,11 +1232,11 @@
 						"translation.y": 2067.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 9,
 					"type": "text"
 				},
 				{
-					"buffer": 9,
+					"buffer": 12,
 					"file": "pyCHAMP/sampler/walkers.py",
 					"semi_transient": false,
 					"settings":
@@ -1142,7 +1261,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 9,
+					"stack_index": 12,
 					"type": "text"
 				}
 			]
@@ -1207,6 +1326,18 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"nn_m",
+				"example/nn_morse.py"
+			],
+			[
+				"nnh",
+				"example/nn_ho1d.py"
+			],
+			[
+				"mo",
+				"example/morse1d.py"
+			],
 			[
 				"solve",
 				"pyCHAMP/solver/solver_base.py"
@@ -1644,7 +1775,7 @@
 		],
 		"width": 0.0
 	},
-	"selected_group": 1,
+	"selected_group": 0,
 	"settings":
 	{
 	},

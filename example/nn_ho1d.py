@@ -9,6 +9,7 @@ from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 from pyCHAMP.wavefunction.rbf import RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
+from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -20,7 +21,8 @@ class RBF_HO1D(NEURAL_WF_BASE):
         super(RBF_HO1D,self).__init__(nelec,ndim)
 
         self.ncenter = ncenter
-        self.centers = torch.linspace(-5,5,self.ncenter)
+        #self.centers = torch.linspace(-5,5,self.ncenter)
+        self.centers = torch.tensor(mesh(self.nuclear_potential,-5,5,self.ncenter))
         self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers,opt_centers=False)
         #self.fc = weight_norm(nn.Linear(self.ncenter, 1, bias=False),'weight')
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
