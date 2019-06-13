@@ -33,7 +33,7 @@ class DeepQMC(SOLVER_BASE):
 
     def __init__(self, wf=None, sampler=None, optimizer=None):
         SOLVER_BASE.__init__(self,wf,sampler,None)
-        self.opt = optimizer
+        self.optimizer = optimizer
 
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
 
@@ -61,7 +61,8 @@ class DeepQMC(SOLVER_BASE):
               ntherm=-1,
               resample=100,
               loss='variance',
-              plot = None):
+              sol=None,
+              fig=None):
         '''Train the model.
 
         Arg:
@@ -84,10 +85,23 @@ class DeepQMC(SOLVER_BASE):
         self.dataset = QMCDataSet(pos)
         self.dataloader = DataLoader(self.dataset,batch_size=batchsize)
         self.loss = QMCLoss(self.wf,method=loss)
-                
+        
+        XPLOT = Variable(torch.linspace(-5,5,100).view(100,1,1))
+        xp = XPLOT.detach().numpy().flatten()
+        vp = self.get_wf(XPLOT)
+        
+        plt.clf()
+        ax = fig.add_subplot(111)
+        line1, = ax.plot(xp,vp,color='red')
+        line3, = ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
+        line4, = ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
+        if callable(sol):
+            line2, = ax.plot(xp,sol(xp),color='blue')
+        
         cumulative_loss = []
         clipper = ZeroOneClipper()
-    
+        
+
         for n in range(nepoch):
 
             cumulative_loss = 0
@@ -106,8 +120,19 @@ class DeepQMC(SOLVER_BASE):
 
                 self.wf.fc.apply(clipper)
 
-            if plot is not None:
-                plot.drawNow()
+            vp = self.get_wf(XPLOT)
+            line1.set_ydata(vp)
+
+            line3.set_xdata(self.wf.rbf.centers.detach().numpy())
+            line3.set_ydata(self.wf.fc.weight.detach().numpy().T)
+
+            line4.set_xdata(self.wf.rbf.centers.detach().numpy())
+            l4 = (self.wf.fc.weight.grad.detach().numpy().T)**2
+            l4 /= np.linalg.norm(l4)
+            line4.set_ydata(l4)
+
+            fig.canvas.draw()            
+
 
             locale_ = self.wf.local_energy(pos)
             e_ = locale_.mean()

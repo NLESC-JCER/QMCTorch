@@ -13,6 +13,7 @@ from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
 from pyCHAMP.solver.mesh import torchify
 
 from pyCHAMP.solver.plot import plot_results_1d as plot_results
+from pyCHAMP.solver.plot import plotter1d
 
 import matplotlib.pyplot as plt
 
@@ -98,7 +99,9 @@ pos = None
 obs_dict = None
 
 plt.ion()
-fig = plt.figure()
+domain = {'xmin':-5.,'xmax':5.}
+plot1D = plotter1d(wf,domain,50,sol=ho1d_sol)
+#fig = plt.figure()
 
 for i in range(1):
 
@@ -112,8 +115,7 @@ for i in range(1):
              resample=100,
              ntherm=-1,
              loss = 'variance',
-             sol=ho1d_sol,
-             fig=fig)
+             plot=plot1D)
 
     # net.wf.fc.weight.requires_grad = False
     # net.wf.rbf.centers.requires_grad = True

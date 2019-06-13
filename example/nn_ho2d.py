@@ -12,8 +12,9 @@ from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.solver.mesh import regular_mesh_2d as regmesh2d
 
-from pyCHAMP.solver.plot import plot_wf_2d
+from pyCHAMP.solver.plot import plot_wf_2d, plotter2d
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 
@@ -37,7 +38,7 @@ class RBF_HO2D(NEURAL_WF_BASE):
 
         # initiaize the fc layer
         self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0,4] = 1.
+        self.fc.weight.data[0,12] = 1.
         #nn.init.uniform_(self.fc.weight,0,1)
 
     def forward(self,x):
@@ -81,7 +82,7 @@ def ho2d_sol(pos):
     return vn/torch.norm(vn)
 
 # wavefunction
-wf = RBF_HO2D(ndim=2,nelec=1,ncenter=[3,3])
+wf = RBF_HO2D(ndim=2,nelec=1,ncenter=[5,5])
 
 #sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
@@ -89,50 +90,31 @@ sampler = METROPOLIS(nwalkers=250, nstep=1000,
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
-opt = optim.Adam(wf.parameters(),lr=0.005)
+opt = optim.Adam(wf.parameters(),lr=0.05)
 
 # network
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 pos = None
 obs_dict = None
 
-plot_wf_2d(net,sol=ho2d_sol,nx=25,ny=25)
-
-# plt.ion()
-# fig = plt.figure()
-
-# for i in range(1):
-
-#     net.wf.fc.weight.requires_grad = True
-#     net.wf.rbf.centers.requires_grad = False
-
-#     pos,obs_dict = net.train(250,
-#              batchsize=250,
-#              pos = pos,
-#              obs_dict = obs_dict,
-#              resample=100,
-#              ntherm=-1,
-#              loss = 'variance',
-#              sol=ho2d_sol,
-#              fig=fig)
-
-    # net.wf.fc.weight.requires_grad = False
-    # net.wf.rbf.centers.requires_grad = True
-
-    # pos,obs_dict = net.train(10,
-    #          batchsize=250,
-    #          pos = pos,
-    #          obs_dict = obs_dict,
-    #          resample=100,
-    #          ntherm=-1,
-    #          loss = 'variance',
-    #          sol=ho1d_sol,
-    #          fig=fig)
-
-#net.plot_results(obs_dict,ho1d_sol,e0=0.5)
+domain = {'xmin':-5.,'xmax':5.,'ymin':-5.,'ymax':5.}
+res = [25,25]
+#plot_wf_2d(net,domain,res,sol=ho2d_sol)
 
 
+plt.ion()
+plot2D = plotter2d(wf,domain,res,sol=ho2d_sol)
 
+for i in range(1):
 
+    net.wf.fc.weight.requires_grad = True
+    net.wf.rbf.centers.requires_grad = False
 
-
+    pos,obs_dict = net.train(25,
+             batchsize=250,
+             pos = pos,
+             obs_dict = obs_dict,
+             resample=100,
+             ntherm=-1,
+             loss = 'variance',
+             plot=plot2D)

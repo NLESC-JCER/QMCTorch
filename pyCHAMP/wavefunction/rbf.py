@@ -12,7 +12,7 @@ def pairwise_distance(x,y):
 
 class RBF1D(nn.Module):
 
-    def __init__(self,output_features,centers,opt_centers=True):
+    def __init__(self,input_features,output_features,centers,opt_centers=True):
         '''Radial Basis Function Layer in 1D
 
         Args:
@@ -22,8 +22,8 @@ class RBF1D(nn.Module):
             opt_centers : optmize the center positions
         '''
 
-        super(RBF,self).__init__()
-        #self.input_features = 1
+        super(RBF1D,self).__init__()
+        self.input_features = input_features
         self.output_features = output_features
 
         self.centers = nn.Parameter(torch.Tensor(centers))
@@ -75,8 +75,8 @@ class RBF(nn.Module):
         self.centers.requires_grad = opt_centers
 
         # get the standard deviations
-        #self.sigma = self.get_sigma(self.centers)
-        self.sigma = self.get_sigma_ones(self.centers)
+        self.sigma = self.get_sigma(self.centers)
+        #self.sigma = self.get_sigma_ones(self.centers)
 
         # get the covariance matrix and its inverse
         self.cov = self.covmat(self.sigma)
@@ -91,7 +91,7 @@ class RBF(nn.Module):
     def get_sigma(X):
         npoints = torch.tensor(float(len(X)))
         nsqrt = torch.sqrt(npoints) - 1.
-        delta = (X.max(0).values - X.min(0).values) / nsqrt
+        delta = 0.5*(X.max(0).values - X.min(0).values) / nsqrt
         return delta.expand(X.size())
 
     @staticmethod
