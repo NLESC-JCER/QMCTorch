@@ -48,3 +48,13 @@ def adaptive_mesh_1d(func,xmin,xmax,npoints,loss='amplitude'):
 	points = list(learner.data.keys())
 
 	return points
+
+def regular_mesh_2d(xmin=-2,xmax=2,ymin=-2.,ymax=2,nx=5,ny=5):
+
+    x = np.linspace(xmin,xmax,nx)
+    y = np.linspace(ymin,ymax,ny)
+
+    XX,YY = np.meshgrid(x,y)
+    points = np.vstack( (XX.flatten(),YY.flatten()) ).T
+
+    return points.tolist()

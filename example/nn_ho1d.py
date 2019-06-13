@@ -12,6 +12,8 @@ from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
 from pyCHAMP.solver.mesh import torchify
 
+from pyCHAMP.solver.plot import plot_results_1d as plot_results
+
 import matplotlib.pyplot as plt
 
 import numpy as np
@@ -126,7 +128,7 @@ for i in range(1):
     #          sol=ho1d_sol,
     #          fig=fig)
 
-net.plot_results(obs_dict,ho1d_sol,e0=0.5)
+plot_results(net,obs_dict,ho1d_sol,e0=0.5)
 
 
 

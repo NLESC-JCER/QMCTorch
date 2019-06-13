@@ -8,24 +8,25 @@ import torch.optim as optim
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 from pyCHAMP.wavefunction.rbf import RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
-from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
-from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
-from pyCHAMP.solver.mesh import torchify
 
-import matplotlib.pyplot as plt
+from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
+from pyCHAMP.solver.mesh import regular_mesh_2d as regmesh2d
+
+from pyCHAMP.solver.plot import plot_wf_2d
 
 import numpy as np
 
 
 class RBF_HO2D(NEURAL_WF_BASE):
 
-    def __init__(self,nelec=1,ndim=2,ncenter=51):
+    def __init__(self,nelec=1,ndim=2,ncenter=[3,3]):
         super(RBF_HO2D,self).__init__(nelec,ndim)
 
-        # get the RBF centers 
-        self.centers = torch.linspace(-5,5,ncenter)
-        #_func = torchify(self.nuclear_potential)
-        #self.centers = torch.tensor(mesh(_func,-5,5,ncenter,loss='curvature'))
+        # get the RBF centers
+        points = regmesh2d(xmin=-5,xmax=5,nx=ncenter[0],
+                           ymin=-5,ymax=5,ny=ncenter[1]) 
+
+        self.centers = torch.tensor(points)
         self.ncenter = len(self.centers)
 
         # define the RBF layer
@@ -35,8 +36,8 @@ class RBF_HO2D(NEURAL_WF_BASE):
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
         # initiaize the fc layer
-        self.fc.weight.data.fill_(1.)
-        #self.fc.weight.data[0,1] = 1.
+        self.fc.weight.data.fill_(0.)
+        self.fc.weight.data[0,4] = 1.
         #nn.init.uniform_(self.fc.weight,0,1)
 
     def forward(self,x):
@@ -51,7 +52,7 @@ class RBF_HO2D(NEURAL_WF_BASE):
         '''
 
         batch_size = x.shape[0]
-        x = x.view(batch_size,-1,self.ndim)
+        x = x.view(batch_size,self.ndim)
         x = self.rbf(x)
         x = self.fc(x)
         return x.view(-1,1)
@@ -63,7 +64,7 @@ class RBF_HO2D(NEURAL_WF_BASE):
 
         Returns: values of V * psi
         '''
-        return (0.5*pos**2).flatten().view(-1,1)
+        return (0.5*pos**2).sum(1).view(-1,1)
 
     def electronic_potential(self,pos):
         '''Compute the potential of the wf points
@@ -74,13 +75,13 @@ class RBF_HO2D(NEURAL_WF_BASE):
         '''
         return 0
 
-def ho1d_sol(pos):
+def ho2d_sol(pos):
     '''Analytical solution of the 1D harmonic oscillator.'''
-    vn = np.exp(-0.5*pos**2)
-    return vn/np.linalg.norm(vn)
+    vn = torch.exp(-0.5*pos**2).prod(1).view(-1,1)
+    return vn/torch.norm(vn)
 
 # wavefunction
-wf = RBF_HO1D(ndim=1,nelec=1,ncenter=11)
+wf = RBF_HO2D(ndim=2,nelec=1,ncenter=[3,3])
 
 #sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
@@ -95,23 +96,25 @@ net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 pos = None
 obs_dict = None
 
-plt.ion()
-fig = plt.figure()
+plot_wf_2d(net,sol=ho2d_sol,nx=25,ny=25)
 
-for i in range(1):
+# plt.ion()
+# fig = plt.figure()
 
-    net.wf.fc.weight.requires_grad = True
-    net.wf.rbf.centers.requires_grad = False
+# for i in range(1):
 
-    pos,obs_dict = net.train(250,
-             batchsize=250,
-             pos = pos,
-             obs_dict = obs_dict,
-             resample=100,
-             ntherm=-1,
-             loss = 'variance',
-             sol=ho1d_sol,
-             fig=fig)
+#     net.wf.fc.weight.requires_grad = True
+#     net.wf.rbf.centers.requires_grad = False
+
+#     pos,obs_dict = net.train(250,
+#              batchsize=250,
+#              pos = pos,
+#              obs_dict = obs_dict,
+#              resample=100,
+#              ntherm=-1,
+#              loss = 'variance',
+#              sol=ho2d_sol,
+#              fig=fig)
 
     # net.wf.fc.weight.requires_grad = False
     # net.wf.rbf.centers.requires_grad = True
@@ -126,7 +129,7 @@ for i in range(1):
     #          sol=ho1d_sol,
     #          fig=fig)
 
-net.plot_results(obs_dict,ho1d_sol,e0=0.5)
+#net.plot_results(obs_dict,ho1d_sol,e0=0.5)
 
 
 
