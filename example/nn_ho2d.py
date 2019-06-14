@@ -94,7 +94,7 @@ wf = RBF_HO2D(domain,ncenter)
 #sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
-                     ndim = wf.ndim, domain = {'min':-2,'max':2})
+                     ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
 opt = optim.Adam(wf.parameters(),lr=0.01)
@@ -108,9 +108,8 @@ pos, obs_dict = None, None
 # net.plot_density(_pos.detach().numpy())
 
 plt.ion()
-
 plot2D = plotter2d(wf,domain,[25,25],sol=ho2d_sol,kinetic=False)
-
+exit()
 
 for i in range(1):
 

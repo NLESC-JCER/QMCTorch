@@ -55,13 +55,13 @@ def plot_wf_1d(net,grad=False,hist=False,sol=None):
         plt.grid()
         plt.show()
 
-def plot_results_1d(net,obs_dict,sol=None,e0=None,xmin=-5,xmax=-5,nx=100):
+def plot_results_1d(net,obs_dict,sol=None,e0=None,xmin=-5,xmax=5,nx=100):
 
     fig = plt.figure()
     ax0 = fig.add_subplot(211)
     ax1 = fig.add_subplot(212)
 
-    X = Variable(torch.linspace(xmin,xmax,nx).view(nx,1,1))
+    X = Variable(torch.linspace(xmin,xmax,nx).view(nx,1))
     X.requires_grad = True
     xn = X.detach().numpy().flatten()
 
@@ -137,13 +137,15 @@ class plotter1d(object):
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot( 111 )
 
-        self.POS = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1,1))
+        self.POS = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1))
         pos = self.POS.detach().numpy().flatten()  
 
         if callable(sol):
             self.ax.plot(pos,sol(pos),color='blue')
 
         vp = self.wf(self.POS).detach().numpy()
+        print(pos.shape)
+        print(vp.shape)
         self.lwf, = self.ax.plot(pos,vp,color='red')
         self.pweight, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
         self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
@@ -219,4 +221,3 @@ class plotter2d(object):
                         antialiased=False )
         plt.draw()                     
         self.fig.canvas.flush_events()
-        #time.sleep(1)

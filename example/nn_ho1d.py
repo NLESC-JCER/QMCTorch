@@ -6,7 +6,8 @@ from torch.nn.utils.weight_norm import weight_norm
 import torch.optim as optim
 
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
-from pyCHAMP.wavefunction.rbf import RBF1D as RBF
+#from pyCHAMP.wavefunction.rbf import RBF1D as RBF
+from pyCHAMP.wavefunction.rbf import RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
@@ -26,19 +27,19 @@ class RBF_HO1D(NEURAL_WF_BASE):
         super(RBF_HO1D,self).__init__(nelec,ndim)
 
         # get the RBF centers 
-        self.centers = torch.linspace(-5,5,ncenter)
+        self.centers = torch.linspace(-5,5,ncenter).view(-1,1)
         #_func = torchify(self.nuclear_potential)
         #self.centers = torch.tensor(mesh(_func,-5,5,ncenter,loss='curvature'))
         self.ncenter = len(self.centers)
 
         # define the RBF layer
-        self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers,opt_centers=False)
+        self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers, opt_centers=False)
         
         # define the fc layer
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
         # initiaize the fc layer
-        self.fc.weight.data.fill_(1.)
+        self.fc.weight.data.fill_(0.1)
         #self.fc.weight.data[0,1] = 1.
         #nn.init.uniform_(self.fc.weight,0,1)
 
@@ -54,7 +55,7 @@ class RBF_HO1D(NEURAL_WF_BASE):
         '''
 
         batch_size = x.shape[0]
-        x = x.view(batch_size,-1,self.ndim)
+        #x = x.view(batch_size,-1,self.ndim)
         x = self.rbf(x)
         x = self.fc(x)
         return x.view(-1,1)
