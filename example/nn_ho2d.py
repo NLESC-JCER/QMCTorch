@@ -1,4 +1,5 @@
 import torch
+import sys
 from torch import nn
 from torch.autograd import Variable
 import torch.nn.functional as F
@@ -20,12 +21,13 @@ import numpy as np
 
 class RBF_HO2D(NEURAL_WF_BASE):
 
-    def __init__(self,nelec=1,ndim=2,ncenter=[3,3]):
+    def __init__(self,domain,ncenter,nelec=1,ndim=2):
         super(RBF_HO2D,self).__init__(nelec,ndim)
 
         # get the RBF centers
-        points = regmesh2d(xmin=-5,xmax=5,nx=ncenter[0],
-                           ymin=-5,ymax=5,ny=ncenter[1]) 
+
+        points = regmesh2d(xmin=domain['xmin'],xmax=domain['xmax'],nx=ncenter[0],
+                           ymin=domain['ymin'],ymax=domain['ymax'],ny=ncenter[1]) 
 
         self.centers = torch.tensor(points)
         self.ncenter = len(self.centers)
@@ -37,9 +39,10 @@ class RBF_HO2D(NEURAL_WF_BASE):
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
         # initiaize the fc layer
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0,12] = 1.
-        #nn.init.uniform_(self.fc.weight,0,1)
+        #self.fc.weight.data.fill_(0)
+        #self.fc.weight.data[0,12] = 1.
+        # self.fc.weight.data[0,7] = 1.
+        nn.init.uniform_(self.fc.weight,0,1)
 
     def forward(self,x):
         ''' Compute the value of the wave function.
@@ -81,36 +84,40 @@ def ho2d_sol(pos):
     vn = torch.exp(-0.5*pos**2).prod(1).view(-1,1)
     return vn/torch.norm(vn)
 
+# domain for the RBF Network
+domain = {'xmin':-5.,'xmax':5.,'ymin':-5.,'ymax':5.}
+ncenter = [5,5]
+
 # wavefunction
-wf = RBF_HO2D(ndim=2,nelec=1,ncenter=[5,5])
+wf = RBF_HO2D(domain,ncenter)
 
 #sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
-                     ndim = wf.ndim, domain = {'min':-5,'max':5})
+                     ndim = wf.ndim, domain = {'min':-2,'max':2})
 
 # optimizer
-opt = optim.Adam(wf.parameters(),lr=0.05)
+opt = optim.Adam(wf.parameters(),lr=0.01)
 
 # network
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
-pos = None
-obs_dict = None
+pos, obs_dict = None, None
 
-domain = {'xmin':-5.,'xmax':5.,'ymin':-5.,'ymax':5.}
-res = [25,25]
-#plot_wf_2d(net,domain,res,sol=ho2d_sol)
 
+# _pos = net.sample()
+# net.plot_density(_pos.detach().numpy())
 
 plt.ion()
-plot2D = plotter2d(wf,domain,res,sol=ho2d_sol)
+
+plot2D = plotter2d(wf,domain,[25,25],sol=ho2d_sol,kinetic=False)
+
 
 for i in range(1):
 
     net.wf.fc.weight.requires_grad = True
     net.wf.rbf.centers.requires_grad = False
 
-    pos,obs_dict = net.train(25,
+    pos,obs_dict = net.train(100,
              batchsize=250,
              pos = pos,
              obs_dict = obs_dict,

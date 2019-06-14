@@ -36,8 +36,8 @@ class HarmOsc2D(WF):
 if __name__ == "__main__":
 
     wf = HarmOsc2D(nelec=1, ndim=2)
-    sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
-    sampler = PYMC3(nwalkers=100,ndim=2)
+    sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=2, domain = {'min':-2,'max':2})
+    #sampler = PYMC3(nwalkers=100,ndim=2)
 
     #sampler = HAMILTONIAN(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1)
     optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)

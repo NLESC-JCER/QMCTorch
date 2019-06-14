@@ -126,6 +126,7 @@ class DeepQMC(SOLVER_BASE):
                 pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
 
+
         return pos, obs_dict
 
 

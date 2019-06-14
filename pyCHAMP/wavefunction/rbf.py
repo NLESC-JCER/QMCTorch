@@ -76,7 +76,7 @@ class RBF(nn.Module):
 
         # get the standard deviations
         self.sigma = self.get_sigma(self.centers)
-        #self.sigma = self.get_sigma_ones(self.centers)
+        #self.sigma = self.get_sigma_ones(self.centers,s=1.)
 
         # get the covariance matrix and its inverse
         self.cov = self.covmat(self.sigma)
@@ -95,8 +95,8 @@ class RBF(nn.Module):
         return delta.expand(X.size())
 
     @staticmethod
-    def get_sigma_ones(X):
-        return torch.ones(X.shape)
+    def get_sigma_ones(X,s=1):
+        return s*torch.ones(X.shape)
 
     @staticmethod
     def covmat(sigma):
@@ -111,11 +111,14 @@ class RBF(nn.Module):
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
         delta =  input[:,None,:] - self.centers[None,...]
+        
 
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
         X = ( torch.matmul(delta.unsqueeze(2),self.invCov).squeeze() * delta ).sum(2)
 
+
         # divide by the determinant of the cov mat
         X = (torch.exp(-0.5*X).unsqueeze(2) / self.detS).squeeze()
+        #print(X)
 
         return X

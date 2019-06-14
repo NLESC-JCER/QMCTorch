@@ -100,15 +100,14 @@ def plot_results_1d(net,obs_dict,sol=None,e0=None,xmin=-5,xmax=-5,nx=100):
 
     plt.show()
 
-
 def plot_wf_2d(net,domain,res,sol=None):
 
         fig = plt.figure()
         ax = fig.add_subplot( 111, projection='3d' )
 
-        points = mesh(xmin=domain['xmin'],xmax=domain['xmax'],
-                      ymin=domain['ymin'],ymax=domain['ymax'],
-                      nx=res[0],ny=res[1])
+        points = regular_mesh_2d(xmin=domain['xmin'],xmax=domain['xmax'],
+                                ymin=domain['ymin'],ymax=domain['ymax'],
+                                nx=res[0],ny=res[1])
 
         POS = Variable(torch.tensor(points))
         POS.requires_grad = True
@@ -169,7 +168,7 @@ class plotter1d(object):
 
 class plotter2d(object):
 
-    def __init__( self, wf, domain, res, sol=None ):
+    def __init__( self, wf, domain, res, pot=False, kinetic=False, sol=None ):
 
         self.wf = wf
         self.res = res
@@ -192,6 +191,15 @@ class plotter2d(object):
             vs = sol(self.POS).view(self.res[0],self.res[1]).detach().numpy()
             vs /= np.linalg.norm(vs)
             self.ax.plot_wireframe(self.xx,self.yy,vs,color='black',linewidth=1)
+
+        if pot:
+            vs = wf.nuclear_potential(self.POS).view(self.res[0],self.res[1]).detach().numpy()
+            self.ax.plot_wireframe(self.xx,self.yy,vs,color='red',linewidth=1)
+
+
+        if kinetic:
+            vs = wf.kinetic_energy(self.POS).view(self.res[0],self.res[1]).detach().numpy()
+            self.ax.plot_wireframe(self.xx,self.yy,10*vs,color='red',linewidth=1)
 
         self.vals = self.wf(self.POS).view(self.res[0],self.res[1]).detach().numpy()
 

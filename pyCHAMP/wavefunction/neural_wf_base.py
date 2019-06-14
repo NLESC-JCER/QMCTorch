@@ -68,11 +68,23 @@ class NEURAL_WF_BASE(nn.Module):
 
         if out is None:
             out = self.forward(pos)
-            
+
+        # compute the jacobian            
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
-        hess = grad(jacob.sum(),pos,create_graph=True)[0]
-        return -0.5 * hess.sum(1).view(-1,1)
+
+        # compute the diagonal element of the Hessian
+        z = Variable(torch.ones(jacob.shape[0]))
+        hess = torch.zeros(jacob.shape[0])
+        for idim in range(jacob.shape[1]):
+            tmp = grad(jacob[:,idim],pos,grad_outputs=z,create_graph=True,allow_unused=True)[0]    
+            hess += tmp[:,idim]
+
+        return -0.5 * hess.view(-1,1)
+
+        # original solution do not touch
+        #hess = grad(jacob.sum(),pos,grad_outputs=z,create_graph=True)[0]
+        #return -0.5 * hess.sum(1).view(-1,1)
     
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''

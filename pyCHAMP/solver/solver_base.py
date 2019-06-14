@@ -34,6 +34,8 @@ class SOLVER_BASE(object):
 	def plot_density(self,pos):
 
 		if self.wf.ndim == 1:
+			fig = plt.figure()
+			ax = fig.add_subplot(111)
 			if self.wf.nelec == 1:
 				plt.hist(pos)
 			else:
@@ -41,6 +43,8 @@ class SOLVER_BASE(object):
 					plt.hist(pos[ielec,:])
 
 		elif self.wf.ndim == 2:
+			fig = plt.figure()
+			ax = fig.add_subplot(111)
 			for ielec in range(self.wf.nelec):
 				plt.scatter(pos[:,ielec*2],pos[:,ielec*2+1])
 
