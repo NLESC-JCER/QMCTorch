@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from pyCHAMP.solver.solver_base import SOLVER_BASE
 from pyCHAMP.solver.torch_utils import QMCDataSet, QMCLoss
+from pyCHAMP.solver.refine_mesh import refine_mesh
 
 import matplotlib.pyplot as plt
 
@@ -54,6 +55,12 @@ class DeepQMC(SOLVER_BASE):
         vals = self.wf(x)
         return vals.detach().numpy().flatten()
 
+    def modify_grid(self,centers,fc_weight):
+        self.wf.rbf.centers.data = torch.tensor(centers)
+        self.wf.rbf.sigma = self.wf.rbf.get_sigma(self.wf.rbf.centers) 
+        self.wf.fc.weight.data = torch.tensor(fc_weight)
+
+
     def train(self,nepoch,
               batchsize=32,
               pos=None,
@@ -61,7 +68,8 @@ class DeepQMC(SOLVER_BASE):
               ntherm=-1,
               resample=100,
               loss='variance',
-              plot = None):
+              plot = None,
+              refine = None):
         '''Train the model.
 
         Arg:
@@ -96,6 +104,7 @@ class DeepQMC(SOLVER_BASE):
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
                 vals = self.wf(lpos)
+                print(self.wf.variance(lpos))
 
                 loss = self.loss(vals,lpos)
                 cumulative_loss += loss
@@ -104,7 +113,8 @@ class DeepQMC(SOLVER_BASE):
                 loss.backward()
                 self.opt.step()
 
-                self.wf.fc.apply(clipper)
+                if self.wf.fc.clip:
+                    self.wf.fc.apply(clipper)
 
             if plot is not None:
                 plot.drawNow()
@@ -126,6 +136,10 @@ class DeepQMC(SOLVER_BASE):
                 pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
 
+            if (refine is not None):
+                if n % refine == 0:
+                    new_centers, new_fc_weight = refine_mesh(self.wf)
+                    self.modify_grid(new_centers,new_fc_weight)
 
         return pos, obs_dict
 

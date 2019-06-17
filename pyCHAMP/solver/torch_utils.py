@@ -3,26 +3,6 @@ from torch import nn
 from torch.utils.data import Dataset
 from torch.autograd import Variable
 
-def torchify(func):
-    '''Transform a funtion to accept non torch argument.
-
-    def func(pos):
-        # pos needs here to be a torch tensor
-        return torch.exp(-pos)
-
-    newf = torchify(func)
-    newf(1.)
-    '''
-
-    #assert func.__code__.co_argcount == 1
-    def torchf(x):
-        x = torch.tensor(float(x))
-        data = func(x).detach().numpy().flatten().tolist()
-        if len(data) == 1:
-            data = data[0]
-        return data
-    return torchf
-
 class QMCDataSet(Dataset):
 
     def __init__(self, data):

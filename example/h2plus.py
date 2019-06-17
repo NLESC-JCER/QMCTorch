@@ -3,7 +3,7 @@ import autograd.numpy as np
 from pyCHAMP.wavefunction.wf_base import WF
 from pyCHAMP.optimizer.minimize import MINIMIZE
 from pyCHAMP.sampler.metropolis import METROPOLIS
-from pyCHAMP.sampler.hamiltonian import HAMILTONIAN
+
 from pyCHAMP.solver.vmc import VMC
 
 class Hydrogen(WF):
@@ -31,8 +31,8 @@ class Hydrogen(WF):
 		r1 = np.sqrt(np.sum((pos-self.x1)**2,1))
 		r2 = np.sqrt(np.sum((pos-self.x2)**2,1))
 
-		p1 = 2*np.exp(-beta*r1).reshape(-1,1)
-		p2 = 2*np.exp(-beta*r2).reshape(-1,1)
+		p1 = 2*np.exp(-beta*r1).reshape(-1)
+		p2 = 2*np.exp(-beta*r2).reshape(-1)
 
 		return p1+p2
 
@@ -42,7 +42,7 @@ class Hydrogen(WF):
 		r2 = np.sqrt(np.sum((pos-self.x2)**2,1))
 
 		rm1 = - 1./ r1 - 1. / r2
-		return rm1.reshape(-1,1)
+		return rm1.reshape(-1)
 
 	def electronic_potential(self,pos):
 		return 0
@@ -52,7 +52,7 @@ if __name__ == "__main__":
 
 	wf = Hydrogen(nelec=1, ndim=3)
 	sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=3, domain = {'min':-5,'max':5})
-	sampler = HAMILTONIAN(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=3)
+	#sampler = HAMILTONIAN(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=3)
 	optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)
 
 	# VMS solver

@@ -54,7 +54,12 @@ class RBF1D(nn.Module):
 
 class RBF(nn.Module):
 
-    def __init__(self,input_features,output_features,centers,opt_centers=True):
+    def __init__(self,input_features,
+                      output_features,
+                      centers,
+                      opt_centers=True,
+                      sigma = 0.5 ):
+
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -62,6 +67,7 @@ class RBF(nn.Module):
             output_features: output size
             centers : position of the centers
             opt_centers : optmize the center positions
+            sigma : strategy to get the sigma
         '''
 
         super(RBF,self).__init__()
@@ -75,8 +81,10 @@ class RBF(nn.Module):
         self.centers.requires_grad = opt_centers
 
         # get the standard deviations
-        self.sigma = self.get_sigma(self.centers)     
-        print(self.sigma)
+        self.sigma_method = sigma
+
+        self.sigma = self.get_sigma()     
+        #self.sigma = self_get_sigma(self.centers)
         #self.sigma = self.get_sigma_ones(self.centers,s=0.2)
 
         # get the covariance matrix and its inverse
@@ -88,12 +96,31 @@ class RBF(nn.Module):
         k = (2.*PI)**self.input_features
         self.detS = torch.sqrt( k*self.detS )
 
+    def get_sigma(self):
+
+        if isinstance(self.sigma_method,float):
+            return self.get_sigma_ones(self.centers, s=self.sigma_method)
+        elif self.sigma_method == '1d':
+            return self.get_sigma_1d(self.centers)
+        elif self.sigma_method == 'mean':
+            return self.get_sigma_average(self.centers)
+        else:
+            raise ValueError(self.sigma_method, ' not a correct option for sigma')
+
     @staticmethod
-    def get_sigma(X):
+    def get_sigma_average(X):
         npoints = torch.tensor(float(len(X)))
         nsqrt = npoints**(1./X.shape[1]) - 1.
         delta = (X.max(0).values - X.min(0).values) / nsqrt
         return delta.expand(X.size())
+
+
+    @staticmethod
+    def get_sigma_1d(X):
+        x = X.clone().detach().view(-1)
+        xp = torch.cat((torch.tensor([x[1]]),x[:-1]))
+        xm = torch.cat((x[1:],torch.tensor([x[-2]])))
+        return 0.5*(torch.abs(x-xp) + torch.abs(x-xm)).view(-1,1)
 
     @staticmethod
     def get_sigma_ones(X,s=1):

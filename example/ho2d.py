@@ -24,6 +24,7 @@ class HarmOsc2D(WF):
         b0 = param[0]
         pos = pos.T
         v =   np.exp(- b0 *(pos[0])**2) * np.exp(- b0 *(pos[1])**2)
+        print(v.shape)
         return v
 
     def nuclear_potential(self,pos):

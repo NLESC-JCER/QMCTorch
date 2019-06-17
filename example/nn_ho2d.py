@@ -14,6 +14,7 @@ from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.solver.mesh import regular_mesh_2d as regmesh2d
 
 from pyCHAMP.solver.plot import plot_wf_2d, plotter2d
+from pyCHAMP.solver.plot import plot_results_2d as plot_results
 
 import matplotlib.pyplot as plt
 import numpy as np
@@ -86,7 +87,7 @@ def ho2d_sol(pos):
 
 # domain for the RBF Network
 domain = {'xmin':-5.,'xmax':5.,'ymin':-5.,'ymax':5.}
-ncenter = [5,5]
+ncenter = [10,10]
 
 # wavefunction
 wf = RBF_HO2D(domain,ncenter)
@@ -103,24 +104,18 @@ opt = optim.Adam(wf.parameters(),lr=0.01)
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 pos, obs_dict = None, None
 
-
-# _pos = net.sample()
-# net.plot_density(_pos.detach().numpy())
-
+# set up the plotter
 plt.ion()
 plot2D = plotter2d(wf,domain,[25,25],sol=ho2d_sol,kinetic=False)
-exit()
 
-for i in range(1):
+# train the wavefunction
+pos,obs_dict = net.train(100,
+         batchsize=250,
+         pos = pos,
+         obs_dict = obs_dict,
+         resample=100,
+         ntherm=-1,
+         loss = 'variance',
+         plot=plot2D)
 
-    net.wf.fc.weight.requires_grad = True
-    net.wf.rbf.centers.requires_grad = False
-
-    pos,obs_dict = net.train(100,
-             batchsize=250,
-             pos = pos,
-             obs_dict = obs_dict,
-             resample=100,
-             ntherm=-1,
-             loss = 'variance',
-             plot=plot2D)
+plot_results(net,obs_dict,domain,[25,25],ho2d_sol,e0=1.)

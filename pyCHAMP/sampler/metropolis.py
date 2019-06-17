@@ -95,7 +95,7 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
 
         SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
 
-    def generate(self,pdf,ntherm=10,with_tqdm=True,pos=None):
+    def generate(self,pdf,ntherm=10,with_tqdm=True,pos=None,init='center'):
 
         ''' perform a MC sampling of the function f
         Returns:
@@ -105,7 +105,7 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
         if ntherm == -1:
             ntherm = self.nstep-1
 
-        self.walkers.initialize(method='uniform',pos=pos)
+        self.walkers.initialize(method=init,pos=pos)
 
         fx = pdf(torch.tensor(self.walkers.pos).float())
         fx[fx==0] = 1E-6

@@ -10,7 +10,7 @@ from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 from pyCHAMP.wavefunction.rbf import RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
-from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh
+from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh, fgradient, finverse
 from pyCHAMP.solver.mesh import torchify
 
 from pyCHAMP.solver.plot import plot_results_1d as plot_results
@@ -28,8 +28,15 @@ class RBF_HO1D(NEURAL_WF_BASE):
 
         # get the RBF centers 
         self.centers = torch.linspace(-5,5,ncenter).view(-1,1)
-        #_func = torchify(self.nuclear_potential)
-        #self.centers = torch.tensor(mesh(_func,-5,5,ncenter,loss='curvature'))
+
+        # _func = torchify(self.nuclear_potential)
+        # _fgrad = fgradient(_func)
+        # _finv = finverse(_fgrad)
+
+        # self.centers = torch.tensor(mesh(_finv,-5,5,ncenter,loss='default'))
+        # self.centers = torch.sort(self.centers)[0]
+        # self.centers = self.centers.view(-1,1)
+
         self.ncenter = len(self.centers)
 
         # define the RBF layer
@@ -84,7 +91,7 @@ def ho1d_sol(pos):
     return vn/np.linalg.norm(vn)
 
 # wavefunction
-wf = RBF_HO1D(ndim=1,nelec=1,ncenter=11)
+wf = RBF_HO1D(ndim=1,nelec=1,ncenter=5)
 
 #sampler
 sampler = METROPOLIS(nwalkers=250, nstep=1000, 
@@ -99,24 +106,24 @@ net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 pos = None
 obs_dict = None
 
-plt.ion()
-domain = {'xmin':-5.,'xmax':5.}
-plot1D = plotter1d(wf,domain,50,sol=ho1d_sol)
-#fig = plt.figure()
+# plt.ion()
+# domain = {'xmin':-5.,'xmax':5.}
+# plot1D = plotter1d(wf,domain,50,sol=ho1d_sol)
 
-for i in range(1):
 
-    net.wf.fc.weight.requires_grad = True
-    net.wf.rbf.centers.requires_grad = False
 
-    pos,obs_dict = net.train(250,
-             batchsize=250,
-             pos = pos,
-             obs_dict = obs_dict,
-             resample=100,
-             ntherm=-1,
-             loss = 'variance',
-             plot=plot1D)
+    # net.wf.fc.weight.requires_grad = True
+    # net.wf.rbf.centers.requires_grad = False
+
+    # pos,obs_dict = net.train(250,
+    #          batchsize=250,
+    #          pos = pos,
+    #          obs_dict = obs_dict,
+    #          resample=100,
+    #          ntherm=-1,
+    #          loss = 'variance',
+    #          plot=plot1D,
+    #          refine=25)
 
     # net.wf.fc.weight.requires_grad = False
     # net.wf.rbf.centers.requires_grad = True
@@ -131,7 +138,7 @@ for i in range(1):
     #          sol=ho1d_sol,
     #          fig=fig)
 
-plot_results(net,obs_dict,ho1d_sol,e0=0.5)
+#plot_results(net,obs_dict,ho1d_sol,e0=0.5)
 
 
 
