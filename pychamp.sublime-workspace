@@ -4,6 +4,34 @@
 		"selected_items":
 		[
 			[
+				"show",
+				"show_plot"
+			],
+			[
+				"spa",
+				"spacing_vals"
+			],
+			[
+				"meh",
+				"method"
+			],
+			[
+				"regu",
+				"regular_mesh_3d"
+			],
+			[
+				"sigm",
+				"sigma_method"
+			],
+			[
+				"ge",
+				"get_sigma_ones"
+			],
+			[
+				"si",
+				"sigma_method"
+			],
+			[
 				"new",
 				"new_fc_weight"
 			],
@@ -38,10 +66,6 @@
 			[
 				"kin",
 				"kinetic_autograd"
-			],
-			[
-				"si",
-				"get_sigma_ones"
 			],
 			[
 				"inv",
@@ -150,10 +174,6 @@
 			[
 				"confs_sp",
 				"confs_spin_up"
-			],
-			[
-				"ge",
-				"get_mo"
 			],
 			[
 				"c",
@@ -494,58 +514,34 @@
 			[
 				"Ht",
 				"Ht"
-			],
-			[
-				"BSE_",
-				"BSE_OPERATOR"
-			],
-			[
-				"_coe",
-				"_coeff_Hd2"
-			],
-			[
-				"get",
-				"get_full_matrix"
-			],
-			[
-				"_eigen",
-				"_eigenvectors"
-			],
-			[
-				"e",
-				"eigenvectors"
 			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"contents": "import torch\nfrom torch import nn\nfrom torch.utils.data import Dataset\nfrom torch.autograd import Variable\n\nclass QMCDataSet(Dataset):\n\n    def __init__(self, data):\n        self.data = data\n\n    def __len__(self):\n        return self.data.shape[0]\n\n    def __getitem__(self,index):\n        return self.data[index,:]\n\nclass QMCLoss(nn.Module):\n\n    def __init__(self,wf,method='variance'):\n\n        super(QMCLoss,self).__init__()\n        self.wf = wf\n        self.method = method\n\n    def forward(self,vals,pos):\n\n        if self.method == 'variance':\n            loss = self.wf.variance(pos)\n\n        elif self.method == 'energy':\n            loss = self.wf.energy(pos)\n\n        elif self.method == 'density':\n            loss = 1./(torch.exp(torch.mean(vals**2))+1)\n\n        elif callable(self.method):\n            loss = nn.MSELoss()\n            target = torch.tensor(self.method(pos.detach().numpy()))\n            return loss(vals,target)\n\n        else:\n            raise ValueError('method must be variance, energy or callable')\n\n        return loss",
 			"file": "pyCHAMP/solver/torch_utils.py",
-			"file_size": 1526,
-			"file_write_time": 132048174523822900,
 			"settings":
 			{
 				"buffer_size": 1054,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"contents": "import autograd.numpy as np\n\nfrom pyCHAMP.wavefunction.wf_base import WF\n\nfrom pyCHAMP.optimizer.minimize import MINIMIZE\n#from pyCHAMP.optimizer.swarm import SWARM\n\nfrom pyCHAMP.sampler.metropolis import METROPOLIS\nfrom pyCHAMP.sampler.pymc3 import PYMC3\n#from pyCHAMP.sampler.hamiltonian import HAMILTONIAN\nfrom pyCHAMP.solver.vmc import VMC\n\n\n\n\n\nclass HarmOsc2D(WF):\n\n    def __init__(self,nelec=1,ndim=2):\n        WF.__init__(self, nelec, ndim)\n\n    def values(self,param,pos):\n\n        b0 = param[0]\n        pos = pos.T\n        v =   np.exp(- b0 *(pos[0])**2) * np.exp(- b0 *(pos[1])**2)\n        return v\n\n    def nuclear_potential(self,pos):\n        return np.sum(0.5*pos**2,1)\n\n    def electronic_potential(self,pos):\n        return 0\n\n\nif __name__ == \"__main__\":\n\n    wf = HarmOsc2D(nelec=1, ndim=2)\n    sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=2, domain = {'min':-2,'max':2})\n    #sampler = PYMC3(nwalkers=100,ndim=2)\n\n    #sampler = HAMILTONIAN(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1)\n    optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)\n\n    #optimizer = SWARM( maxiter=25)\n    \n    # VMC solver\n    vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)\n\n    # single point\n    opt_param = [0.5]   \n    pos,e,s = vmc.single_point(opt_param)\n    print('Energy   : ', e)\n    print('Variance : ', s)\n    vmc.plot_density(pos)\n\n    # optimization\n    # init_param = [1.]\n    # vmc.optimize(init_param)\n    # vmc.plot_history()\n    \n\n\n\n    # metro = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})\n    # optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)\n\n\n\n    # vmc = VMC(wf=wf, sampler=metro, optimizer=optimizer)\n    # pos = vmc.sample(opt_param)\n\n\n    # diff = DIFFUSION(nwalkers=1000, nstep=1, step_size = 0.5, nelec=1, ndim=1, domain = {'min':-2,'max':2})\n    # diff.set_initial_guess(pos)\n\n    # dmc = DMC(wf=wf, sampler=diff, optimizer=None)\n    # pos,e,s = dmc.single_point(opt_param)\n    # dmc.plot_density(pos)\n\n\n\n\n    # sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})\n    # optimizer = MINIMIZE(method='bfgs', maxiter=25, tol=1E-4)\n    # vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)\n    # x0 = [1.25]\n    # vmc.optimize(x0)\n\n    # plt.plot(vmc.history['energy'])\n    # plt.plot(vmc.history['variance'])\n    # plt.show()\n\n\n",
 			"file": "example/ho2d.py",
-			"file_size": 2435,
-			"file_write_time": 132049725118947831,
 			"settings":
 			{
-				"buffer_size": 2435,
+				"buffer_size": 2458,
+				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"file": "example/nn_ho1d.py",
+			"file": "example/nn_h2plus.py",
 			"settings":
 			{
-				"buffer_size": 3976,
+				"buffer_size": 4098,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -554,19 +550,16 @@
 			"file": "pyCHAMP/solver/plot.py",
 			"settings":
 			{
-				"buffer_size": 10670,
+				"buffer_size": 15037,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"contents": "import adaptive\nfrom adaptive.learner.learner1D import (curvature_loss_function,\n                                        uniform_loss,\n                                        default_loss)\n\nimport torch\nimport numpy as np \n\ndef torchify(func):\n    '''Transform a torch funtion to accept non torch argument.\n\n    Example :\n\n    def func(pos):\n        # pos needs here to be a torch tensor\n        return torch.exp(-pos)\n\n    newf = torchify(func)\n    newf(1.)\n    '''\n\n    #assert func.__code__.co_argcount == 1\n    def torchf(x):\n        x = torch.tensor(float(x))\n        data = func(x).detach().numpy().flatten().tolist()\n        if len(data) == 1:\n            data = data[0]\n        return data\n    return torchf\n\ndef fgradient(func,eps=1E-6):\n    def _grad(x):\n        return (func(x+eps)+func(x-eps)-2*func(x))/eps**2\n    return _grad\n\ndef finverse(func,eps=1E-12):\n    def _inv(x):\n        return 1./(func(x)+eps)\n    return _inv\n\ndef amplitude_1d(xs,ys):\n    from math import sqrt\n    return (xs[1]-xs[0])/sqrt((ys[1]-ys[0])**2+1)\n\ndef adaptive_mesh_1d(func,xmin,xmax,npoints,loss='default'):\n\n\tlosses = {'amplitude' : amplitude_1d,\n\t\t\t  'uniform'   : uniform_loss,\n              'default'   : default_loss,\n\t\t\t  'curvature' : curvature_loss_function()}\n\n\tlearner = adaptive.Learner1D(func, (xmin, xmax), loss_per_interval=losses[loss])\n\tnpoints_goal = lambda l: l.npoints >= npoints\n\tadaptive.runner.simple(learner, goal=npoints_goal)\n\t\n\tpoints = list(learner.data.keys())\n\n\treturn points\n\n\ndef adaptive_mesh_2d(func,xmin,xmax,ymin,ymax,nx,ny,loss='amplitude'):\n\n    losses = {'amplitude' : amplitude_1d,\n              'uniform'   : uniform_loss,\n              'default'   : default_loss,\n              'curvature' : curvature_loss_function()}\n\n    learner = adaptive.Learner1D(func, (xmin, xmax), loss_per_interval=losses[loss])\n    npoints_goal = lambda l: l.npoints >= npoints\n    adaptive.runner.simple(learner, goal=npoints_goal)\n    \n    points = list(learner.data.keys())\n\n    return points\n\ndef regular_mesh_2d(xmin=-2,xmax=2,ymin=-2.,ymax=2,nx=5,ny=5):\n\n    x = np.linspace(xmin,xmax,nx)\n    y = np.linspace(ymin,ymax,ny)\n\n    XX,YY = np.meshgrid(x,y)\n    points = np.vstack( (XX.flatten(),YY.flatten()) ).T\n\n    return points.tolist()\n\n",
 			"file": "pyCHAMP/solver/mesh.py",
-			"file_size": 2253,
-			"file_write_time": 132051713112123145,
 			"settings":
 			{
-				"buffer_size": 2254,
+				"buffer_size": 2571,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -584,7 +577,7 @@
 			"file": "pyCHAMP/wavefunction/rbf.py",
 			"settings":
 			{
-				"buffer_size": 4116,
+				"buffer_size": 4729,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -601,7 +594,7 @@
 			"file": "pyCHAMP/sampler/metropolis.py",
 			"settings":
 			{
-				"buffer_size": 4339,
+				"buffer_size": 4348,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -637,7 +630,7 @@
 			"file": "pyCHAMP/solver/deepqmc.py",
 			"settings":
 			{
-				"buffer_size": 4409,
+				"buffer_size": 4495,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -665,6 +658,23 @@
 			"settings":
 			{
 				"buffer_size": 2215,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/h2.py",
+			"settings":
+			{
+				"buffer_size": 2681,
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/h2plus.py",
+			"settings":
+			{
+				"buffer_size": 1655,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -910,8 +920,8 @@
 						"selection":
 						[
 							[
-								107,
-								107
+								479,
+								479
 							]
 						],
 						"settings":
@@ -924,7 +934,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 14,
+					"stack_index": 9,
 					"type": "text"
 				},
 				{
@@ -933,15 +943,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2435,
+						"buffer_size": 2458,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								344,
-								344
+								985,
+								985
 							]
 						],
 						"settings":
@@ -954,24 +964,24 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 11,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "example/nn_ho1d.py",
+					"file": "example/nn_h2plus.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3976,
+						"buffer_size": 4098,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3655,
-								3655
+								958,
+								958
 							]
 						],
 						"settings":
@@ -981,10 +991,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1170.0,
+						"translation.y": 195.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 1,
 					"type": "text"
 				},
 				{
@@ -993,15 +1003,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 10670,
+						"buffer_size": 15037,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2820,
-								2820
+								13799,
+								13799
 							]
 						],
 						"settings":
@@ -1011,10 +1021,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 858.0,
+						"translation.y": 5616.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 2,
 					"type": "text"
 				},
 				{
@@ -1023,7 +1033,7 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2254,
+						"buffer_size": 2571,
 						"regions":
 						{
 						},
@@ -1041,10 +1051,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 13.0,
+						"translation.y": 286.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 16,
+					"stack_index": 5,
 					"type": "text"
 				},
 				{
@@ -1074,7 +1084,7 @@
 						"translation.y": 351.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 10,
+					"stack_index": 17,
 					"type": "text"
 				},
 				{
@@ -1083,15 +1093,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4116,
+						"buffer_size": 4729,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3091,
-								3091
+								1793,
+								1793
 							]
 						],
 						"settings":
@@ -1101,10 +1111,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 234.0,
+						"translation.y": 663.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 3,
 					"type": "text"
 				},
 				{
@@ -1134,7 +1144,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 18,
+					"stack_index": 21,
 					"type": "text"
 				},
 				{
@@ -1143,7 +1153,7 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4339,
+						"buffer_size": 4348,
 						"regions":
 						{
 						},
@@ -1165,7 +1175,7 @@
 						"translation.y": 234.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 17,
+					"stack_index": 20,
 					"type": "text"
 				},
 				{
@@ -1195,7 +1205,7 @@
 						"translation.y": 1677.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 13,
+					"stack_index": 18,
 					"type": "text"
 				},
 				{
@@ -1224,13 +1234,13 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 19,
+					"stack_index": 7,
 					"type": "text"
 				}
 			]
 		},
 		{
-			"selected": 8,
+			"selected": 10,
 			"sheets":
 			[
 				{
@@ -1239,15 +1249,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4116,
+						"buffer_size": 4729,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								728,
-								728
+								726,
+								726
 							]
 						],
 						"settings":
@@ -1257,10 +1267,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 78.0,
+						"translation.y": 234.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 11,
 					"type": "text"
 				},
 				{
@@ -1290,7 +1300,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 15,
+					"stack_index": 19,
 					"type": "text"
 				},
 				{
@@ -1299,15 +1309,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4409,
+						"buffer_size": 4495,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								1726,
-								1726
+								3379,
+								3379
 							]
 						],
 						"settings":
@@ -1317,10 +1327,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 1092.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
@@ -1336,8 +1346,8 @@
 						"selection":
 						[
 							[
-								902,
-								902
+								1282,
+								1282
 							]
 						],
 						"settings":
@@ -1346,10 +1356,10 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 170.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 12,
+					"stack_index": 10,
 					"type": "text"
 				},
 				{
@@ -1365,8 +1375,8 @@
 						"selection":
 						[
 							[
-								2153,
-								2153
+								2059,
+								2059
 							]
 						],
 						"settings":
@@ -1377,27 +1387,27 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 156.0,
+						"translation.y": 507.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 8,
+					"stack_index": 12,
 					"type": "text"
 				},
 				{
 					"buffer": 2,
-					"file": "example/nn_ho1d.py",
+					"file": "example/nn_h2plus.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3976,
+						"buffer_size": 4098,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3419,
-								3419
+								3940,
+								3940
 							]
 						],
 						"settings":
@@ -1410,7 +1420,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 16,
 					"type": "text"
 				},
 				{
@@ -1419,15 +1429,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4339,
+						"buffer_size": 4348,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								0,
-								0
+								984,
+								984
 							]
 						],
 						"settings":
@@ -1438,10 +1448,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1131.0,
+						"translation.y": 147.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 9,
+					"stack_index": 6,
 					"type": "text"
 				},
 				{
@@ -1450,15 +1460,15 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2254,
+						"buffer_size": 2571,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								2254,
-								2254
+								2451,
+								2451
 							]
 						],
 						"settings":
@@ -1468,10 +1478,10 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 468.0,
+						"translation.y": 368.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 4,
+					"stack_index": 13,
 					"type": "text"
 				},
 				{
@@ -1487,8 +1497,8 @@
 						"selection":
 						[
 							[
-								961,
-								961
+								1397,
+								1397
 							]
 						],
 						"settings":
@@ -1497,10 +1507,69 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 195.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 1,
+					"stack_index": 15,
+					"type": "text"
+				},
+				{
+					"buffer": 16,
+					"file": "example/h2.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 2681,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								0,
+								0
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 234.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 14,
+					"type": "text"
+				},
+				{
+					"buffer": 17,
+					"file": "example/h2plus.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1655,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								360,
+								360
+							]
+						],
+						"settings":
+						{
+							"history_list_is_closing": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"translate_tabs_to_spaces": false
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -1566,16 +1635,36 @@
 		"selected_items":
 		[
 			[
+				"ho2",
+				"example/ho2d.py"
+			],
+			[
+				"h2",
+				"example/h2plus.py"
+			],
+			[
+				"wal",
+				"pyCHAMP/sampler/walkers.py"
+			],
+			[
 				"metr",
 				"pyCHAMP/sampler/metropolis.py"
 			],
 			[
-				"nn",
-				"example/nn_ho1d.py"
+				"h2p",
+				"example/h2plus.py"
 			],
 			[
-				"ho2",
-				"example/ho2d.py"
+				"rbf",
+				"pyCHAMP/wavefunction/rbf.py"
+			],
+			[
+				"nn_ho",
+				"example/nn_ho2d.py"
+			],
+			[
+				"nn",
+				"example/nn_ho1d.py"
 			],
 			[
 				"wf_ba",
@@ -1638,10 +1727,6 @@
 				"pyCHAMP/solver/neural_net.py"
 			],
 			[
-				"h2",
-				"example/h2.py"
-			],
-			[
 				"sol",
 				"pyCHAMP/solver/solver_base.py"
 			],
@@ -1672,10 +1757,6 @@
 			[
 				"pysc",
 				"pyCHAMP/wavefunction/wf_pyscf.py"
-			],
-			[
-				"wal",
-				"pyCHAMP/sampler/walkers.py"
 			],
 			[
 				"neru",

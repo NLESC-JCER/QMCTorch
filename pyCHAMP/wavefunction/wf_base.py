@@ -84,7 +84,7 @@ class WF(object):
         else :
             return np.sum(eg,1).reshape(-1,1)
 
-    def kinetic_fd(self,param,pos,eps=1E-6):
+    def kinetic_fd(self,param,pos,eps=1E-3):
 
         '''Compute the action of the kinetic operator on the we points.
         Args :

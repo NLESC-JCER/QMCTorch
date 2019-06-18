@@ -82,10 +82,46 @@ class NEURAL_WF_BASE(nn.Module):
 
         return -0.5 * hess.view(-1,1)
 
-        # original solution do not touch
+        # original implementation doe inlcude mixed terms !
         #hess = grad(jacob.sum(),pos,grad_outputs=z,create_graph=True)[0]
         #return -0.5 * hess.sum(1).view(-1,1)
     
+    def kinetic_energy_finite_difference(self,pos,eps=1E-6):
+        '''Compute the second derivative of the network
+        output w.r.t the value of the input using finite difference.
+
+        This is to compute the value of the kinetic operator.
+
+        Args:
+            pos: position of the electron
+            out : preomputed values of the wf at pos
+            eps : psilon for numerical derivative
+        Returns:
+            values of nabla^2 * Psi
+        '''
+
+        nwalk = pos.shape[0]
+        ndim = pos.shape[1]
+        out = torch.zeros(nwalk,1)
+
+        for icol in range(ndim):
+
+            pos_tmp = pos.clone()
+            feps = -2*self.forward(pos_tmp)
+
+            pos_tmp = pos.clone()
+            pos_tmp[:,icol] += eps
+            feps += self.forward(pos_tmp)
+
+            pos_tmp = pos.clone()
+            pos_tmp[:,icol] -= eps
+            feps += self.forward(pos_tmp)
+
+            out += feps/(eps**2)
+
+        return -0.5*out.view(-1,1)
+
+
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
         return self.kinetic_energy(pos)/self.forward(pos) \

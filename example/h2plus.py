@@ -6,6 +6,8 @@ from pyCHAMP.sampler.metropolis import METROPOLIS
 
 from pyCHAMP.solver.vmc import VMC
 
+from pyCHAMP.solver.mesh import regular_mesh_3d
+
 class Hydrogen(WF):
 
 	def __init__(self,nelec,ndim):
@@ -28,11 +30,13 @@ class Hydrogen(WF):
 		if pos.ndim == 1:
 			pos = pos.reshape(1,-1)
 
-		r1 = np.sqrt(np.sum((pos-self.x1)**2,1))
-		r2 = np.sqrt(np.sum((pos-self.x2)**2,1))
+		k = np.sqrt( (2*np.pi*beta)**3 )
 
-		p1 = 2*np.exp(-beta*r1).reshape(-1)
-		p2 = 2*np.exp(-beta*r2).reshape(-1)
+		r1 = np.sum((pos-self.x1)**2,1)
+		r2 = np.sum((pos-self.x2)**2,1)
+
+		p1 = 2./k * np.exp(-0.5*beta*r1).reshape(-1)
+		p2 = 2./k * np.exp(-0.5*beta*r2).reshape(-1)
 
 		return p1+p2
 
@@ -65,6 +69,10 @@ if __name__ == "__main__":
 	print('Variance : ', s)
 	vmc.plot_density(pos)
 
+	pts = regular_mesh_3d(xmin=-2,xmax=2,ymin=-2.,ymax=2,zmin=-5,zmax=5,nx=5,ny=5,nz=5)
+	pos = np.array(pts)
+
+	exit()
 	# optimization
 	init_param = [0.5]
 	vmc.optimize(init_param)

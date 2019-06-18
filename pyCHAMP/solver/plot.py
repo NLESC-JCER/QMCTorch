@@ -374,12 +374,16 @@ def plot_results_3d(net,obs_dict,domain,res,isoval=0.02,sol=None,e0=None,hist=Fa
     ax0 = fig.add_subplot(211, projection='3d')
     ax1 = fig.add_subplot(212)
 
-    plot_wf_3d(net,domain,res,sol=sol,isoval=isoval,poly=False,hist=hist,ax=ax0)
+    plot_wf_3d(net,domain,res,sol=sol,isoval=isoval,hist=hist,ax=ax0)
     plot_observable(obs_dict,e0=e0,ax=ax1)
 
     plt.show()
 
-def plot_wf_3d(net,domain,res,sol=None,isoval=0.02,poly=False,hist=False,ax=None):
+def plot_wf_3d(net,domain,res,sol=None,
+               wf=True, isoval=0.02,
+               pot=False,pot_isoval=0,
+               grad=False,grad_isoval=0,
+               hist=False,ax=None):
     '''Plot a 3D wave function.
 
     Args:
@@ -421,36 +425,56 @@ def plot_wf_3d(net,domain,res,sol=None,isoval=0.02,poly=False,hist=False,ax=None
             ax.scatter(pos[:,ielec*3],pos[:,ielec*3+1],pos[:,ielec*3+2])
 
     if callable(sol):
-        vs = sol(POS).view(res[0],res[1],res[2]).detach().numpy()
-        vs /= np.linalg.norm(vs)
+
+        vals = sol(POS)
+        vs = vals.detach().numpy().reshape(res[0],res[1],res[2])
         verts, faces, normals,values = measure.marching_cubes_lewiner(vs,isoval,spacing=spacing_vals)
 
-        if poly:
-            mesh = Poly3DCollection(verts[faces])
-            mesh.set_edgecolor('k')
-            ax.add_collection3d(mesh)
-        else:            
-            ax.plot_trisurf(verts[:,0]+domain['xmin'],
-                            verts[:,1]+domain['ymin'],
-                            faces,
-                            verts[:,2]+domain['zmin'],
-                            alpha=0.2,antialiased=True,lw=1)
-        
-    vals = net.wf(POS)
-    vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
-    verts, faces, normals,values = measure.marching_cubes_lewiner(vn,isoval,spacing=spacing_vals)        
-        
-    if poly:
-        mesh = Poly3DCollection(verts[faces])
-        mesh.set_edgecolor('k')
-        ax.add_collection3d(mesh)
-
-    else:
         ax.plot_trisurf(verts[:,0]+domain['xmin'],
                         verts[:,1]+domain['ymin'],
                         faces,
                         verts[:,2]+domain['zmin'],
-                        alpha=0.75,cmap='Spectral',antialiased=True,lw=1)
+                        alpha=0.25,antialiased=True,
+                        lw=1, edgecolor='blue')
+
+    if pot:
+
+        vals = net.wf.nuclear_potential(POS)
+        vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
+        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,pot_isoval,spacing=spacing_vals)        
+        
+        ax.plot_trisurf(verts[:,0]+domain['xmin'],
+                        verts[:,1]+domain['ymin'],
+                        faces,
+                        verts[:,2]+domain['zmin'],
+                        alpha=0.25,antialiased=True,
+                        lw=1, edgecolor='red')
+
+    if grad:
+
+        #vals = net.wf.kinetic_energy_finite_difference(POS,eps=1E-3)
+        vals = net.wf.kinetic_energy(POS)
+        vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
+        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,grad_isoval,spacing=spacing_vals)        
+        
+        ax.plot_trisurf(verts[:,0]+domain['xmin'],
+                        verts[:,1]+domain['ymin'],
+                        faces,
+                        verts[:,2]+domain['zmin'],
+                        alpha=0.25,antialiased=True,
+                        lw=1, edgecolor='green')
+    if wf:
+
+        vals = net.wf(POS)
+        vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
+        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,isoval,spacing=spacing_vals)        
+            
+        ax.plot_trisurf(verts[:,0]+domain['xmin'],
+                        verts[:,1]+domain['ymin'],
+                        faces,
+                        verts[:,2]+domain['zmin'],
+                        alpha=0.5,cmap='Spectral',
+                        antialiased=True,lw=1,edgecolor='black')
 
     ax.set_xlim(domain['xmin'],domain['xmax'])
     ax.set_ylim(domain['ymin'],domain['ymax'])

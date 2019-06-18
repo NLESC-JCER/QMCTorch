@@ -104,7 +104,6 @@ class DeepQMC(SOLVER_BASE):
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
                 vals = self.wf(lpos)
-                print(self.wf.variance(lpos))
 
                 loss = self.loss(vals,lpos)
                 cumulative_loss += loss
