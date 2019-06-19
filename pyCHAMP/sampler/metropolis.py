@@ -142,7 +142,7 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             if istep>=ntherm:
                 POS.append(self.walkers.pos.copy())
 
-        #print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
+        print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
         return POS
 
     

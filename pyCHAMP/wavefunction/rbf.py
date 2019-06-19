@@ -82,6 +82,7 @@ class RBF(nn.Module):
 
         # make the centers optmizable or not
         self.centers = nn.Parameter(torch.Tensor(centers))
+        self.ncenter = len(self.centers)
         self.centers.requires_grad = opt_centers
         self.kernel = kernel
 
@@ -147,6 +148,15 @@ class RBF(nn.Module):
     def forward(self,input):
         '''Compute the output of the RBF layer'''
 
+        if self.kernel == 'gaussian':
+            return self._gaussian_kernel(input)
+        elif self.kernel == 'slater':
+            return self._slater_kernel(input)
+        else:
+            raise ValueError('Kernel not recognized')
+
+    def _gaussian_kernel(self,input):
+
         if self.sigma.requires_grad:
             self.invCov = self.invCovMat(self.sigma)
             self.detS = self.denom(self.sigma,self.input_features)
@@ -166,4 +176,21 @@ class RBF(nn.Module):
         # divide by the determinant of the cov mat
         X = (torch.exp(-0.5*X).unsqueeze(2) / self.detS).squeeze()
 
-        return X
+        return X.view(-1,self.ncenter)
+
+    def _slater_kernel(self,input):
+        
+    
+        # get the distancese of each point to each RBF center
+        # (Nbatch,Nrbf,Ndim)
+        delta =  (input[:,None,:] - self.centers[None,...])
+
+        # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
+        X = ( torch.matmul(delta.unsqueeze(2),self.invCov).squeeze(2) * delta ).sum(2)
+        X = (delta**2).sum(2)
+        X = torch.sqrt(X)
+        
+        # divide by the determinant of the cov mat
+        X = torch.exp(-X)
+
+        return X.view(-1,self.ncenter)

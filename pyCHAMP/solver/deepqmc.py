@@ -87,6 +87,7 @@ class DeepQMC(SOLVER_BASE):
               obs_dict=None,
               ntherm=-1,
               resample=100,
+              resample_every=25,
               loss='variance',
               plot = None,
               refine = None):
@@ -135,7 +136,6 @@ class DeepQMC(SOLVER_BASE):
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
                 
-
             if plot is not None:
                 plot.drawNow()
 
@@ -144,9 +144,10 @@ class DeepQMC(SOLVER_BASE):
             print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
             print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
             print('distance : %f' %self.wf.atomic_distance() )
-
-            if self.sampler.nstep > 0:
-                pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
+            
+            if n%resample_every == 0:
+                #pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
+                pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=True)
                 self.dataloader.dataset.data = pos
 
         return pos, obs_dict
