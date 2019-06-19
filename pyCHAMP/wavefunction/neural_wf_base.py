@@ -51,6 +51,13 @@ class NEURAL_WF_BASE(nn.Module):
         '''
         raise NotImplementedError()
 
+    def nuclear_repulsion(self):
+        '''Compute the nuclear repulsion term 
+
+        Returns: values of Vnn * psi
+        '''
+        raise NotImplementedError()        
+
 
     def kinetic_energy(self,pos,out=None):
         '''Compute the second derivative of the network
@@ -83,8 +90,8 @@ class NEURAL_WF_BASE(nn.Module):
         return -0.5 * hess.view(-1,1)
 
         # original implementation doe inlcude mixed terms !
-        #hess = grad(jacob.sum(),pos,grad_outputs=z,create_graph=True)[0]
-        #return -0.5 * hess.sum(1).view(-1,1)
+        # hess = grad(jacob.sum(),pos,grad_outputs=z,create_graph=True)[0]
+        # return -0.5 * hess.sum(1).view(-1,1)
     
     def kinetic_energy_finite_difference(self,pos,eps=1E-6):
         '''Compute the second derivative of the network
@@ -126,11 +133,12 @@ class NEURAL_WF_BASE(nn.Module):
         ''' local energy of the sampling points.'''
         return self.kinetic_energy(pos)/self.forward(pos) \
              + self.nuclear_potential(pos)  \
-             + self.electronic_potential(pos)
+             + self.electronic_potential(pos) \
+             + self.nuclear_repulsion()
 
     def energy(self,pos):
         '''Total energy for the sampling points.'''
-        return torch.mean(self.local_energy(pos))
+        return torch.mean(self.local_energy(pos)) 
 
     def variance(self, pos):
         '''Variance of the energy at the sampling points.'''

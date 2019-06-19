@@ -13,8 +13,8 @@ from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 
 from pyCHAMP.solver.mesh import regular_mesh_3d
 
-from pyCHAMP.solver.plot import plot_wf_3d
-from pyCHAMP.solver.plot import plot_results_3d as plot_results
+from pyCHAMP.solver.plot import plot_wf_1d, plotter1d
+from pyCHAMP.solver.plot import plot_results_1d as plot_results
 
 import matplotlib.pyplot as plt
 
@@ -24,7 +24,7 @@ import numpy as np
 class RBF_H2plus(NEURAL_WF_BASE):
 
     def __init__(self,centers):
-        super(RBF_H2plus,self).__init__(1,3)
+        super(RBF_H2plus,self).__init__(1,1)
 
         # get the RBF centers 
         self.centers = centers
@@ -35,7 +35,7 @@ class RBF_H2plus(NEURAL_WF_BASE):
                        self.ncenter, 
                        centers=self.centers, 
                        opt_centers=False,
-                       kernel='gaussian',
+                       kernel='slater',
                        sigma=1.)
         
         # define the fc layer
@@ -72,16 +72,15 @@ class RBF_H2plus(NEURAL_WF_BASE):
         TODO : vecorize that !! The solution below doesn't really wirk :(def plot_observable(obs_dict,e0=None,ax=None):)
         '''
 
-        c0 = self.centers[0,:]
-        c1 = self.centers[1,:]
+        c0 = self.centers[0]
+        c1 = self.centers[1]
 
-        r0 = torch.sqrt(   ((pos-c0)**2).sum(1)  )
-        r1 = torch.sqrt(   ((pos-c1)**2).sum(1)  )
+        r0 = torch.sqrt(   ((pos-c0)**2)  ) + 1E-1
+        r1 = torch.sqrt(   ((pos-c1)**2)  ) + 1E-1
 
         p0 = (-1./r0).view(-1,1)
         p1 = (-1./r1).view(-1,1)
         
-
         return p0 + p1
 
         # r = torch.sqrt(((self.centers[:,None,:]-pos[None,...])**2).sum(2)).view(-1,self.ncenter)
@@ -98,80 +97,74 @@ class RBF_H2plus(NEURAL_WF_BASE):
         return 0
 
     def nuclear_repulsion(self):
-        c0 = self.centers[0,:]
-        c1 = self.centers[1,:]
+        c0 = self.centers[0]
+        c1 = self.centers[1]
         rnn = torch.sqrt(   ((c0-c1)**2).sum()  )
         return (1./rnn).view(-1,1)
 
     def atomic_distance(self,pos=None):
-        c0 = self.centers[0,:]
-        c1 = self.centers[1,:]
+        c0 = self.centers[0]
+        c1 = self.centers[1]
         return torch.sqrt(   ((c0-c1)**2).sum()  )
 
 def h2plus_sol(pos):
     '''Solution of the H2 + problem.'''
 
-    centers = torch.tensor([[0.,0.,2.],[0.,0.,-2]])
+    centers = torch.tensor([-0.75,0.75])
     beta = 1.
 
-    k = torch.sqrt( torch.tensor( (2*np.pi*beta)**3 ) )
-    
-    c0 = centers[0,:]
-    c1 = centers[1,:]
+    c0 = centers[0]
+    c1 = centers[1]
 
-    r0 = ((pos-c0)**2).sum(1)
-    r1 = ((pos-c1)**2).sum(1)
+    r0 = torch.sqrt(((pos-c0)**2))
+    r1 = torch.sqrt(((pos-c1)**2))
 
-    p0 = 2./k * torch.exp(-0.5*beta*r0).view(-1,1)
-    p1 = 2./k * torch.exp(-0.5*beta*r1).view(-1,1)
+    p0 = 2.* torch.exp(-0.5*beta*r0).view(-1,1)
+    p1 = 2.* torch.exp(-0.5*beta*r1).view(-1,1)
 
     return p0+p1
-
-    # r = torch.sqrt(((centers[:,None,:]-pos[None,...])**2).sum(2)).view(-1,2)
-    # return 2*torch.exp(-1.0 * r).sum(1).view(-1,1)
     
 
 # wavefunction
-X = 0.25
-centers = torch.tensor([[0.,0.,X],
-                        [0.,0.,-X]])
+X = 0.1
+centers = torch.tensor([[X],
+                        [-X]])
 wf = RBF_H2plus(centers)
 
 #sampler
-sampler = METROPOLIS(nwalkers=2000, nstep=1000, 
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
-opt = optim.Adam(wf.parameters(),lr=0.005)
+opt = optim.Adam(wf.parameters(),lr=0.05)
 #opt = optim.SGD(wf.parameters(),lr=0.1)
 
 # domain for the RBF Network
 boundary = 5.
-domain = {'xmin':-boundary,'xmax':boundary,
-          'ymin':-boundary,'ymax':boundary,
-          'zmin':-boundary,'zmax':boundary}
-ncenter = [11,11,11]
+domain = {'xmin':-boundary,'xmax':boundary}
+ncenter = 51
 
 # network
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
+
 obs_dict = {'local_energy':[],
             'atomic_distance':[]}
 
 if 0:
-    plot_wf_3d(net,domain,ncenter,sol=h2plus_sol,
-               wf=True, isoval=0.01,
+    plot_wf_1d(net,domain,ncenter,sol=h2plus_sol,
                hist=False,
-               pot=False,pot_isoval=-1,
-               grad=False, grad_isoval = 0.01)
+               pot=False,
+               grad=True)
 
 if 0:
+
     X = np.linspace(0.1,2,25)
     energy, var = [], []
     for x in X:
 
-        net.wf.rbf.centers.data[0,2] = -x
-        net.wf.rbf.centers.data[1,2] = x
+        net.wf.rbf.centers.data[0] = -x
+        net.wf.rbf.centers.data[1] = x
         pos = Variable(net.sample())
         pos.requires_grad = True
         e = net.wf.energy(pos)
@@ -200,6 +193,9 @@ if 0:
 
 if 1:
 
+
+    plot1D = plotter1d(wf,domain,ncenter,sol=h2plus_sol)
+
     # do not optimize the weights of fc
     net.wf.fc.weight.requires_grad = False
 
@@ -215,9 +211,10 @@ if 1:
              obs_dict = obs_dict,
              resample=200,
              ntherm=-1,
-             loss = 'energy')
+             loss = 'energy',
+             plot=plot1D)
 
-    plot_results(net,obs_dict,domain,ncenter,isoval=0.02,hist=True)
+    plot_results(net,obs_dict,domain,ncenter)
 
 
 

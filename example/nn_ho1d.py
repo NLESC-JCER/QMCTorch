@@ -14,7 +14,7 @@ from pyCHAMP.solver.mesh import adaptive_mesh_1d as mesh, fgradient, finverse
 from pyCHAMP.solver.mesh import torchify
 
 from pyCHAMP.solver.plot import plot_results_1d as plot_results
-from pyCHAMP.solver.plot import plotter1d
+from pyCHAMP.solver.plot import plotter1d, plot_wf_1d
 
 import matplotlib.pyplot as plt
 
@@ -46,8 +46,8 @@ class RBF_HO1D(NEURAL_WF_BASE):
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
 
         # initiaize the fc layer
-        self.fc.weight.data.fill_(0.1)
-        #self.fc.weight.data[0,1] = 1.
+        self.fc.weight.data.fill_(0.)
+        self.fc.weight.data[0,2] = 1.
         #nn.init.uniform_(self.fc.weight,0,1)
 
     def forward(self,x):
@@ -87,8 +87,8 @@ class RBF_HO1D(NEURAL_WF_BASE):
 
 def ho1d_sol(pos):
     '''Analytical solution of the 1D harmonic oscillator.'''
-    vn = np.exp(-0.5*pos**2)
-    return vn/np.linalg.norm(vn)
+    vn = torch.exp(-0.5*pos**2)
+    return vn #/np.linalg.norm(vn)
 
 # wavefunction
 wf = RBF_HO1D(ndim=1,nelec=1,ncenter=5)
@@ -105,6 +105,15 @@ opt = optim.Adam(wf.parameters(),lr=0.005)
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 pos = None
 obs_dict = None
+
+boundary = 5.
+domain = {'xmin':-boundary,'xmax':boundary}
+ncenter = 51
+
+plot_wf_1d(net,domain,ncenter,sol=ho1d_sol,
+           hist=False,
+           pot=False,
+           grad=True)
 
 # plt.ion()
 # domain = {'xmin':-5.,'xmax':5.}

@@ -54,12 +54,14 @@ class RBF1D(nn.Module):
 
 class RBF(nn.Module):
 
-    def __init__(self,input_features,
-                      output_features,
-                      centers,
-                      opt_centers=True,
-                      sigma = 1.0,
-                      opt_sigma= False ):
+    def __init__(self,
+                input_features,
+                output_features,
+                centers,
+                kernel='gaussian',
+                opt_centers=True,
+                sigma = 1.0,
+                opt_sigma= False ):
 
         '''Radial Basis Function Layer in N dimension
 
@@ -81,6 +83,7 @@ class RBF(nn.Module):
         # make the centers optmizable or not
         self.centers = nn.Parameter(torch.Tensor(centers))
         self.centers.requires_grad = opt_centers
+        self.kernel = kernel
 
         # get the standard deviations
         self.sigma_method = sigma
@@ -154,6 +157,11 @@ class RBF(nn.Module):
 
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
         X = ( torch.matmul(delta.unsqueeze(2),self.invCov).squeeze(2) * delta ).sum(2)
+
+        # slater kernel
+        if self.kernel == 'slater':
+            X = torch.sqrt(X)
+            self.detS[:,:] = 1.
 
         # divide by the determinant of the cov mat
         X = (torch.exp(-0.5*X).unsqueeze(2) / self.detS).squeeze()

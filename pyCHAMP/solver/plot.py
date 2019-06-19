@@ -24,14 +24,19 @@ def plot_observable(obs_dict,e0=None,ax=None):
         ax = fig.add_subplot(111)
         show_plot = True
 
-    n = len(obs_dict['energy'])
+    n = len(obs_dict['local_energy'])
     epoch = np.arange(n)
 
+    # get the variance
     emax = [np.quantile(e,0.75) for e in obs_dict['local_energy'] ]
     emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
 
+    # get the mean value
+    energy = np.mean(obs_dict['local_energy'],1)
+
+    # plot
     ax.fill_between(epoch,emin,emax,alpha=0.5,color='#4298f4')
-    ax.plot(epoch,obs_dict['energy'],color='#144477')
+    ax.plot(epoch,energy,color='#144477')
     if e0 is not None:
         ax.axhline(e0,color='black',linestyle='--')
 
@@ -68,14 +73,15 @@ class plotter1d(object):
         pos = self.POS.detach().numpy().flatten()  
 
         if callable(sol):
-            self.ax.plot(pos,sol(pos),color='blue')
+            v = sol(self.POS).detach().numpy()
+            self.ax.plot(pos,v,color='blue')
 
         vp = self.wf(self.POS).detach().numpy()
-        print(pos.shape)
-        print(vp.shape)
         self.lwf, = self.ax.plot(pos,vp,color='red')
+
         self.pweight, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
-        self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
+        if self.wf.fc.weight.requires_grad:
+            self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
 
         plt.draw()
         self.fig.canvas.flush_events()
@@ -89,14 +95,17 @@ class plotter1d(object):
         self.pweight.set_xdata(self.wf.rbf.centers.detach().numpy())
         self.pweight.set_ydata(self.wf.fc.weight.detach().numpy().T)
 
-        self.pgrad.set_xdata(self.wf.rbf.centers.detach().numpy())
-        data = (self.wf.fc.weight.grad.detach().numpy().T)**2
-        data /= np.linalg.norm(data)
-        self.pgrad.set_ydata(data)
+        if self.wf.fc.weight.requires_grad:
+            self.pgrad.set_xdata(self.wf.rbf.centers.detach().numpy())
+            data = (self.wf.fc.weight.grad.detach().numpy().T)**2
+            data /= np.linalg.norm(data)
+            self.pgrad.set_ydata(data)
 
-        self.fig.canvas.draw()  
+        #self.fig.canvas.draw()  
+        plt.draw()
+        self.fig.canvas.flush_events()
 
-def plot_wf_1d(net,grad=False,hist=False,sol=None):
+def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
         '''Plot a 1D wave function.
 
         Args:
@@ -106,38 +115,50 @@ def plot_wf_1d(net,grad=False,hist=False,sol=None):
             sol : callabale of the solution
         '''
 
-        X = Variable(torch.linspace(-5,5,100).view(100,1,1))
+        if ax is None:
+            fig = plt.figure()
+            ax = fig.add_subplot( 111 )
+            show_plot = True
+        else:
+            show_plot = False
+
+
+        X = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1))
         X.requires_grad = True
         xn = X.detach().numpy().flatten()
 
         if callable(sol):
-            vs = sol(xn)
-            plt.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--')
+            vs = sol(X).detach().numpy()
+            ax.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--',label='solution')
 
         vals = net.wf(X)
         vn = vals.detach().numpy().flatten()
-        vn /= np.linalg.norm(vn)
-        plt.plot(xn,vn,color='black',linewidth=2)
+        ax.plot(xn,vn,color='black',linewidth=2,label='DeepQMC')
 
         if pot:
             pot = net.wf.nuclear_potential(X).detach().numpy()
-            plt.plot(xn,pot,color='black',linestyle='--')
+            ax.plot(xn,pot,color='black',linestyle='--')
 
         if grad:
-            kin = net.wf.kinetic_autograd(X)
+            kin = net.wf.kinetic_energy(X)
             g = np.gradient(vn,xn)
-            h = np.gradient(g,xn)
-            plt.plot(xn,kin.detach().numpy())
-            plt.plot(xn,h)
+            h = -0.5*np.gradient(g,xn)
+            ax.plot(xn,kin.detach().numpy(),label='kinetic')
+            ax.plot(xn,h,label='hessian')
 
         if hist:
             pos = net.sample(ntherm=-1)
-            plt.hist(pos.detach().numpy(),density=False)
+            ax.hist(pos.detach().numpy(),density=False)
         
-        plt.grid()
-        plt.show()
+        ax.grid()
+        ax.set_xlabel('X')
+        ax.set_ylabel('Wavefuntion')
+        ax.legend()
 
-def plot_results_1d(net,obs_dict,sol=None,e0=None,xmin=-5,xmax=5,nx=100):
+        if show_plot:
+            plt.show()
+
+def plot_results_1d(net,obs_dict,domain,res,sol=None,e0=None):
     ''' Plot the summary of the results for a 1D problem.
 
     Args: 
@@ -153,44 +174,11 @@ def plot_results_1d(net,obs_dict,sol=None,e0=None,xmin=-5,xmax=5,nx=100):
     ax0 = fig.add_subplot(211)
     ax1 = fig.add_subplot(212)
 
-    X = Variable(torch.linspace(xmin,xmax,nx).view(nx,1))
-    X.requires_grad = True
-    xn = X.detach().numpy().flatten()
-
-    if callable(sol):
-        vs = sol(xn)
-        ax0.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--',label='Solution')
-
-    vals = net.wf(X)
-    vn = vals.detach().numpy().flatten()
-    vn /= np.linalg.norm(vn)
-    ax0.plot(xn,vn,color='black',linewidth=2,label='DeepQMC')
-
-    pot = net.wf.nuclear_potential(X).detach().numpy()
-    ax0.plot(xn,pot/10,color='black',linestyle='--',label='V(x)')
-
-    ax0.set_ylim((np.min(pot/10),np.max(vn)))
-    ax0.grid()
-    ax0.set_xlabel('X')
-    ax0.set_ylabel('Wavefuntion')
-    ax0.legend()
-
-    n = len(obs_dict['energy'])
-    epoch = np.arange(n)
-
-    emax = [np.quantile(e,0.75) for e in obs_dict['local_energy'] ]
-    emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
-
-    ax1.fill_between(epoch,emin,emax,alpha=0.5,color='#4298f4')
-    ax1.plot(epoch,obs_dict['energy'],color='#144477')
-    if e0 is not None:
-        ax1.axhline(e0,color='black',linestyle='--')
-
-    ax1.grid()
-    ax1.set_xlabel('Number of epoch')
-    ax1.set_ylabel('Energy')
+    plot_wf_1d(net,domain,res,sol=sol,hist=False,ax=ax0)
+    plot_observable(obs_dict,e0=e0,ax=ax1)
 
     plt.show()
+ 
 
 ###########################################################################################
 ##  2D routnines

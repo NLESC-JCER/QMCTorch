@@ -1,3 +1,5 @@
+import inspect
+
 import numpy as np 
 
 import torch
@@ -60,6 +62,24 @@ class DeepQMC(SOLVER_BASE):
         self.wf.rbf.sigma = self.wf.rbf.get_sigma(self.wf.rbf.centers) 
         self.wf.fc.weight.data = torch.tensor(fc_weight)
 
+    def get_observable(self,obs_dict,pos,**kwargs):
+        '''compute all the requuired observable.
+
+        Args :
+            obs_dict : a dictionanry with all keys 
+                        corresponding to a method of self.wf
+            **kwargs : the possible arguments for the methods
+        TODO : match the signature of the callables
+        '''
+
+        for obs in obs_dict.keys():
+
+            # get the method
+            func = self.wf.__getattribute__(obs)
+            data = func(pos).detach().numpy()
+            obs_dict[obs].append(data)
+
+        return obs_dict
 
     def train(self,nepoch,
               batchsize=32,
@@ -82,7 +102,7 @@ class DeepQMC(SOLVER_BASE):
         '''
 
         if obs_dict is None:
-            obs_dict = {'energy':[],'variance':[],'loss':[],'local_energy':[]}
+            obs_dict = {'local_energy':[]}
 
         if pos is None:
             pos = self.sample(ntherm=ntherm)
@@ -111,34 +131,23 @@ class DeepQMC(SOLVER_BASE):
                 self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
-
+            
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
+                
 
             if plot is not None:
                 plot.drawNow()
 
-            locale_ = self.wf.local_energy(pos)
-            e_ = locale_.mean()
-            v_ = locale_.var()
-
+            obs_dict = self.get_observable(obs_dict,pos)
             print('epoch %d loss %f' %(n,cumulative_loss))
-            print('variance : %f' %v_)
-            print('energy : %f' %e_)
-
-            obs_dict['energy'].append(e_.detach().numpy().tolist())
-            obs_dict['variance'].append(v_.detach().numpy().tolist())
-            obs_dict['local_energy'].append(locale_.detach().numpy().tolist())
-            obs_dict['loss'].append(cumulative_loss.detach().numpy().tolist())
+            print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
+            print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
+            print('distance : %f' %self.wf.atomic_distance() )
 
             if self.sampler.nstep > 0:
                 pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
-
-            if (refine is not None):
-                if n % refine == 0:
-                    new_centers, new_fc_weight = refine_mesh(self.wf)
-                    self.modify_grid(new_centers,new_fc_weight)
 
         return pos, obs_dict
 

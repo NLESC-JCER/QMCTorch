@@ -42,6 +42,12 @@ class WF(object):
         '''
         raise NotImplementedError()
 
+    def nuclear_repulsion(self):
+        '''Compute the nuclear repulsion term 
+
+        Returns: values of Vnn * psi
+        '''
+        raise NotImplementedError() 
 
     def jacobian_opt(self,param,pos):
 
