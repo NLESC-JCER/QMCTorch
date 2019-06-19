@@ -102,8 +102,8 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
             X (list) : position of the walkers
         '''
 
-        if ntherm == -1:
-            ntherm = self.nstep-1
+        if ntherm < 0:
+            ntherm = self.nstep+ntherm
 
         self.walkers.initialize(method=init,pos=pos)
 

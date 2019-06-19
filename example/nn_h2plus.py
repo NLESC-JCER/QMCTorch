@@ -75,8 +75,8 @@ class RBF_H2plus(NEURAL_WF_BASE):
         c0 = self.centers[0,:]
         c1 = self.centers[1,:]
 
-        r0 = torch.sqrt(   ((pos-c0)**2).sum(1)  )
-        r1 = torch.sqrt(   ((pos-c1)**2).sum(1)  )
+        r0 = torch.sqrt(   ((pos-c0)**2).sum(1)  ) + 1E-1
+        r1 = torch.sqrt(   ((pos-c1)**2).sum(1)  ) + 1E-1
 
         p0 = (-1./r0).view(-1,1)
         p1 = (-1./r1).view(-1,1)
@@ -132,18 +132,18 @@ def h2plus_sol(pos):
     
 
 # wavefunction
-X = 0.25
+X = 0.5
 centers = torch.tensor([[0.,0.,X],
                         [0.,0.,-X]])
 wf = RBF_H2plus(centers)
 
 #sampler
-sampler = METROPOLIS(nwalkers=2000, nstep=1000, 
+sampler = METROPOLIS(nwalkers=2000, nstep=1000,
                      step_size = 3., nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
-opt = optim.Adam(wf.parameters(),lr=0.005)
+opt = optim.Adam(wf.parameters(),lr=0.01)
 #opt = optim.SGD(wf.parameters(),lr=0.1)
 
 # domain for the RBF Network
@@ -213,8 +213,8 @@ if 1:
              batchsize=500,
              pos = None,
              obs_dict = obs_dict,
-             resample=200,
-             ntherm=-1,
+             resample=500,
+             ntherm=-2,
              loss = 'energy')
 
     plot_results(net,obs_dict,domain,ncenter,isoval=0.02,hist=True)

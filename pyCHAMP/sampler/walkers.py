@@ -15,6 +15,8 @@ class WALKERS(object):
 	def initialize(self, method='uniform', pos=None):
 
 		if pos is not None:
+			if len(pos) > self.nwalkers:
+				pos = pos[-self.nwalkers:,:]
 			self.pos = pos
 		
 		else:
