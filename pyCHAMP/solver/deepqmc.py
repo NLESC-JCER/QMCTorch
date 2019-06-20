@@ -144,6 +144,7 @@ class DeepQMC(SOLVER_BASE):
             print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
             print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
             print('distance : %f' %self.wf.atomic_distance() )
+            print('sigma : %f' %self.wf.get_sigma() )
             
             if n%resample_every == 0:
                 #pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)

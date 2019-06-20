@@ -106,6 +106,8 @@ class RBF(nn.Module):
 
         if isinstance(self.sigma_method,float):
             return self.get_sigma_ones(self.centers, s=self.sigma_method)
+        elif isinstance(self.sigma_method,torch.Tensor):
+            return self.sigma_method
         elif self.sigma_method == '1d':
             return self.get_sigma_1d(self.centers)
         elif self.sigma_method == 'mean':
@@ -191,6 +193,57 @@ class RBF(nn.Module):
         X = torch.sqrt(X)
         
         # divide by the determinant of the cov mat
-        X = torch.exp(-X)
+        X = torch.exp(-self.sigma_method*X)
+
+        return X.view(-1,self.ncenter)
+
+
+class RBF_Slater(nn.Module):
+
+    def __init__(self,
+                input_features,
+                output_features,
+                centers,
+                sigma ):
+
+        '''Radial Basis Function Layer in N dimension
+
+        Args:
+            input_features: input side
+            output_features: output size
+            centers : position of the centers
+            opt_centers : optmize the center positions
+            sigma : strategy to get the sigma
+            opt_sigma : optmize the std or not
+        '''
+
+        super(RBF_Slater,self).__init__()
+
+        # register dimension
+        self.input_features = input_features
+        self.output_features = output_features
+
+        # make the centers optmizable or not
+        self.centers = nn.Parameter(centers)
+        self.centers.requires_grad = True
+        self.ncenter = len(self.centers)
+        
+        # get the standard deviations
+        self.sigma = nn.Parameter(sigma)
+        self.sigma.requires_grad = True
+
+    def forward(self,input):
+        
+    
+        # get the distancese of each point to each RBF center
+        # (Nbatch,Nrbf,Ndim)
+        delta =  (input[:,None,:] - self.centers[None,...])
+
+        # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
+        X = (delta**2).sum(2)
+        X = torch.sqrt(X)
+        
+        # divide by the determinant of the cov mat
+        X = torch.exp(-self.sigma*X)
 
         return X.view(-1,self.ncenter)
