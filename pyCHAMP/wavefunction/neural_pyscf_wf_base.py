@@ -9,7 +9,10 @@ from pyscf import scf, gto, mcscf
 from tqdm import tqdm
 from time import time
 
-from pyCHAMP.wavefunction.wave_modules import SlaterPooling,ElectronDistance,TwoBodyJastrowFactor,AOLayer
+from pyCHAMP.wavefunction.wave_modules import (SlaterPooling,
+                                               ElectronDistance,
+                                               TwoBodyJastrowFactor,
+                                               AOLayer)
 
 class NEURAL_PYSCF_WF(nn.Module):
 
@@ -191,35 +194,106 @@ class NEURAL_PYSCF_WF(nn.Module):
 
         return pot
 
+    def nuclear_repulsion(self):
+        '''Compute the nuclear repulsion of the system.'''
+
+        coords = self.mol.atom_coords()
+        mass = self.mol.atom_mass_list()
+        natom = len(mass)
+
+        vnn = 0.
+        for i1 in range(natom-1):
+            c1 = torch.tensor(coords[i1,:])
+            m1 = torch.tensor(mass[i1])
+            for i2 in range(i1+1,natom):
+                c2 = torch.tensor(coords[i2,:])
+                m2 = torch.tensor(mass[i2])
+                r = torch.sqrt( ((c1-c2)**2).sum() ).float()
+                vnn += m1*m2 / r
+        return vnn
+
     def pdf(self,pos):
         return self.forward(pos)**2
 
-    def kinetic_autograd(self,pos):
+    # def kinetic_autograd(self,pos):
 
-        out = self.forward(pos)
+    #     out = self.forward(pos)
+    #     z = Variable(torch.ones(out.shape))
+    #     jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
+    #     hess = grad(jacob.sum(),pos,create_graph=True)[0]
+    #     return hess.sum(1)
+
+    def kinetic_energy(self,pos,out=None):
+        '''Compute the second derivative of the network
+        output w.r.t the value of the input. 
+
+        This is to compute the value of the kinetic operator.
+
+        Args:
+            pos: position of the electron
+            out : preomputed values of the wf at pos
+
+        Returns:
+            values of nabla^2 * Psi
+        '''
+
+        if out is None:
+            out = self.forward(pos)
+
+        # compute the jacobian            
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
-        hess = grad(jacob.sum(),pos,create_graph=True)[0]
-        return hess.sum(1)
 
+        # compute the diagonal element of the Hessian
+        z = Variable(torch.ones(jacob.shape[0]))
+        hess = torch.zeros(jacob.shape[0])
+        for idim in range(jacob.shape[1]):
+            tmp = grad(jacob[:,idim],pos,grad_outputs=z,create_graph=True,allow_unused=True)[0]    
+            hess += tmp[:,idim]
 
-    def applyK(self,pos):
-        '''Comute the result of H * psi
+        return -0.5 * hess.view(-1,1)
+    
+    def kinetic_energy_finite_difference(self,pos,eps=1E-6):
+        '''Compute the second derivative of the network
+        output w.r.t the value of the input using finite difference.
 
-        Args :
-            pos : position of the electrons
-            metod (string) : mehod to compute the derivatives
-        Returns : value of K * pis
-        ''' 
-        Kpsi = -0.5*self.kinetic_autograd(pos) 
-        return Kpsi
+        This is to compute the value of the kinetic operator.
 
+        Args:
+            pos: position of the electron
+            out : preomputed values of the wf at pos
+            eps : psilon for numerical derivative
+        Returns:
+            values of nabla^2 * Psi
+        '''
+
+        nwalk = pos.shape[0]
+        ndim = pos.shape[1]
+        out = torch.zeros(nwalk,1)
+
+        for icol in range(ndim):
+
+            pos_tmp = pos.clone()
+            feps = -2*self.forward(pos_tmp)
+
+            pos_tmp = pos.clone()
+            pos_tmp[:,icol] += eps
+            feps += self.forward(pos_tmp)
+
+            pos_tmp = pos.clone()
+            pos_tmp[:,icol] -= eps
+            feps += self.forward(pos_tmp)
+
+            out += feps/(eps**2)
+
+        return -0.5*out.view(-1,1)
     
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        return self.applyK(pos)/self.forward(pos) \
+        return self.kinetic_energy(pos)/self.forward(pos) \
                + self.nuclear_potential(pos)  \
-               + self.electronic_potential(pos)
+               + self.electronic_potential(pos) \
+               + self.nuclear_repulsion()
 
     def energy(self,pos):
         '''Total energy for the sampling points.'''

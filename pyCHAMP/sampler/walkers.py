@@ -37,7 +37,7 @@ class WALKERS(object):
 	def move(self, step_size, method='one'):
 
 		if method == 'one':
-			new_pos = self._move_one(step_size)
+			new_pos = self._move_one_vect(step_size)
 
 		elif method == 'all':
 			new_pos = self._move_all(step_size)
@@ -56,6 +56,15 @@ class WALKERS(object):
 				index = [self.ndim*ielec[iw],self.ndim*(ielec[iw]+1)]
 				new_pos[iw,index[0]:index[1]] += self._random(step_size,(self.ndim,))	
 		return new_pos
+
+	def _move_one_vect(self,step_size):
+
+		new_pos = np.copy(self.pos)
+		index =  np.random.randint(0,self.nelec,self.nwalkers)
+		new_pos = new_pos.reshape(self.nwalkers,self.nelec,self.ndim)
+		new_pos[range(self.nwalkers),index,:] += self._random(step_size,(self.nwalkers,self.ndim))
+		return new_pos.reshape(self.nwalkers,self.ndim*self.nelec)
+
 
 	def _random(self,step_size,size):
 		return step_size * (2 * np.random.random(size) - 1)

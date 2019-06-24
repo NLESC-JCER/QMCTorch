@@ -4,6 +4,22 @@
 		"selected_items":
 		[
 			[
+				"n",
+				"nwalkers"
+			],
+			[
+				"kine",
+				"kinetic_energy"
+			],
+			[
+				"nuc",
+				"nuclear_repulsion"
+			],
+			[
+				"ato",
+				"atom_mass_list"
+			],
+			[
 				"ce",
 				"centers"
 			],
@@ -18,10 +34,6 @@
 			[
 				"get",
 				"get_observable"
-			],
-			[
-				"nuc",
-				"nuclear_repulsion"
 			],
 			[
 				"de",
@@ -66,10 +78,6 @@
 			[
 				"m",
 				"modify_grid"
-			],
-			[
-				"n",
-				"ninterval"
 			],
 			[
 				"inte",
@@ -506,14 +514,6 @@
 			[
 				"da",
 				"davidson_correction"
-			],
-			[
-				"david",
-				"davidson_correction"
-			],
-			[
-				"N",
-				"N"
 			]
 		]
 	},
@@ -529,22 +529,19 @@
 			}
 		},
 		{
-			"file": "example/ho2d.py",
+			"file": "pyCHAMP/wavefunction/neural_pyscf_wf_base.py",
 			"settings":
 			{
-				"buffer_size": 2458,
+				"buffer_size": 9519,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
 		},
 		{
-			"contents": "import sys\nimport torch\nfrom torch import nn\nfrom torch.autograd import Variable\nimport torch.nn.functional as F\nimport torch.optim as optim\n\nfrom pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE\n\nfrom pyCHAMP.wavefunction.rbf import RBF\nfrom pyCHAMP.solver.deepqmc import DeepQMC\nfrom pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS\n\nfrom pyCHAMP.solver.mesh import regular_mesh_3d\n\nfrom pyCHAMP.solver.plot import plot_wf_1d, plotter1d\nfrom pyCHAMP.solver.plot import plot_results_1d as plot_results\n\nimport matplotlib.pyplot as plt\n\nimport numpy as np\n\n\nclass RBF_H2plus(NEURAL_WF_BASE):\n\n    def __init__(self,centers):\n        super(RBF_H2plus,self).__init__(1,1)\n\n        # get the RBF centers \n        self.centers = centers\n        self.ncenter = len(self.centers)\n\n        # define the RBF layer\n        self.rbf = RBF(self.ndim_tot, \n                       self.ncenter, \n                       centers=self.centers, \n                       opt_centers=False,\n                       kernel='slater',\n                       sigma=1.)\n        \n        # define the fc layer\n        self.fc = nn.Linear(self.ncenter, 1, bias=False)\n\n        # initiaize the fc layer\n        self.fc.weight.data.fill_(2.)\n        self.fc.clip = False\n        \n\n    def forward(self,x):\n        ''' Compute the value of the wave function.\n        for a multiple conformation of the electrons\n\n        Args:\n            parameters : variational param of the wf\n            pos: position of the electrons\n\n        Returns: values of psi\n        '''\n\n        batch_size = x.shape[0]\n        x = self.rbf(x)\n        x = self.fc(x)\n        return x.view(-1,1)\n\n    def nuclear_potential(self,pos):\n        '''Compute the potential of the wf points\n        Args:\n            pos: position of the electron\n\n        Returns: values of V * psi\n\n        TODO : vecorize that !! The solution below doesn't really wirk :(def plot_observable(obs_dict,e0=None,ax=None):)\n        '''\n\n        c0 = self.centers[0]\n        c1 = self.centers[1]\n\n        r0 = torch.sqrt(   ((pos-c0)**2)  ) + 1E-1\n        r1 = torch.sqrt(   ((pos-c1)**2)  ) + 1E-1\n\n        p0 = (-1./r0).view(-1,1)\n        p1 = (-1./r1).view(-1,1)\n        \n        return p0 + p1\n\n        # r = torch.sqrt(((self.centers[:,None,:]-pos[None,...])**2).sum(2)).view(-1,self.ncenter)\n        # return (-1./r).sum(1).view(-1,1)\n   \n\n    def electronic_potential(self,pos):\n        '''Compute the potential of the wf points\n        Args:\n            pos: position of the electron\n\n        Returns: values of Vee * psi\n        '''\n        return 0\n\n    def nuclear_repulsion(self):\n        c0 = self.centers[0]\n        c1 = self.centers[1]\n        rnn = torch.sqrt(   ((c0-c1)**2).sum()  )\n        return (1./rnn).view(-1,1)\n\n    def atomic_distance(self,pos=None):\n        c0 = self.centers[0]\n        c1 = self.centers[1]\n        return torch.sqrt(   ((c0-c1)**2).sum()  )\n\ndef h2plus_sol(pos):\n    '''Solution of the H2 + problem.'''\n\n    centers = torch.tensor([-0.75,0.75])\n    beta = 1.\n\n    c0 = centers[0]\n    c1 = centers[1]\n\n    r0 = torch.sqrt(((pos-c0)**2))\n    r1 = torch.sqrt(((pos-c1)**2))\n\n    p0 = 2.* torch.exp(-0.5*beta*r0).view(-1,1)\n    p1 = 2.* torch.exp(-0.5*beta*r1).view(-1,1)\n\n    return p0+p1\n    \n\n# wavefunction\nX = 0.1\ncenters = torch.tensor([[X],\n                        [-X]])\nwf = RBF_H2plus(centers)\n\n#sampler\nsampler = METROPOLIS(nwalkers=1000, nstep=1000, \n                     step_size = 3., nelec = wf.nelec, \n                     ndim = wf.ndim, domain = {'min':-5,'max':5})\n\n# optimizer\nopt = optim.Adam(wf.parameters(),lr=0.05)\n#opt = optim.SGD(wf.parameters(),lr=0.1)\n\n# domain for the RBF Network\nboundary = 5.\ndomain = {'xmin':-boundary,'xmax':boundary}\nncenter = 51\n\n# network\nnet = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)\n\nobs_dict = {'local_energy':[],\n            'atomic_distance':[]}\n\nif 0:\n    plot_wf_1d(net,domain,ncenter,sol=h2plus_sol,\n               hist=False,\n               pot=False,\n               grad=True)\n\nif 0:\n\n    X = np.linspace(0.1,2,25)\n    energy, var = [], []\n    for x in X:\n\n        net.wf.rbf.centers.data[0] = -x\n        net.wf.rbf.centers.data[1] = x\n        pos = Variable(net.sample())\n        pos.requires_grad = True\n        e = net.wf.energy(pos)\n        s = net.wf.variance(pos)\n\n        energy.append(e)\n        var.append(s)\n\n    plt.plot(X,energy)\n    plt.show()\n    plt.plot(X,var)\n    plt.show()\n    \n\nif 0:\n    pos = Variable(net.sample())\n    pos.requires_grad = True\n    e = net.wf.energy(pos)\n    s = net.wf.variance(pos)\n\n    print('Energy   :', e)\n    print('Variance :', s)\n    sys.exit()\n\n\n\nif 1:\n\n    plot1D = plotter1d(wf,domain,ncenter,sol=h2plus_sol)\n\n    # do not optimize the weights of fc\n    net.wf.fc.weight.requires_grad = False\n\n    # optimize the position of the centers\n    # do not optimize the std of the gaussian\n    net.wf.rbf.sigma.requires_grad = False\n    net.wf.rbf.centers.requires_grad = True\n\n    # train\n    pos,obs_dict = net.train(250,\n             batchsize=500,\n             pos = None,\n             obs_dict = obs_dict,\n             resample=200,\n             ntherm=-1,\n             loss = 'energy',\n             plot=plot1D)\n\n    plot_results(net,obs_dict,domain,ncenter)\n\n\n\n\n\n\n",
-			"file": "example/nn_h2plus_1d.py",
-			"file_size": 5271,
-			"file_write_time": 132054255136633278,
+			"file": "pyCHAMP/wavefunction/wave_modules.py",
 			"settings":
 			{
-				"buffer_size": 5270,
+				"buffer_size": 3573,
 				"line_ending": "Unix"
 			}
 		},
@@ -558,28 +555,10 @@
 			}
 		},
 		{
-			"file": "example/nn_h2plus.py",
-			"settings":
-			{
-				"buffer_size": 6081,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/solver/plot.py",
-			"settings":
-			{
-				"buffer_size": 15633,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
 			"file": "pyCHAMP/wavefunction/rbf.py",
 			"settings":
 			{
-				"buffer_size": 6217,
+				"buffer_size": 9794,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -599,14 +578,6 @@
 			{
 				"buffer_size": 4252,
 				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/wavefunction/neural_pyscf_wf_base.py",
-			"settings":
-			{
-				"buffer_size": 7093,
 				"line_ending": "Unix"
 			}
 		},
@@ -632,7 +603,25 @@
 			"file": "pyCHAMP/sampler/walkers.py",
 			"settings":
 			{
-				"buffer_size": 1931,
+				"buffer_size": 2263,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "example/nn_h2_rbf.py",
+			"settings":
+			{
+				"buffer_size": 6947,
+				"encoding": "UTF-8",
+				"line_ending": "Unix"
+			}
+		},
+		{
+			"file": "pyCHAMP/solver/plot.py",
+			"settings":
+			{
+				"buffer_size": 15633,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -641,16 +630,7 @@
 			"file": "pyCHAMP/solver/deepqmc.py",
 			"settings":
 			{
-				"buffer_size": 4730,
-				"encoding": "UTF-8",
-				"line_ending": "Unix"
-			}
-		},
-		{
-			"file": "pyCHAMP/sampler/pymc3.py",
-			"settings":
-			{
-				"buffer_size": 2246,
+				"buffer_size": 4784,
 				"encoding": "UTF-8",
 				"line_ending": "Unix"
 			}
@@ -761,11 +741,16 @@
 	],
 	"file_history":
 	[
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/sampler_base.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/plot.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/nn_ho2d.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/nn_h2.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho2d.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/nn_h2plus_1d.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/pymc3.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/deepqmc_mol.py",
+		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/sampler_base.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/solver/refine_mesh.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/nn_morse.py",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/nn_ho2d.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/nn_h2plus.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho1d.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/morse1d.py",
@@ -788,7 +773,6 @@
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/wavefunction/neural_wf_base.py",
 		"/home/nicolas/Documents/tutorial/pytorch/own_func.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho3d.py",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/ho2d.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/sand_box.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/h2o.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/tests/test_ho3d.py",
@@ -800,7 +784,6 @@
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer/swarm.py",
 		"/home/nicolas/Documents/tutorial/pyswarm/test.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/optimizer/minimize.py",
-		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/pymc3.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/example/h2.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/tests/test_lint.py",
 		"/home/nicolas/Documents/projects/QMC/pyCHAMP/pyCHAMP/sampler/metropolis.py",
@@ -885,10 +868,7 @@
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/orbitals.cc",
 		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/gwbse/bse_engine.cc",
 		"/home/nicolas/Documents/projects/votca/xtp/include/votca/xtp/bse_engine.h",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/tools/dftgwbse.cc",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/jobcalculators/eqm.cc",
-		"/home/nicolas/Documents/projects/votca/xtp/include/votca/xtp/bse_singlet.h",
-		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/gwbse/bse_triplet.cc"
+		"/home/nicolas/Documents/projects/votca/xtp/src/libxtp/tools/dftgwbse.cc"
 	],
 	"find":
 	{
@@ -927,7 +907,7 @@
 	"groups":
 	[
 		{
-			"selected": 4,
+			"selected": 11,
 			"sheets":
 			[
 				{
@@ -943,8 +923,8 @@
 						"selection":
 						[
 							[
-								479,
-								479
+								1054,
+								1054
 							]
 						],
 						"settings":
@@ -957,24 +937,55 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 19,
+					"stack_index": 7,
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "example/ho2d.py",
+					"file": "pyCHAMP/wavefunction/neural_pyscf_wf_base.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 2458,
+						"buffer_size": 9519,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								985,
-								985
+								1363,
+								1363
+							]
+						],
+						"settings":
+						{
+							"history_list_is_closing": true,
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 429.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "pyCHAMP/wavefunction/wave_modules.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3573,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3405,
+								3405
 							]
 						],
 						"settings":
@@ -987,37 +998,7 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 18,
-					"type": "text"
-				},
-				{
-					"buffer": 2,
-					"file": "example/nn_h2plus_1d.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 5270,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								3390,
-								3390
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 858.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 13,
+					"stack_index": 6,
 					"type": "text"
 				},
 				{
@@ -1044,87 +1025,27 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1681.0,
+						"translation.y": 819.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 2,
+					"stack_index": 9,
 					"type": "text"
 				},
 				{
 					"buffer": 4,
-					"file": "example/nn_h2plus.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 6081,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								5314,
-								5314
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 2457.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 0,
-					"type": "text"
-				},
-				{
-					"buffer": 5,
-					"file": "pyCHAMP/solver/plot.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 15633,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								12751,
-								12751
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 4896.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 4,
-					"type": "text"
-				},
-				{
-					"buffer": 6,
 					"file": "pyCHAMP/wavefunction/rbf.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 6217,
+						"buffer_size": 9794,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								6174,
-								6174
+								9299,
+								9299
 							]
 						],
 						"settings":
@@ -1134,14 +1055,14 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1209.0,
+						"translation.y": 2496.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 1,
+					"stack_index": 8,
 					"type": "text"
 				},
 				{
-					"buffer": 7,
+					"buffer": 5,
 					"file": "pyCHAMP/solver/mesh.py",
 					"semi_transient": false,
 					"settings":
@@ -1167,11 +1088,11 @@
 						"translation.y": 286.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 25,
+					"stack_index": 24,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
+					"buffer": 6,
 					"file": "pyCHAMP/wavefunction/neural_wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1197,24 +1118,24 @@
 						"translation.y": 390.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 14,
+					"stack_index": 17,
 					"type": "text"
 				},
 				{
-					"buffer": 6,
+					"buffer": 4,
 					"file": "pyCHAMP/wavefunction/rbf.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 6217,
+						"buffer_size": 9794,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3194,
-								3194
+								3404,
+								3404
 							]
 						],
 						"settings":
@@ -1224,19 +1145,19 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 663.0,
+						"translation.y": 3328.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 24,
+					"stack_index": 2,
 					"type": "text"
 				},
 				{
-					"buffer": 9,
+					"buffer": 1,
 					"file": "pyCHAMP/wavefunction/neural_pyscf_wf_base.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 7093,
+						"buffer_size": 9519,
 						"regions":
 						{
 						},
@@ -1249,6 +1170,7 @@
 						],
 						"settings":
 						{
+							"history_list_is_closing": true,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
@@ -1257,11 +1179,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 17,
+					"stack_index": 20,
 					"type": "text"
 				},
 				{
-					"buffer": 10,
+					"buffer": 7,
 					"file": "pyCHAMP/sampler/metropolis.py",
 					"semi_transient": false,
 					"settings":
@@ -1273,8 +1195,8 @@
 						"selection":
 						[
 							[
-								1987,
-								1987
+								3711,
+								3711
 							]
 						],
 						"settings":
@@ -1285,14 +1207,14 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1053.0,
+						"translation.y": 1200.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 9,
+					"stack_index": 1,
 					"type": "text"
 				},
 				{
-					"buffer": 11,
+					"buffer": 8,
 					"file": "pyCHAMP/wavefunction/wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1318,24 +1240,24 @@
 						"translation.y": 1677.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 26,
+					"stack_index": 25,
 					"type": "text"
 				},
 				{
-					"buffer": 12,
+					"buffer": 9,
 					"file": "pyCHAMP/sampler/walkers.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1931,
+						"buffer_size": 2263,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								837,
-								837
+								1862,
+								1862
 							]
 						],
 						"settings":
@@ -1344,20 +1266,50 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 0.0,
+						"translation.y": 195.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 12,
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
 		},
 		{
-			"selected": 11,
+			"selected": 0,
 			"sheets":
 			[
 				{
-					"buffer": 5,
+					"buffer": 10,
+					"file": "example/nn_h2_rbf.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 6947,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								3950,
+								3950
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 11,
 					"file": "pyCHAMP/solver/plot.py",
 					"semi_transient": false,
 					"settings":
@@ -1383,24 +1335,24 @@
 						"translation.y": 702.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 15,
+					"stack_index": 18,
 					"type": "text"
 				},
 				{
-					"buffer": 13,
+					"buffer": 12,
 					"file": "pyCHAMP/solver/deepqmc.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 4730,
+						"buffer_size": 4784,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								4730,
-								4730
+								4480,
+								4480
 							]
 						],
 						"settings":
@@ -1410,44 +1362,14 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 1638.0,
+						"translation.y": 628.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 6,
+					"stack_index": 11,
 					"type": "text"
 				},
 				{
-					"buffer": 14,
-					"file": "pyCHAMP/sampler/pymc3.py",
-					"semi_transient": false,
-					"settings":
-					{
-						"buffer_size": 2246,
-						"regions":
-						{
-						},
-						"selection":
-						[
-							[
-								1077,
-								1077
-							]
-						],
-						"settings":
-						{
-							"syntax": "Packages/Python/Python.sublime-syntax",
-							"tab_size": 4,
-							"translate_tabs_to_spaces": true
-						},
-						"translation.x": 0.0,
-						"translation.y": 0.0,
-						"zoom_level": 1.0
-					},
-					"stack_index": 8,
-					"type": "text"
-				},
-				{
-					"buffer": 15,
+					"buffer": 13,
 					"file": "example/nn_ho1d.py",
 					"semi_transient": false,
 					"settings":
@@ -1465,6 +1387,7 @@
 						],
 						"settings":
 						{
+							"history_list_is_closing": true,
 							"syntax": "Packages/Python/Python.sublime-syntax",
 							"tab_size": 4,
 							"translate_tabs_to_spaces": true
@@ -1473,11 +1396,11 @@
 						"translation.y": 1170.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 16,
+					"stack_index": 19,
 					"type": "text"
 				},
 				{
-					"buffer": 8,
+					"buffer": 6,
 					"file": "pyCHAMP/wavefunction/neural_wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1489,8 +1412,8 @@
 						"selection":
 						[
 							[
-								262,
-								262
+								3583,
+								3583
 							]
 						],
 						"settings":
@@ -1500,14 +1423,14 @@
 							"translate_tabs_to_spaces": true
 						},
 						"translation.x": 0.0,
-						"translation.y": 507.0,
+						"translation.y": 966.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 20,
+					"stack_index": 10,
 					"type": "text"
 				},
 				{
-					"buffer": 16,
+					"buffer": 14,
 					"file": "pyCHAMP/solver/solver_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1536,7 +1459,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 10,
+					"buffer": 7,
 					"file": "pyCHAMP/sampler/metropolis.py",
 					"semi_transient": false,
 					"settings":
@@ -1563,24 +1486,24 @@
 						"translation.y": 1170.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 7,
+					"stack_index": 15,
 					"type": "text"
 				},
 				{
-					"buffer": 12,
+					"buffer": 9,
 					"file": "pyCHAMP/sampler/walkers.py",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 1931,
+						"buffer_size": 2263,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								275,
-								275
+								887,
+								887
 							]
 						],
 						"settings":
@@ -1592,11 +1515,11 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 10,
+					"stack_index": 4,
 					"type": "text"
 				},
 				{
-					"buffer": 7,
+					"buffer": 5,
 					"file": "pyCHAMP/solver/mesh.py",
 					"semi_transient": false,
 					"settings":
@@ -1622,11 +1545,11 @@
 						"translation.y": 680.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 5,
+					"stack_index": 14,
 					"type": "text"
 				},
 				{
-					"buffer": 17,
+					"buffer": 15,
 					"file": "example/h2.py",
 					"semi_transient": false,
 					"settings":
@@ -1655,7 +1578,7 @@
 					"type": "text"
 				},
 				{
-					"buffer": 18,
+					"buffer": 16,
 					"file": "example/h2plus.py",
 					"semi_transient": false,
 					"settings":
@@ -1681,11 +1604,11 @@
 						"translation.y": 663.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 11,
+					"stack_index": 16,
 					"type": "text"
 				},
 				{
-					"buffer": 19,
+					"buffer": 17,
 					"file": "example/hydrogen.py",
 					"semi_transient": false,
 					"settings":
@@ -1697,8 +1620,8 @@
 						"selection":
 						[
 							[
-								280,
-								280
+								579,
+								579
 							]
 						],
 						"settings":
@@ -1710,11 +1633,41 @@
 						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 3,
+					"stack_index": 13,
 					"type": "text"
 				},
 				{
-					"buffer": 11,
+					"buffer": 4,
+					"file": "pyCHAMP/wavefunction/rbf.py",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 9794,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								7178,
+								7178
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/Python/Python.sublime-syntax",
+							"tab_size": 4,
+							"translate_tabs_to_spaces": true
+						},
+						"translation.x": 0.0,
+						"translation.y": 2523.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 12,
+					"type": "text"
+				},
+				{
+					"buffer": 8,
 					"file": "pyCHAMP/wavefunction/wf_base.py",
 					"semi_transient": false,
 					"settings":
@@ -1806,6 +1759,26 @@
 		"selected_items":
 		[
 			[
+				"mey",
+				"pyCHAMP/sampler/metropolis.py"
+			],
+			[
+				"neur",
+				"pyCHAMP/wavefunction/neural_pyscf_wf_base.py"
+			],
+			[
+				"neu",
+				"pyCHAMP/wavefunction/neural_wf_base.py"
+			],
+			[
+				"nn_h2",
+				"example/nn_ho2d.py"
+			],
+			[
+				"rbf",
+				"pyCHAMP/wavefunction/rbf.py"
+			],
+			[
 				"mes",
 				"pyCHAMP/solver/mesh.py"
 			],
@@ -1862,10 +1835,6 @@
 				"example/h2plus.py"
 			],
 			[
-				"rbf",
-				"pyCHAMP/wavefunction/rbf.py"
-			],
-			[
 				"nn_ho",
 				"example/nn_ho2d.py"
 			],
@@ -1910,10 +1879,6 @@
 				"pyCHAMP/sampler/walkers.py"
 			],
 			[
-				"neur",
-				"pyCHAMP/solver/neural_net.py"
-			],
-			[
 				"Po",
 				"pyCHAMP/optimizer/PointNet.py"
 			],
@@ -1936,10 +1901,6 @@
 			[
 				"ho3d",
 				"example/ho3d.py"
-			],
-			[
-				"neu",
-				"pyCHAMP/wavefunction/neural_pyscf_wf_base.py"
 			],
 			[
 				"sa",

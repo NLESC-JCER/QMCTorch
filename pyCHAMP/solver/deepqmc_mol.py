@@ -20,7 +20,7 @@ class DeepQMC(SOLVER_BASE):
     def __init__(self, wf=None, sampler=None, optimizer=None):
 
         SOLVER_BASE.__init__(self,wf,sampler,None)
-        self.opt = optim.SGD(self.wf.parameters(),lr=0.005, momentum=0.9, weight_decay=0.001)
+        self.opt = optimizer
         self.batchsize = 100
 
 

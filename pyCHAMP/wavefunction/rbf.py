@@ -9,6 +9,7 @@ def pairwise_distance(x,y):
     yn = (y**2).sum(1).view(1,-1)
     return xn + yn + 2.*x.mm(y.transpose(0,1))
 
+########################################################################################################
 
 class RBF1D(nn.Module):
 
@@ -51,6 +52,7 @@ class RBF1D(nn.Module):
         out = torch.exp( -(out-self.centers)**2 / self.sigma )
         return(out)
         
+########################################################################################################
 
 class RBF(nn.Module):
 
@@ -197,6 +199,7 @@ class RBF(nn.Module):
 
         return X.view(-1,self.ncenter)
 
+########################################################################################################
 
 class RBF_Slater(nn.Module):
 
@@ -247,3 +250,62 @@ class RBF_Slater(nn.Module):
         X = torch.exp(-self.sigma*X)
 
         return X.view(-1,self.ncenter)
+
+################################################################################
+
+class RBF_Slater_NELEC(nn.Module):
+
+    def __init__(self,
+                input_features,
+                output_features,
+                centers,
+                sigma,
+                nelec):
+
+        '''Radial Basis Function Layer in N dimension
+
+        Args:
+            input_features: input side
+            output_features: output size
+            centers : position of the centers
+            opt_centers : optmize the center positions
+            sigma : strategy to get the sigma
+            opt_sigma : optmize the std or not
+        '''
+
+        super(RBF_Slater_NELEC,self).__init__()
+
+        # register dimension
+        self.input_features = input_features
+        self.output_features = output_features
+
+        # make the centers optmizable or not
+        self.centers = nn.Parameter(centers)
+        self.centers.requires_grad = True
+        self.ncenter = len(self.centers)
+        
+        # get the standard deviations
+        self.sigma = nn.Parameter(sigma)
+        self.sigma.requires_grad = True
+
+        # wavefunction data
+        self.nelec = nelec
+        self.ndim = int(self.input_features/self.nelec)
+
+    def forward(self,input):
+        
+    
+        # get the distancese of each point to each RBF center
+        # (Nbatch,Nelec,Nrbf,Ndim)
+        delta =  (input.view(-1,self.nelec,1,self.ndim) - self.centers[None,...])
+
+        # compute the distance
+        # (Nbatch,Nelec,Nrbf)
+        X = (delta**2).sum(3)
+        X = torch.sqrt(X)
+        
+        # multiply by the exponent and take the exponential
+        # (Nbatch,Nelec,Nrbf)
+        X = torch.exp(-self.sigma*X)
+
+        return X

@@ -11,14 +11,15 @@ from pyCHAMP.solver.deepqmc import DeepQMC
 import matplotlib.pyplot as plt
 
 
-
-# wavefunction
-wf = NEURAL_PYSCF_WF(atom='H 0 0 0; H 0 0 1.38',
-                     #basis='dzp',
-                     basis='sto-3g',
+# wavefunction 
+# bond distance : 0.74 A -> 1.38 a
+# ground state energy : -31.688 eV -> -1.16 hartree
+# bond dissociation energy 4.478 eV -> 0.16 hartree
+wf = NEURAL_PYSCF_WF(atom='H 0 0 0; H 0 0 0.74',
+                     basis='dz',
                      active_space=(1,1))
 # sampler
-sampler = METROPOLIS(nwalkers=100, nstep=100, 
+sampler = METROPOLIS(nwalkers=1000, nstep=1000, 
                      step_size = 3., nelec = wf.nelec, 
                      ndim = 3, domain = {'min':-5,'max':5})
 
@@ -48,6 +49,26 @@ if 1:
     print('Energy   :', e)
     print('Variance :', s)
 
+if 0:
+
+    X = np.linspace(0.5,2.5,25)
+    energy, var = [], []
+    for x in X:
+
+        net.wf.rbf.centers.data[0,2] = -x
+        net.wf.rbf.centers.data[0,2] = x
+        pos = Variable(net.sample())
+        pos.requires_grad = True
+        e = net.wf.energy(pos)
+        s = net.wf.variance(pos)
+
+        energy.append(e)
+        var.append(s)
+
+    plt.plot(X,energy)
+    plt.show()
+    plt.plot(X,var)
+    plt.show()    
 
 if 0:
     net.wf.layer_mo.weight.data = torch.eye(net.wf.nao).double()
