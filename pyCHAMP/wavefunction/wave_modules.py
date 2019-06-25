@@ -36,14 +36,45 @@ class SlaterPooling(nn.Module):
 
         return out
 
+# class ElectronDistance(torch.autograd.Function):
+        
+#     @staticmethod
+#     def forward(self,input):
+#         batch_size = input.shape[0]
+#         inp_norm = (input**2).sum(2).view(batch_size,-1,1)
+#         dist = inp_norm + inp_norm.view(batch_size,1,-1) - 2.0 * torch.bmm(input,input.transpose(1,2))
+#         return dist
+
 class ElectronDistance(torch.autograd.Function):
         
     @staticmethod
-    def forward(self,input):
-        batch_size = input.shape[0]
-        inp_norm = (input**2).sum(2).view(batch_size,-1,1)
-        dist = inp_norm + inp_norm.view(batch_size,1,-1) - 2.0 * torch.bmm(input,input.transpose(1,2))
-        return dist #view(batch_size,-1,1)
+    def forward(self,input1,input2=None):
+        '''compute the pairwise distance between two sets of electrons.
+        Args:
+            input1 (Nbatch,Nelec1*Ndim) : position of the electrons
+            input2 (Nbatch,Nelec2*Ndim) : position of the electrons if None -> input1
+        Returns:
+            mat (Nbatch,Nelec1,Nelec2) : pairwise distance between electrons
+        '''
+
+        ndim = 3
+
+        nelec1 = input1.shape[1]/ndim
+        input1 = input1.view(-1,nelec1,ndim)
+        norm1 = (input1**2).sum(-1).unsqueeze(-1)
+
+        if input2 is None:
+            nelec2 = nelec1
+            input2 = input1
+            norm2 = norm1
+        else:
+            nelec2 = input2.shape[1]/ndim
+            input2 = input2.view(-1,nelec2,ndim)
+            norm2 = (input2**2).sum(-1).unsqueeze(-1)
+
+        dist = norm1 + norm2.transpose(1,2) -2.0 * torch.bmm(input1,input2.transpose(1,2))
+
+        return dist
 
 class TwoBodyJastrowFactor(nn.Module):
 
@@ -55,20 +86,37 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.weight = Variable(torch.tensor([1.0]))
         self.weight.requires_grad = True
+
         bup = torch.cat( (0.25*torch.ones(nup,nup),0.5*torch.ones(nup,ndown) ),dim=1)
         bdown = torch.cat( (0.5*torch.ones(ndown,nup),0.25*torch.ones(ndown,ndown) ),dim=1)
         self.static_weight = torch.cat( (bup,bdown),dim=0)
 
     def forward(self,input):
-        return JastrowFunction.apply(input, self.weight, self.static_weight)
 
+        # all jastrow for all electron pairs
+        factors = torch.exp(static_weight * input / (1.0 + weight * input))
+        
+        # electron pairs with different spins
+        factors_updown = factors[:,:nup,nup:]
+
+        # electron pairs up up
+        factors_upup = factors_[:,:nup,:nup]
+        factors_upup = factors_upup[:,torch.tril(torch.ones(nup,nup))==0]
+
+        # electron pairs down,down
+        factors_downdown = factors_[:,nup:,nup:]
+        factors_downdown = factors_downdown[:,torch.tril(torch.ones(ndown,ndown))==0]
+
+        return factors_upup.prod(1) * factors_downdown.prod(1) * factors_updown.prod(2).prod(1)
 class JastrowFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx,input,weight,static_weight):
         ctx.save_for_backward(input, weight, static_weight)
-        output = static_weight * input / (1.0 + weight * input)
-        return output #.sum([1,2])
+        output = torch.exp(static_weight * input / (1.0 + weight * input))
+
+
+        return output
 
     @staticmethod
     def backward(ctx,grad_output):

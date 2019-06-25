@@ -11,7 +11,7 @@ from pyCHAMP.wavefunction.rbf import RBF_Slater_NELEC as RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 
-from pyCHAMP.wavefunction.wave_modules import SlaterPooling
+from pyCHAMP.wavefunction.wave_modules import SlaterPooling, TwoBodyJastrowFactor
 
 from pyCHAMP.solver.mesh import regular_mesh_3d
 
@@ -44,6 +44,8 @@ class RBF_H2(NEURAL_WF_BASE):
         mo_coeff =  torch.sqrt(torch.tensor([2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
         self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
 
+        # jastrow
+        self.jastrow = TwoBodyJastrowFactor(1,1)
         # defin the SD pooling layer
         #self.pool = SlaterPooling([[[0]],[[0]]],1,1)
 
@@ -62,9 +64,10 @@ class RBF_H2(NEURAL_WF_BASE):
         '''
 
         batch_size = x.shape[0]
+        J = self.jastrow(x)
         x = self.rbf(x)
         x = self.mo(x)
-        return (x[:,0,0]*x[:,1,0]).view(-1,1)
+        return J*(x[:,0,0]*x[:,1,0]).view(-1,1)
         #return (x[:,0,0] * x[:,1,1] + x[:,0,1]*x[:,1,0]).view(-1,1)
         #return (x[:,0,0] + x[:,1,1]).view(-1,1)
 
@@ -133,6 +136,7 @@ class RBF_H2(NEURAL_WF_BASE):
 X = 0.69 # <- opt ditance +0.69 and -0.69
 S = 1.20 # <- roughly ideal zeta parameter
 
+
 # define the RBF WF
 centers = torch.tensor([[0.,0.,-X],[0.,0.,X]])
 sigma = torch.tensor([S,S])
@@ -160,8 +164,6 @@ obs_dict = {'local_energy':[],
             'atomic_distance':[],
             'get_sigma':[]}
 
-
-
 if 0:
     net.sampler.nstep = 5
     pos = net.sample()
@@ -175,7 +177,6 @@ if 0:
 
     plt.plot(X[:,-1].detach().numpy(),V.detach().numpy())
     plt.show()
-
 
 if 0:
     X = np.linspace(0.5,2,11)
@@ -193,32 +194,45 @@ if 0:
 
     plt.plot(X,energy)
     plt.show()
-    plt.plot(X,var)
-    plt.show()
+    # plt.plot(X,var)
+    # plt.show()
 
 
-if 0:
-    X = np.linspace(0.5,2,15)
+if 1:
+    X = np.linspace(0.1,2,21)
     energy, var = [], []
+    K,Vnn,Ven,Vee = [],[],[],[]
     for x in X:
 
         net.wf.rbf.centers.data[0,2] = -x
         net.wf.rbf.centers.data[1,2] = x
         pos = Variable(net.sample())
         pos.requires_grad = True
+
+        K.append(net.wf.kinetic_energy(pos).mean())
+        Vnn.append(net.wf.nuclear_repulsion())
+        Ven.append(net.wf.nuclear_potential(pos).mean())
+        Vee.append(net.wf.electronic_potential(pos).mean())
+
         e = net.wf.energy(pos)
         s = net.wf.variance(pos)
 
         energy.append(e)
         var.append(s)
 
-    plt.plot(X,energy)
+    plt.plot(X,energy,linewidth=4,c='black',label='Energy')
+    plt.plot(X,K,label='K')
+    plt.plot(X,Vee,label='Vee')
+    plt.plot(X,Ven,label='Ven')
+    plt.plot(X,Vnn,label='Vnn')
+    plt.legend()
+    plt.grid()
     plt.show()
     plt.plot(X,var)
     plt.show()
     
 
-if 1:
+if 0:
     pos = Variable(net.sample())
     pos.requires_grad = True
     e = net.wf.energy(pos)

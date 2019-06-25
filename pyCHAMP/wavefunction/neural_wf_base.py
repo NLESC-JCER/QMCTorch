@@ -93,7 +93,7 @@ class NEURAL_WF_BASE(nn.Module):
         # hess = grad(jacob.sum(),pos,grad_outputs=z,create_graph=True)[0]
         # return -0.5 * hess.sum(1).view(-1,1)
     
-    def kinetic_energy_finite_difference(self,pos,eps=1E-6):
+    def kinetic_energy_finite_difference(self,pos,eps=1E-3):
         '''Compute the second derivative of the network
         output w.r.t the value of the input using finite difference.
 
