@@ -190,7 +190,7 @@ class NEURAL_PYSCF_WF(nn.Module):
                 epos2 = pos[:,ielec2*self.ndim:(ielec2+1)*self.ndim]
                 
                 r = torch.sqrt( ((epos1-epos2)**2).sum(1) ).float()
-                pot -= (1./r)
+                pot += (1./r)
 
         return pot
 
@@ -215,13 +215,6 @@ class NEURAL_PYSCF_WF(nn.Module):
     def pdf(self,pos):
         return self.forward(pos)**2
 
-    # def kinetic_autograd(self,pos):
-
-    #     out = self.forward(pos)
-    #     z = Variable(torch.ones(out.shape))
-    #     jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
-    #     hess = grad(jacob.sum(),pos,create_graph=True)[0]
-    #     return hess.sum(1)
 
     def kinetic_energy(self,pos,out=None):
         '''Compute the second derivative of the network

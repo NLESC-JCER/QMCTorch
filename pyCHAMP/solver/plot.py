@@ -346,7 +346,7 @@ def plot_results_2d(net,obs_dict,domain,res,sol=None,e0=None):
 ##  3D routnines
 ###########################################################################################
 
-def plot_results_3d(net,obs_dict,domain,res,isoval=0.02,sol=None,e0=None,hist=False):
+def plot_results_3d(net,obs_dict,domain,res,wf=False,isoval=0.02,sol=None,e0=None,hist=False):
     ''' Plot the summary of the results for a 1D problem.
 
     Args: 
@@ -362,7 +362,7 @@ def plot_results_3d(net,obs_dict,domain,res,isoval=0.02,sol=None,e0=None,hist=Fa
     ax0 = fig.add_subplot(211, projection='3d')
     ax1 = fig.add_subplot(212)
 
-    plot_wf_3d(net,domain,res,sol=sol,isoval=isoval,hist=hist,ax=ax0)
+    plot_wf_3d(net,domain,res,wf=wf,sol=sol,isoval=isoval,hist=hist,ax=ax0)
     plot_observable(obs_dict,e0=e0,ax=ax1)
 
     plt.show()

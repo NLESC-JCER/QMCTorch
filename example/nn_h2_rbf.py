@@ -23,8 +23,6 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-
-
 class RBF_H2(NEURAL_WF_BASE):
 
     def __init__(self,centers,sigma):
@@ -47,13 +45,19 @@ class RBF_H2(NEURAL_WF_BASE):
         self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
 
         # jastrow
+        self.edist = ElectronDistance(2,3)
         self.jastrow = TwoBodyJastrowFactor(1,1)
-        # defin the SD pooling layer
-        #self.pool = SlaterPooling([[[0]],[[0]]],1,1)
 
-        
-        
+        # define the SD pooling layer
+        self.configs = (torch.LongTensor([np.array([0])]), torch.LongTensor([np.array([0])]))
+        self.nci = 1
+        self.pool = SlaterPooling(self.configs,1,1)
 
+        # define the linear layer
+        self.fc = nn.Linear(self.nci, 1, bias=False)
+        self.fc.weight.data.fill_(1.)
+        self.fc.clip = False
+        
     def forward(self,x):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
@@ -65,17 +69,14 @@ class RBF_H2(NEURAL_WF_BASE):
         Returns: values of psi
         '''
         
-        #edist  = ElectronDistance.apply(x)
-        #J = self.jastrow(edist)
+        edist  = self.edist(x)
+        J = self.jastrow(edist)
 
         x = self.rbf(x)
         x = self.mo(x)
+        #x = self.pool(x)
         x = (x[:,0,0]*x[:,1,0]).view(-1,1)
-
-        return x
-
-        #return (x[:,0,0] * x[:,1,1] + x[:,0,1]*x[:,1,0]).view(-1,1)
-        #return (x[:,0,0] + x[:,1,1]).view(-1,1)
+        return J*x
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -132,7 +133,7 @@ class RBF_H2(NEURAL_WF_BASE):
 
     def get_sigma(self,pos=None):
         return self.rbf.sigma.data[0]
-    
+
 
 # wavefunction 
 # bond distance : 0.74 A -> 1.38 a
@@ -205,7 +206,7 @@ if 0:
     # plt.show()
 
 
-if 1:
+if 0:
     X = np.linspace(0.1,2,21)
     energy, var = [], []
     K,Vnn,Ven,Vee = [],[],[],[]
@@ -249,17 +250,17 @@ if 0:
     print('Variance :', s)
 
 
-if 0:
+if 1:
 
-    x = 0.5
+    x = 0.25
     net.wf.rbf.centers.data[0,2] = -x
-    net.wf.rbf.centers.data[0,2] = x
+    net.wf.rbf.centers.data[1,2] = x
 
     s = 1.20
     net.wf.rbf.sigma.data[:] = s 
 
     # do not optimize the weights of fc
-    net.wf.fc.weight.requires_grad = False
+    # net.wf.fc.weight.requires_grad = False
 
     # optimize the position of the centers
     # do not optimize the std of the gaussian
@@ -267,7 +268,7 @@ if 0:
     net.wf.rbf.sigma.requires_grad = False
 
     # train
-    pos,obs_dict = net.train(500,
+    pos,obs_dict = net.train(150,
              batchsize=500,
              pos = None,
              obs_dict = obs_dict,
@@ -276,25 +277,7 @@ if 0:
              ntherm=-1,
              loss = 'energy')
 
-    # optimize the position of the centers
-    # do not optimize the std of the gaussian
-    net.wf.rbf.centers.requires_grad = False
-    net.wf.rbf.sigma.requires_grad = True
-
-    opt = optim.Adam(wf.parameters(),lr=0.0001)
-
-    # train
-    pos,obs_dict = net.train(250,
-             batchsize=500,
-             pos = None,
-             obs_dict = obs_dict,
-             resample=1000,
-             resample_every=25,
-             ntherm=-1,
-             loss = 'energy')
-
-
-    plot_results(net,obs_dict,domain,ncenter,isoval=0.02,hist=True)
+    plot_results(net,obs_dict,domain,ncenter,hist=True)
 
 
 

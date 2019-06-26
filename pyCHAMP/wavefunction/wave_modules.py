@@ -25,21 +25,36 @@ class SlaterPooling(nn.Module):
 
     def forward(self,input):
 
-        out = torch.zeros(input.shape[0],self.nconfs)
-        for isample in range(input.shape[0]):
+        ''' Compute the product of spin up/down determinants
+        Args:
+            input : MO values (Nbatch, Nelec, Nmo)
+        Returnn:
+            determiant (Nbatch, Ndet)
+        '''
+        nbatch = input.shape[0]
+        out = torch.zeros(nbatch,self.nconfs)
+        
+        for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
 
-            for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
+            mo_up = input.index_select(1,self.index_up).index_select(2,cup)
+            mo_down = input.index_select(1,self.index_down).index_select(2,cdown)
 
-                mo_up = input[isample].index_select(0,self.index_up).index_select(1,cup)
-                mo_down = input[isample].index_select(0,self.index_down).index_select(1,cdown)
-                out[isample,ic] = torch.det(mo_up) * torch.det(mo_down)
+            # a batch version of det is on its way (end July 2019)
+            # https://github.com/pytorch/pytorch/issues/7500
+            # we'll move to that asap but in the mean time we loop
+            for isample in range(nbatch):
+                out[isample,ic] = torch.det(mo_up[isample]) * torch.det(mo_down[isample])
 
         return out
 
 
-class ElectronDistance(torch.autograd.Function):
+class ElectronDistance(nn.Module):
+    
+    def __init__(self,nelec,ndim):
+        super(ElectronDistance,self).__init__()
+        self.nelec = nelec
+        self.ndim = ndim
         
-    @staticmethod
     def forward(self,input):
         '''compute the pairwise distance between two sets of electrons.
         Args:
@@ -49,10 +64,7 @@ class ElectronDistance(torch.autograd.Function):
             mat (Nbatch,Nelec1,Nelec2) : pairwise distance between electrons
         '''
 
-        ndim = 3
-
-        nelec = int(input.shape[1]/ndim)
-        input = input.view(-1,nelec,ndim)
+        input = input.view(-1,self.nelec,self.ndim)
         norm = (input**2).sum(-1).unsqueeze(-1)
         dist = norm + norm.transpose(1,2) -2.0 * torch.bmm(input,input.transpose(1,2))
 
@@ -75,10 +87,11 @@ class TwoBodyJastrowFactor(nn.Module):
         self.static_weight = torch.cat( (bup,bdown),dim=0)
 
     def forward(self,input):
+        
         factors = torch.exp(self.static_weight * input / (1.0 + self.weight * input))
-        #factors = factors[:,torch.tril(torch.ones(self.nelec,self.nelec))==0].prod(1)
-        factors = factors.sum(2).sum(1)
+        factors = factors[:,torch.tril(torch.ones(self.nelec,self.nelec))==0].prod(1)
         return factors.view(-1,1)
+
         #return JastrowFunction.apply(input,self.weight,self.static_weight)
 
         

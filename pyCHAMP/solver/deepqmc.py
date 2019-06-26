@@ -146,6 +146,7 @@ class DeepQMC(SOLVER_BASE):
             print('distance : %f' %self.wf.atomic_distance() )
             print('sigma : %f' %self.wf.get_sigma() )
             
+            
             if n%resample_every == 0:
                 #pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
                 pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=True)
