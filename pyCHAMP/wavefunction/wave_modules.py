@@ -36,19 +36,11 @@ class SlaterPooling(nn.Module):
 
         return out
 
-# class ElectronDistance(torch.autograd.Function):
-        
-#     @staticmethod
-#     def forward(self,input):
-#         batch_size = input.shape[0]
-#         inp_norm = (input**2).sum(2).view(batch_size,-1,1)
-#         dist = inp_norm + inp_norm.view(batch_size,1,-1) - 2.0 * torch.bmm(input,input.transpose(1,2))
-#         return dist
 
 class ElectronDistance(torch.autograd.Function):
         
     @staticmethod
-    def forward(self,input1,input2=None):
+    def forward(self,input):
         '''compute the pairwise distance between two sets of electrons.
         Args:
             input1 (Nbatch,Nelec1*Ndim) : position of the electrons
@@ -59,20 +51,10 @@ class ElectronDistance(torch.autograd.Function):
 
         ndim = 3
 
-        nelec1 = input1.shape[1]/ndim
-        input1 = input1.view(-1,nelec1,ndim)
-        norm1 = (input1**2).sum(-1).unsqueeze(-1)
-
-        if input2 is None:
-            nelec2 = nelec1
-            input2 = input1
-            norm2 = norm1
-        else:
-            nelec2 = input2.shape[1]/ndim
-            input2 = input2.view(-1,nelec2,ndim)
-            norm2 = (input2**2).sum(-1).unsqueeze(-1)
-
-        dist = norm1 + norm2.transpose(1,2) -2.0 * torch.bmm(input1,input2.transpose(1,2))
+        nelec = int(input.shape[1]/ndim)
+        input = input.view(-1,nelec,ndim)
+        norm = (input**2).sum(-1).unsqueeze(-1)
+        dist = norm + norm.transpose(1,2) -2.0 * torch.bmm(input,input.transpose(1,2))
 
         return dist
 
@@ -83,6 +65,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.nup = nup
         self.ndown = ndown
+        self.nelec = nup+ndown
 
         self.weight = Variable(torch.tensor([1.0]))
         self.weight.requires_grad = True
@@ -92,38 +75,45 @@ class TwoBodyJastrowFactor(nn.Module):
         self.static_weight = torch.cat( (bup,bdown),dim=0)
 
     def forward(self,input):
+        factors = torch.exp(self.static_weight * input / (1.0 + self.weight * input))
+        #factors = factors[:,torch.tril(torch.ones(self.nelec,self.nelec))==0].prod(1)
+        factors = factors.sum(2).sum(1)
+        return factors.view(-1,1)
+        #return JastrowFunction.apply(input,self.weight,self.static_weight)
 
-        # all jastrow for all electron pairs
-        factors = torch.exp(static_weight * input / (1.0 + weight * input))
         
-        # electron pairs with different spins
-        factors_updown = factors[:,:nup,nup:]
-
-        # electron pairs up up
-        factors_upup = factors_[:,:nup,:nup]
-        factors_upup = factors_upup[:,torch.tril(torch.ones(nup,nup))==0]
-
-        # electron pairs down,down
-        factors_downdown = factors_[:,nup:,nup:]
-        factors_downdown = factors_downdown[:,torch.tril(torch.ones(ndown,ndown))==0]
-
-        return factors_upup.prod(1) * factors_downdown.prod(1) * factors_updown.prod(2).prod(1)
 class JastrowFunction(torch.autograd.Function):
 
     @staticmethod
     def forward(ctx,input,weight,static_weight):
-        ctx.save_for_backward(input, weight, static_weight)
-        output = torch.exp(static_weight * input / (1.0 + weight * input))
+        '''Compute the Jastrow factor.
+        Args:
+            input : Nbatch x Nelec x Nelec (elec distance)
+            weight : Nelec, Nelec
+            static weight : Float
+        Returns:
+            jastrow : Nbatch x 1
+        '''
+
+        # save the tensors
+        ctx.save_for_backward(input,weight,static_weight)
+
+        # all jastrow for all electron pairs
+        factors = torch.exp(static_weight * input / (1.0 + weight * input))
+        
+        # product of the off diag terms 
+        nr,nc = input.shape[1], input.shape[2]
+        factors = factors[:,torch.tril(torch.ones(nr,nc))==0].prod(1)
+        
+        return factors.view(-1,1)
 
 
-        return output
-
-    @staticmethod
-    def backward(ctx,grad_output):
-        input, weight, static_weight = ctx.saved_tensors
-        grad_input = (static_weight / (1+weight*input) *( 1 -  input * weight / (1+weight*input) ) )
-        grad_weight = -(static_weight * input**2 * (1+weight*input)**(-2) )
-        return grad_output * grad_input, grad_output * grad_weight, None
+    # @staticmethod
+    # def backward(ctx,grad_output):
+    #     input, weight, static_weight = ctx.saved_tensors
+    #     grad_input = (static_weight / (1+weight*input) *( 1 -  input * weight / (1+weight*input) ) )
+    #     grad_weight = -(static_weight * input**2 * (1+weight*input)**(-2) )
+    #     return grad_output * grad_input, grad_output * grad_weight, None
 
 class AOFunction(torch.autograd.Function):
 
@@ -155,3 +145,11 @@ class AOLayer(nn.Module):
 
     def forward(self,input):
         return AOFunction.apply(input,self.mol)
+
+
+if __name__ == "__main__":
+
+    pos = torch.rand(10,12)
+    edist = ElectronDistance.apply(pos)
+    jastrow = TwoBodyJastrowFactor(2,2)
+    val = jastrow(edist)

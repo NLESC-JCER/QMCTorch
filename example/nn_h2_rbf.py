@@ -11,7 +11,7 @@ from pyCHAMP.wavefunction.rbf import RBF_Slater_NELEC as RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 
-from pyCHAMP.wavefunction.wave_modules import SlaterPooling, TwoBodyJastrowFactor
+from pyCHAMP.wavefunction.wave_modules import SlaterPooling, TwoBodyJastrowFactor, ElectronDistance
 
 from pyCHAMP.solver.mesh import regular_mesh_3d
 
@@ -21,6 +21,8 @@ from pyCHAMP.solver.plot import plot_results_3d as plot_results
 import matplotlib.pyplot as plt
 
 import numpy as np
+
+
 
 
 class RBF_H2(NEURAL_WF_BASE):
@@ -62,12 +64,16 @@ class RBF_H2(NEURAL_WF_BASE):
 
         Returns: values of psi
         '''
+        
+        #edist  = ElectronDistance.apply(x)
+        #J = self.jastrow(edist)
 
-        batch_size = x.shape[0]
-        J = self.jastrow(x)
         x = self.rbf(x)
         x = self.mo(x)
-        return J*(x[:,0,0]*x[:,1,0]).view(-1,1)
+        x = (x[:,0,0]*x[:,1,0]).view(-1,1)
+
+        return x
+
         #return (x[:,0,0] * x[:,1,1] + x[:,0,1]*x[:,1,0]).view(-1,1)
         #return (x[:,0,0] + x[:,1,1]).view(-1,1)
 
@@ -87,7 +93,7 @@ class RBF_H2(NEURAL_WF_BASE):
             for iatom in range(len(self.centers)):
                 patom = self.centers[iatom,:]
 
-                r = torch.sqrt(   ((pelec-patom)**2).sum(1)  ) + 1E-3
+                r = torch.sqrt(   ((pelec-patom)**2).sum(1)  ) + 1E-6
                 p += (-1./r)
 
         return p.view(-1,1)
@@ -108,8 +114,8 @@ class RBF_H2(NEURAL_WF_BASE):
             for ielec2 in range(ielec1+1,self.nelec):
                 epos2 = pos[:,ielec2*self.ndim:(ielec2+1)*self.ndim]
                 
-                r = torch.sqrt( ((epos1-epos2)**2).sum(1) ) + 1E-3
-                pot -= (1./r) 
+                r = torch.sqrt( ((epos1-epos2)**2).sum(1) ) + 1E-6
+                pot = (1./r) 
 
         return pot.view(-1,1)
 
@@ -141,6 +147,7 @@ S = 1.20 # <- roughly ideal zeta parameter
 centers = torch.tensor([[0.,0.,-X],[0.,0.,X]])
 sigma = torch.tensor([S,S])
 wf = RBF_H2(centers=centers,sigma=sigma)
+#f.kinetic = 'fd'
 
 #sampler
 sampler = METROPOLIS(nwalkers=1000, nstep=1000,

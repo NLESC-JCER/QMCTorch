@@ -11,14 +11,15 @@ from torch.autograd import grad, Variable
 
 class NEURAL_WF_BASE(nn.Module):
 
-    def __init__(self,nelec, ndim):
+    def __init__(self,nelec, ndim, kinetic='auto'):
 
         super(NEURAL_WF_BASE, self).__init__()
 
         self.ndim = ndim
         self.nelec = nelec
         self.ndim_tot = self.nelec*self.ndim
-        
+        self.kinetic = kinetic
+
     def forward(self,x):
         
         ''' Compute the value of the wave function.
@@ -60,6 +61,16 @@ class NEURAL_WF_BASE(nn.Module):
 
 
     def kinetic_energy(self,pos,out=None):
+        '''Main switch for the kinetic energy.'''
+
+        if self.kinetic == 'auto':
+            return self.kinetic_energy_autograd(pos,out)
+        elif self.kinetic == 'fd':
+            return self.kinetic_energy_finite_difference(pos)
+        else:
+            raise ValueError('kinetif %s not recognized' %self.kinetic)
+
+    def kinetic_energy_autograd(self,pos,out=None):
         '''Compute the second derivative of the network
         output w.r.t the value of the input. 
 
