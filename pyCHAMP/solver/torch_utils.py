@@ -45,9 +45,10 @@ class QMCLoss(nn.Module):
 
 class OrthoReg(nn.Module):
 
-    def __init__(self):
+    def __init__(self,alpha=0.1):
         super(OrthoReg,self).__init__()
+        self.alpha = alpha
 
     def forward(self,W):
         ''' Return the loss : |W x W^T - I|.'''
-        return torch.norm(W.mm(W.transpose(0,1)) - torch.eye(W.shape[0]))
+        return self.alpha * torch.norm(W.mm(W.transpose(0,1)) - torch.eye(W.shape[0]))

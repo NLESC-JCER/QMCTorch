@@ -87,6 +87,7 @@ class DeepQMC(SOLVER_BASE):
               obs_dict=None,
               ntherm=-1,
               resample=100,
+              resample_from_last=False,
               resample_every=25,
               loss='variance',
               plot = None,
@@ -151,8 +152,10 @@ class DeepQMC(SOLVER_BASE):
             
             
             if n%resample_every == 0:
-                #pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
-                pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=True)
+                if resample_from_last:
+                    pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
+                else:
+                    pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=True)
                 self.dataloader.dataset.data = pos
 
         return pos, obs_dict

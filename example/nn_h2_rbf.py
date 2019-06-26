@@ -43,6 +43,8 @@ class RBF_H2(NEURAL_WF_BASE):
         self.mo = nn.Linear(self.ncenters, self.ncenters, bias=False)
         mo_coeff =  torch.sqrt(torch.tensor([1./2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
         #mo_coeff = torch.eye(2)
+        q,_ = np.linalg.qr(np.array([[0.8,0.2],[0.2,-0.8]]))
+        mo_coeff = torch.tensor(q).float()
         self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
 
         # jastrow
@@ -75,7 +77,7 @@ class RBF_H2(NEURAL_WF_BASE):
 
         x = self.rbf(x)
         x = self.mo(x)
-        #x = self.pool(x)
+        #x = self.pool(x) <- issue with batch determinant
         x = (x[:,0,0]*x[:,1,0]).view(-1,1)
         return J*x
 
@@ -160,7 +162,8 @@ sampler = METROPOLIS(nwalkers=1000, nstep=1000,
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
-opt = optim.Adam(wf.parameters(),lr=0.005)
+#opt = optim.Adam(wf.parameters(),lr=0.005) # <- good for geo opt
+opt = optim.Adam(wf.parameters(),lr=0.01) # <- good for coeef opt
 #opt = optim.SGD(wf.parameters(),lr=0.1)
 
 # domain for the RBF Network
@@ -278,10 +281,11 @@ if 1:
              batchsize=500,
              pos = None,
              obs_dict = obs_dict,
-             resample=1000,
-             resample_every=25,
+             resample=100,
+             resample_from_last=True,
+             resample_every=1,
              ntherm=-1,
-             loss = 'energy')
+             loss = 'variance')
 
     plot_results(net,obs_dict,domain,ncenter,hist=True)
 
