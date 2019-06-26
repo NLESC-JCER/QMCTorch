@@ -42,3 +42,12 @@ class QMCLoss(nn.Module):
             raise ValueError('method must be variance, energy or callable')
 
         return loss
+
+class OrthoReg(nn.Module):
+
+    def __init__(self):
+        super(OrthoReg,self).__init__()
+
+    def forward(self,W):
+        ''' Return the loss : |W x W^T - I|.'''
+        return torch.norm(W.mm(W.transpose(0,1)) - torch.eye(W.shape[0]))

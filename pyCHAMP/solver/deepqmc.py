@@ -9,7 +9,7 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 from pyCHAMP.solver.solver_base import SOLVER_BASE
-from pyCHAMP.solver.torch_utils import QMCDataSet, QMCLoss
+from pyCHAMP.solver.torch_utils import QMCDataSet, QMCLoss, OrthoReg
 from pyCHAMP.solver.refine_mesh import refine_mesh
 
 import matplotlib.pyplot as plt
@@ -112,7 +112,9 @@ class DeepQMC(SOLVER_BASE):
 
         self.dataset = QMCDataSet(pos)
         self.dataloader = DataLoader(self.dataset,batch_size=batchsize)
-        self.loss = QMCLoss(self.wf,method=loss)
+
+        self.qmc_loss = QMCLoss(self.wf,method=loss)
+        self.or_loss = OrthoReg()
                 
         cumulative_loss = []
         clipper = ZeroOneClipper()
@@ -126,7 +128,7 @@ class DeepQMC(SOLVER_BASE):
                 lpos.requires_grad = True
                 vals = self.wf(lpos)
 
-                loss = self.loss(vals,lpos)
+                loss = self.qmc_loss(vals,lpos) + self.or_loss(self.wf.mo.weight)
                 cumulative_loss += loss
 
                 self.opt.zero_grad()
@@ -145,6 +147,7 @@ class DeepQMC(SOLVER_BASE):
             print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
             print('distance : %f' %self.wf.atomic_distance() )
             print('sigma : %f' %self.wf.get_sigma() )
+            print('MOs : ', self.wf.get_mos() )
             
             
             if n%resample_every == 0:

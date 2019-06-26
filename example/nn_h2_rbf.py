@@ -41,7 +41,8 @@ class RBF_H2(NEURAL_WF_BASE):
         
         # define the mo layer
         self.mo = nn.Linear(self.ncenters, self.ncenters, bias=False)
-        mo_coeff =  torch.sqrt(torch.tensor([2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
+        mo_coeff =  torch.sqrt(torch.tensor([1./2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
+        #mo_coeff = torch.eye(2)
         self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
 
         # jastrow
@@ -134,6 +135,9 @@ class RBF_H2(NEURAL_WF_BASE):
     def get_sigma(self,pos=None):
         return self.rbf.sigma.data[0]
 
+    def get_mos(self,pos=None):
+        return self.mo.weight.data
+
 
 # wavefunction 
 # bond distance : 0.74 A -> 1.38 a
@@ -170,7 +174,8 @@ ncenter = [11,11,11]
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 obs_dict = {'local_energy':[],
             'atomic_distance':[],
-            'get_sigma':[]}
+            'get_sigma':[],
+            'get_mos':[]}
 
 if 0:
     net.sampler.nstep = 5
@@ -253,18 +258,19 @@ if 0:
 if 1:
 
     x = 0.25
+    x = 0.69
     net.wf.rbf.centers.data[0,2] = -x
     net.wf.rbf.centers.data[1,2] = x
 
     s = 1.20
     net.wf.rbf.sigma.data[:] = s 
 
-    # do not optimize the weights of fc
-    # net.wf.fc.weight.requires_grad = False
+    # do not optimize the weights of mo
+    net.wf.mo.weight.requires_grad = True
 
     # optimize the position of the centers
     # do not optimize the std of the gaussian
-    net.wf.rbf.centers.requires_grad = True
+    net.wf.rbf.centers.requires_grad = False
     net.wf.rbf.sigma.requires_grad = False
 
     # train
