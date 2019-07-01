@@ -77,8 +77,8 @@ class RBF_H2(NEURAL_WF_BASE):
 
         x = self.rbf(x)
         x = self.mo(x)
-        #x = self.pool(x) <- issue with batch determinant
-        x = (x[:,0,0]*x[:,1,0]).view(-1,1)
+        x = self.pool(x) #<- issue with batch determinant
+        #x = (x[:,0,0]*x[:,1,0]).view(-1,1)
         return J*x
 
     def nuclear_potential(self,pos):
@@ -248,7 +248,7 @@ if 0:
     plt.show()
     
 
-if 0:
+if 1:
     pos = Variable(net.sample())
     pos.requires_grad = True
     e = net.wf.energy(pos)
@@ -258,7 +258,7 @@ if 0:
     print('Variance :', s)
 
 
-if 1:
+if 0:
 
     x = 0.25
     x = 0.69
