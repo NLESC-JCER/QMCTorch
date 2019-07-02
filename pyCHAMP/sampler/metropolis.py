@@ -95,7 +95,7 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
 
         SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
 
-    def generate(self,pdf,ntherm=10,with_tqdm=True,pos=None,init='center'):
+    def generate(self,pdf,ntherm=10,with_tqdm=True,pos=None,init='uniform'):
 
         ''' perform a MC sampling of the function f
         Returns:

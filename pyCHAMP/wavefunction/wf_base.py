@@ -120,39 +120,6 @@ class WF(object):
 
         return out
 
-
-    # def kinetic_fd(self,param,pos,eps=1E-6):
-
-    #     '''Compute the action of the kinetic operator on the we points.
-    #     Args :
-    #         pos : position of the electrons
-    #         metod (string) : mehod to compute the derivatives
-    #     Returns : value of K * psi
-    #     '''
-
-    #     ndim = pos.shape[1]
-    #     out = np.zeros_like(pos)
-
-    #     for icol in range(ndim):
-
-    #         pos_tmp = np.copy(pos)
-    #         feps = -2*self.values(param,pos_tmp)
-
-    #         pos_tmp = np.copy(pos)
-    #         pos_tmp[:,icol] += eps
-    #         feps += self.values(param,pos_tmp)
-
-    #         pos_tmp = np.copy(pos)
-    #         pos_tmp[:,icol] -= eps
-    #         feps += self.values(param,pos_tmp)
-
-    #         out[:,icol] = feps.reshape(-1)/(eps**2)
-
-    #     if self.ndim_tot == 1:
-    #         return out.reshape(-1,1)
-    #     else :
-    #         return np.sum(out,1).reshape(-1,1)
-
     def drift_fd(self,param,pos,eps=1E-6):
 
         '''Compute the drift force on the points.

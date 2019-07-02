@@ -35,7 +35,6 @@ class HarmOsc1D(WF):
 	def electronic_potential(self,pos):
 		return 0
 
-
 if __name__ == "__main__":
 
 	wf = HarmOsc1D(nelec=1, ndim=1)

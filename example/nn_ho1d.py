@@ -42,7 +42,9 @@ class RBF_HO1D(NEURAL_WF_BASE):
         self.ncenter = len(self.centers)
 
         # define the RBF layer
-        self.rbf = RBF(self.ndim_tot, self.ncenter,centers=self.centers, opt_centers=False)
+        self.rbf = RBF(self.ndim_tot, self.ncenter,
+                      centers=self.centers, opt_centers=False,
+                      sigma = 1.)
         
         # define the fc layer
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
@@ -86,7 +88,15 @@ class RBF_HO1D(NEURAL_WF_BASE):
         Returns: values of Vee * psi
         '''
         return 0
-        
+
+    def nuclear_repulsion(self):
+        '''Compute the potential of the wf points
+        Args:
+            pos: position of the electron
+
+        Returns: values of Vee * psi
+        '''
+        return 0
 
 def ho1d_sol(pos):
     '''Analytical solution of the 1D harmonic oscillator.'''
@@ -97,13 +107,13 @@ def ho1d_sol(pos):
 wf = RBF_HO1D(ndim=1,nelec=1,ncenter=5)
 
 #sampler
-sampler = METROPOLIS(nwalkers=250, nstep=1000, 
+sampler = METROPOLIS(nwalkers=250, nstep=100, 
                      step_size = 3., nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 #sampler
-sampler = HAMILTONIAN(nwalkers=250, nstep=1000, 
-                     step_size = 0.1, nelec = wf.nelec, 
+sampler_ham = HAMILTONIAN(nwalkers=250, nstep=100, 
+                     step_size = 0.01, nelec = wf.nelec, 
                      ndim = wf.ndim, domain = {'min':-5,'max':5}, L=5)
 
 # optimizer
@@ -112,20 +122,14 @@ opt = optim.Adam(wf.parameters(),lr=0.005)
 # network
 net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 pos = net.sample(ntherm=-1)
-
-# net.sampler.walkers.initialize(method='center',pos=None)
-# pos = net.sampler.walkers.pos 
-# pos = Variable(torch.tensor(pos).float())
-# pos,_  = net.sampler._step(net.wf.pdf,net.sampler.get_grad,0.1,10,pos)
-
-
-
+print('energy   :', net.wf.energy(pos))
+print('variance :', net.wf.variance(pos))
 # pos = None
 # obs_dict = None
 
-# boundary = 5.
-# domain = {'xmin':-boundary,'xmax':boundary}
-# ncenter = 51
+boundary = 5.
+domain = {'xmin':-boundary,'xmax':boundary}
+ncenter = 51
 
 # plot_wf_1d(net,domain,ncenter,sol=ho1d_sol,
 #            hist=False,
