@@ -1,8 +1,8 @@
 #!/usr/bin/env python
-# -*- coding: utf-8 -*-
+
 import os
 
-from setuptools import setup
+from setuptools import (find_packages, setup)
 
 here = os.path.abspath(os.path.dirname(__file__))
 
@@ -19,14 +19,12 @@ setup(
     version=version['__version__'],
     description="CHAMP QMC code in Python",
     long_description=readme + '\n\n',
-    author="Nicolas Renaud",
+    long_description_content_type='text/markdown',
+    author=["Nicolas Renaud", "Felipe Zapata"],
     author_email='n.renaud@esciencecenter.nl',
     url='https://github.com/NLESC-JCER/pyCHAMP',
-    packages=[
-        'pyCHAMP',
-    ],
-    package_dir={'pyCHAMP':
-                 'pyCHAMP'},
+    packages=find_packages(),
+    package_dir={'pyCHAMP': 'pyCHAMP'},
     include_package_data=True,
     license="Apache Software License 2.0",
     zip_safe=False,
@@ -36,25 +34,16 @@ setup(
         'Intended Audience :: Developers',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        "Programming Language :: Python :: 2",
-        'Programming Language :: Python :: 2.7',
+        'intended audience :: science/research',
+        'Programming Language :: Python :: 3.7',
+        'Topic :: Scientific/Engineering :: Chemistry'
     ],
     test_suite='tests',
-    install_requires=[],  # FIXME: add your package's dependencies to this list
-    setup_requires=[
-        # dependency for `python setup.py test`
-        'pytest-runner',
-        # dependencies for `python setup.py build_sphinx`
-        'sphinx',
-        'sphinx_rtd_theme',
-        'recommonmark'
-    ],
-    tests_require=[
-        'pytest',
-        'pytest-cov',
-        'pycodestyle',
-    ],
+    install_requires=['pytorch', 'autograd', 'cython', 'matplotlib', 'numpy', 'pyhmc', 'pyyaml>=5.1',
+                      'schema', 'scipy', 'tqdm'],
     extras_require={
-        'dev':  ['prospector[with_pyroma]', 'yapf', 'isort'],
+        'dev': ['prospector[with_pyroma]', 'yapf', 'isort'],
+        'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
+        'test': ['coverage', 'pycodestyle', 'pytest', 'pytest-cov', 'pytest-runner'],
     }
 )
