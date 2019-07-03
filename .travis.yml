@@ -12,43 +12,21 @@ before_install:
   - export PATH="$HOME/miniconda/bin:$PATH"
   - hash -r
   - conda config --set always_yes yes --set changeps1 no --set auto_update_conda False
-  - conda update -q conda
-
-  # Useful for debugging any issues with conda
-  - conda info -a
-
-  # pytest
-  - conda install -c anaconda pytest
-  - conda install -c conda-forge pytest-cov
-  - conda install python=3.6
-
 
   # dependencies
-  - conda install -c anaconda numpy
-  - conda install -c anaconda scipy
-  - conda install -c anaconda cython
-  - conda install -c conda-forge autograd
-  - conda install -c conda-forge pymc3
-
-  # pip
-  - pip install -q --upgrade pip
-
-  # pyhmc
-  - pip install pyhmc
+  - conda install cython numpy
+  - conda install pytorch-cpu torchvision-cpu -c pytorch
 
   # codacy coverage
-  - pip install -q coverage
-  - pip install -q codacy-coverage
-  - pip install -q coveralls
+  - pip install -q coverage codacy-coverage coveralls
 
 # command to install dependencies
 install:
-  - pip install -qe .
+  - pip install -e .[dev,test]
 
 # command to run tests
 script:
-  - cd test/
-  - pytest --cov=pyCHAMP --cov-report xml:coverage.xml
+  - pytest --cov=pyCHAMP tests --cov-report xml:coverage.xml
   - mv coverage.xml ../
   - mv .coverage ../
   - cd ../
