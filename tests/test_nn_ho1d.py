@@ -92,8 +92,8 @@ class TestRbfNetworkHarmonicOscillator1D(unittest.TestCase):
     def test_single_point_metropolis_hasting_sampling(self):
 
         # initiaize the fc layer
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0,2] = 1.
+        self.net.wf.fc.weight.data.fill_(0.)
+        self.net.wf.fc.weight.data[0,2] = 1.
 
         # sample and compute observables
         pos = self.net.sample(ntherm=-1,with_tqdm=False)
@@ -107,8 +107,8 @@ class TestRbfNetworkHarmonicOscillator1D(unittest.TestCase):
         self.net.sampler = self.hmc_sampler
 
         # initiaize the fc layer
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0,2] = 1.
+        self.net.wf.fc.weight.data.fill_(0.)
+        self.net.wf.fc.weight.data[0,2] = 1.
 
         # sample and compute observables
         pos = self.net.sample(ntherm=-1,with_tqdm=False)
