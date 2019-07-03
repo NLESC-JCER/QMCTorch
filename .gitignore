@@ -21,3 +21,6 @@ docs/apidocs
 .eclipse
 .vscode
 *.sublime*
+
+# pytorch
+*.pth*

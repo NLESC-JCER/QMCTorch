@@ -81,26 +81,35 @@ class DeepQMC(SOLVER_BASE):
 
         return obs_dict
 
-    def train(self,nepoch,
-              batchsize=32,
-              pos=None,
-              obs_dict=None,
-              ntherm=-1,
-              resample=100,
-              resample_from_last=False,
-              resample_every=25,
-              loss='variance',
-              plot = None,
-              refine = None):
+    def save_checkpoint(self,epoch,loss,filename):
+        torch.save({
+            'epoch' : epoch,
+            'model_state_dict' : self.wf.state_dict(),
+            'optimzier_state_dict' : self.opt.state_dict(),
+            'loss' : loss
+            }, filename)
+        return loss
+        
+
+    def train(self,nepoch, batchsize=32, pos=None, obs_dict=None, 
+              ntherm=-1, resample=100, resample_from_last=False, resample_every=1,
+              loss='variance', plot = None,
+              save_model='model.pth'):
+
         '''Train the model.
 
         Arg:
             nepoch : number of epoch
+            batchsize : size of the minibatch
             pos : presampled electronic poition
-            ntherm : thermalization of the MC sampling
-            nresample : number of MC step during the resampling
+            obs_dict (dict, {name: []} ) : quantities to be computed during the training
+                                           'name' must refer to a method of the DeepQMC instance
+            ntherm : thermalization of the MC sampling. If negative (-N) takes the last N entries
+            resample : number of MC step during the resampling
+            resample_from_last (bool) : if true use the previous position as starting for the resampling
+            resample_every (int) : number of epch between resampling
             loss : loss used ('energy','variance' or callable (for supervised)
-            sol : anayltical solution for plotting (callable)
+            plot : None or plotter instance from plot_utils.py to interactively monitor the training
         '''
 
         if obs_dict is None:
@@ -120,6 +129,8 @@ class DeepQMC(SOLVER_BASE):
         cumulative_loss = []
         clipper = ZeroOneClipper()
     
+        min_loss = 1E3
+
         for n in range(nepoch):
 
             cumulative_loss = 0
@@ -129,7 +140,7 @@ class DeepQMC(SOLVER_BASE):
                 lpos.requires_grad = True
                 vals = self.wf(lpos)
 
-                loss = self.qmc_loss(vals,lpos) + self.or_loss(self.wf.mo.weight)
+                loss = self.qmc_loss(vals,lpos) #+ self.or_loss(self.wf.mo.weight)
                 cumulative_loss += loss
 
                 self.opt.zero_grad()
@@ -142,20 +153,25 @@ class DeepQMC(SOLVER_BASE):
             if plot is not None:
                 plot.drawNow()
 
+            if cumulative_loss < min_loss:
+                min_loss = self.save_checkpoint(n,cumulative_loss,save_model)
+                 
+
             obs_dict = self.get_observable(obs_dict,pos)
             print('epoch %d loss %f' %(n,cumulative_loss))
             print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
             print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
-            print('distance : %f' %self.wf.atomic_distance() )
-            print('sigma : %f' %self.wf.get_sigma() )
-            print('MOs : ', self.wf.get_mos() )
+
+            # print('distance : %f' %self.wf.atomic_distance() )
+            # print('sigma : %f' %self.wf.get_sigma() )
+            # print('MOs : ', self.wf.get_mos() )
             
             
-            if n%resample_every == 0:
+            if (n%resample_every == 0) or (n == nepoch-1):
                 if resample_from_last:
                     pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
                 else:
-                    pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=True)
+                    pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
 
         return pos, obs_dict
