@@ -251,6 +251,7 @@ class RBF_Slater(nn.Module):
 
         return X.view(-1,self.ncenter)
 
+
 ################################################################################
 
 class RBF_Slater_NELEC(nn.Module):
