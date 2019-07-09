@@ -185,7 +185,7 @@ class DeepQMC(SOLVER_BASE):
 
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
-        
+
         return pos, obs_dict
 
 
