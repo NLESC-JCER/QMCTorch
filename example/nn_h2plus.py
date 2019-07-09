@@ -137,7 +137,7 @@ X = 1.25
 X = 0.97
 centers = torch.tensor([[0.,0.,X],
                         [0.,0.,-X]])
-wf = RBF_H2plus(centers,sigma=1.05)
+wf = RBF_H2plus(centers,sigma=1.20)
 
 #sampler
 sampler = METROPOLIS(nwalkers=1000, nstep=1000,
@@ -168,7 +168,7 @@ if 0:
                grad=False, grad_isoval = 0.01)
 
 
-if 1:
+if 0:
     X = np.linspace(0.5,1.5,25)
     energy, var = [], []
     for x in X:
@@ -188,8 +188,8 @@ if 1:
     plt.show()
 
 
-if 0:
-    X = np.linspace(0.1,3,25)
+if 1:
+    X = np.linspace(0.1,2,25)
     energy, var = [], []
     for x in X:
 
