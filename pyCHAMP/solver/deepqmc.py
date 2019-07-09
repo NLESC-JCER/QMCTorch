@@ -13,7 +13,7 @@ from pyCHAMP.solver.torch_utils import QMCDataSet, QMCLoss, OrthoReg
 from pyCHAMP.solver.refine_mesh import refine_mesh
 
 import matplotlib.pyplot as plt
-
+from mpl_toolkits.mplot3d import Axes3D 
 from tqdm import tqdm
 import time
 
@@ -118,27 +118,34 @@ class DeepQMC(SOLVER_BASE):
         if pos is None:
             pos = self.sample(ntherm=ntherm)
 
-        self.sampler.nstep=resample
+        # change the number of steps
+        _nstep_save = self.sampler.nstep
+        self.sampler.nstep = resample
 
+        # create the data loader
         self.dataset = QMCDataSet(pos)
         self.dataloader = DataLoader(self.dataset,batch_size=batchsize)
 
+        # get the loss
         self.qmc_loss = QMCLoss(self.wf,method=loss)
         self.or_loss = OrthoReg()
                 
-        cumulative_loss = []
+        # clipper for the fc weights
         clipper = ZeroOneClipper()
     
+        cumulative_loss = []
         min_loss = 1E3
 
         for n in range(nepoch):
+            print('----------------------------------------')
+            print('epoch %d' %n)
 
             cumulative_loss = 0
             for data in self.dataloader:
                 
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
-                vals = self.wf(lpos)
+                vals = None #self.wf(lpos)
 
                 loss = self.qmc_loss(vals,lpos) #+ self.or_loss(self.wf.mo.weight)
                 cumulative_loss += loss
@@ -146,7 +153,7 @@ class DeepQMC(SOLVER_BASE):
                 self.opt.zero_grad()
                 loss.backward()
                 self.opt.step()
-            
+
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
                 
@@ -158,13 +165,15 @@ class DeepQMC(SOLVER_BASE):
                  
 
             obs_dict = self.get_observable(obs_dict,pos)
-            print('epoch %d loss %f' %(n,cumulative_loss))
+            print('loss %f' %(cumulative_loss))
             print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
             print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
-
-            # print('distance : %f' %self.wf.atomic_distance() )
-            # print('sigma : %f' %self.wf.get_sigma() )
-            # print('MOs : ', self.wf.get_mos() )
+            #print('distance : %f' %self.wf.atomic_distance() )
+            #print('sigma : %f' %self.wf.get_sigma() )
+            # print('MOs : ', self.wf.get_mos() )       
+            print('----------------------------------------')
+            
+            
             
             
             if (n%resample_every == 0) or (n == nepoch-1):
@@ -174,6 +183,9 @@ class DeepQMC(SOLVER_BASE):
                     pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
 
+        #restore the sampler number of step
+        self.sampler.nstep = _nstep_save
+        
         return pos, obs_dict
 
 
