@@ -68,7 +68,7 @@ class RBF_H(NEURAL_WF_BASE):
     def nuclear_repulsion(self):
         return 0
 
-class TestRbfNetworkHydrogen(unittest.TestCase):
+class TestHydrogen(unittest.TestCase):
 
     def setUp(self):
 

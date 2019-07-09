@@ -6,7 +6,7 @@ import torch.optim as optim
 import numpy as np
 
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
-from pyCHAMP.wavefunction.rbf import RBF_Slater as RBF
+from pyCHAMP.wavefunction.rbf import RBF_Slater_NELEC as RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.sampler.hamiltonian import HAMILTONIAN_TORCH as HAMILTONIAN
@@ -25,6 +25,7 @@ class RBF_H2p(NEURAL_WF_BASE):
         self.rbf = RBF(self.ndim_tot, 
                        self.ncenter, 
                        centers=centers,
+                       nelec=self.nelec,
                        sigma=sigma)
         
         # define the fc layer
@@ -83,7 +84,7 @@ class RBF_H2p(NEURAL_WF_BASE):
     def get_sigma(self,pos=None):
         return self.rbf.sigma.data[0]
 
-class TestRbfNetworkH2plus(unittest.TestCase):
+class TestH2plus(unittest.TestCase):
 
     def setUp(self):
 
@@ -168,7 +169,7 @@ class TestRbfNetworkH2plus(unittest.TestCase):
 
             if e<emin:
                 emin = e            
-                
+
         assert(emin<-0.55)
 
 

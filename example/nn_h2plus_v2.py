@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 
-from pyCHAMP.wavefunction.rbf import RBF_Slater as RBF
+from pyCHAMP.wavefunction.rbf import RBF_Slater_NELEC as RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.sampler.hamiltonian import HAMILTONIAN_TORCH as HAMILTONIAN
@@ -35,7 +35,8 @@ class RBF_H2plus(NEURAL_WF_BASE):
         # define the RBF layer
         self.rbf = RBF(self.ndim_tot, 
                        self.ncenter, 
-                       centers=centers, 
+                       centers=centers,
+                       nelec=self.nelec, 
                        sigma=sigma)
 
         # define the fc layer
@@ -216,7 +217,7 @@ def single_point(net,x=1.5,loss='variance'):
     plt.show()
 
 def geo_opt(net,x=1.25,sigma=1.20,loss='energy'):
-    '''Optimize the gemoentry of the mol.'''
+    '''Optimize the geometry of the mol.'''
     net.wf.rbf.centers.data[0,2] = -x
     net.wf.rbf.centers.data[1,2] = x
 
@@ -306,8 +307,8 @@ if __name__ == "__main__":
     wf = RBF_H2plus(centers=centers,sigma=sigma)
 
     #sampler
-    sampler = METROPOLIS(nwalkers=2000, nstep=5000,
-                         step_size = 0.1, nelec = wf.nelec, 
+    sampler = METROPOLIS(nwalkers=100, nstep=500,
+                         step_size = 0.5, nelec = wf.nelec, 
                          ndim = wf.ndim, domain = {'min':-5,'max':5})
 
     sampler_ham = HAMILTONIAN(nwalkers=250, nstep=250, 
@@ -322,10 +323,10 @@ if __name__ == "__main__":
     net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 
     # compute a single point
-    single_point(net,x=1.5,loss='variance')
+    single_point(net,x=2,loss='variance')
 
     # optimize the gemoetry
-    geo_opt(net,x=1.25,sigma=1.20,loss='variance')
+    #geo_opt(net,x=1.25,sigma=1.20,loss='variance')
 
 
 

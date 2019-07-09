@@ -7,7 +7,7 @@ import torch.optim as optim
 
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 
-from pyCHAMP.wavefunction.rbf import RBF_Slater as RBF
+from pyCHAMP.wavefunction.rbf import RBF_Slater_NELEC as RBF
 from pyCHAMP.solver.deepqmc import DeepQMC
 from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 from pyCHAMP.sampler.hamiltonian import HAMILTONIAN_TORCH as HAMILTONIAN
@@ -35,7 +35,8 @@ class RBF_H2plus(NEURAL_WF_BASE):
         # define the RBF layer
         self.rbf = RBF(self.ndim_tot, 
                        self.ncenter, 
-                       centers=centers, 
+                       centers=centers,
+                       nelec=self.nelec, 
                        sigma=sigma)
 
         # define the fc layer
@@ -216,7 +217,7 @@ def single_point(net,x=1.5,loss='variance'):
     plt.show()
 
 def geo_opt(net,x=1.25,sigma=1.20,loss='energy'):
-    '''Optimize the gemoentry of the mol.'''
+    '''Optimize the geometry of the mol.'''
     net.wf.rbf.centers.data[0,2] = -x
     net.wf.rbf.centers.data[1,2] = x
 
@@ -325,7 +326,7 @@ if __name__ == "__main__":
     single_point(net,x=1.5,loss='variance')
 
     # optimize the gemoetry
-    geo_opt(net,x=1.25,sigma=1.20,loss='variance')
+    #geo_opt(net,x=1.25,sigma=1.20,loss='variance')
 
 
 
