@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from mendeleev import element
+from pyscf import gto,scf
 
 class Molecule(object):
 
@@ -91,6 +92,28 @@ class Molecule(object):
         if self.basis.lower() == 'dz':
             self.norb = int(self.norb/2)
                 
+    def get_mo_coeffs(self,code='pyscf'):
+
+        if code.lower() not in ['pyscf']:
+            raise ValueError(code + 'not currently supported')
+
+        if code.lower() == 'pyscf':
+            mo = self._get_mo_pyscf()
+
+        return mo
+
+    def _get_mo_pyscf(self):
+
+        pyscf_basis = {'sz':'sto-3g','dz':'dz'}
+        mol = gto.M(atom=self.atoms_str,basis=pyscf_basis[self.basis])
+        rhf = scf.RHF(mol).run()
+        return self._normalize_columns(rhf.mo_coeff)
+
+    @staticmethod
+    def _normalize_columns(mat):
+        norm = np.sqrt( (mat**2).sum(0) )
+        return mat / norm
+
 
 if __name__ == "__main__":
 
