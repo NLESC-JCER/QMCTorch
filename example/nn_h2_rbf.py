@@ -13,8 +13,6 @@ from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
 
 from pyCHAMP.wavefunction.wave_modules import SlaterPooling, TwoBodyJastrowFactor, ElectronDistance
 
-from pyCHAMP.solver.mesh import regular_mesh_3d
-
 from pyCHAMP.solver.plot import plot_wf_3d
 from pyCHAMP.solver.plot import plot_results_3d as plot_results
 
@@ -154,15 +152,15 @@ def sigma_curve(net,X = np.linspace(0.5,2,11)):
         e = net.wf.energy(pos)
         s = net.wf.variance(pos)
 
-        energy.append(e)
-        var.append(s)
+        energy.append(e.data.item())
+        var.append(s.data.item())
 
     plt.plot(X,energy)
     plt.show()
     plt.plot(X,var)
     plt.show()
 
-def pos_curve(net,X = np.linspace(0.1,2,21)):
+def pos_curve(net,X = np.linspace(0.2,1.5,11)):
     '''Plot the E(R_hh) and V(R_hh) cruves.'''
 
     energy, var = [], []
@@ -175,16 +173,13 @@ def pos_curve(net,X = np.linspace(0.1,2,21)):
         pos = Variable(net.sample())
         pos.requires_grad = True
 
-        K.append(net.wf.kinetic_energy(pos).mean())
-        Vnn.append(net.wf.nuclear_repulsion())
-        Ven.append(net.wf.nuclear_potential(pos).mean())
-        Vee.append(net.wf.electronic_potential(pos).mean())
+        K.append(net.wf.kinetic_energy(pos).mean().data.item())
+        Vnn.append(net.wf.nuclear_repulsion().data.item())
+        Ven.append(net.wf.nuclear_potential(pos).mean().data.item())
+        Vee.append(net.wf.electronic_potential(pos).mean().data.item())
 
-        e = net.wf.energy(pos)
-        s = net.wf.variance(pos)
-
-        energy.append(e)
-        var.append(s)
+        energy.append(net.wf.energy(pos).data.item())
+        var.append(net.wf.variance(pos).data.item())
 
     plt.plot(X,energy,linewidth=4,c='black',label='Energy')
     plt.plot(X,K,label='K')
@@ -259,7 +254,7 @@ def geo_opt(net,x=1.25,sigma=1.20,loss='energy'):
                 'get_sigma':[]}
 
     # train
-    pos,obs_dict = net.train(250,
+    pos,obs_dict = net.train(100,
              batchsize=1000,
              pos = None,
              obs_dict = obs_dict,
@@ -334,7 +329,7 @@ if __name__ == "__main__":
     # ground state energy : -31.688 eV -> -1.16 hartree
     # bond dissociation energy 4.478 eV -> 0.16 hartree
     X = 0.69 # <- opt ditance +0.69 and -0.69
-    S = 1.20 # <- roughly ideal zeta parameter
+    S = 1.24 # <- roughly ideal zeta parameter
 
 
     # define the RBF WF
@@ -356,10 +351,11 @@ if __name__ == "__main__":
     net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 
     # single point
-    single_point(net,x=0.5,alpha=0.01)
+    #single_point(net,x=0.5,alpha=0.01)
+    pos_curve(net)
 
     # geo opt
-    geo_opt(net,x=0.4)
+    #geo_opt(net,x=0.4)
 
 
 
