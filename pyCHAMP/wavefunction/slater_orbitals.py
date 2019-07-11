@@ -5,26 +5,32 @@ from math import pi as PI
 
 from pyCHAMP.wavefunction.spherical_harmonics import SphericalHarmonics
 
-class STO_SZ(nn.Module):
+class STO(nn.Module):
 
     def __init__(self,
                 nelec,
                 atom_coords,
                 nshells,
-                bas_n,bas_l,bas_m, 
-                bas_exp ):
+                bas_n,
+                bas_l,
+                bas_m, 
+                bas_exp,
+                basis ):
 
         '''Radial Basis Function Layer in N dimension
 
         Args:
             nelec : number of electron
-            atoms : position of the atoms
+            atom_coords : position of the atoms
             nshells : number of bas per atom
-            bas_n,bas_l,bas_m : quantum number of the bas
+            bas_n : 1st quantum number of the bas
+            bas_l : 2nd quantum number of the bas
+            bas_m : 3rd quantum number of the bas
             bas_exp : exponent of the bas
+            basis : type of the basis used (dz or sz)
         '''
 
-        super(STO_SZ,self).__init__()
+        super(STO,self).__init__()
 
         # wavefunction data
         self.nelec = nelec
@@ -49,80 +55,57 @@ class STO_SZ(nn.Module):
         self.bas_l = torch.tensor(bas_l)
         self.bas_m = torch.tensor(bas_m)
 
+        # basis
+        self.basis = basis
+        if self.basis.lower() not in ['sz','dz']:
+            raise ValueError("Only DZ and SZ basis set supported")
+
     def forward(self,input):
         
         # get the pos of the bas
         self.bas_coords = self.atom_coords.repeat_interleave(self.nshells,dim=0)
-        print(self.bas_coords.shape)
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nrbf,Ndim)
         xyz =  (input.view(-1,self.nelec,1,self.ndim) - self.bas_coords[None,...])
-        print(xyz.shape)
-
+        
         # compute the distance
         # -> (Nbatch,Nelec,Nrbf)
         R = torch.sqrt((xyz**2).sum(3))
-        print(R.shape)
-
+        
         # radial part
         # -> (Nbatch,Nelec,Nrbf)
         X = R**self.bas_n * torch.exp(-self.bas_exp*R)
-        print(X.shape)
-
+        
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nrbf)
         Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m)
-        print(Y.shape)
+        
+        # product
+        XY = X * Y
 
-        return X * Y
+        # add the components if DZ basis set
+        if self.basis == 'dz':
+            nrbf = XY.shape[-1]
+            norb = int(nrbf/2)
+            XY = XY.view(-1,self.nelec,2,norb).sum(2)
+
+        return XY
 
 if __name__ == "__main__":
 
-    nelec = 2
-    atoms = ['O','O']
-    atom_coords = [[0.,0.,0.],[0.,0.,1.]]
+    from pyCHAMP.wavefunction.molecule import Molecule
 
-    nshells = [5,5] #[1s,2s,2px,2py,2pz]
-    bas_exp = [ 7.66, #O 1S
-                2.25, #O 2S
-                2.25,2.25,2.25, #O 2P
-                7.66, #O 1S
-                2.25, #O 2S
-                2.25,2.25,2.25 #O 2P
-                ]
+    m = Molecule(atom='H 0 0 0; H 0 0 1',basis='dz')
 
-    bas_n = [ 0, #1s
-              1, #2s
-              1,1,1, #2p
-              0, #1s
-              1, #2s             
-              1,1,1 #2p 
-              ]
-  
-    bas_l = [ 0, #1s
-              0, #2s
-              1,1,1, #2p
-              0, #1s
-              0, #2s             
-              1,1,1 #2p 
-              ]
-
-    bas_m = [ 0, #1s
-              0, #2s
-              -1,0,1, #2p
-              0, #1s
-              0, #2s             
-              -1,0,1 #2p 
-              ]
-
-    sto = STO_SZ(nelec=8,
-                atom_coords=atom_coords,
-                nshells=nshells,
-                bas_n=bas_n,
-                bas_l=bas_l,
-                bas_m=bas_l, 
-                bas_exp=bas_exp)
+    sto = STO(nelec=m.nelec,
+                atom_coords=m.atom_coords,
+                nshells=m.nshells,
+                bas_n=m.bas_n,
+                bas_l=m.bas_l,
+                bas_m=m.bas_l, 
+                bas_exp=m.bas_exp,
+                basis=m.basis)
 
     pos = torch.rand(20,sto.nelec*3)
     aoval = sto.forward(pos)
