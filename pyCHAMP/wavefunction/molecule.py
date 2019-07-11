@@ -12,23 +12,30 @@ class Molecule(object):
         if self.basis.lower() not in ['sz','dz']:
             raise ValueError("Only DZ and SZ basis set supported")
 
+        # process the atom name/pos
         self.atoms = []
         self.atom_coords = []
         self.nelec = 0
         self.process_atom_str()
 
-        __path__ = './atomicdata'        # to be changed
-        self.basis_path = os.path.join( __path__, basis.upper())
+        # get the basis folder
+        self.basis_path = os.path.dirname(os.path.realpath(__file__))
+        self.basis_path = os.path.join(self.basis_path,'atomicdata')
+        self.basis_path = os.path.join(self.basis_path, basis.upper())
+
+        # init the basis data
         self.nshells = []
         self.bas_exp = []
         self.bas_n = []
         self.bas_l = []
         self.bas_m = []
 
+        # utilities dict for extracting data
         self.get_l = {'S':0,'P':1,'D':2}
         self.mult_bas = {'S':1,'P':3,'D':5}
         self.get_m = {'S':[0],'P':[-1,0,1],'D':[-2,-1,0,1,2]}
 
+        # read/process basis info
         self.process_basis()
 
     def process_atom_str(self):
@@ -39,7 +46,8 @@ class Molecule(object):
             self.atoms.append(atom_data[0])
             x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])
             self.atom_coords.append([x,y,z])
-            self.nelec += element(atom_data[0]  ).electrons
+            self.nelec += element(atom_data[0]).electrons
+        self.natom = len(self.atoms)
 
     def process_basis(self):
 
@@ -78,6 +86,10 @@ class Molecule(object):
 
                 # number of shells
                 self.nshells[-1] += mult
+
+        self.norb = np.sum(self.nshells)
+        if self.basis.lower() == 'dz':
+            self.norb = int(self.norb/2)
                 
 
 if __name__ == "__main__":
