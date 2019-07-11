@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from mendeleev import element
 
 class Molecule(object):
 
@@ -8,11 +9,15 @@ class Molecule(object):
         self.atoms_str = atom
         self.basis = basis
 
+        if self.basis.lower() not in ['sz','dz']:
+            raise ValueError("Only DZ and SZ basis set supported")
+
         self.atoms = []
         self.atom_coords = []
+        self.nelec = 0
         self.process_atom_str()
 
-        __path__ = './atomicdata'        
+        __path__ = './atomicdata'        # to be changed
         self.basis_path = os.path.join( __path__, basis.upper())
         self.nshells = []
         self.bas_exp = []
@@ -34,11 +39,14 @@ class Molecule(object):
             self.atoms.append(atom_data[0])
             x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])
             self.atom_coords.append([x,y,z])
+            self.nelec += element(atom_data[0]  ).electrons
 
     def process_basis(self):
 
         # loop over all the atoms
         for at in self.atoms:
+
+            self.nshells.append(0)
             
             # read the atom file
             fname = os.path.join(self.basis_path,at)
@@ -49,23 +57,28 @@ class Molecule(object):
             for ibas in  range(data.index('BASIS\n')+1,data.index('END\n')):
                 
                 # split the data
-                d = data[ibas].split()
-                print(d)
+                bas = data[ibas].split()
+                bas_name = bas[0]
+                zeta = float(bas[1])
+
                 # get the primary quantum number
-                n = int(d[0][0])-1
+                n = int(bas_name[0])-1
 
                 # secondary qn and multiplicity
-                l = self.get_l[d[0][1]]
-                mult = self.mult_bas[d[0][1]]
+                l = self.get_l[bas_name[1]]
+                mult = self.mult_bas[bas_name[1]]
 
                 # store the quantum numbers
                 self.bas_n += [n]*mult
                 self.bas_l += [l]*mult
-                self.bas_m += self.get_m[d[0][1]]
+                self.bas_m += self.get_m[bas_name[1]]
 
-                # store the exponets
-                zeta = float(d[1])
+                # store the exponents
                 self.bas_exp += [zeta]*mult
+
+                # number of shells
+                self.nshells[-1] += mult
+                
 
 if __name__ == "__main__":
 
