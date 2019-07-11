@@ -88,7 +88,7 @@ class STO(nn.Module):
         if self.basis == 'dz':
             nrbf = XY.shape[-1]
             norb = int(nrbf/2)
-            XY = XY.view(-1,self.nelec,2,norb).sum(2)
+            XY = 0.5*XY.view(-1,self.nelec,2,norb).sum(2)
 
         return XY
 
@@ -96,7 +96,7 @@ if __name__ == "__main__":
 
     from pyCHAMP.wavefunction.molecule import Molecule
 
-    m = Molecule(atom='H 0 0 0; H 0 0 1',basis='dz')
+    m = Molecule(atom='H 0 0 0; H 0 0 1',basis='sz')
 
     sto = STO(nelec=m.nelec,
                 atom_coords=m.atom_coords,
