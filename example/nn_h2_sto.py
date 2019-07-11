@@ -24,7 +24,7 @@ import numpy as np
 
 class STO_H2(NEURAL_WF_BASE):
 
-    def __init__(self,mol):
+    def __init__(self,mol,scf='pyscf'):
         super(STO_H2,self).__init__(2,3)
 
         self.natom = mol.natom
@@ -41,7 +41,10 @@ class STO_H2(NEURAL_WF_BASE):
         
         # define the mo layer
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
-        mo_coeff =  torch.sqrt(torch.tensor([1./2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
+        #mo_coeff =  torch.sqrt(torch.tensor([1./2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
+
+        mo_coeff =  torch.tensor(mol.get_mo_coeffs(code=scf)).float()
+        print(mo_coeff.shape)
         self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
 
         # jastrow
@@ -330,13 +333,13 @@ if __name__ == "__main__":
     net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 
     # single point
-    #single_point(net,x=0.5,alpha=0.01)
+    single_point(net,x=0.5,alpha=0.01)
 
     # curve wrt to position
     #pos_curve(net)
 
     # geo opt
-    geo_opt(net,x=0.4)
+    #geo_opt(net,x=0.4)
 
 
 
