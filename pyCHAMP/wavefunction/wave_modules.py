@@ -15,14 +15,12 @@ class BatchDeterminant(torch.autograd.Function):
     @staticmethod
     def forward(ctx,input):
 
-        
-
         # LUP decompose the matrices
         inp_lu, pivots = input.lu()
         perm, inpl, inpu = torch.lu_unpack(inp_lu,pivots)
         
         # get the number of permuations
-        s = (pivots != torch.tensor(range(1,x.shape[1]+1)).int()).sum(1).float()
+        s = (pivots != torch.tensor(range(1,input.shape[1]+1)).int()).sum(1).float()
 
         # get the prod of the diag of U
         d = torch.diagonal(inpu,dim1=-2,dim2=-1).prod(1)
@@ -75,8 +73,11 @@ class SlaterPooling(nn.Module):
             # a batch version of det is on its way (end July 2019)
             # https://github.com/pytorch/pytorch/issues/7500
             # we'll move to that asap but in the mean time we loop
-            for isample in range(nbatch):
-                out[isample,ic] = (torch.det(mo_up[isample]) * torch.det(mo_down[isample]))
+            #for isample in range(nbatch):
+            #    out[isample,ic] = (torch.det(mo_up[isample]) * torch.det(mo_down[isample]))
+
+            # using my own BatchDeterminant
+            out[:,ic] = BatchDeterminant.apply(mo_up) * BatchDeterminant.apply(mo_down)
 
         return out
 

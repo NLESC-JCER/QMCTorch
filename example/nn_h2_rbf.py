@@ -73,7 +73,7 @@ class RBF_H2(NEURAL_WF_BASE):
 
         x = self.rbf(x)
         x = self.mo(x)
-        x = self.pool(x) #<- issue with batch determinant
+        x = self.pool(x) 
         #x = self.pool_ground_state(x)
         
         return x
@@ -370,7 +370,7 @@ if __name__ == "__main__":
     wf = RBF_H2(centers=centers,sigma=sigma)
 
     #sampler
-    sampler = METROPOLIS(nwalkers=10   , nstep=100,
+    sampler = METROPOLIS(nwalkers=100, nstep=100,
                          step_size = 0.5, nelec = wf.nelec, move = 'one',
                          ndim = wf.ndim, domain = {'min':-5,'max':5})
 
