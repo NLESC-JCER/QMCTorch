@@ -101,49 +101,50 @@ class METROPOLIS_TORCH(SAMPLER_BASE):
         Returns:
             X (list) : position of the walkers
         '''
-
-        if ntherm < 0:
-            ntherm = self.nstep+ntherm
-
-        self.walkers.initialize(method=init,pos=pos)
-
-        fx = pdf(torch.tensor(self.walkers.pos).float())
-        fx[fx==0] = 1E-6
-        POS = []
-        rate = 0
-
-        if with_tqdm:
-            rng = tqdm(range(self.nstep))
-        else:
-            rng = range(self.nstep)
-
-        for istep in rng:
-
-            # new positions
-            Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
-
-
-            # new function
-            t0 = time.time()
-            fxn = pdf(Xn)
-            df = (fxn/(fx)).double()
+        with torch.no_grad():
             
-            # accept the moves
-            index = self._accept(df)
-            
-            # acceptance rate
-            rate += index.byte().sum().float()/self.walkers.nwalkers
-            
-            # update position/function value
-            self.walkers.pos[index,:] = Xn[index,:]
-            fx[index] = fxn[index]
+            if ntherm < 0:
+                ntherm = self.nstep+ntherm
+
+            self.walkers.initialize(method=init,pos=pos)
+
+            fx = pdf(torch.tensor(self.walkers.pos).float())
             fx[fx==0] = 1E-6
-        
-            if istep>=ntherm:
-                POS.append(self.walkers.pos.copy())
+            POS = []
+            rate = 0
 
-        if with_tqdm:
-            print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
+            if with_tqdm:
+                rng = tqdm(range(self.nstep))
+            else:
+                rng = range(self.nstep)
+
+            for istep in rng:
+
+                # new positions
+                Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
+
+
+                # new function
+                t0 = time.time()
+                fxn = pdf(Xn)
+                df = (fxn/(fx)).double()
+                
+                # accept the moves
+                index = self._accept(df)
+                
+                # acceptance rate
+                rate += index.byte().sum().float()/self.walkers.nwalkers
+                
+                # update position/function value
+                self.walkers.pos[index,:] = Xn[index,:]
+                fx[index] = fxn[index]
+                fx[fx==0] = 1E-6
+            
+                if istep>=ntherm:
+                    POS.append(self.walkers.pos.copy())
+
+            if with_tqdm:
+                print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
             
         return POS
 

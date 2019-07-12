@@ -8,6 +8,7 @@ from torch import nn
 import torch.nn.functional as F
 from torch.autograd import grad, Variable
 
+from time import time
 
 class NEURAL_WF_BASE(nn.Module):
 
@@ -89,15 +90,17 @@ class NEURAL_WF_BASE(nn.Module):
 
         # compute the jacobian            
         z = Variable(torch.ones(out.shape))
+        
         jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
-
+        
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape[0])
+        
         for idim in range(jacob.shape[1]):
             tmp = grad(jacob[:,idim],pos,grad_outputs=z,create_graph=True,allow_unused=True)[0]    
             hess += tmp[:,idim]
-
+        
         return -0.5 * hess.view(-1,1)
 
         # original implementation doe inlcude mixed terms !
@@ -117,7 +120,7 @@ class NEURAL_WF_BASE(nn.Module):
         Returns:
             values of nabla^2 * Psi
         '''
-
+        
         nwalk = pos.shape[0]
         ndim = pos.shape[1]
         out = torch.zeros(nwalk,1)
@@ -140,12 +143,24 @@ class NEURAL_WF_BASE(nn.Module):
         return -0.5*out.view(-1,1)
 
 
-    def local_energy(self,pos):
+    def local_energy_save(self,pos):
         ''' local energy of the sampling points.'''
         return self.kinetic_energy(pos)/self.forward(pos) \
              + self.nuclear_potential(pos)  \
              + self.electronic_potential(pos) \
              + self.nuclear_repulsion()
+
+    def local_energy(self,pos):
+        ''' local energy of the sampling points.'''
+        #t0 = time()    
+        wf = self.forward(pos)
+        ke = self.kinetic_energy(pos,out=wf)
+        #print('Kinetic done in %f' %(time()-t0))
+        
+        return ke/wf \
+             + self.nuclear_potential(pos)  \
+             + self.electronic_potential(pos) \
+             + self.nuclear_repulsion()        
 
     def energy(self,pos):
         '''Total energy for the sampling points.'''

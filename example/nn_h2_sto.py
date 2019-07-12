@@ -44,7 +44,6 @@ class STO_H2(NEURAL_WF_BASE):
         #mo_coeff =  torch.sqrt(torch.tensor([1./2.]))  * torch.tensor([[1.,1.],[1.,-1.]])
 
         mo_coeff =  torch.tensor(mol.get_mo_coeffs(code=scf)).float()
-        print(mo_coeff.shape)
         self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
 
         # jastrow

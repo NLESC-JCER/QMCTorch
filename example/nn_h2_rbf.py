@@ -20,11 +20,12 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
+from time import time
 
 class RBF_H2(NEURAL_WF_BASE):
 
     def __init__(self,centers,sigma):
-        super(RBF_H2,self).__init__(2,3)
+        super(RBF_H2,self).__init__(2,3,kinetic='auto')
 
         # basis function
         self.centers = centers
@@ -67,14 +68,19 @@ class RBF_H2(NEURAL_WF_BASE):
         Returns: values of psi
         '''
         
-        edist  = self.edist(x)
-        J = self.jastrow(edist)
+        #edist  = self.edist(x)
+        #J = self.jastrow(edist)
 
         x = self.rbf(x)
         x = self.mo(x)
-        #x = self.pool(x) #<- issue with batch determinant
-        x = (x[:,0,0]*x[:,1,0]).view(-1,1)
-        return J*x
+        x = self.pool(x) #<- issue with batch determinant
+        #x = self.pool_ground_state(x)
+        
+        return x
+
+    @staticmethod
+    def pool_ground_state(x):
+        return (x[:,0,0]*x[:,1,0]).view(-1,1)
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -226,6 +232,32 @@ def single_point(net,x=0.69,loss='variance',alpha=0.01):
 
     plt.show()
 
+def test_single_point(net,x=0.69,loss='variance',alpha=0.01):
+
+    ''' Compute a single point and plot the data.'''
+    net.wf.rbf.centers.data[0,2] = -x
+    net.wf.rbf.centers.data[1,2] = x
+    net.wf.rbf.centers.requires_grad = True
+
+    pos = Variable(torch.rand(1000,6))
+    pos.requires_grad = True
+
+    e = net.wf.energy(pos)
+    print('Energy   :', e)
+    e.backward()
+
+    fig = plt.figure()
+    ax = fig.gca(projection='3d')
+    d = pos.detach().numpy()
+    ax.scatter(d[:,0],d[:,1],d[:,2],alpha=alpha)
+    ax.scatter(d[:,3],d[:,4],d[:,5],alpha=alpha, color='red')
+
+    for i in range(2):
+        x,y,z = net.wf.rbf.centers.data[i,:].numpy()
+        u,v,w = net.wf.rbf.centers.grad.data[i,:].numpy()
+        ax.quiver(x,y,z,-u,-v,-w,color='black',length=1.,normalize=True,pivot='middle')
+
+    plt.show()
 
 def geo_opt(net,x=1.25,sigma=1.20,loss='energy'):
     '''Optimize the geometry of the mol.'''
@@ -338,7 +370,7 @@ if __name__ == "__main__":
     wf = RBF_H2(centers=centers,sigma=sigma)
 
     #sampler
-    sampler = METROPOLIS(nwalkers=1000   , nstep=1000,
+    sampler = METROPOLIS(nwalkers=10   , nstep=100,
                          step_size = 0.5, nelec = wf.nelec, move = 'one',
                          ndim = wf.ndim, domain = {'min':-5,'max':5})
 
@@ -351,8 +383,8 @@ if __name__ == "__main__":
     net = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 
     # single point
-    #single_point(net,x=0.5,alpha=0.01)
-    pos_curve(net)
+    single_point(net,x=0.5,alpha=0.01)
+    #pos_curve(net)
 
     # geo opt
     #geo_opt(net,x=0.4)
