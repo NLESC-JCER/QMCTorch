@@ -2,6 +2,8 @@ import os
 import numpy as np
 from mendeleev import element
 from pyscf import gto,scf
+import basis_set_exchange as bse 
+import json 
 
 class Molecule(object):
 
@@ -34,11 +36,13 @@ class Molecule(object):
         self.nshells = [] # number of shell per atom
         self.index_ctr = [] # index of the contraction
         self.bas_exp = []
+        self.bas_coeffs = []
         self.bas_n = []
         self.bas_l = []
         self.bas_m = []
 
         # utilities dict for extracting data
+        self.get_label = {0:'S',1:'P',2:'D'}
         self.get_l = {'S':0,'P':1,'D':2}
         self.mult_bas = {'S':1,'P':3,'D':5}
         self.get_m = {'S':[0],'P':[-1,0,1],'D':[-2,-1,0,1,2]}
@@ -64,6 +68,48 @@ class Molecule(object):
         elif self.basis_type == 'gto':
             self._process_gto()
 
+    def _get_sto_atomic_data(self,at):
+
+        atomic_data = { 'electron_shells':{} }
+
+        # read the atom file
+        fname = os.path.join(self.basis_path,at)
+        with open(fname,'r') as f:
+            data = f.readlines()
+
+        # loop over all the basis
+        for ibas in  range(data.index('BASIS\n')+1,data.index('END\n')):
+
+            # split the data
+            bas = data[ibas].split()
+            if len(bas) == 0:
+                continue
+
+            bas_name = bas[0]
+            zeta = float(bas[1])
+
+            # get the primary quantum number
+            n = int(bas_name[0])-1
+
+            if n not in atomic_data['electron_shells']:
+                atomic_data['electron_shells'][n] = {'angular_momentum':[],
+                                                     'exponents':[],
+                                                     'coefficients':[] }
+
+            # secondary qn and multiplicity
+            l = self.get_l[bas_name[1]]
+            
+            # store it
+            if l not in atomic_data['electron_shells'][n]['angular_momentum']:
+                atomic_data['electron_shells'][n]['angular_momentum'].append(l)
+                atomic_data['electron_shells'][n]['coefficients'].append([])
+                atomic_data['electron_shells'][n]['exponents'].append([])
+
+            atomic_data['electron_shells'][n]['coefficients'][l].append(1.)
+            atomic_data['electron_shells'][n]['exponents'][l].append(zeta)
+
+        return atomic_data
+
     def _process_sto(self):
 
         # number of orbs
@@ -72,57 +118,149 @@ class Molecule(object):
         # loop over all the atoms
         for at in self.atoms:
 
+            data = self._get_sto_atomic_data(at)
+            self.nshells.append(0)
+
+            for ishell, shell in data['electron_shells'].items():
+
+                # primary quantum number
+                n = ishell
+
+                # loop over the angular momentum
+                for iangular, angular in enumerate(shell['angular_momentum']):
+
+                    # secondary qn and multiplicity
+                    l = angular
+                    mult = self.mult_bas[self.get_label[angular]]
+                    nbas = len(shell['coefficients'][0])
+                    mvals = self.get_m[self.get_label[angular]]
+
+                    for imult in range(mult):
+
+                        self.norb += 1
+
+                        # store coeffs and exps of the bas
+                        self.bas_exp += shell['exponents'][l]
+                        self.bas_coeffs += shell['coefficients'][l]
+
+                        # index of the contraction
+                        self.index_ctr += [ self.norb-1 ] * nbas
+
+                        # store the quantum numbers
+                        self.bas_n += [n]*nbas
+                        self.bas_l += [l]*nbas
+                        self.bas_m += [mvals[imult]]*nbas
+
+                    # number of shells
+                    self.nshells[-1] += mult
+
+
+    # def _process_sto(self):
+
+    #     # number of orbs
+    #     self.norb = 0
+
+    #     # loop over all the atoms
+    #     for at in self.atoms:
+
+    #         self.nshells.append(0)
+    #         all_bas_names = []
+
+    #         # read the atom file
+    #         fname = os.path.join(self.basis_path,at)
+    #         with open(fname,'r') as f:
+    #             data = f.readlines()
+
+    #         # loop over all the basis
+    #         for ibas in  range(data.index('BASIS\n')+1,data.index('END\n')):
+                
+    #             # split the data
+    #             bas = data[ibas].split()
+    #             if len(bas) == 0:
+    #                 continue
+
+    #             bas_name = bas[0]
+    #             zeta = float(bas[1])
+
+    #             # see if we have a new basis
+    #             if bas_name not in  all_bas_names:
+    #                 all_bas_names.append(bas_name)
+    #                 self.norb += 1
+
+    #             # get the primary quantum number
+    #             n = int(bas_name[0])-1
+
+    #             # secondary qn and multiplicity
+    #             l = self.get_l[bas_name[1]]
+    #             mult = self.mult_bas[bas_name[1]]
+
+    #             # index of the contraction
+    #             self.index_ctr += [self.norb-1]*mult
+
+    #             # store the quantum numbers
+    #             self.bas_n += [n]*mult
+    #             self.bas_l += [l]*mult
+    #             self.bas_m += self.get_m[bas_name[1]]
+
+    #             # store the exponents
+    #             self.bas_exp += [zeta]*mult
+
+    #             # number of shells
+    #             self.nshells[-1] += mult
+
+    #     # self.norb = np.sum(self.nshells)
+    #     # if self.basis.lower() == 'dz':
+    #     #     self.norb = int(self.norb/2)
+                
+    def _process_gto(self):
+
+        # number of orbs
+        self.norb = 0
+
+        # loop over all the atoms
+        for at in self.atoms:
+
+            at_num = element(at).atomic_number
             self.nshells.append(0)
             all_bas_names = []
 
-            # read the atom file
-            fname = os.path.join(self.basis_path,at)
-            with open(fname,'r') as f:
-                data = f.readlines()
+            # import data
+            data = json.loads(bse.get_basis(self.basis,elements=[at_num],fmt='JSON'))
 
-            # loop over all the basis
-            for ibas in  range(data.index('BASIS\n')+1,data.index('END\n')):
-                
-                # split the data
-                bas = data[ibas].split()
-                if len(bas) == 0:
-                    continue
+            # loop over the electronic shells
+            for ishell,shell in enumerate(data['elements'][str(at_num)]['electron_shells']):
 
-                bas_name = bas[0]
-                zeta = float(bas[1])
+                # get the primary number
+                n = ishell
 
-                # see if we have a new basis
-                if bas_name not in  all_bas_names:
-                    all_bas_names.append(bas_name)
-                    self.norb += 1
+                # loop over the angular momentum
+                for iangular, angular in enumerate(shell['angular_momentum']):
 
-                # get the primary quantum number
-                n = int(bas_name[0])-1
+                    # secondary qn and multiplicity
+                    l = angular
+                    mult = self.mult_bas[self.get_label[angular]]
+                    nbas = len(shell['exponents'])
+                    mvals = self.get_m[self.get_label[angular]]
 
-                # secondary qn and multiplicity
-                l = self.get_l[bas_name[1]]
-                mult = self.mult_bas[bas_name[1]]
+                    for imult in range(mult):
 
-                # index of the contraction
-                self.index_ctr += [self.norb-1]*mult
+                        self.norb += 1
 
-                # store the quantum numbers
-                self.bas_n += [n]*mult
-                self.bas_l += [l]*mult
-                self.bas_m += self.get_m[bas_name[1]]
+                        # store coeffs and exps of the bas
+                        self.bas_exp += shell['exponents']
+                        self.bas_coeffs += shell['coefficients']
 
-                # store the exponents
-                self.bas_exp += [zeta]*mult
+                        # index of the contraction
+                        self.index_ctr += [ self.norb-1 ] * nbas
 
-                # number of shells
-                self.nshells[-1] += mult
+                        # store the quantum numbers
+                        self.bas_n += [n]*nbas
+                        self.bas_l += [l]*nbas
+                        self.bas_m += [mvals[imult]]*nbas
 
-        # self.norb = np.sum(self.nshells)
-        # if self.basis.lower() == 'dz':
-        #     self.norb = int(self.norb/2)
-                
-    def _process_gto(self):
-        raise ValueError("GTOs not implemented yet")
+                    # number of shells
+                    self.nshells[-1] += mult
+
 
     def get_mo_coeffs(self,code='pyscf'):
 
@@ -149,7 +287,8 @@ class Molecule(object):
 
 if __name__ == "__main__":
 
-    m = Molecule(atom='H 0 0 0; O 0 0 1',basis='dzp')
+    m1 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='gto',basis='sto-3g')
+    m2 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='sto',basis='sz')
 
     
     
