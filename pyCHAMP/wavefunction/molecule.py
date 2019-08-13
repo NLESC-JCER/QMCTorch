@@ -5,13 +5,18 @@ from pyscf import gto,scf
 
 class Molecule(object):
 
-    def __init__(self,atom=None,basis=''):
+    def __init__(self,atom=None,basis_type='sto',basis='sz'):
 
         self.atoms_str = atom
-        self.basis = basis
+        self.basis_type = basis_type.lower()
+        self.basis = basis.lower()
 
-        if self.basis.lower() not in ['sz','dz']:
-            raise ValueError("Only DZ and SZ basis set supported")
+        if self.basis_type not in ['sto','gto']:
+            raise ValueError("basis_type must be slater or gaussian")
+
+        if self.basis_type == 'slater':
+            if self.basis not in ['sz','dz','dzp']:
+                raise ValueError("Only DZ and SZ basis set supported")
 
         # process the atom name/pos
         self.atoms = []
@@ -22,10 +27,12 @@ class Molecule(object):
         # get the basis folder
         self.basis_path = os.path.dirname(os.path.realpath(__file__))
         self.basis_path = os.path.join(self.basis_path,'atomicdata')
+        self.basis_path = os.path.join(self.basis_path,self.basis_type)
         self.basis_path = os.path.join(self.basis_path, basis.upper())
 
         # init the basis data
-        self.nshells = []
+        self.nshells = [] # number of shell per atom
+        self.index_ctr = [] # index of the contraction
         self.bas_exp = []
         self.bas_n = []
         self.bas_l = []
@@ -51,12 +58,23 @@ class Molecule(object):
         self.natom = len(self.atoms)
 
     def process_basis(self):
+        if self.basis_type == 'sto':
+            self._process_sto()
+
+        elif self.basis_type == 'gto':
+            self._process_gto()
+
+    def _process_sto(self):
+
+        # number of orbs
+        self.norb = 0
 
         # loop over all the atoms
         for at in self.atoms:
 
             self.nshells.append(0)
-            
+            all_bas_names = []
+
             # read the atom file
             fname = os.path.join(self.basis_path,at)
             with open(fname,'r') as f:
@@ -67,8 +85,16 @@ class Molecule(object):
                 
                 # split the data
                 bas = data[ibas].split()
+                if len(bas) == 0:
+                    continue
+
                 bas_name = bas[0]
                 zeta = float(bas[1])
+
+                # see if we have a new basis
+                if bas_name not in  all_bas_names:
+                    all_bas_names.append(bas_name)
+                    self.norb += 1
 
                 # get the primary quantum number
                 n = int(bas_name[0])-1
@@ -76,6 +102,9 @@ class Molecule(object):
                 # secondary qn and multiplicity
                 l = self.get_l[bas_name[1]]
                 mult = self.mult_bas[bas_name[1]]
+
+                # index of the contraction
+                self.index_ctr += [self.norb-1]*mult
 
                 # store the quantum numbers
                 self.bas_n += [n]*mult
@@ -88,10 +117,13 @@ class Molecule(object):
                 # number of shells
                 self.nshells[-1] += mult
 
-        self.norb = np.sum(self.nshells)
-        if self.basis.lower() == 'dz':
-            self.norb = int(self.norb/2)
+        # self.norb = np.sum(self.nshells)
+        # if self.basis.lower() == 'dz':
+        #     self.norb = int(self.norb/2)
                 
+    def _process_gto(self):
+        raise ValueError("GTOs not implemented yet")
+
     def get_mo_coeffs(self,code='pyscf'):
 
         if code.lower() not in ['pyscf']:
@@ -117,7 +149,7 @@ class Molecule(object):
 
 if __name__ == "__main__":
 
-    m = Molecule(atom='H 0 0 0; O 0 0 0',basis='sz')
+    m = Molecule(atom='H 0 0 0; O 0 0 1',basis='dzp')
 
     
     

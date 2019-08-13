@@ -10,7 +10,9 @@ class STO(nn.Module):
     def __init__(self,
                 nelec,
                 atom_coords,
+                norb,
                 nshells,
+                index_ctr,
                 bas_n,
                 bas_l,
                 bas_m, 
@@ -22,6 +24,7 @@ class STO(nn.Module):
         Args:
             nelec : number of electron
             atom_coords : position of the atoms
+            norb : total number of orbitals
             nshells : number of bas per atom
             bas_n : 1st quantum number of the bas
             bas_l : 2nd quantum number of the bas
@@ -34,6 +37,7 @@ class STO(nn.Module):
 
         # wavefunction data
         self.nelec = nelec
+        self.norb = norb
         self.ndim = 3
 
         # make the atomic position optmizable
@@ -46,6 +50,9 @@ class STO(nn.Module):
         self.bas_coords = self.atom_coords.repeat_interleave(self.nshells,dim=0)
         self.nbas = len(self.bas_coords)
 
+        #index for the contractions
+        self.index_ctr = torch.tensor(index_ctr)
+
         # get the exponents of the bas
         self.bas_exp = nn.Parameter(torch.tensor(bas_exp))
         self.bas_exp.requires_grad = True
@@ -57,7 +64,7 @@ class STO(nn.Module):
 
         # basis
         self.basis = basis
-        if self.basis.lower() not in ['sz','dz']:
+        if self.basis.lower() not in ['sz','dz','dzp']:
             raise ValueError("Only DZ and SZ basis set supported")
 
     def forward(self,input):
@@ -85,10 +92,19 @@ class STO(nn.Module):
         XY = X * Y
 
         # add the components if DZ basis set
-        if self.basis == 'dz':
-            nrbf = XY.shape[-1]
-            norb = int(nrbf/2)
-            XY = 0.5*XY.view(-1,self.nelec,2,norb).sum(2)
+        # if self.basis == 'dz':
+        #     nrbf = XY.shape[-1]
+        #     norb = int(nrbf/2)
+        #     XY = 0.5*XY.view(-1,self.nelec,2,norb).sum(2)
+
+        # contract the basis
+        if self.basis != 'sz':
+                nbatch = XY.shape[0]
+                XYtmp = torch.zeros(nbatch,self.nelec,self.norb)
+                print(XYtmp.shape)
+                print(XY.shape)
+                print(self.index_ctr)
+                XYtmp.index_add_(2,self.index_ctr,XY)
 
         return XY
 
@@ -96,14 +112,16 @@ if __name__ == "__main__":
 
     from pyCHAMP.wavefunction.molecule import Molecule
 
-    m = Molecule(atom='H 0 0 0; H 0 0 1',basis='sz')
+    m = Molecule(atom='H 0 0 0; H 0 0 1',basis='dzp')
 
     sto = STO(nelec=m.nelec,
                 atom_coords=m.atom_coords,
-                nshells=m.nshells,
+                norb = m.norb,
+                nshells= m.nshells,
+                index_ctr = m.index_ctr,
                 bas_n=m.bas_n,
                 bas_l=m.bas_l,
-                bas_m=m.bas_l, 
+                bas_m=m.bas_m, 
                 bas_exp=m.bas_exp,
                 basis=m.basis)
 
