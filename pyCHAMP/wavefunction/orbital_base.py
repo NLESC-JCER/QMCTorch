@@ -5,9 +5,10 @@ from math import pi as PI
 
 from pyCHAMP.wavefunction.spherical_harmonics import SphericalHarmonics
 
-class STO(nn.Module):
+class Orbitals(nn.Module):
 
     def __init__(self,
+                basis_type,
                 nelec,
                 atom_coords,
                 norb,
@@ -16,12 +17,14 @@ class STO(nn.Module):
                 bas_n,
                 bas_l,
                 bas_m, 
+                bas_coeffs,
                 bas_exp,
                 basis ):
 
         '''Radial Basis Function Layer in N dimension
 
         Args:
+            basis_type : sto or gto
             nelec : number of electron
             atom_coords : position of the atoms
             norb : total number of orbitals
@@ -30,10 +33,9 @@ class STO(nn.Module):
             bas_l : 2nd quantum number of the bas
             bas_m : 3rd quantum number of the bas
             bas_exp : exponent of the bas
-            basis : type of the basis used (dz or sz)
         '''
 
-        super(STO,self).__init__()
+        super(Orbitals,self).__init__()
 
         # wavefunction data
         self.nelec = nelec
@@ -53,6 +55,9 @@ class STO(nn.Module):
         #index for the contractions
         self.index_ctr = torch.tensor(index_ctr)
 
+        # get the coeffs of the bas
+        self.bas_coeffs = torch.tensor(bas_coeffs)
+
         # get the exponents of the bas
         self.bas_exp = nn.Parameter(torch.tensor(bas_exp))
         self.bas_exp.requires_grad = True
@@ -62,13 +67,20 @@ class STO(nn.Module):
         self.bas_l = torch.tensor(bas_l)
         self.bas_m = torch.tensor(bas_m)
 
-        # basis
-        self.basis = basis
-        if self.basis.lower() not in ['sz','dz','dzp']:
-            raise ValueError("Only DZ and SZ basis set supported")
+        # select the radial aprt
+        radial_dict = {'sto':self.radial_slater, 'gto':self.radial_gaussian}
+        self.radial = radial_dict[basis_type]
+        
+    def radial_slater(self,R):
+        return R**self.bas_n * torch.exp(-self.bas_exp*R)
+
+    def radial_gaussian(self,R):
+        return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
 
     def forward(self,input):
         
+        nbatch = input.shape[0]
+
         # get the pos of the bas
         self.bas_coords = self.atom_coords.repeat_interleave(self.nshells,dim=0)
 
@@ -82,43 +94,42 @@ class STO(nn.Module):
         
         # radial part
         # -> (Nbatch,Nelec,Nrbf)
-        X = R**self.bas_n * torch.exp(-self.bas_exp*R)
+        R = self.radial(R)
         
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nrbf)
         Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m)
         
-        # product
-        XY = X * Y
-
-        # add the components if DZ basis set
-        # if self.basis == 'dz':
-        #     nrbf = XY.shape[-1]
-        #     norb = int(nrbf/2)
-        #     XY = 0.5*XY.view(-1,self.nelec,2,norb).sum(2)
+        # product with coefficients
+        phi = self.bas_coeffs * R * Y
 
         # contract the basis
-        if self.basis != 'sz':
-                nbatch = XY.shape[0]
-                XYtmp = torch.zeros(nbatch,self.nelec,self.norb)
-                XYtmp.index_add_(2,self.index_ctr,XY)
+        psi = torch.zeros(nbatch,self.nelec,self.norb)
+        psi.index_add_(2,self.index_ctr,phi)
 
-        return XY
+        return psi
+
+
+
 
 if __name__ == "__main__":
 
     from pyCHAMP.wavefunction.molecule import Molecule
 
-    m = Molecule(atom='H 0 0 0; H 0 0 1',basis='dz')
+    #m = Molecule(atom='H 0 0 0; H 0 0 1',basis_type='sto',basis='dz')
+    m = Molecule(atom='H 0 0 0; H 0 0 1',basis_type='gto',basis='sto-3g')
 
-    sto = STO(nelec=m.nelec,
+    sto = Orbitals(
+                basis_type=m.basis_type,
+                nelec=m.nelec,
                 atom_coords=m.atom_coords,
                 norb = m.norb,
                 nshells= m.nshells,
                 index_ctr = m.index_ctr,
                 bas_n=m.bas_n,
                 bas_l=m.bas_l,
-                bas_m=m.bas_m, 
+                bas_m=m.bas_m,
+                bas_coeffs = m.bas_coeffs, 
                 bas_exp=m.bas_exp,
                 basis=m.basis)
 

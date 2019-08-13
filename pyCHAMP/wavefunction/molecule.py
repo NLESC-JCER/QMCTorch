@@ -14,11 +14,7 @@ class Molecule(object):
         self.basis = basis.lower()
 
         if self.basis_type not in ['sto','gto']:
-            raise ValueError("basis_type must be slater or gaussian")
-
-        if self.basis_type == 'slater':
-            if self.basis not in ['sz','dz','dzp']:
-                raise ValueError("Only DZ and SZ basis set supported")
+            raise ValueError("basis_type must be sto or gto")
 
         # process the atom name/pos
         self.atoms = []
@@ -248,8 +244,8 @@ class Molecule(object):
                         self.norb += 1
 
                         # store coeffs and exps of the bas
-                        self.bas_exp += shell['exponents']
-                        self.bas_coeffs += shell['coefficients']
+                        self.bas_exp += np.array(shell['exponents']).astype('float').tolist()
+                        self.bas_coeffs += np.array(shell['coefficients'][iangular]).astype('float').tolist()
 
                         # index of the contraction
                         self.index_ctr += [ self.norb-1 ] * nbas
@@ -260,7 +256,7 @@ class Molecule(object):
                         self.bas_m += [mvals[imult]]*nbas
 
                     # number of shells
-                    self.nshells[-1] += mult
+                    self.nshells[-1] += mult*nbas
 
 
     def get_mo_coeffs(self,code='pyscf'):
