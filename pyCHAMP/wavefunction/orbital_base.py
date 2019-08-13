@@ -70,7 +70,21 @@ class Orbitals(nn.Module):
         # select the radial aprt
         radial_dict = {'sto':self.radial_slater, 'gto':self.radial_gaussian}
         self.radial = radial_dict[basis_type]
-        
+
+        #select the normalization
+        if basis_type == 'sto':
+            self.norm_cst = self.norm_slater()
+        elif basis_type == 'gto':
+            self.norm_cst = self.norm_gaussian()
+
+
+    def norm_slater(self):
+        nfact = torch.tensor([np.math.factorial(2*n) for n in self.bas_n])
+        return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
+
+    def norm_gaussian(self):
+        return 0
+
     def radial_slater(self,R):
         return R**self.bas_n * torch.exp(-self.bas_exp*R)
 
