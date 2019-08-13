@@ -82,6 +82,7 @@ class Molecule(object):
 
             # split the data
             bas = data[ibas].split()
+            
             if len(bas) == 0:
                 continue
 
@@ -105,8 +106,8 @@ class Molecule(object):
                 atomic_data['electron_shells'][n]['coefficients'].append([])
                 atomic_data['electron_shells'][n]['exponents'].append([])
 
-            atomic_data['electron_shells'][n]['coefficients'][l].append(1.)
-            atomic_data['electron_shells'][n]['exponents'][l].append(zeta)
+            atomic_data['electron_shells'][n]['coefficients'][-1].append(1.)
+            atomic_data['electron_shells'][n]['exponents'][-1].append(zeta)
 
         return atomic_data
 
@@ -140,8 +141,8 @@ class Molecule(object):
                         self.norb += 1
 
                         # store coeffs and exps of the bas
-                        self.bas_exp += shell['exponents'][l]
-                        self.bas_coeffs += shell['coefficients'][l]
+                        self.bas_exp += shell['exponents'][iangular]
+                        self.bas_coeffs += shell['coefficients'][iangular]
 
                         # index of the contraction
                         self.index_ctr += [ self.norb-1 ] * nbas
@@ -152,7 +153,7 @@ class Molecule(object):
                         self.bas_m += [mvals[imult]]*nbas
 
                     # number of shells
-                    self.nshells[-1] += mult
+                    self.nshells[-1] += nbas*mult
 
 
     # def _process_sto(self):
@@ -288,7 +289,7 @@ class Molecule(object):
 if __name__ == "__main__":
 
     m1 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='gto',basis='sto-3g')
-    m2 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='sto',basis='sz')
+    m2 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='sto',basis='dzp')
 
     
     
