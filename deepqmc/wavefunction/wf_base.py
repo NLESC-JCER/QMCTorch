@@ -10,11 +10,11 @@ from torch.autograd import grad, Variable
 
 from time import time
 
-class NEURAL_WF_BASE(nn.Module):
+class WF_BASE(nn.Module):
 
     def __init__(self,nelec, ndim, kinetic='auto'):
 
-        super(NEURAL_WF_BASE, self).__init__()
+        super(WF_BASE, self).__init__()
 
         self.ndim = ndim
         self.nelec = nelec

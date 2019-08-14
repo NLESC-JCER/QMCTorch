@@ -8,10 +8,11 @@ import torch.optim as optim
 from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
 
 from pyCHAMP.solver.deepqmc import DeepQMC
-from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
+from pyCHAMP.sampler.metropolis import METROPOLIS as METROPOLIS
 
 from pyCHAMP.wavefunction.atomic_orbitals import AtomicOrbitals
-from pyCHAMP.wavefunction.wave_modules import SlaterPooling, TwoBodyJastrowFactor, ElectronDistance
+from pyCHAMP.wavefunction.slater_pooling import SlaterPooling
+from pyCHAMP.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 from pyCHAMP.wavefunction.molecule import Molecule
 
 from pyCHAMP.solver.plot import plot_wf_3d
