@@ -43,6 +43,18 @@ class Molecule(object):
         self.mult_bas = {'S':1,'P':3,'D':5}
         self.get_m = {'S':[0],'P':[-1,0,1],'D':[-2,-1,0,1,2]}
 
+        # for cartesian 
+        self.get_lmn_cart = {'S': [0,0,0],
+                             'P':[[1,0,0],
+                                  [0,1,0],
+                                  [0,0,1]],
+                             'D':[[2,0,0],
+                                  [0,2,0],
+                                  [0,0,2],
+                                  [1,1,0],
+                                  [1,0,1],
+                                  [0,1,1] ]}
+
         # read/process basis info
         self.process_basis()
 
@@ -151,63 +163,6 @@ class Molecule(object):
                     # number of shells
                     self.nshells[-1] += nbas*mult
 
-
-    # def _process_sto(self):
-
-    #     # number of orbs
-    #     self.norb = 0
-
-    #     # loop over all the atoms
-    #     for at in self.atoms:
-
-    #         self.nshells.append(0)
-    #         all_bas_names = []
-
-    #         # read the atom file
-    #         fname = os.path.join(self.basis_path,at)
-    #         with open(fname,'r') as f:
-    #             data = f.readlines()
-
-    #         # loop over all the basis
-    #         for ibas in  range(data.index('BASIS\n')+1,data.index('END\n')):
-                
-    #             # split the data
-    #             bas = data[ibas].split()
-    #             if len(bas) == 0:
-    #                 continue
-
-    #             bas_name = bas[0]
-    #             zeta = float(bas[1])
-
-    #             # see if we have a new basis
-    #             if bas_name not in  all_bas_names:
-    #                 all_bas_names.append(bas_name)
-    #                 self.norb += 1
-
-    #             # get the primary quantum number
-    #             n = int(bas_name[0])-1
-
-    #             # secondary qn and multiplicity
-    #             l = self.get_l[bas_name[1]]
-    #             mult = self.mult_bas[bas_name[1]]
-
-    #             # index of the contraction
-    #             self.index_ctr += [self.norb-1]*mult
-
-    #             # store the quantum numbers
-    #             self.bas_n += [n]*mult
-    #             self.bas_l += [l]*mult
-    #             self.bas_m += self.get_m[bas_name[1]]
-
-    #             # store the exponents
-    #             self.bas_exp += [zeta]*mult
-
-    #             # number of shells
-    #             self.nshells[-1] += mult
-
-    #     # self.norb = np.sum(self.nshells)
-    #     # if self.basis.lower() == 'dz':
-    #     #     self.norb = int(self.norb/2)
                 
     def _process_gto(self):
 
@@ -261,18 +216,33 @@ class Molecule(object):
 
     def get_mo_coeffs(self,code='pyscf'):
 
-        if code.lower() not in ['pyscf']:
-            raise ValueError(code + 'not currently supported')
+        if self.basis_type == 'gto':
 
-        if code.lower() == 'pyscf':
-            mo = self._get_mo_pyscf()
+            if code.lower() not in ['pyscf']:
+                raise ValueError(code + 'not currently supported for GTO orbitals')
+
+            if code.lower() == 'pyscf':
+                mo = self._get_mo_pyscf()
+
+        elif self.basis_type == 'sto': 
+
+            if code.lower() not in ['pyscf']:
+                raise ValueError(code + 'not currently supported for STO orbitals')
+
+            if code.lower() == 'pyscf':
+                mo = self._get_mo_pyscf()
 
         return mo
 
     def _get_mo_pyscf(self):
 
-        pyscf_basis = {'sz':'sto-3g','dz':'dz'}
-        mol = gto.M(atom=self.atoms_str,basis=pyscf_basis[self.basis])
+        if self.basis_type == 'sto':
+            bdict = {'sz':'sto-3g','dz':'sto-3g'}
+            pyscf_basis = bdict[self.basis]
+        else:
+            pyscf_basis = self.basis
+
+        mol = gto.M(atom=self.atoms_str,basis=pyscf_basis)
         rhf = scf.RHF(mol).run()
         return self._normalize_columns(rhf.mo_coeff)
 

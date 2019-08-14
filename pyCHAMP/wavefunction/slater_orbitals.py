@@ -64,7 +64,7 @@ class STO(nn.Module):
 
         # basis
         self.basis = basis
-        if self.basis.lower() not in ['sz','dz','dzp']:
+        if self.basis.lower() not in ['sz','dz']:
             raise ValueError("Only DZ and SZ basis set supported")
 
     def forward(self,input):
