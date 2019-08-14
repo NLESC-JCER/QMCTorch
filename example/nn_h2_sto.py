@@ -32,10 +32,12 @@ class STO_H2(NEURAL_WF_BASE):
         # define the RBF layer
         self.sto = STO(nelec=mol.nelec,
                     atom_coords=mol.atom_coords,
+                    norb = mol.norb,
                     nshells=mol.nshells,
+                    index_ctr=mol.index_ctr,
                     bas_n=mol.bas_n,
                     bas_l=mol.bas_l,
-                    bas_m=mol.bas_l, 
+                    bas_m=mol.bas_m, 
                     bas_exp=mol.bas_exp,
                     basis=mol.basis)
         
