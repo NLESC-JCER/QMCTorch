@@ -4,7 +4,7 @@ import torch.nn.functional as F
 from math import pi as PI
 import numpy as np
 
-from pyCHAMP.wavefunction.spherical_harmonics import SphericalHarmonics
+from deepqmc.wavefunction.spherical_harmonics import SphericalHarmonics
 
 class AtomicOrbitals(nn.Module):
 

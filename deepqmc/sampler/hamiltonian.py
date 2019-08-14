@@ -2,11 +2,9 @@ import torch
 from tqdm import tqdm
 import time
 from torch.autograd import grad, Variable
-from pyCHAMP.sampler.sampler_base import SAMPLER_BASE
+from deepqmc.sampler.sampler_base import SAMPLER_BASE
 
-
-
-class HAMILTONIAN_TORCH(SAMPLER_BASE):
+class HAMILTONIAN(SAMPLER_BASE):
 
     def __init__(self, nwalkers=1000, nstep=None, nelec=1, ndim=3,
              step_size = None, domain = None, L=10,

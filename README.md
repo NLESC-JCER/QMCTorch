@@ -1,26 +1,19 @@
-# pyCHAMP
+# DeepQMC
 
-Quantum Monte Carlo code in Python
+Deep Learning for Quantum Monte Carlo Simulations
 
 ## Introduction
 
-
-pyCHAMP allows to run small Variational QMC calculations in Python. Diffusion Monte Carlo is currently under developement Only a few features are currently supported : 
-
-### Sampler : 
+DeepQMC allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle in a box model and molecular systems. It relies heavily on pytorch for the deep learning part and on pyscf to obtain the first guess of the molecular orbitals. Several MC samplers are implemented :
 
   * Metropolis-Hasting
   * Hamiltonian Monte-Carlo
 
-### Optimizers :
+and more will be added. Beyond facilitating the optimization of the wave fuction parameters, `autograd` is also leveraged to compute the kinetic operator.
 
-  * Scipy Minimize routines (BFGS, Simplex, .... )
-  * Linear Method
-  
-  
-`pyChamp` tries to use `autograd` as much as possible to define the partial derivatives of the wave function, alleviating the necessaity to derive analytic expressions
 
-## Example : VMC Single point calculation 1D Harmonic oscillator with 1-electron
+
+## Example : Harmonic Oscillator in 1D
 
 ```python
 

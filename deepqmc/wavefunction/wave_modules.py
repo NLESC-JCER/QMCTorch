@@ -162,37 +162,6 @@ class JastrowFunction(torch.autograd.Function):
     #     grad_weight = -(static_weight * input**2 * (1+weight*input)**(-2) )
     #     return grad_output * grad_input, grad_output * grad_weight, None
 
-class AOFunction(torch.autograd.Function):
-
-    @staticmethod
-    def forward(ctx, input, mol):
-        ctx.save_for_backward(input)
-        ctx.mol = mol
-        pos = input.detach().numpy().astype('float64') 
-        output = [mol.eval_gto("GTOval_sph",p) for p in pos]
-        return torch.tensor(output,requires_grad=True)
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        input = ctx.saved_tensors[0]
-        pos = input.detach().numpy().astype('float64')
-        deriv_ao = torch.tensor([ctx.mol.eval_gto("GTOval_ip_sph",p) for p in pos])
-
-        out = torch.zeros(input.shape)
-        for k in range(3):
-            out[:,:,k] = (grad_output * deriv_ao[:,k,:,:]).sum(-1)
-
-        return out, None
-
-class AOLayer(nn.Module):
-
-    def __init__(self,mol):
-        super(AOLayer,self).__init__()
-        self.mol = mol
-
-    def forward(self,input):
-        return AOFunction.apply(input,self.mol)
-
 
 if __name__ == "__main__":
 

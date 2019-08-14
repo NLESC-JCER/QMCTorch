@@ -8,9 +8,9 @@ from torch.autograd import Variable, grad
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from pyCHAMP.solver.solver_base import SOLVER_BASE
-from pyCHAMP.solver.torch_utils import QMCDataSet, QMCLoss, OrthoReg
-from pyCHAMP.solver.refine_mesh import refine_mesh
+from deepqmc.solver.solver_base import SOLVER_BASE
+from deepqmc.solver.torch_utils import QMCDataSet, QMCLoss, OrthoReg
+
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D 

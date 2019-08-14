@@ -44,7 +44,8 @@ class QMCLoss(nn.Module):
         return loss
 
 class OrthoReg(nn.Module):
-
+    '''add a penalty to make matrice sorthgonal.'''
+    
     def __init__(self,alpha=0.1):
         super(OrthoReg,self).__init__()
         self.alpha = alpha
