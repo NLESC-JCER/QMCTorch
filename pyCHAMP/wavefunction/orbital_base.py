@@ -2,6 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 from math import pi as PI
+import numpy as np
 
 from pyCHAMP.wavefunction.spherical_harmonics import SphericalHarmonics
 
@@ -79,11 +80,22 @@ class Orbitals(nn.Module):
 
 
     def norm_slater(self):
+        '''Normalization of the STO 
+        taken from www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
+        '''
         nfact = torch.tensor([np.math.factorial(2*n) for n in self.bas_n])
         return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
 
     def norm_gaussian(self):
-        return 0
+        '''Normalisation of the gto
+        phi = N * r**n * exp(-alpha*r**2)
+        see http://fisica.ciens.ucv.ve/~svincenz/TISPISGIMR.pdf 3.326 2.10 page 337
+        '''
+        beta = 2*self.bas_exp
+        nfact = torch.tensor([np.math.factorial(n) for n in self.bas_n],dtype=torch.float)
+        twonfact = torch.tensor([np.math.factorial(2*n) for n in self.bas_n],dtype=torch.float)
+
+        return torch.sqrt(2 * nfact / twonfact * ( 4*beta )**self.bas_n * torch.sqrt(beta/np.pi))
 
     def radial_slater(self,R):
         return R**self.bas_n * torch.exp(-self.bas_exp*R)
@@ -115,7 +127,7 @@ class Orbitals(nn.Module):
         Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m)
         
         # product with coefficients
-        phi = self.bas_coeffs * R * Y
+        phi = self.norm_cst * self.bas_coeffs * R * Y
 
         # contract the basis
         psi = torch.zeros(nbatch,self.nelec,self.norb)
