@@ -86,7 +86,15 @@ After the optimization, the following result is obtained:
 
 ## Dihydrogen molecule
 
+We use a similar network architecture to optimize QMC wavefunction for molecular systems. This architecture is depicted below. 
 
 <p align="center">
 <img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
 </p>
+
+Starting from the positions of the electrons in the system, we have define a network layer that evaluate the values of all the atomic orbitals at all the electron positions. This layer has several variational paramters (atomic positions, basis function exponents and coefficients) that can be optimized during the training. 
+
+From the atomic orbital values we compute the values of the molecular orbitals, there again for the positions of all the electrons. This achieved by a simple linear layer whose transformation matrix is given by the molecular orbital coefficients. These coefficients are variational parameters of the layer and can therefore also be optimized.
+
+We then have defined a Slater pooling layer that that computes values of all the required Slater determinant. Finally a fully connected layer sums up the determinants. The weight of this last layer are the CI coefficients that can as well be optimized.
+

@@ -91,9 +91,10 @@ class JastrowFunction(torch.autograd.Function):
 
 if __name__ == "__main__":
 
-    pos = torch.rand(10,12)
-    edist = ElectronDistance.apply(pos)
-    jastrow = TwoBodyJastrowFactor(2,2)
+    pos = torch.rand(10,6)
+    edist=ElectronDistance(2,3)
+    edist = edist(pos)
+    jastrow = TwoBodyJastrowFactor(1,1)
     val = jastrow(edist)
 
    
