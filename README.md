@@ -68,4 +68,14 @@ After defining the domain in `domain` and the number of basis function in `ncent
 <img src="./pics/rbf_nn.png" title="RBF neural network">
 </p>
 
+The then instantiate the sampler, here a simple `Metroplis` scheme. The sampler is used to sample the wave function and hence generate a bach of sampling points. These points are used as input of the neural network the compute the values of wave function at those points. We finally select the `Adam` optimizer to optimize the wave function paramters. 
+
+We then define a `DeepQMC` instance that ties all the elements together and train th model to optimize the wave function paramters. We here use the variance of the sampling point energy as a loss and run 100 epochs. Many more parameters are accessible in the training routines.
+
+After the optimization, the following result is obtained:
+
+<p align="center">
+<img src="./pics/ho1d.png" title="Results of the optimization">
+</p>
+
 
