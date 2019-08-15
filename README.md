@@ -4,7 +4,13 @@ Deep Learning for Quantum Monte Carlo Simulations
 
 ## Introduction
 
-DeepQMC allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle in a box model and molecular systems. It relies heavily on pytorch for the deep learning part and on pyscf to obtain the first guess of the molecular orbitals. Several MC samplers are implemented :
+DeepQMC allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle in a box model and molecular systems. It relies heavily on `pytorch` for the deep learning part and on `pyscf` to obtain the first guess of the molecular orbitals. The three manin ingredients of any calculations are :
+
+  * a neural network calculation the value of the wave function at a given point
+  * a sampler able to generate sampling points of the wave function
+  * an optimizer (as those provided by `pytorch`) 
+
+Several MC samplers are implemented :
 
   * Metropolis-Hasting
   * Hamiltonian Monte-Carlo
@@ -12,8 +18,7 @@ DeepQMC allows to leverage deep learning to optimize QMC wave functions. The pac
 and more will be added. Beyond facilitating the optimization of the wave fuction parameters, `autograd` is also leveraged for example to apply the kinetic operator on the wave function.
 
 
-
-## Example : Harmonic Oscillator in 1D
+## Harmonic Oscillator in 1D
 
 We illustrate here how to optimize a simple harmonic oscillator in 1D using DeepQMC. The `pot_func` function defines the potential that is here a simple harmonic oscillator. The `sol_func` function gives the analytical solution of the problem and is only use for plotting purposes.
 
@@ -79,3 +84,9 @@ After the optimization, the following result is obtained:
 </p>
 
 
+## Dihydrogen molecule
+
+
+<p align="center">
+<img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
+</p>

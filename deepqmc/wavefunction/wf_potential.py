@@ -2,11 +2,11 @@ import numpy as np
 import torch
 from torch import nn
 
-from deepqmc.wavefunction.wf_base import WF_BASE
+from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.rbf import RBF
 
 
-class Potential(WF_BASE):
+class Potential(WaveFunction):
 
     def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1,fcinit=0.1):
         super(Potential,self).__init__(nelec,ndim)
