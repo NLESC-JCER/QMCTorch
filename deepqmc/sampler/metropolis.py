@@ -1,11 +1,11 @@
 import numpy as np 
-from deepqmc.sampler.sampler_base import SAMPLER_BASE
+from deepqmc.sampler.sampler_base import SamplerBase
 from deepqmc.sampler.walkers import WALKERS
 from tqdm import tqdm 
 import torch
 import time
 
-class METROPOLIS(SAMPLER_BASE):
+class Metropolis(SamplerBase):
 
     def __init__(self, nwalkers=1000, nstep=1000, nelec=1, ndim=3,
                  step_size = 3, domain = {'min':-2,'max':2},
@@ -20,7 +20,7 @@ class METROPOLIS(SAMPLER_BASE):
             boudnary (float) : boudnary of the space
         '''
 
-        SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
+        SamplerBase.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain,move)
 
     def generate(self,pdf,ntherm=10,with_tqdm=True,pos=None,init='uniform'):
 

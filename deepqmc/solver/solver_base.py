@@ -2,7 +2,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-class SOLVER_BASE(object):
+class SolverBase(object):
 
     def __init__(self,wf=None, sampler=None, optimizer=None):
 
@@ -19,7 +19,6 @@ class SOLVER_BASE(object):
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
         ''' sample the wave function.'''
         
-        t0 = time.time()
         pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm,with_tqdm=with_tqdm,pos=pos)
         pos = torch.tensor(pos)
         pos = pos.view(-1,self.sampler.ndim*self.sampler.nelec)
@@ -27,27 +26,36 @@ class SOLVER_BASE(object):
         return pos.float()
 
     def observalbe(self,func,pos):
+        '''Computes observalbes given by the func arguments.'''
+
         obs = []
         for p in tqdm(pos):
             obs.append( func(p).data.numpy().tolist() )
         return obs
 
     def get_wf(self,x):
+        '''Get the value of the wave functions at x.'''
         vals = self.wf(x)
         return vals.detach().numpy().flatten()
 
+    def energy(self,pos=None):
+        '''Get the energy of the wave function.'''
+        if pos is None:
+            pos = self.sample(ntherm=-1)
+        return self.wf.energy(pos)
 
+    def variance(self,pos):
+        '''Get the variance of the wave function.'''
+        if pos is None:
+            pos = self.sample(ntherm=-1)
+        return self.wf.variance(pos)
 
-    def energy(self,param,pos):
-        return self.wf.energy(param,pos)
-
-    def variance(self,param,pos):
-        return self.wf.variance(param,pos)
-
-    def single_point(self,param):
-        pos = self.sample(param)
-        e = self.energy(param,pos)
-        s = self.variance(param,pos)
+    def single_point(self,pos=None):
+        '''Performs a single point calculation.'''
+        if pos is None:
+            pos = self.sample(ntherm=-1)
+        e = self.energy(pos)
+        s = self.variance(pos)
         return pos, e, s
 
     def plot_density(self,pos):

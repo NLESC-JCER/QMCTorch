@@ -4,22 +4,18 @@ from torch import nn
 
 from deepqmc.wavefunction.wf_base import WF_BASE
 from deepqmc.wavefunction.rbf import RBF
-from deepqmc.wavefunction.mesh_utils import regular_mesh_2d, regular_mesh_3d
 
-class PinBox(WF_BASE):
 
-    def __init__(self,fpot,domain,ncenter,nelec=1):
-        super(PinBox,self).__init__(nelec,len(ncenter))
+class Potential(WF_BASE):
+
+    def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1):
+        super(Potential,self).__init__(nelec,ndim)
 
         # get the RBF centers 
-        ndim = len(ncenter)
-        if ndim == 1:
-            self.centers = torch.linspace(domain['xmin'],domain['xmax'],ncenter[0]).view(-1,1)
-        elif ndim == 2:
-            points = regular_mesh_2d(xmin=domain['xmin'],xmax=domain['xmax'],nx=ncenter[0],
-                           ymin=domain['ymin'],ymax=domain['ymax'],ny=ncenter[1]) 
-            self.centers = torch.tensor(points)
-        self.ncenter = len(self.centers)
+        if not isinstance(ncenter,list):
+            ncenter = [ncenter]
+        self.centers = torch.linspace(domain['xmin'],domain['xmax'],ncenter[0]).view(-1,1)
+        self.ncenter = ncenter[0]
 
         # define the RBF layer
         self.rbf = RBF(self.ndim_tot, self.ncenter,
@@ -28,6 +24,7 @@ class PinBox(WF_BASE):
         
         # define the fc layer
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
+        self.fc.clip = True
 
         # initiaize the fc layer
         nn.init.uniform_(self.fc.weight,0,1)
@@ -45,9 +42,6 @@ class PinBox(WF_BASE):
 
         Returns: values of psi
         '''
-
-        batch_size = x.shape[0]
-        #x = x.view(batch_size,-1,self.ndim)
         x = self.rbf(x)
         x = self.fc(x)
         return x.view(-1,1)

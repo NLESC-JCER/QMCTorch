@@ -2,9 +2,9 @@ import torch
 from tqdm import tqdm
 import time
 from torch.autograd import grad, Variable
-from deepqmc.sampler.sampler_base import SAMPLER_BASE
+from deepqmc.sampler.sampler_base import SamplerBase
 
-class HAMILTONIAN(SAMPLER_BASE):
+class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=1000, nstep=None, nelec=1, ndim=3,
              step_size = None, domain = None, L=10,
@@ -19,7 +19,7 @@ class HAMILTONIAN(SAMPLER_BASE):
             boudnary (float) : boudnary of the space
         '''
 
-        SAMPLER_BASE.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain, move)
+        SamplerBase.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain, move)
         self.traj_length = L
 
        

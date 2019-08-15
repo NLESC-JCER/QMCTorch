@@ -8,7 +8,7 @@ from torch.autograd import Variable, grad
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
-from deepqmc.solver.solver_base import SOLVER_BASE
+from deepqmc.solver.solver_base import SolverBase
 from deepqmc.solver.torch_utils import QMCDataSet, QMCLoss, OrthoReg
 
 
@@ -32,10 +32,10 @@ class ZeroOneClipper(object):
             w = module.weight.data
             w.sub_(torch.min(w)).div_(torch.norm(w).expand_as(w))
             
-class DeepQMC(SOLVER_BASE):
+class DeepQMC(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None):
-        SOLVER_BASE.__init__(self,wf,sampler,None)
+        SolverBase.__init__(self,wf,sampler,None)
         self.opt = optimizer
 
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
@@ -92,7 +92,8 @@ class DeepQMC(SOLVER_BASE):
         
 
     def train(self,nepoch, batchsize=32, pos=None, obs_dict=None, 
-              ntherm=-1, resample=100, resample_from_last=False, resample_every=1,
+              ntherm=-1, resample=100, resample_from_last=False, 
+              resample_every=1,
               loss='variance', plot = None,
               save_model='model.pth'):
 

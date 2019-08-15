@@ -81,7 +81,7 @@ class plotter1d(object):
             res : number of points in each direction
             sol : callabale solution of the problem
         '''
-
+        plt.ion()
         self.wf = wf
         self.res = res
         self.fig = plt.figure()
@@ -100,6 +100,7 @@ class plotter1d(object):
         self.pweight, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
         if self.wf.fc.weight.requires_grad:
             self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
+
 
         plt.draw()
         self.fig.canvas.flush_events()
@@ -146,6 +147,7 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
         xn = X.detach().numpy().flatten()
 
         if callable(sol):
+            
             vs = sol(X).detach().numpy()
             ax.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--',label='solution')
 
@@ -187,7 +189,7 @@ def plot_results_1d(net,obs_dict,domain,res,sol=None,e0=None):
         domain : boundary of the plot
         res : number of points in the x axis
     '''
-
+    plt.ioff()
     fig = plt.figure()
     ax0 = fig.add_subplot(211)
     ax1 = fig.add_subplot(212)
@@ -250,6 +252,7 @@ class plotter2d(object):
             res : number of points in each direction
             sol : callabale solution of the problem
         '''
+        plt.ion()
 
         self.wf = wf
         self.res = res
@@ -313,7 +316,7 @@ def plot_results_2d(net,obs_dict,domain,res,sol=None,e0=None):
         sol : callable of the solutions
         e0 : energy of the solution
     '''
-
+    plt.ioff()
     fig = plt.figure()
     ax0 = fig.add_subplot(211, projection='3d')
     ax1 = fig.add_subplot(212)
@@ -375,7 +378,7 @@ def plot_results_3d(net,obs_dict,domain,res,wf=False,isoval=0.02,sol=None,e0=Non
         sol : callable of the solutions
         e0 : energy of the solution
     '''
-    
+    plt.ioff()
     fig = plt.figure()
     ax0 = fig.add_subplot(211, projection='3d')
     ax1 = fig.add_subplot(212)
