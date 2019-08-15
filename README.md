@@ -9,130 +9,63 @@ DeepQMC allows to leverage deep learning to optimize QMC wave functions. The pac
   * Metropolis-Hasting
   * Hamiltonian Monte-Carlo
 
-and more will be added. Beyond facilitating the optimization of the wave fuction parameters, `autograd` is also leveraged to compute the kinetic operator.
+and more will be added. Beyond facilitating the optimization of the wave fuction parameters, `autograd` is also leveraged for example to apply the kinetic operator on the wave function.
 
 
 
 ## Example : Harmonic Oscillator in 1D
 
-```python
+We illustrate here how to optimize a simple harmonic oscillator in 1D using DeepQMC. The `pot_func` function defines the potential that is here a simple harmonic oscillator. The `sol_func` function gives the analytical solution of the problem and is only use for plotting purposes.
 
-from pyCHAMP.wavefunction.wf_base import WF
-from pyCHAMP.sampler.metropolis import METROPOLIS
-from pyCHAMP.solver.vmc import VMC
 
-class HarmOsc1D(WF):
-
-    def __init__(self,nelec,ndim):
-        WF.__init__(self, nelec, ndim)
-
-    def values(self,parameters,pos):
-        ''' Compute the value of the wave function.
-        Args:
-            parameters : parameters of th wf
-            x: position of the electron
-        Returns: values of psi
-        '''
-    
-        beta = parameters[0]
-        return np.exp(-beta*pos**2).reshape(-1,1)
-
-    def nuclear_potential(self,pos):
-        return 0.5*pos**2 
-
-    def electronic_potential(self,pos):
-        return 0
-        
-wf = HarmOsc1D(nelec=1, ndim=1)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size = 3, nelec=1, ndim=1, domain = {'min':-2,'max':2})
-
-vmc = VMC(wf=wf, sampler=sampler, optimizer=None)
-opt_param = [0.5]
-pos, e, s = vmc.single_point(opt_param)
-
-print('Energy   : ', e)
-print('Variance : ', s)
-vmc.plot_density(pos)
-```
-
-This script will output :
-
-```
-Energy   :  0.5000007216288713
-Variance :  2.8121093888720785e-09
-``` 
-
-and plot the following distribution 
-
-![alt-text](./pics/ho1dDist.png)
-
-## Example : VMC optimization of a 3D Harmonic oscillator with 1-electron
 
 ```python
+import torch
+import torch.optim as optim
 
-import autograd.numpy as np
+from deepqmc.wavefunction.wf_potential import Potential
+from deepqmc.sampler.metropolis import  Metropolis
+from deepqmc.solver.deepqmc import DeepQMC
+from deepqmc.solver.plot import plot_results_1d, plotter1d
 
-from pyCHAMP.wavefunction.wf_base import WF
-from pyCHAMP.sampler.metropolis import METROPOLIS
-from pyCHAMP.optimizer.minimize import MINIMIZE
-from pyCHAMP.solver.vmc import VMC
+def pot_func(pos):
+    '''Potential function desired.'''
+    return  0.5*pos**2
 
-class HarmOsc3D(WF):
+def sol_func(pos):
+    '''Analytical solution of the 1D harmonic oscillator.'''
+    return torch.exp(-0.5*pos**2)
 
-	def __init__(self,nelec,ndim):
-		WF.__init__(self, nelec, ndim)
+# box
+domain, ncenter = {'xmin':-5.,'xmax':5.}, 5
 
-	def values(self,parameters,pos):
-		''' Compute the value of the wave function.
+# wavefunction
+wf = Potential(pot_func,domain,ncenter,nelec=1)
 
-		Args:
-			parameters : variational param of the wf
-			pos: position of the electron
+#sampler
+sampler = Metropolis(nwalkers=250, nstep=1000, 
+                     step_size = 1., nelec = wf.nelec, 
+                     ndim = wf.ndim, domain = {'min':-5,'max':5})
 
-		Returns: values of psi
-		# '''
-		# if pos.shape[1] != self.ndim :
-		# 	raise ValueError('Position have wrong dimension')
+# optimizer
+opt = optim.Adam(wf.parameters(),lr=0.01)
 
-		beta = parameters[0]
-		return np.exp(-beta*np.sum(pos**2,1)).reshape(-1,1)
+# define solver
+qmc = DeepQMC(wf=wf,sampler=sampler,optimizer=opt)
 
-	def nuclear_potential(self,pos):
-		return np.sum(0.5*pos**2,1).reshape(-1,1)
+# train the wave function
+pos,obs_dict = qmc.train(100, loss = 'variance',
+                         plot = plotter1d(wf,domain,50,sol=sol_func) )
 
-	def electronic_potential(self,pos):
-		return 0
-
-wf = HarmOsc3D(nelec=1, ndim=3)
-sampler = METROPOLIS(nwalkers=1000, nstep=1000, step_size=3, nelec=1, ndim=3, domain = {'min':-2,'max':2})
-optimizer = MINIMIZE(method='bfgs', maxiter=20, tol=1E-4)
-
-# VMC solver
-vmc = VMC(wf=wf, sampler=sampler, optimizer=optimizer)
-
-# optimiztaion
-init_param = [0.25]
-vmc.optimize(init_param)
-vmc.plot_history()
-``` 
-
-will output :
-
-```
-0 energy = 1.836533, variance = 0.767677 (beta=0.250000)
-1 energy = 1.564179, variance = 0.128395 (beta=0.374170)
-2 energy = 1.509419, variance = 0.027333 (beta=0.436731)
-3 energy = 1.500715, variance = 0.002094 (beta=0.481135)
-4 energy = 1.499970, variance = 0.000016 (beta=0.498338)
-5 energy = 1.500326, variance = 0.000019 (beta=0.498338)
-6 energy = 1.500002, variance = 0.000000 (beta=0.499981)
-7 energy = 1.499989, variance = 0.000000 (beta=0.499998)
+# plot the final wave function 
+plot_results_1d(qmc,obs_dict,domain,50,sol_func,e0=0.5)
 ```
 
-leading to the following plot :
 
-![alt-text](./pics/ho3dopt.png)
+After defining the domain in `domain` and the number of basis function in `ncenter`, we instantialte the `Potential` wave function class. This class defines a very simple neural network that, given a position computes the value of the wave function at that point. This neural network is composed of a layer of radial basis functions followed by a fully conneted layer to sum them up:
 
-and the following point distribution :
+![alt-text](./pics/rbf_nn.png)
 
-![alt-text](./pics/ho3dDist.png)
+The final form of the wave function is then given by :
+
+$$ \Psi(x) = \sum_n \mathcal{G}_n(\theta,x)$$

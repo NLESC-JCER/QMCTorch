@@ -91,9 +91,8 @@ class DeepQMC(SolverBase):
         return loss
         
 
-    def train(self,nepoch, batchsize=32, pos=None, obs_dict=None, 
-              ntherm=-1, resample=100, resample_from_last=False, 
-              resample_every=1,
+    def train(self,nepoch, batchsize=None, pos=None, obs_dict=None, 
+              ntherm=-1, resample=100, resample_from_last=True, resample_every=1,
               loss='variance', plot = None,
               save_model='model.pth'):
 
@@ -101,7 +100,7 @@ class DeepQMC(SolverBase):
 
         Arg:
             nepoch : number of epoch
-            batchsize : size of the minibatch
+            batchsize : size of the minibatch, if None take all points at once
             pos : presampled electronic poition
             obs_dict (dict, {name: []} ) : quantities to be computed during the training
                                            'name' must refer to a method of the DeepQMC instance
@@ -118,6 +117,9 @@ class DeepQMC(SolverBase):
 
         if pos is None:
             pos = self.sample(ntherm=ntherm)
+
+        if batchsize is None:
+            batchsize = len(pos)
 
         # change the number of steps
         _nstep_save = self.sampler.nstep

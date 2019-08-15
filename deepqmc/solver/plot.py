@@ -72,7 +72,7 @@ def plot_observable(obs_dict,e0=None,ax=None):
 
 class plotter1d(object):
 
-    def __init__(self, wf, domain, res, sol = None):
+    def __init__(self, wf, domain, res, sol = None, plot_weight=False, plot_grad=False):
         '''Dynamic plot of a 1D-wave function during the optimization
 
         Args:
@@ -80,12 +80,17 @@ class plotter1d(object):
             domain : dict containing the boundary
             res : number of points in each direction
             sol : callabale solution of the problem
+            plot_weight : plot the weight of the fc
+            plot_grad : plot the grad of the weight
         '''
         plt.ion()
         self.wf = wf
         self.res = res
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot( 111 )
+
+        self.plot_weight = plot_weight
+        self.plot_grad = plot_grad
 
         self.POS = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1))
         pos = self.POS.detach().numpy().flatten()  
@@ -97,9 +102,13 @@ class plotter1d(object):
         vp = self.wf(self.POS).detach().numpy()
         self.lwf, = self.ax.plot(pos,vp,color='red')
 
-        self.pweight, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),self.wf.fc.weight.detach().numpy().T,'o')
-        if self.wf.fc.weight.requires_grad:
-            self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),np.zeros(self.wf.ncenter),'X')
+        if self.plot_weight:
+            self.pweight, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),
+                                         self.wf.fc.weight.detach().numpy().T,'o')
+        if self.plot_grad:
+            if self.wf.fc.weight.requires_grad:
+                self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),
+                                           np.zeros(self.wf.ncenter),'X')
 
 
         plt.draw()
@@ -111,14 +120,16 @@ class plotter1d(object):
         vp = self.wf(self.POS).detach().numpy()
         self.lwf.set_ydata(vp)
 
-        self.pweight.set_xdata(self.wf.rbf.centers.detach().numpy())
-        self.pweight.set_ydata(self.wf.fc.weight.detach().numpy().T)
+        if self.plot_weight:
+            self.pweight.set_xdata(self.wf.rbf.centers.detach().numpy())
+            self.pweight.set_ydata(self.wf.fc.weight.detach().numpy().T)
 
-        if self.wf.fc.weight.requires_grad:
-            self.pgrad.set_xdata(self.wf.rbf.centers.detach().numpy())
-            data = (self.wf.fc.weight.grad.detach().numpy().T)**2
-            data /= np.linalg.norm(data)
-            self.pgrad.set_ydata(data)
+        if self.plot_grad:
+            if self.wf.fc.weight.requires_grad:
+                self.pgrad.set_xdata(self.wf.rbf.centers.detach().numpy())
+                data = (self.wf.fc.weight.grad.detach().numpy().T)**2
+                data /= np.linalg.norm(data)
+                self.pgrad.set_ydata(data)
 
         #self.fig.canvas.draw()  
         plt.draw()

@@ -8,7 +8,7 @@ from deepqmc.wavefunction.rbf import RBF
 
 class Potential(WF_BASE):
 
-    def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1):
+    def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1,fcinit=0.1):
         super(Potential,self).__init__(nelec,ndim)
 
         # get the RBF centers 
@@ -27,7 +27,10 @@ class Potential(WF_BASE):
         self.fc.clip = True
 
         # initiaize the fc layer
-        nn.init.uniform_(self.fc.weight,0,1)
+        if fcinit == 'random':
+            nn.init.uniform_(self.fc.weight,0,1)
+        elif isinstance(fcinit,float):  
+            self.fc.weight.data.fill_(fcinit)
 
         # book the potential function
         self.user_potential = fpot
