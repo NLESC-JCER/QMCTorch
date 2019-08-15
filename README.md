@@ -64,8 +64,8 @@ plot_results_1d(qmc,obs_dict,domain,50,sol_func,e0=0.5)
 
 After defining the domain in `domain` and the number of basis function in `ncenter`, we instantialte the `Potential` wave function class. This class defines a very simple neural network that, given a position computes the value of the wave function at that point. This neural network is composed of a layer of radial basis functions followed by a fully conneted layer to sum them up:
 
-![alt-text](./pics/rbf_nn.png)
+<p align="center">
+<img src="./pics/rbf_nn.png" title="RBF neural network">
+</p>
 
-The final form of the wave function is then given by :
 
-$$ \Psi(x) = \sum_n \mathcal{G}_n(\theta,x)$$
