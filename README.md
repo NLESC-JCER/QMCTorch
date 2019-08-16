@@ -86,21 +86,7 @@ After the optimization, the following result is obtained:
 
 ## Dihydrogen molecule
 
-We use a similar network architecture to optimize QMC wavefunction for molecular systems. This architecture is depicted below. 
-
-<p align="center">
-<img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
-</p>
-
-Starting from the positions of the electrons in the system, we have define a network layer that evaluate the values of all the atomic orbitals at all the electron positions. This layer has several variational paramters (atomic positions, basis function exponents and coefficients) that can be optimized during the training. 
-
-From the atomic orbital values we compute the values of the molecular orbitals, there again for the positions of all the electrons. This achieved by a simple linear layer whose transformation matrix is given by the molecular orbital coefficients. These coefficients are variational parameters of the layer and can therefore also be optimized.
-
-We then have defined a Slater pooling layer that that computes values of all the required Slater determinant. Finally a fully connected layer sums up the determinants. The weight of this last layer are the CI coefficients that can as well be optimized.
-
-In parallel we also have defined a Jastrow layer that computes the e-e distance and the value of the Jastrow factor. There again the parameters of the layer can be  optimized during the training of the wave function.
-
-Dedicated classes facilitates the definition and usage of this model in `DeepQMC`. For example the small script below allow to compute the energy of a H2 molecule using a few simple lines.
+`DeepQMC` also allows optimizing the wave function and the geometry of molecular systems through the use of dedicated classes. For example the small script below allow to compute the energy of a H2 molecule using a few simple lines.
 
 ```python
 import sys
@@ -112,7 +98,7 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', basis_type='sto', basis='sz')
 
 # define the wave function
 wf = Orbital(mol)
@@ -126,5 +112,27 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-solver.single_point()
+pos, e, s = solver.single_point()
 ```
+
+The main difference compared to the harmonic oscillator case is the definition of the molecule via the `Molecule` class and the definition of thw wave function that is now given by the `Orbital` class. The `Molecule` object specifies the geometry of the system and the type of orbitals required. So far only `sto` and `gto` are supported. The `Orbital` class defines a neural network encoding the wave fuction ansatz. The network takes as input the positions of the electrons in the system and compute the corresponding value of the wave function. The architecture of the network is depicted below:
+
+<p align="center">
+<img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
+</p>
+
+Starting from the positions of the electrons in the system, we have define a `AtomicOrbital` layer that evaluates the values of all the atomic orbitals at all the electron positions. This is in spirit similar to the RBF layer used in the `Potential` wave function used in the previous example.
+
+The `AtomicOrbital` layer has several variational paramters: atomic positions, basis function exponents and coefficients. These parameters can be optimized during the training. 
+
+The network then computes the values of the molecular orbitals from the atomic orbitals. This achieved by a simple linear layer whose transformation matrix is given by the molecular orbital coefficients. These coefficients are also variational parameters of the layer and can therefore also be optimized.
+
+We then have defined a `SlaterPooling` layer that computes the values of all the required Slater determinants. The `SlaterPooling` operation achieved by the masking MO contained in the determinants, and by then taking the determinant of the submatrix. We have implemented `BatchDeterminant` layer to accelerate this operation.
+
+Finally a fully connected layer sums up the determinants. The weight of this last layer are the CI coefficients that can as well be optimized.
+
+In parallel we also have defined a `JastrowFactor` layer that computes the e-e distance and the value of the Jastrow factor. There again the parameters of the layer can be  optimized during the training of the wave function.
+
+
+
+
