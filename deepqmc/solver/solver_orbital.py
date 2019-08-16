@@ -1,4 +1,4 @@
-
+import time
 import numpy as np 
 
 import torch
@@ -7,11 +7,14 @@ from torch.autograd import Variable
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+from mendeleev import element
+
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper
+from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper, OrthoReg
 
 from tqdm import tqdm
-import time
+
+from mayavi import mlab
 
 class SolverOrbital(SolverBase):
 
@@ -42,11 +45,6 @@ class SolverOrbital(SolverBase):
                 else:
                     opt_freeze = ['ci','mo','bas_exp']
                     raise ValueError('Valid arguments for freeze are :', opt_freeze)
-
-
-
-
-
 
     def run(self, nepoch, batchsize=None, pos=None, obs_dict=None, 
               ntherm=-1, resample=100, resample_from_last=True, resample_every=1,
@@ -152,4 +150,9 @@ class SolverOrbital(SolverBase):
         return pos, obs_dict
 
 
+
+
+
+
+    
 

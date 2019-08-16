@@ -17,6 +17,8 @@ class Orbital(WaveFunction):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
+        self.atoms = mol.atoms
+        self.bonds = mol.bonds
         self.natom = mol.natom
 
         # define the atomic orbital layer

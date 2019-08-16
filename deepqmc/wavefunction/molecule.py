@@ -22,6 +22,7 @@ class Molecule(object):
         self.atom_coords = []
         self.nelec = 0
         self.process_atom_str()
+        self.get_bonds()
 
         # get the basis folder
         self.basis_path = os.path.dirname(os.path.realpath(__file__))
@@ -72,6 +73,28 @@ class Molecule(object):
 
         self.nup = math.ceil(self.nelec/2)
         self.ndown = math.floor(self.nelec/2)
+
+    def get_bonds(self):
+        self.bonds = list()
+        for iat1 in range(self.natom-1):
+            at1 = self.atoms[iat1]
+            xyz1 = np.array(self.atom_coords[iat1])
+            for iat2 in range(iat1+1,self.natom):
+                at2 = self.atoms[iat2]
+                xyz2 = np.array(self.atom_coords[iat2])
+
+                d = np.sqrt(np.sum((xyz1-xyz2)**2))
+                thr = self._get_max_blength(at1,at2)
+                if d < thr:
+                    self.bonds.append((iat1,iat2))
+
+    @staticmethod
+    def _get_max_blength(at1,at2):
+        bond = { ('H','H') : 2. }
+        if (at1,at2) in bond:
+            return bond[(at1,at2)]
+        else:
+            return 2.
 
     def process_basis(self):
         if self.basis_type == 'sto':
