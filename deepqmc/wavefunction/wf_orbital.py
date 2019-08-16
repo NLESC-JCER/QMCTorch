@@ -4,14 +4,14 @@ import torch
 from torch import nn
 
 
-from pyCHAMP.wavefunction.wf_base import WaveFuntion
-from pyCHAMP.wavefunction.atomic_orbitals import AtomicOrbitals
-from pyCHAMP.wavefunction.slater_pooling import SlaterPooling
-from pyCHAMP.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
+from deepqmc.wavefunction.wf_base import WaveFunction
+from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
+from deepqmc.wavefunction.slater_pooling import SlaterPooling
+from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 
 
 
-class Orbital(WaveFuntion):
+class Orbital(WaveFunction):
 
     def __init__(self,mol,scf='pyscf'):
         super(Orbital,self).__init__(mol.nelec,3)
@@ -31,7 +31,7 @@ class Orbital(WaveFuntion):
 
         # jastrow
         self.edist = ElectronDistance(mol.nelec,3)
-        self.jastrow = TwoBodyJastrowFactor(nup,ndown)
+        self.jastrow = TwoBodyJastrowFactor(mol.nup,mol.ndown)
 
         # define the SD pooling layer
         self.configs = (torch.LongTensor([np.array([0])]), torch.LongTensor([np.array([0])]))

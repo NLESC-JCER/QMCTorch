@@ -99,3 +99,32 @@ From the atomic orbital values we compute the values of the molecular orbitals, 
 We then have defined a Slater pooling layer that that computes values of all the required Slater determinant. Finally a fully connected layer sums up the determinants. The weight of this last layer are the CI coefficients that can as well be optimized.
 
 In parallel we also have defined a Jastrow layer that computes the e-e distance and the value of the Jastrow factor. There again the parameters of the layer can be  optimized during the training of the wave function.
+
+Dedicated classes facilitates the definition and usage of this model in `DeepQMC`. For example the small script below allow to compute the energy of a H2 molecule using a few simple lines.
+
+```python
+import sys
+from torch.optim import Adam
+
+from deepqmc.wavefunction.wf_orbital import Orbital
+from deepqmc.solver.solver_orbital import SolverOrbital 
+from deepqmc.sampler.metropolis import Metropolis
+from deepqmc.wavefunction.molecule import Molecule
+
+# define the molecule
+mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
+
+# define the wave function
+wf = Orbital(mol)
+
+#sampler
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
+                     ndim = wf.ndim, nelec = wf.nelec, move = 'one')
+
+# optimizer
+opt = Adam(wf.parameters(),lr=0.01)
+
+# solver
+solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
+solver.single_point()
+```

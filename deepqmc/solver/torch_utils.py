@@ -22,7 +22,7 @@ class Loss(nn.Module):
         self.wf = wf
         self.method = method
 
-    def forward(self,vals,pos):
+    def forward(self,pos):
 
         if self.method == 'variance':
             loss = self.wf.variance(pos)
@@ -30,16 +30,8 @@ class Loss(nn.Module):
         elif self.method == 'energy':
             loss = self.wf.energy(pos)
 
-        elif self.method == 'density':
-            loss = 1./(torch.exp(torch.mean(vals**2))+1)
-
-        elif callable(self.method):
-            loss = nn.MSELoss()
-            target = torch.tensor(self.method(pos.detach().numpy()))
-            return loss(vals,target)
-
         else:
-            raise ValueError('method must be variance, energy or callable')
+            raise ValueError('method must be variance, energy')
 
         return loss
 

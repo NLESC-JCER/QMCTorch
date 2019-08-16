@@ -72,36 +72,6 @@ class SolverBase(object):
         s = self.variance(pos)
         return pos, e, s
 
-    def plot_density(self,pos):
-
-        if self.wf.ndim == 1:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            if self.wf.nelec == 1:
-                plt.hist(pos)
-            else:
-                for ielec in range(self.wf.nelec):
-                    plt.hist(pos[ielec,:])
-
-        elif self.wf.ndim == 2:
-            fig = plt.figure()
-            ax = fig.add_subplot(111)
-            for ielec in range(self.wf.nelec):
-                plt.scatter(pos[:,ielec*2],pos[:,ielec*2+1])
-
-        elif self.wf.ndim == 3:
-            fig = plt.figure()
-            ax = fig.add_subplot(111,projection='3d')
-            for ielec in range(self.wf.nelec):
-                ax.scatter(pos[:,ielec*3],pos[:,ielec*3+1],pos[:,ielec*3+2])
-        plt.show()
-
-    def plot_history(self):
-
-        plt.plot(self.history['energy'])
-        plt.plot(self.history['variance'])
-        plt.show()
-
     def save_checkpoint(self,epoch,loss,filename):
         torch.save({
             'epoch' : epoch,

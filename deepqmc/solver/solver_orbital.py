@@ -1,4 +1,4 @@
-import inspect
+
 import numpy as np 
 
 import torch
@@ -10,18 +10,45 @@ from torch.utils.data import DataLoader
 from deepqmc.solver.solver_base import SolverBase
 from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper
 
-
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D 
 from tqdm import tqdm
 import time
 
-class SolverPotential(SolverBase):
+class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
 
-    def run(self,nepoch, batchsize=None, pos=None, obs_dict=None, 
+    def configure(self,task='wf_opt',freeze=[]):
+        
+        if task == 'geo_opt':
+            self.wf.ao.bas_exp.requires_grad = False
+            self.wf.mo.weight.requires_grad = False
+            self.wf.fc.weight.requires_grad = False
+            self.wf.ao.atom_coords.requires_grad = True
+
+        elif task == 'wf_opt':
+            self.wf.ao.bas_exp.requires_grad = True
+            self.wf.mo.weight.requires_grad = True
+            self.wf.fc.weight.requires_grad = True
+            self.wf.ao.atom_coords.requires_grad = False  
+
+            for name in freeze:
+                if name.lower() == 'ci':
+                    self.wf.fc.weight.requires_grad = False
+                elif name.lower() == 'mo':
+                    self.wf.mo.weight.requires_grad = False
+                elif name.lower() == 'bas_exp':
+                    self.wf.ao.bas_exp.requires_grad = False
+                else:
+                    opt_freeze = ['ci','mo','bas_exp']
+                    raise ValueError('Valid arguments for freeze are :', opt_freeze)
+
+
+
+
+
+
+    def run(self, nepoch, batchsize=None, pos=None, obs_dict=None, 
               ntherm=-1, resample=100, resample_from_last=True, resample_every=1,
               loss='variance', plot = None,
               save_model='model.pth'):
@@ -61,7 +88,9 @@ class SolverPotential(SolverBase):
 
         # get the loss
         self.loss = Loss(self.wf,method=loss)
-        #self.or_loss = OrthoReg()
+
+        # orthogonalization penalty for the MO coeffs
+        self.ortho_loss = OrthoReg()
                 
         # clipper for the fc weights
         clipper = ZeroOneClipper()
@@ -80,6 +109,8 @@ class SolverPotential(SolverBase):
                 lpos.requires_grad = True
 
                 loss = self.loss(lpos)
+                if self.wf.mo.weight.requires_grad:
+                    less += self.ortho_loss(self.wf.mo.weight)
                 cumulative_loss += loss
 
                 self.opt.zero_grad()

@@ -1,4 +1,5 @@
 import os
+import math
 import numpy as np
 from mendeleev import element
 from pyscf import gto,scf
@@ -68,6 +69,9 @@ class Molecule(object):
             self.atom_coords.append([x,y,z])
             self.nelec += element(atom_data[0]).electrons
         self.natom = len(self.atoms)
+
+        self.nup = math.ceil(self.nelec/2)
+        self.ndown = math.floor(self.nelec/2)
 
     def process_basis(self):
         if self.basis_type == 'sto':
