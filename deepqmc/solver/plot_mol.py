@@ -12,7 +12,12 @@ from mendeleev import element
 from mayavi import mlab
 from deepqmc.solver.torch_utils import Loss, OrthoReg
 
-def plot_molecule(solver, pos=None, loss='variance',alpha=0.01):
+def hex_to_rgb(hex):
+    hex = hex.lstrip('#')
+    hlen = len(hex)
+    return tuple( int(hex[i:i+hlen//3], 16)/255 for i in range(0,hlen,hlen//3) )
+
+def plot_molecule(solver, pos=None, loss='variance',alpha=0.025):
 
     # get sampling points
     if pos is None:
@@ -29,8 +34,14 @@ def plot_molecule(solver, pos=None, loss='variance',alpha=0.01):
         l.backward()
 
     # plot 
+    plt.style.use('dark_background')
     fig = plt.figure()
+
     ax = fig.gca(projection='3d')
+    ax.set_axis_off()
+    # ax.w_xaxis.set_pane_color((0.25,0.25,0.25,1.0))
+    # ax.w_yaxis.set_pane_color((0.25,0.25,0.25,1.0))
+    # ax.w_zaxis.set_pane_color((0.25,0.25,0.25,1.0))
 
     # plot electrons
     d = pos.detach().numpy()
@@ -51,15 +62,9 @@ def plot_molecule(solver, pos=None, loss='variance',alpha=0.01):
 
         if solver.wf.ao.atom_coords.requires_grad == True:
             u,v,w = solver.wf.ao.atom_coords.grad.data[iat,:].numpy()
-            ax.quiver(x,y,z,-u,-v,-w,color='black',length=1.,normalize=True,pivot='middle')
+            ax.quiver(x,y,z,-u,-v,-w,color='grey',length=1.,normalize=True,pivot='middle')
 
     plt.show()
-
-
-def hex_to_rgb(hex):
-    hex = hex.lstrip('#')
-    hlen = len(hex)
-    return tuple( int(hex[i:i+hlen//3], 16)/255 for i in range(0,hlen,hlen//3) )
 
 
 def plot_molecule_mayavi(solver, pos=None, loss='variance',alpha=0.05):

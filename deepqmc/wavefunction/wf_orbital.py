@@ -72,7 +72,7 @@ class Orbital(WaveFunction):
 
         Returns: values of V * psi
 
-        TODO : vecorize that !! The solution below doesn't really wirk :(def plot_observable(obs_dict,e0=None,ax=None):)
+        TODO : vecorize that !! 
         '''
         
         p = torch.zeros(pos.shape[0])
@@ -82,7 +82,6 @@ class Orbital(WaveFunction):
                 patom = self.ao.atom_coords[iatom,:]
                 r = torch.sqrt(   ((pelec-patom)**2).sum(1)  ) + 1E-6
                 p += (-1./r)
-
         return p.view(-1,1)
 
     def electronic_potential(self,pos):
@@ -120,7 +119,16 @@ class Orbital(WaveFunction):
         return (1./rnn).view(-1,1)
 
 
-
+    def atomic_distances(self,pos):
+        d = []
+        for iat1 in range(self.natom-1):
+            at1 = self.atoms[iat1]
+            c1 = self.ao.atom_coords[iat1,:]
+            for iat2 in range(iat1+1,self.natom):
+                at2 = self.atoms[iat2]
+                c2 = self.ao.atom_coords[iat2,:]
+                d.append((at1,at2,torch.sqrt(   ((c1-c2)**2).sum())))
+        return d
 
 
 

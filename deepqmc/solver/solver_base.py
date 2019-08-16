@@ -3,6 +3,7 @@ import torch
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
+
 class SolverBase(object):
 
     def __init__(self,wf=None, sampler=None, optimizer=None):
@@ -42,7 +43,9 @@ class SolverBase(object):
 
             # get the method
             func = self.wf.__getattribute__(obs)
-            data = func(pos).detach().numpy()
+            data = func(pos)
+            if isinstance(data,torch.Tensor):
+                data = data.detach().numpy()
             obs_dict[obs].append(data)
 
         return obs_dict
@@ -64,12 +67,15 @@ class SolverBase(object):
             pos = self.sample(ntherm=-1)
         return self.wf.variance(pos)
 
-    def single_point(self,pos=None):
+    def single_point(self,pos=None,prt=True):
         '''Performs a single point calculation.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
         e = self.energy(pos)
         s = self.variance(pos)
+        if prt:
+            print('Energy   : ',e)
+            print('Variance : ',s)
         return pos, e, s
 
     def save_checkpoint(self,epoch,loss,filename):

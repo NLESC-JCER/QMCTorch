@@ -3,7 +3,8 @@ from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital 
-from deepqmc.solver.plot_mol import plot_molecule, plot_molecule_mayavi
+from deepqmc.solver.plot_mol import plot_molecule
+#from deepqmc.solver.plot_mol import plot_molecule_mayavi as plot_molecule
 
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
@@ -22,7 +23,7 @@ mol = Molecule(atom='H 0 0 -0.5; H 0 0 0.5', basis_type='sto', basis='sz')
 wf = Orbital(mol)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=100, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -30,11 +31,17 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-# pos,e,s = solver.single_point()
-# print('Energy   : ', e)
-# print('Variance : ', s)
+#solver.single_point()
 
-plot_molecule_mayavi(solver)
+# plot the molecule
+#plot_molecule(solver)
+
+# optimize the geometry
+solver.configure(task='geo_opt')
+solver.run(100,loss='energy',obs_dict={'local_energy':[],'atomic_distances':[]})
+
+
+
 
 
 

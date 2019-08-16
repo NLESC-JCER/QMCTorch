@@ -69,6 +69,8 @@ class SolverOrbital(SolverBase):
 
         if obs_dict is None:
             obs_dict = {'local_energy':[]}
+        if 'local_energy' not in obs_dict:
+            obs_dict['local_energy'] = []
 
         if pos is None:
             pos = self.sample(ntherm=ntherm)
@@ -108,7 +110,7 @@ class SolverOrbital(SolverBase):
 
                 loss = self.loss(lpos)
                 if self.wf.mo.weight.requires_grad:
-                    less += self.ortho_loss(self.wf.mo.weight)
+                    loss += self.ortho_loss(self.wf.mo.weight)
                 cumulative_loss += loss
 
                 self.opt.zero_grad()
@@ -127,11 +129,13 @@ class SolverOrbital(SolverBase):
 
             obs_dict = self.get_observable(obs_dict,pos)
             print('loss %f' %(cumulative_loss))
-            print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
-            print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
-            #print('distance : %f' %self.wf.atomic_distance() )
-            #print('sigma : %f' %self.wf.get_sigma() )
-            # print('MOs : ', self.wf.get_mos() )       
+            for k in obs_dict:
+                if k =='local_energy':
+                    print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
+                    print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
+                else:
+                    print(k + ' : ', obs_dict[k][-1])
+
             print('----------------------------------------')
             
             
