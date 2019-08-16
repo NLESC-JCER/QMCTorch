@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -8,13 +9,7 @@ class SolverBase(object):
 
         self.wf = wf
         self.sampler = sampler
-        self.optimizer = optimizer  
-
-        self.history = {'eneregy':[],'variance':[],'param':[]}
-
-        if optimizer is not None:
-            self.optimizer.func = self.wf.energy
-            self.optimizer.grad = self.wf.energy_gradient
+        self.opt = optimizer  
 
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
         ''' sample the wave function.'''
@@ -32,6 +27,25 @@ class SolverBase(object):
         for p in tqdm(pos):
             obs.append( func(p).data.numpy().tolist() )
         return obs
+
+    def get_observable(self,obs_dict,pos,**kwargs):
+        '''compute all the required observable.
+
+        Args :
+            obs_dict : a dictionanry with all keys 
+                        corresponding to a method of self.wf
+            **kwargs : the possible arguments for the methods
+        TODO : match the signature of the callables
+        '''
+
+        for obs in obs_dict.keys():
+
+            # get the method
+            func = self.wf.__getattribute__(obs)
+            data = func(pos).detach().numpy()
+            obs_dict[obs].append(data)
+
+        return obs_dict
 
     def get_wf(self,x):
         '''Get the value of the wave functions at x.'''
@@ -87,3 +101,12 @@ class SolverBase(object):
         plt.plot(self.history['energy'])
         plt.plot(self.history['variance'])
         plt.show()
+
+    def save_checkpoint(self,epoch,loss,filename):
+        torch.save({
+            'epoch' : epoch,
+            'model_state_dict' : self.wf.state_dict(),
+            'optimzier_state_dict' : self.opt.state_dict(),
+            'loss' : loss
+            }, filename)
+        return loss

@@ -98,3 +98,4 @@ From the atomic orbital values we compute the values of the molecular orbitals, 
 
 We then have defined a Slater pooling layer that that computes values of all the required Slater determinant. Finally a fully connected layer sums up the determinants. The weight of this last layer are the CI coefficients that can as well be optimized.
 
+In parallel we also have defined a Jastrow layer that computes the e-e distance and the value of the Jastrow factor. There again the parameters of the layer can be  optimized during the training of the wave function.
