@@ -129,7 +129,8 @@ class AtomicOrbitals(nn.Module):
         
         # product with coefficients
         # -> (Nbatch,Nelec,Nbas)
-        bas = self.norm_cst * self.bas_coeffs * R * Y
+        #bas = self.norm_cst * self.bas_coeffs * R * Y
+        bas = self.bas_coeffs * R * Y
 
         # contract the basis
         # -> (Nbatch,Nelec,Norb)
