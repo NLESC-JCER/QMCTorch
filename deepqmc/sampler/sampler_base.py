@@ -1,5 +1,5 @@
 
-from pyCHAMP.sampler.walkers import WALKERS
+from deepqmc.sampler.walkers import Walkers
 
 class SamplerBase(object):
 
@@ -15,7 +15,7 @@ class SamplerBase(object):
         self.nelec = nelec
         self.ndim = ndim 
         
-        self.walkers = WALKERS(nwalkers,nelec,ndim,domain)
+        self.walkers = Walkers(nwalkers,nelec,ndim,domain)
 
     def set_ndim(self,ndim):
         self.ndim = ndim

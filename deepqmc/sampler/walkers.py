@@ -1,6 +1,6 @@
 import torch
 
-class WALKERS(object):
+class Walkers(object):
 
     def __init__(self,nwalkers,nelec,ndim,domain):
 

@@ -1,6 +1,6 @@
 import numpy as np 
 from deepqmc.sampler.sampler_base import SamplerBase
-from deepqmc.sampler.walkers import WALKERS
+from deepqmc.sampler.walkers import Walkers
 from tqdm import tqdm 
 import torch
 import time
