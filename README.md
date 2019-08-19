@@ -23,7 +23,7 @@ import torch.optim as optim
 from deepqmc.sampler.metropolis import  Metropolis
 from deepqmc.wavefunction.wf_potential import Potential
 from deepqmc.solver.solver_potential import SolverPotential
-from deepqmc.solver.plot import plot_results_1d, plotter1d
+from deepqmc.solver.plot_potential import plot_results_1d, plotter1d
 
 
 # box
@@ -91,9 +91,10 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital 
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
+from deepqmc.solver.plot_data import plot_observable
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', basis_type='sto', basis='sz')
+mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
 
 # define the wave function
 wf = Orbital(mol)
@@ -107,7 +108,13 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-pos, e, s = solver.single_point()
+
+# optimize the geometry
+solver.configure(task='geo_opt')
+pos,obs_dict = solver.run(100,loss='energy')
+
+# plot the data
+plot_observable(obs_dict,e0=-1.16)
 ```
 
 The main difference compared to the harmonic oscillator case is the definition of the molecule via the `Molecule` class and the definition of the wave function that is now given by the `Orbital` class. The `Molecule` object specifies the geometry of the system and the type of orbitals required. So far only `sto` and `gto` are supported. The `Orbital` class defines a neural network encoding the wave fuction ansatz. The network takes as input the positions of the electrons in the system and compute the corresponding value of the wave function using the architecture depicted below:
@@ -126,6 +133,13 @@ Finally a fully connected layer sums up all the determinants. The weight of this
 
 In parallel we also have defined a `JastrowFactor` layer that computes the e-e distance and the value of the Jastrow factor. There again the parameters of the layer can be  optimized during the training of the wave function.
 
+The script presented above configures then the solver to run a geometry optimization on the model using the energy of the sampling points as a loss.
 
+
+The figure below shows the evolution of the system's eneergy during the geometry optimization of the molecule. 
+
+<p align="center">
+<img src="./pics/h2_geo_opt.png" title="Geometry optimization of a H2 molecule">
+</p>
 
 

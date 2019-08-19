@@ -3,11 +3,13 @@ from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital 
-from deepqmc.solver.plot_mol import plot_molecule
-#from deepqmc.solver.plot_mol import plot_molecule_mayavi as plot_molecule
 
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
+
+from deepqmc.solver.plot_orbital import plot_molecule
+from deepqmc.solver.plot_orbital import plot_molecule_mayavi as plot_molecule
+from deepqmc.solver.plot_data import plot_observable
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -16,7 +18,7 @@ from deepqmc.wavefunction.molecule import Molecule
 
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.5; H 0 0 0.5', basis_type='sto', basis='sz')
+mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
 #mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='gto', basis='sto-3g')
 
 # define the wave function
@@ -38,9 +40,10 @@ solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
 
 # optimize the geometry
 solver.configure(task='geo_opt')
-solver.run(100,loss='energy',obs_dict={'local_energy':[],'atomic_distances':[]})
+pos,obs_dict = solver.run(50,loss='energy',obs_dict={'local_energy':[],'atomic_distances':[]})
 
-
+# plot the data
+plot_observable(obs_dict,e0=-1.16)
 
 
 

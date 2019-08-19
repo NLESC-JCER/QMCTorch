@@ -8,6 +8,8 @@ from mpl_toolkits.mplot3d import axes3d
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 from skimage import measure
 
+from deepqmc.solver.plot_data import plot_observable
+
 
 def regular_mesh_2d(xmin=-2,xmax=2,ymin=-2.,ymax=2,nx=5,ny=5):
 
@@ -30,44 +32,9 @@ def regular_mesh_3d(xmin=-2,xmax=2,ymin=-2.,ymax=2,zmin=-5,zmax=5,nx=5,ny=5,nz=5
 
     return points.tolist()
 
-def plot_observable(obs_dict,e0=None,ax=None):
-    '''Plot the observable selected.
-
-    Args:
-        obs_dict : dictioanry of observable
-    '''
-    show_plot = False
-    if ax is None:    
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        show_plot = True
-
-    n = len(obs_dict['local_energy'])
-    epoch = np.arange(n)
-
-    # get the variance
-    emax = [np.quantile(e,0.75) for e in obs_dict['local_energy'] ]
-    emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
-
-    # get the mean value
-    energy = np.mean(obs_dict['local_energy'],1)
-
-    # plot
-    ax.fill_between(epoch,emin,emax,alpha=0.5,color='#4298f4')
-    ax.plot(epoch,energy,color='#144477')
-    if e0 is not None:
-        ax.axhline(e0,color='black',linestyle='--')
-
-    ax.grid()
-    ax.set_xlabel('Number of epoch')
-    ax.set_ylabel('Energy')
-
-    if show_plot:
-        plt.show()
-
 
 ###########################################################################################
-##  1D routnines
+##  1D routines
 ###########################################################################################
 
 class plotter1d(object):
@@ -502,3 +469,6 @@ def plot_wf_3d(net,domain,res,sol=None,
 
     if show_plot:
         plt.show()
+
+
+

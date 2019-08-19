@@ -85,9 +85,9 @@ def plot_molecule_mayavi(solver, pos=None, loss='variance',alpha=0.05):
 
 
     # plot 
-    mlab.figure(1, bgcolor=(0, 0, 0), size=(350, 350))
+    fig = mlab.figure(1, bgcolor=(0, 0, 0), size=(350, 350))
     mlab.clf()
-
+    
     # plot electrons
     d = pos.detach().numpy()
     for ielec in range(solver.wf.nelec):

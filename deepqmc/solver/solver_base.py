@@ -86,3 +86,6 @@ class SolverBase(object):
             'loss' : loss
             }, filename)
         return loss
+
+    def run(self):
+        raise NotImplementedError()
