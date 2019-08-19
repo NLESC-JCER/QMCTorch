@@ -139,7 +139,7 @@ The script presented above configures then the solver to run a geometry optimiza
 The figure below shows the evolution of the system's eneergy during the geometry optimization of the molecule. 
 
 <p align="center">
-<img src="./pics/h2_geo_opt.png" title="Geometry optimization of a H2 molecule">
+<img src="./pics/h2_go_opt.png" title="Geometry optimization of a H2 molecule">
 </p>
 
 
