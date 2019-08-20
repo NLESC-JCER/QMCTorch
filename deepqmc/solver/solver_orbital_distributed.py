@@ -11,17 +11,21 @@ import torch.optim as optim
 from torch.utils.data import DataLoader
 
 import torch.distributed as dist
-from torch.multiprocessing import Process
+from torch.multiprocessing import Process, Queue, Event, Manager
 from mendeleev import element
 
-from deepqmc.solver.solver_base import SolverBase
+from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper, OrthoReg
 
 
-class DistributedSolverOrbital(SolverBase):
+def printd(rank,*args):
+    if rank == 1:
+        print(*args)
+
+class DistSolverOrbital(SolverOrbital):
 
     def __init__(self, wf=None, sampler=None, optimizer=None):
-        SolverBase.__init__(self,wf,sampler,optimizer)
+        SolverOrbital.__init__(self,wf,sampler,optimizer)
 
         # task
         self.configure(task='geo_opt')
@@ -37,33 +41,6 @@ class DistributedSolverOrbital(SolverBase):
 
         self.save_model = 'model.pth'
 
-
-    def configure(self,task='wf_opt',freeze=[]):
-        '''Configure the optimzier for specific tasks.'''
-        self.task = task
-
-        if task == 'geo_opt':
-            self.wf.ao.bas_exp.requires_grad = False
-            self.wf.mo.weight.requires_grad = False
-            self.wf.fc.weight.requires_grad = False
-            self.wf.ao.atom_coords.requires_grad = True
-
-        elif task == 'wf_opt':
-            self.wf.ao.bas_exp.requires_grad = True
-            self.wf.mo.weight.requires_grad = True
-            self.wf.fc.weight.requires_grad = True
-            self.wf.ao.atom_coords.requires_grad = False  
-
-            for name in freeze:
-                if name.lower() == 'ci':
-                    self.wf.fc.weight.requires_grad = False
-                elif name.lower() == 'mo':
-                    self.wf.mo.weight.requires_grad = False
-                elif name.lower() == 'bas_exp':
-                    self.wf.ao.bas_exp.requires_grad = False
-                else:
-                    opt_freeze = ['ci','mo','bas_exp']
-                    raise ValueError('Valid arguments for freeze are :', opt_freeze)
 
     def conf_dist(self,master_address='127.0.0.1',master_port='29500',backend='gloo'):
         '''Configure the communicatin address and backend.'''
@@ -81,22 +58,29 @@ class DistributedSolverOrbital(SolverBase):
 
             self.distributed_training = True
             processes = []
+            
+            manager = Manager()
+            obs_data = manager.list()
+
             for rank in range(ndist):
                 p = Process(target=self.init_process,
-                            args=( rank, ndist, nepoch, batchsize, loss  ))
+                            args=( obs_data, rank, ndist, nepoch, batchsize, loss ))
                 p.start()
                 processes.append(p)
-
+                
             for p in processes:
                 p.join()
 
+        self.obs_dict = obs_data
 
-    def init_process(self, rank, size, nepoch, batchsize, loss):
+    def init_process(self, obs_data, rank, size, nepoch, batchsize, loss):
         """ Initialize the distributed environment. """
         os.environ['MASTER_ADDR'] = self.master_address
         os.environ['MASTER_PORT'] = self.master_port
         dist.init_process_group(self.dist_backend, rank=rank, world_size=size)
         self._worker(nepoch,batchsize,loss)
+        obs_data.append(self.obs_dict['local_energy'])
+        
 
     def _worker(self, nepoch, batchsize, loss ):
 
@@ -204,6 +188,9 @@ class DistributedSolverOrbital(SolverBase):
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
 
+        # gather all the data on all procs
+        #self.gather_obs_dict()
+
     def average_gradients(self):
         '''Average the gradients of all the distributed processes.'''
         size = float(dist.get_world_size())
@@ -212,6 +199,13 @@ class DistributedSolverOrbital(SolverBase):
                 dist.all_reduce(param.grad.data,op=dist.ReduceOp.SUM)
                 param.grad.data /= size
 
+
+    def gather_obs_dict(self):
+        for k in self.obs_dict.keys():
+            data = self.obs_dict[k]
+            data_gather = [torch.zeros_like(data)] * dist.get_world_size()
+            dist.all_gather(data_gather,data)
+            self.obs_dict[k] = data_gather[data]
 
 
 
