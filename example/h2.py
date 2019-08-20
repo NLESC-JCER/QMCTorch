@@ -41,7 +41,7 @@ solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
 # optimize the geometry
 solver.configure(task='geo_opt')
 solver.observable(['local_energy','atomic_distances'])
-solver.run(5,loss='energy',ndist=1)
+solver.run(5,loss='energy')
 
 # plot the data
 plot_observable(solver.obs_dict,e0=-1.16)

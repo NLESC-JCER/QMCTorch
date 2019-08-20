@@ -32,11 +32,11 @@ opt = Adam(wf.parameters(),lr=0.01)
 solver = SolverPotential(wf=wf,sampler=sampler,optimizer=opt)
 
 # train the wave function
-pos,obs_dict = solver.run(100, loss = 'variance',
-                         plot = plotter1d(wf,domain,50,sol=ho1d_sol) )
+plotter = plotter1d(wf,domain,50,sol=ho1d_sol)
+solver.run(10, loss = 'variance', plot = plotter )
 
 # plot the final wave function 
-plot_results_1d(solver,obs_dict,domain,50,ho1d_sol,e0=0.5)
+plot_results_1d(solver,solver.obs_dict,domain,50,ho1d_sol,e0=0.5)
 
 
 

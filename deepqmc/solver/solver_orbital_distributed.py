@@ -2,6 +2,7 @@ import os
 import time
 from tqdm import tqdm
 import numpy as np 
+from types import SimpleNamespace
 
 import torch
 from torch import nn
@@ -9,18 +10,15 @@ from torch.autograd import Variable
 import torch.optim as optim
 from torch.utils.data import DataLoader
 
+import torch.distributed as dist
+from torch.multiprocessing import Process
 from mendeleev import element
 
 from deepqmc.solver.solver_base import SolverBase
 from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper, OrthoReg
 
 
-def printd(rank,*args):
-    if rank == 1:
-        print(*args)
-
-
-class SolverOrbital(SolverBase):
+class DistributedSolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
@@ -35,6 +33,8 @@ class SolverOrbital(SolverBase):
         self.observable(['local_energy'])
 
         # distributed model
+        self.conf_dist(master_address='127.0.0.1',master_port='29500',backend='gloo')
+
         self.save_model = 'model.pth'
 
 
@@ -65,7 +65,40 @@ class SolverOrbital(SolverBase):
                     opt_freeze = ['ci','mo','bas_exp']
                     raise ValueError('Valid arguments for freeze are :', opt_freeze)
 
-    def run(self, nepoch, batchsize=None, loss='variance'):
+    def conf_dist(self,master_address='127.0.0.1',master_port='29500',backend='gloo'):
+        '''Configure the communicatin address and backend.'''
+        self.master_address = master_address
+        self.master_port = master_port
+        self.dist_backend = backend
+
+    def run(self, nepoch, batchsize=None, loss='variance', ndist=1 ):
+
+        if ndist == 1:
+            self.distributed_training = False
+            self._worker(nepoch,batchsize,loss)
+
+        else:
+
+            self.distributed_training = True
+            processes = []
+            for rank in range(ndist):
+                p = Process(target=self.init_process,
+                            args=( rank, ndist, nepoch, batchsize, loss  ))
+                p.start()
+                processes.append(p)
+
+            for p in processes:
+                p.join()
+
+
+    def init_process(self, rank, size, nepoch, batchsize, loss):
+        """ Initialize the distributed environment. """
+        os.environ['MASTER_ADDR'] = self.master_address
+        os.environ['MASTER_PORT'] = self.master_port
+        dist.init_process_group(self.dist_backend, rank=rank, world_size=size)
+        self._worker(nepoch,batchsize,loss)
+
+    def _worker(self, nepoch, batchsize, loss ):
 
         '''Train the model.
 
@@ -74,6 +107,18 @@ class SolverOrbital(SolverBase):
             batchsize : size of the minibatch, if None take all points at once
             loss : loss used ('energy','variance' or callable (for supervised)
         '''
+
+        # get the rank of the worker
+        if self.distributed_training:
+            rank = dist.get_rank()
+        else:
+            rank = 1
+
+        # reconfigure the sampler if we have dist training
+        if self.distributed_training:
+            size = int(dist.get_world_size())
+            self.sampler.nwalkers //= size
+            self.sampler.walkers.nwalkers //= size
 
         #sample the wave function
         pos = self.sample(ntherm=self.resample.ntherm)
@@ -103,8 +148,8 @@ class SolverOrbital(SolverBase):
         min_loss = 1E3
 
         for n in range(nepoch):
-            print('----------------------------------------')
-            print('epoch %d' %n)
+            printd(rank,'----------------------------------------')
+            printd(rank,'epoch %d' %n)
 
             cumulative_loss = 0
             for data in self.dataloader:
@@ -121,6 +166,10 @@ class SolverOrbital(SolverBase):
                 self.opt.zero_grad()
                 loss.backward()
 
+                #average gradients
+                if self.distributed_training :
+                    self.average_gradients()
+
                 # optimize
                 self.opt.step()
 
@@ -132,15 +181,15 @@ class SolverOrbital(SolverBase):
                  
 
             self.get_observable(self.obs_dict,pos)
-            print('loss %f' %(cumulative_loss))
+            printd(rank,'loss %f' %(cumulative_loss))
             for k in self.obs_dict:
                 if k =='local_energy':
-                    print('variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
-                    print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )
+                    printd(rank,'variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
+                    printd(rank,'energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )
                 else:
-                    print(k + ' : ', self.obs_dict[k][-1])
+                    printd(rank,k + ' : ', self.obs_dict[k][-1])
 
-            print('----------------------------------------')
+            printd(rank,'----------------------------------------')
             
             # resample the data
             if (n%self.resample.resample_every == 0) or (n == nepoch-1):
@@ -154,3 +203,18 @@ class SolverOrbital(SolverBase):
 
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
+
+    def average_gradients(self):
+        '''Average the gradients of all the distributed processes.'''
+        size = float(dist.get_world_size())
+        for param in self.wf.parameters():
+            if param.requires_grad:
+                dist.all_reduce(param.grad.data,op=dist.ReduceOp.SUM)
+                param.grad.data /= size
+
+
+
+
+
+    
+

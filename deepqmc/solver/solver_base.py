@@ -1,7 +1,6 @@
 import numpy as np
 import torch
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+from types import SimpleNamespace
 
 
 class SolverBase(object):
@@ -12,12 +11,27 @@ class SolverBase(object):
         self.sampler = sampler
         self.opt = optimizer  
 
+
+    def resampling(self,ntherm=-1, resample=100,resample_from_last=True, resample_every=1):
+        '''Configure the resampling options.'''
+        self.resample = SimpleNamespace()
+        self.resample.ntherm = ntherm
+        self.resample.resample = resample
+        self.resample.resample_from_last = resample_from_last
+        self.resample.resample_every = resample_every
+
+    def observable(self,obs):
+        '''Create the observalbe we want to track.'''
+        self.obs_dict = {}
+        for k in obs:
+            self.obs_dict[k] = []
+        if 'local_energy' not in self.obs_dict:
+            self.obs_dict['local_energy'] = []
+
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
         ''' sample the wave function.'''
         
         pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm,with_tqdm=with_tqdm,pos=pos)
-        #pos = torch.tensor(pos)
-        #pos = pos.view(-1,self.sampler.ndim*self.sampler.nelec)
         pos.requires_grad = True
         return pos.float()
 
