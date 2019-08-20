@@ -25,6 +25,9 @@ from deepqmc.wavefunction.wf_potential import Potential
 from deepqmc.solver.solver_potential import SolverPotential
 from deepqmc.solver.plot_potential import plot_results_1d, plotter1d
 
+# analytic solution of the problem
+def sol_func(pos):
+    return torch.exp(-0.5*pos**2)
 
 # box
 domain, ncenter = {'xmin':-5.,'xmax':5.}, 5
@@ -49,15 +52,12 @@ opt = optim.Adam(wf.parameters(),lr=0.01)
 solver = SolverPotential(wf=wf,sampler=sampler,optimizer=opt)
 
 # train the wave function
-pos,obs_dict = solver.run(100, loss = 'variance',
-                         plot = plotter1d(wf,domain,50,
-                         sol=sol_func) )
+plotter = plotter1d(wf,domain,50,sol=sol_func)
+solver.run(100, loss = 'variance', plot = plotter )
 
 
 # plot the final wave function 
-def sol_func(pos):
-    return torch.exp(-0.5*pos**2)
-plot_results_1d(qmc,obs_dict,domain,50,sol_func,e0=0.5)
+plot_results_1d(solver,domain,50,sol_func,e0=0.5)
 ```
 
 The `pot_func` function defines the potential for which we want to optimize the wave function. It is here given by a simple quadratic function. 
@@ -111,10 +111,10 @@ solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
 
 # optimize the geometry
 solver.configure(task='geo_opt')
-pos,obs_dict = solver.run(100,loss='energy')
+solver.run(100,loss='energy')
 
 # plot the data
-plot_observable(obs_dict,e0=-1.16)
+plot_observable(solver.obs_dict,e0=-1.16)
 ```
 
 The main difference compared to the harmonic oscillator case is the definition of the molecule via the `Molecule` class and the definition of the wave function that is now given by the `Orbital` class. The `Molecule` object specifies the geometry of the system and the type of orbitals required. So far only `sto` and `gto` are supported. The `Orbital` class defines a neural network encoding the wave fuction ansatz. The network takes as input the positions of the electrons in the system and compute the corresponding value of the wave function using the architecture depicted below:

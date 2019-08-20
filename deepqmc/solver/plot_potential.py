@@ -156,7 +156,7 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
         if show_plot:
             plt.show()
 
-def plot_results_1d(net,obs_dict,domain,res,sol=None,e0=None):
+def plot_results_1d(net,domain,res,sol=None,e0=None):
     ''' Plot the summary of the results for a 1D problem.
 
     Args: 
@@ -173,7 +173,7 @@ def plot_results_1d(net,obs_dict,domain,res,sol=None,e0=None):
     ax1 = fig.add_subplot(212)
 
     plot_wf_1d(net,domain,res,sol=sol,hist=False,ax=ax0)
-    plot_observable(obs_dict,e0=e0,ax=ax1)
+    plot_observable(net.obs_dict,e0=e0,ax=ax1)
 
     plt.show()
  

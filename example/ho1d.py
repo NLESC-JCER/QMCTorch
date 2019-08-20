@@ -36,7 +36,7 @@ plotter = plotter1d(wf,domain,50,sol=ho1d_sol)
 solver.run(10, loss = 'variance', plot = plotter )
 
 # plot the final wave function 
-plot_results_1d(solver,solver.obs_dict,domain,50,ho1d_sol,e0=0.5)
+plot_results_1d(solver,domain,50,ho1d_sol,e0=0.5)
 
 
 
