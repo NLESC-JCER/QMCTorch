@@ -22,6 +22,7 @@ def plot_observable(obs_dict,e0=None,ax=None):
     emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
 
     # get the mean value
+    print(obs_dict['local_energy'])
     energy = np.mean(obs_dict['local_energy'],1)
 
     # plot

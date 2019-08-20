@@ -35,7 +35,8 @@ class Metropolis(SamplerBase):
 
             self.walkers.initialize(method=init,pos=pos)
 
-            fx = pdf(torch.tensor(self.walkers.pos).float())
+            #fx = pdf(torch.tensor(self.walkers.pos).float())
+            fx = pdf(self.walkers.pos)
             fx[fx==0] = 1E-6
             POS = []
             rate = 0
@@ -48,8 +49,8 @@ class Metropolis(SamplerBase):
             for istep in rng:
 
                 # new positions
-                Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
-
+                #Xn = torch.tensor(self.walkers.move(self.step_size,method=self.move)).float()
+                Xn = self.walkers.move(self.step_size,method=self.move)
 
                 # new function
                 t0 = time.time()
@@ -68,12 +69,12 @@ class Metropolis(SamplerBase):
                 fx[fx==0] = 1E-6
             
                 if istep>=ntherm:
-                    POS.append(self.walkers.pos.copy())
+                    POS.append(self.walkers.pos.clone().detach())
 
             if with_tqdm:
                 print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
             
-        return POS
+        return torch.cat(POS)
 
     
     def _accept(self,P):

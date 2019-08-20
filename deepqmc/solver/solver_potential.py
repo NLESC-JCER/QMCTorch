@@ -99,14 +99,8 @@ class SolverPotential(SolverBase):
             obs_dict = self.get_observable(obs_dict,pos)
             print('loss %f' %(cumulative_loss))
             print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
-            print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
-            #print('distance : %f' %self.wf.atomic_distance() )
-            #print('sigma : %f' %self.wf.get_sigma() )
-            # print('MOs : ', self.wf.get_mos() )       
+            print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )   
             print('----------------------------------------')
-            
-            
-            
             
             if (n%resample_every == 0) or (n == nepoch-1):
                 if resample_from_last:

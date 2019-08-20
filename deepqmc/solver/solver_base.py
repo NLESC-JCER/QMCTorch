@@ -16,18 +16,10 @@ class SolverBase(object):
         ''' sample the wave function.'''
         
         pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm,with_tqdm=with_tqdm,pos=pos)
-        pos = torch.tensor(pos)
-        pos = pos.view(-1,self.sampler.ndim*self.sampler.nelec)
+        #pos = torch.tensor(pos)
+        #pos = pos.view(-1,self.sampler.ndim*self.sampler.nelec)
         pos.requires_grad = True
         return pos.float()
-
-    def observalbe(self,func,pos):
-        '''Computes observalbes given by the func arguments.'''
-
-        obs = []
-        for p in tqdm(pos):
-            obs.append( func(p).data.numpy().tolist() )
-        return obs
 
     def get_observable(self,obs_dict,pos,**kwargs):
         '''compute all the required observable.
@@ -39,16 +31,14 @@ class SolverBase(object):
         TODO : match the signature of the callables
         '''
 
-        for obs in obs_dict.keys():
+        for obs in self. obs_dict.keys():
 
             # get the method
             func = self.wf.__getattribute__(obs)
             data = func(pos)
             if isinstance(data,torch.Tensor):
                 data = data.detach().numpy()
-            obs_dict[obs].append(data)
-
-        return obs_dict
+            self.obs_dict[obs].append(data)
 
     def get_wf(self,x):
         '''Get the value of the wave functions at x.'''
