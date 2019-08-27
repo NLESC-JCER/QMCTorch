@@ -18,8 +18,10 @@ import time
 
 class SolverPotential(SolverBase):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None,
+                 scheduler=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
+        self.scheduler = scheduler
 
         #esampling
         self.resampling(ntherm=-1, resample=100,resample_from_last=True, resample_every=1)
@@ -27,9 +29,7 @@ class SolverPotential(SolverBase):
         # observalbe
         self.observable(['local_energy'])
 
-        self.save_model = 'model.pth'
-
-    def run(self,nepoch, batchsize=None,  loss='variance', plot = None):
+    def run(self,nepoch, batchsize=None, save='model.pth',  loss='variance', plot = None):
 
         '''Train the model.
 
@@ -46,6 +46,9 @@ class SolverPotential(SolverBase):
             loss : loss used ('energy','variance' or callable (for supervised)
             plot : None or plotter instance from plot_utils.py to interactively monitor the training
         '''
+
+        # checkpoint file
+        self.save_model = save
 
         # sample the wave function
         pos = self.sample(ntherm=self.resample.ntherm)
@@ -112,6 +115,9 @@ class SolverPotential(SolverBase):
                     pos = None
                 pos = self.sample(pos=pos,ntherm=self.resample.ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
+
+            if self.scheduler is not None:
+                self.scheduler.step()
 
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
