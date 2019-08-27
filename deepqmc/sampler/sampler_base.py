@@ -23,5 +23,5 @@ class SamplerBase(object):
     def set_initial_guess(self,guess):
         self.initial_guess = guess
 
-    def generate(self):
+    def generate(self,pdf):
         raise NotImplementedError()
