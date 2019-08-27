@@ -3,12 +3,12 @@ import torch
 from torch import nn
 
 from deepqmc.wavefunction.wf_base import WaveFunction
-from deepqmc.wavefunction.rbf import RBF
+from deepqmc.wavefunction.rbf import RBF_Gaussian as RBF
 
 
 class Potential(WaveFunction):
 
-    def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1,fcinit=0.1):
+    def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1,fcinit=0.1,sigma=1.):
         super(Potential,self).__init__(nelec,ndim)
 
         # get the RBF centers 
@@ -19,8 +19,9 @@ class Potential(WaveFunction):
 
         # define the RBF layer
         self.rbf = RBF(self.ndim_tot, self.ncenter,
-                      centers=self.centers, opt_centers=False,
-                      sigma = 1.)
+                      centers=self.centers, sigma = sigma,
+                      opt_centers=True,
+                      opt_sigma = True)
         
         # define the fc layer
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
