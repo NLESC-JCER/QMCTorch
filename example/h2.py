@@ -2,7 +2,8 @@ import sys
 from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital 
+from deepqmc.solver.solver_orbital import SolverOrbital
+#from deepqmc.solver.solver_orbital_distributed import DistSolverOrbital  as SolverOrbital
 
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
@@ -40,10 +41,11 @@ solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
 
 # optimize the geometry
 solver.configure(task='geo_opt')
-pos,obs_dict = solver.run(50,loss='energy',obs_dict={'local_energy':[],'atomic_distances':[]})
+solver.observable(['local_energy','atomic_distances'])
+solver.run(5,loss='energy')
 
 # plot the data
-plot_observable(obs_dict,e0=-1.16)
+plot_observable(solver.obs_dict,e0=-1.16)
 
 
 

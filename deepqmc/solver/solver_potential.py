@@ -18,13 +18,18 @@ import time
 
 class SolverPotential(SolverBase):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None,
+                 scheduler=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
+        self.scheduler = scheduler
 
-    def run(self,nepoch, batchsize=None, pos=None, obs_dict=None, 
-              ntherm=-1, resample=100, resample_from_last=True, resample_every=1,
-              loss='variance', plot = None,
-              save_model='model.pth'):
+        #esampling
+        self.resampling(ntherm=-1, resample=100,resample_from_last=True, resample_every=1)
+
+        # observalbe
+        self.observable(['local_energy'])
+
+    def run(self,nepoch, batchsize=None, save='model.pth',  loss='variance', plot = None):
 
         '''Train the model.
 
@@ -42,18 +47,19 @@ class SolverPotential(SolverBase):
             plot : None or plotter instance from plot_utils.py to interactively monitor the training
         '''
 
-        if obs_dict is None:
-            obs_dict = {'local_energy':[]}
+        # checkpoint file
+        self.save_model = save
 
-        if pos is None:
-            pos = self.sample(ntherm=ntherm)
+        # sample the wave function
+        pos = self.sample(ntherm=self.resample.ntherm)
 
+        # determine the batching mode
         if batchsize is None:
             batchsize = len(pos)
 
         # change the number of steps
         _nstep_save = self.sampler.nstep
-        self.sampler.nstep = resample
+        self.sampler.nstep = self.resample.resample
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -61,7 +67,6 @@ class SolverPotential(SolverBase):
 
         # get the loss
         self.loss = Loss(self.wf,method=loss)
-        #self.or_loss = OrthoReg()
                 
         # clipper for the fc weights
         clipper = ZeroOneClipper()
@@ -93,32 +98,30 @@ class SolverPotential(SolverBase):
                 plot.drawNow()
 
             if cumulative_loss < min_loss:
-                min_loss = self.save_checkpoint(n,cumulative_loss,save_model)
+                min_loss = self.save_checkpoint(n,cumulative_loss,self.save_model)
                  
-
-            obs_dict = self.get_observable(obs_dict,pos)
+            # get the observalbes
+            self.get_observable(self.obs_dict,pos)
             print('loss %f' %(cumulative_loss))
-            print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
-            print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
-            #print('distance : %f' %self.wf.atomic_distance() )
-            #print('sigma : %f' %self.wf.get_sigma() )
-            # print('MOs : ', self.wf.get_mos() )       
+            print('variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
+            print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )   
             print('----------------------------------------')
             
-            
-            
-            
-            if (n%resample_every == 0) or (n == nepoch-1):
-                if resample_from_last:
-                    pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
+            # resample the data
+            if (n%self.resample.resample_every == 0) or (n == nepoch-1):
+                if self.resample.resample_from_last:
+                    pos = pos.clone().detach()
                 else:
-                    pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=False)
+                    pos = None
+                pos = self.sample(pos=pos,ntherm=self.resample.ntherm,with_tqdm=False)
                 self.dataloader.dataset.data = pos
+
+            if self.scheduler is not None:
+                self.scheduler.step()
 
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
 
-        return pos, obs_dict
 
 
 

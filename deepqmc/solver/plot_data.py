@@ -14,15 +14,20 @@ def plot_observable(obs_dict,e0=None,ax=None):
         ax = fig.add_subplot(111)
         show_plot = True
 
-    n = len(obs_dict['local_energy'])
+    if isinstance(obs_dict,dict):
+        data = obs_dict['local_energy']
+    else:
+        data = np.hstack(np.squeeze(np.array(obs_dict)))
+        
+    n = len(data)
     epoch = np.arange(n)
 
     # get the variance
-    emax = [np.quantile(e,0.75) for e in obs_dict['local_energy'] ]
-    emin = [np.quantile(e,0.25) for e in obs_dict['local_energy'] ]
+    emax = [np.quantile(e,0.75) for e in data ]
+    emin = [np.quantile(e,0.25) for e in data ]
 
     # get the mean value
-    energy = np.mean(obs_dict['local_energy'],1)
+    energy = np.mean(data,1)
 
     # plot
     ax.fill_between(epoch,emin,emax,alpha=0.5,color='#4298f4')

@@ -1,4 +1,6 @@
+import os
 import time
+from tqdm import tqdm
 import numpy as np 
 
 import torch
@@ -12,17 +14,34 @@ from mendeleev import element
 from deepqmc.solver.solver_base import SolverBase
 from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper, OrthoReg
 
-from tqdm import tqdm
 
-from mayavi import mlab
+def printd(rank,*args):
+    if rank == 1:
+        print(*args)
+
 
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
 
+        # task
+        self.configure(task='geo_opt')
+
+        #esampling
+        self.resampling(ntherm=-1, resample=100,resample_from_last=True, resample_every=1)
+
+        # observalbe
+        self.observable(['local_energy'])
+
+        # distributed model
+        self.save_model = 'model.pth'
+
+
     def configure(self,task='wf_opt',freeze=[]):
-        
+        '''Configure the optimzier for specific tasks.'''
+        self.task = task
+
         if task == 'geo_opt':
             self.wf.ao.bas_exp.requires_grad = False
             self.wf.mo.weight.requires_grad = False
@@ -46,41 +65,26 @@ class SolverOrbital(SolverBase):
                     opt_freeze = ['ci','mo','bas_exp']
                     raise ValueError('Valid arguments for freeze are :', opt_freeze)
 
-    def run(self, nepoch, batchsize=None, pos=None, obs_dict=None, 
-              ntherm=-1, resample=100, resample_from_last=True, resample_every=1,
-              loss='variance', plot = None,
-              save_model='model.pth'):
+    def run(self, nepoch, batchsize=None, loss='variance'):
 
         '''Train the model.
 
         Arg:
             nepoch : number of epoch
             batchsize : size of the minibatch, if None take all points at once
-            pos : presampled electronic poition
-            obs_dict (dict, {name: []} ) : quantities to be computed during the training
-                                           'name' must refer to a method of the Solver instance
-            ntherm : thermalization of the MC sampling. If negative (-N) takes the last N entries
-            resample : number of MC step during the resampling
-            resample_from_last (bool) : if true use the previous position as starting for the resampling
-            resample_every (int) : number of epch between resampling
             loss : loss used ('energy','variance' or callable (for supervised)
-            plot : None or plotter instance from plot_utils.py to interactively monitor the training
         '''
 
-        if obs_dict is None:
-            obs_dict = {'local_energy':[]}
-        if 'local_energy' not in obs_dict:
-            obs_dict['local_energy'] = []
+        #sample the wave function
+        pos = self.sample(ntherm=self.resample.ntherm)
 
-        if pos is None:
-            pos = self.sample(ntherm=ntherm)
-
+        # handle the batch size        
         if batchsize is None:
             batchsize = len(pos)
 
         # change the number of steps
         _nstep_save = self.sampler.nstep
-        self.sampler.nstep = resample
+        self.sampler.nstep = self.resample.resample
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -113,50 +117,40 @@ class SolverOrbital(SolverBase):
                     loss += self.ortho_loss(self.wf.mo.weight)
                 cumulative_loss += loss
 
+                # compute local gradients
                 self.opt.zero_grad()
                 loss.backward()
+
+                # optimize
                 self.opt.step()
 
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
-                
-            if plot is not None:
-                plot.drawNow()
 
             if cumulative_loss < min_loss:
-                min_loss = self.save_checkpoint(n,cumulative_loss,save_model)
+                min_loss = self.save_checkpoint(n,cumulative_loss,self.save_model)
                  
 
-            obs_dict = self.get_observable(obs_dict,pos)
+            self.get_observable(self.obs_dict,pos)
             print('loss %f' %(cumulative_loss))
-            for k in obs_dict:
+            for k in self.obs_dict:
                 if k =='local_energy':
-                    print('variance : %f' %np.var(obs_dict['local_energy'][-1]))
-                    print('energy : %f' %np.mean(obs_dict['local_energy'][-1]) )
+                    print('variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
+                    print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )
                 else:
-                    print(k + ' : ', obs_dict[k][-1])
+                    print(k + ' : ', self.obs_dict[k][-1])
 
             print('----------------------------------------')
             
-            
-            
-            
-            if (n%resample_every == 0) or (n == nepoch-1):
-                if resample_from_last:
-                    pos = self.sample(pos=pos.detach().numpy(),ntherm=ntherm,with_tqdm=False)
+            # resample the data
+            if (n%self.resample.resample_every == 0) or (n == nepoch-1):
+                if self.resample.resample_from_last:
+                    pos = pos.clone().detach()
                 else:
-                    pos = self.sample(pos=None,ntherm=ntherm,with_tqdm=False)
+                    pos = None
+                pos = self.sample(pos=pos,ntherm=self.resample.ntherm,with_tqdm=False)
+                
                 self.dataloader.dataset.data = pos
 
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
-
-        return pos, obs_dict
-
-
-
-
-
-
-    
-
