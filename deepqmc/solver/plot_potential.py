@@ -64,10 +64,11 @@ class plotter1d(object):
 
         if callable(sol):
             v = sol(self.POS).detach().numpy()
-            self.ax.plot(pos,v,color='blue')
+            self.ax.plot(pos,v,color='#b70000',linewidth=4,linestyle='--',label='solution')
 
         vp = self.wf(self.POS).detach().numpy()
-        self.lwf, = self.ax.plot(pos,vp,color='red')
+        vp/=np.max(vp)
+        self.lwf, = self.ax.plot(pos,vp,linewidth=2,color='black')
 
         if self.plot_weight:
             self.pweight, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),
@@ -77,7 +78,7 @@ class plotter1d(object):
                 self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),
                                            np.zeros(self.wf.ncenter),'X')
 
-
+        plt.grid()
         plt.draw()
         self.fig.canvas.flush_events()
 
@@ -85,6 +86,7 @@ class plotter1d(object):
         '''Update the plot.'''
 
         vp = self.wf(self.POS).detach().numpy()
+        vp/=np.max(vp)
         self.lwf.set_ydata(vp)
 
         if self.plot_weight:
@@ -98,11 +100,11 @@ class plotter1d(object):
                 data /= np.linalg.norm(data)
                 self.pgrad.set_ydata(data)
 
-        #self.fig.canvas.draw()  
+        #self.fig.canvas.draw() 
         plt.draw()
         self.fig.canvas.flush_events()
 
-def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
+def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None,load=None):
         '''Plot a 1D wave function.
 
         Args:
@@ -120,6 +122,11 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
             show_plot = False
 
 
+        if load is not None:
+            checkpoint = torch.load(load)
+            net.wf.load_state_dict(checkpoint['model_state_dict'])
+            epoch = checkpoint['epoch']
+
         X = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1))
         X.requires_grad = True
         xn = X.detach().numpy().flatten()
@@ -131,6 +138,7 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
 
         vals = net.wf(X)
         vn = vals.detach().numpy().flatten()
+        vn /= np.max(vn)
         ax.plot(xn,vn,color='black',linewidth=2,label='DeepQMC')
 
         if pot:
@@ -150,13 +158,16 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None):
         
         ax.grid()
         ax.set_xlabel('X')
-        ax.set_ylabel('Wavefuntion')
+        if load is None:
+            ax.set_ylabel('Wavefuntion')
+        else:
+            ax.set_ylabel('Wavefuntion %d epoch' %epoch)
         ax.legend()
 
         if show_plot:
             plt.show()
 
-def plot_results_1d(net,domain,res,sol=None,e0=None):
+def plot_results_1d(net,domain,res,sol=None,e0=None,load=None):
     ''' Plot the summary of the results for a 1D problem.
 
     Args: 
@@ -172,7 +183,7 @@ def plot_results_1d(net,domain,res,sol=None,e0=None):
     ax0 = fig.add_subplot(211)
     ax1 = fig.add_subplot(212)
 
-    plot_wf_1d(net,domain,res,sol=sol,hist=False,ax=ax0)
+    plot_wf_1d(net,domain,res,sol=sol,hist=False,ax=ax0,load=load)
     plot_observable(net.obs_dict,e0=e0,ax=ax1)
 
     plt.show()
