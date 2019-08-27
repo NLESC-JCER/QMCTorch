@@ -81,7 +81,6 @@ class DistSolverOrbital(SolverOrbital):
         self._worker(nepoch,batchsize,loss)
         obs_data.append(self.obs_dict['local_energy'])
         
-
     def _worker(self, nepoch, batchsize, loss ):
 
         '''Train the model.
