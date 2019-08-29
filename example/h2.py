@@ -17,13 +17,21 @@ from deepqmc.solver.plot_data import plot_observable
 # ground state energy : -31.688 eV -> -1.16 hartree
 # bond dissociation energy 4.478 eV -> 0.16 hartree
 
+class OrbitalH2(Orbital):
+	def __init__(self,mol):
+		super(OrbitalH2,self).__init__(mol)
+
+	def pool(self,x):
+		return (x[:,0,0]*x[:,1,0]).view(-1,1)
+
+
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
 #mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='gto', basis='sto-3g')
 
 # define the wave function
-wf = Orbital(mol)
+wf = OrbitalH2(mol)
 
 #sampler
 sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
