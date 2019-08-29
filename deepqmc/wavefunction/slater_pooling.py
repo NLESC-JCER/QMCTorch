@@ -71,10 +71,7 @@ class SlaterPooling(nn.Module):
             
             # a batch version of det is on its way (end July 2019)
             # https://github.com/pytorch/pytorch/issues/7500
-            # we'll move to that asap but in the mean time we loop
-            #for isample in range(nbatch):
-            #    out[isample,ic] = (torch.det(mo_up[isample]) * torch.det(mo_down[isample]))
-
+            # we'll move to that asap but in the mean time 
             # using my own BatchDeterminant
             out[:,ic] = BatchDeterminant.apply(mo_up) * BatchDeterminant.apply(mo_down)
 
@@ -83,30 +80,11 @@ class SlaterPooling(nn.Module):
 
 if __name__ == "__main__":
 
-    # pos = torch.rand(10,12)
-    # edist = ElectronDistance.apply(pos)
-    # jastrow = TwoBodyJastrowFactor(2,2)
-    # val = jastrow(edist)
 
-    x = Variable(torch.rand(10,3,3))
+    x = Variable(torch.rand(10,5,5))
     x.requires_grad = True
     det = BatchDeterminant.apply(x)
     det.backward(torch.ones(10))
-
-    # # LUP decompose the matrices
-    # x_lu, pivots = x.lu()
-    # perm, xl, xu = torch.lu_unpack(x_lu,pivots)
-    
-    # # get the number of permuations
-    # #s = perm.sum((1,2)) - torch.diagonal(perm,dim1=-2,dim2=-1).sum(1)
-    # s = (pivots != torch.tensor(range(1,x.shape[1]+1)).int()).sum(1).float()
-    # #s = perm.diagonal(dim1=-2,dim2=-1).fill_(0).sum((1,2))
-
-    # # get the prod of the diag of U
-    # d = torch.diagonal(xu,dim1=-2,dim2=-1).prod(1)
-
-    # # assemble
-    # det = (-1)**(s) * d
 
     det_true = torch.tensor([torch.det(xi).item() for xi in x])
     print(det-det_true)
