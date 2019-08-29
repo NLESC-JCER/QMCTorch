@@ -13,7 +13,7 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 
 class Orbital(WaveFunction):
 
-    def __init__(self,mol,scf='pyscf'):
+    def __init__(self,mol,configs='ground_state',scf='pyscf'):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
@@ -35,10 +35,13 @@ class Orbital(WaveFunction):
         self.edist = ElectronDistance(mol.nelec,3)
         self.jastrow = TwoBodyJastrowFactor(mol.nup,mol.ndown)
 
-        # define the SD pooling layer
-        self.configs = (torch.LongTensor([np.array([0])]), torch.LongTensor([np.array([0])]))
-        self.nci = 1
-        self.pool = SlaterPooling(self.configs,1,1)
+        # define the SD we want
+        self.configs = self.get_configs(configs,mol)
+        #self.configs = (torch.LongTensor([np.array([0])]), torch.LongTensor([np.array([0])]))
+        self.nci = len(self.configs[0])
+
+        #  define the SD pooling layer
+        self.pool = SlaterPooling(self.configs,mol.nup,mol.ndown)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
@@ -61,8 +64,8 @@ class Orbital(WaveFunction):
 
         x = self.ao(x)
         x = self.mo(x)
-        #x = self.pool(x) #<- issue with batch determinant
-        x = (x[:,0,0]*x[:,1,0]).view(-1,1)
+        x = self.pool(x)
+
         return J*x
 
     def nuclear_potential(self,pos):
@@ -129,6 +132,19 @@ class Orbital(WaveFunction):
                 c2 = self.ao.atom_coords[iat2,:]
                 d.append((at1,at2,torch.sqrt(   ((c1-c2)**2).sum())))
         return d
+
+    def get_configs(self,configs,mol):
+
+        if isinstance(configs,torch.Tensor):
+            return configs
+
+        elif configs == 'ground_state':
+            return self._get_ground_state_config(mol)
+
+    def _get_ground_state_config(self,mol):
+        conf = (torch.LongTensor([np.array(range(mol.nup))]), 
+                torch.LongTensor([np.array(range(mol.ndown))]))
+        return conf
 
 
 
