@@ -21,6 +21,7 @@ class Molecule(object):
         self.atoms = []
         self.atom_coords = []
         self.nelec = 0
+
         self.process_atom_str()
         self.get_bonds()
 
@@ -61,16 +62,32 @@ class Molecule(object):
         self.process_basis()
 
     def process_atom_str(self):
+        '''Process the input file.'''
 
-        atoms = self.atoms_str.split(';')
+        #if we have an xyz file
+        if os.path.isfile(self.atoms_str):
+            with open(self.atoms_str,'r') as f:
+                data = f.readlines()
+            atoms=data[2:]
+            self.atoms_str = ''
+            for a in atoms[:-1]:
+                self.atoms_str += a + '; '
+            self.atoms_str += atoms[-1]
+
+        # if we have a string
+        else:
+            atoms = self.atoms_str.split(';')
+
+        # loop over all atoms
         for a in atoms:
             atom_data = a.split()
             self.atoms.append(atom_data[0])
             x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])
             self.atom_coords.append([x,y,z])
             self.nelec += element(atom_data[0]).electrons
-        self.natom = len(self.atoms)
 
+        # size of the system
+        self.natom = len(self.atoms)
         self.nup = math.ceil(self.nelec/2)
         self.ndown = math.floor(self.nelec/2)
 
@@ -279,10 +296,11 @@ class Molecule(object):
         return mat / norm
 
 
-if __name__ == "__main__":
+#if __name__ == "__main__":
 
-    m1 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='gto',basis='sto-3g')
-    m2 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='sto',basis='dzp')
+    #m1 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='gto',basis='sto-3g')
+    #m2 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='sto',basis='dzp')
+    #m3 = Molecule(atom='water.xyz',basis_type='sto',basis='sz')
 
     
     
