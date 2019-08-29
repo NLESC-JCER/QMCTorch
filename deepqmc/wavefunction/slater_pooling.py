@@ -68,7 +68,7 @@ class SlaterPooling(nn.Module):
 
             mo_up = input.index_select(1,self.index_up).index_select(2,cup)
             mo_down = input.index_select(1,self.index_down).index_select(2,cdown)
-
+            
             # a batch version of det is on its way (end July 2019)
             # https://github.com/pytorch/pytorch/issues/7500
             # we'll move to that asap but in the mean time we loop
