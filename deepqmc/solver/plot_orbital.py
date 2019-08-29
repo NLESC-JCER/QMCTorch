@@ -60,9 +60,10 @@ def plot_molecule(solver, pos=None, loss='variance',alpha=0.025):
         x,y,z = solver.wf.ao.atom_coords.data[iat,:].numpy()
         ax.scatter(x,y,z,s=r,color=col)
 
-        if solver.wf.ao.atom_coords.requires_grad == True:
-            u,v,w = solver.wf.ao.atom_coords.grad.data[iat,:].numpy()
-            ax.quiver(x,y,z,-u,-v,-w,color='grey',length=1.,normalize=True,pivot='middle')
+        if loss is not None:
+            if solver.wf.ao.atom_coords.requires_grad == True:
+                u,v,w = solver.wf.ao.atom_coords.grad.data[iat,:].numpy()
+                ax.quiver(x,y,z,-u,-v,-w,color='grey',length=1.,normalize=True,pivot='middle')
 
     plt.show()
 
@@ -113,13 +114,14 @@ def plot_molecule_mayavi(solver, pos=None, loss='variance',alpha=0.05):
               resolution=20,
               color=hex_to_rgb(col))
 
-        if solver.wf.ao.atom_coords.requires_grad == True:
-            u,v,w = solver.wf.ao.atom_coords.grad.data[iat,:].numpy()
-            mlab.quiver3d(x,y,z,-u,-v,-w,
-                          color=(1,0,0),
-                          line_width=3,
-                          scale_factor=5,
-                          mode='arrow')
+        if loss is not None:
+            if solver.wf.ao.atom_coords.requires_grad == True:
+                u,v,w = solver.wf.ao.atom_coords.grad.data[iat,:].numpy()
+                mlab.quiver3d(x,y,z,-u,-v,-w,
+                              color=(1,0,0),
+                              line_width=3,
+                              scale_factor=5,
+                              mode='arrow')
 
     # plot the bonds
     for bindex in solver.wf.bonds:
