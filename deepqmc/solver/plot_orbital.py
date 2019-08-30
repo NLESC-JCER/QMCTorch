@@ -68,7 +68,7 @@ def plot_molecule(solver, pos=None, loss='variance',alpha=0.025):
     plt.show()
 
 
-def plot_molecule_mayavi(solver, pos=None, loss='variance',alpha=0.05):
+def plot_molecule_mayavi(solver, pos=None, loss=None,alpha=0.05):
 
     # get sampling points
     if pos is None:

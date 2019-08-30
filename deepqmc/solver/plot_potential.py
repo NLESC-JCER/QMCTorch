@@ -39,7 +39,7 @@ def regular_mesh_3d(xmin=-2,xmax=2,ymin=-2.,ymax=2,zmin=-5,zmax=5,nx=5,ny=5,nz=5
 
 class plotter1d(object):
 
-    def __init__(self, wf, domain, res, sol = None, plot_weight=False, plot_grad=False):
+    def __init__(self, wf, domain, res=51, sol = None, plot_weight=False, plot_grad=False):
         '''Dynamic plot of a 1D-wave function during the optimization
 
         Args:
@@ -66,6 +66,9 @@ class plotter1d(object):
             v = sol(self.POS).detach().numpy()
             self.ax.plot(pos,v,color='#b70000',linewidth=4,linestyle='--',label='solution')
 
+        vpot = wf.nuclear_potential(self.POS).detach().numpy()
+        self.ax.plot(pos,vpot,color='black',linestyle='--')
+
         vp = self.wf(self.POS).detach().numpy()
         vp/=np.max(vp)
         self.lwf, = self.ax.plot(pos,vp,linewidth=2,color='black')
@@ -78,6 +81,7 @@ class plotter1d(object):
                 self.pgrad, = self.ax.plot(self.wf.rbf.centers.detach().numpy(),
                                            np.zeros(self.wf.ncenter),'X')
 
+        self.ax.set_ylim((np.min(vpot),1))
         plt.grid()
         plt.draw()
         self.fig.canvas.flush_events()
@@ -104,7 +108,7 @@ class plotter1d(object):
         plt.draw()
         self.fig.canvas.flush_events()
 
-def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None,load=None):
+def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=True,sol=None,ax=None,load=None):
         '''Plot a 1D wave function.
 
         Args:
@@ -132,7 +136,6 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None,l
         xn = X.detach().numpy().flatten()
 
         if callable(sol):
-            
             vs = sol(X).detach().numpy()
             ax.plot(xn,vs,color='#b70000',linewidth=4,linestyle='--',label='solution')
 
@@ -156,6 +159,7 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=False,sol=None,ax=None,l
             pos = net.sample(ntherm=-1)
             ax.hist(pos.detach().numpy(),density=False)
         
+        ax.set_ylim((np.min(pot),1))
         ax.grid()
         ax.set_xlabel('X')
         if load is None:
