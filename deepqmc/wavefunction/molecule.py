@@ -8,7 +8,10 @@ import json
 
 class Molecule(object):
 
-    def __init__(self,atom=None,basis_type='sto',basis='sz'):
+    def __init__(self,atom=None,
+                      basis_type='sto', 
+                      basis='sz',
+                      unit='bohr'):
 
         self.atoms_str = atom
         self.basis_type = basis_type.lower()

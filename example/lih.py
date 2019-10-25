@@ -16,14 +16,14 @@ from deepqmc.solver.plot_data import plot_observable
 
 
 # define the molecule
-#mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
-mol = Molecule(atom='water.xyz', basis_type='gto', basis='sto-3g')
+mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', basis_type='sto', basis='sz', unit='bohr')
+
 
 # define the wave function
 wf = Orbital(mol)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=100, nstep=100, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -33,7 +33,7 @@ opt = Adam(wf.parameters(),lr=0.01)
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
 pos = Variable(torch.rand(100,mol.nelec*3))
 pos.requires_grad = True
-solver.single_point(pos=pos)
+pos = solver.single_point(pos=pos)
 
 # plot the molecule
 #plot_molecule(solver)

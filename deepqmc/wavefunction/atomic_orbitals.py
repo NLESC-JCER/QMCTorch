@@ -52,6 +52,7 @@ class AtomicOrbitals(nn.Module):
         radial_dict = {'sto':self._radial_slater, 
                        'gto':self._radial_gaussian,
                        'gto_cart':self._radial_gausian_cart}
+
         self.radial = radial_dict[mol.basis_type]
 
         # get the normaliationconstants
