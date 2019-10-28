@@ -1,4 +1,6 @@
 import sys
+import torch
+from torch.autograd import Variable
 from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
@@ -12,29 +14,19 @@ from deepqmc.solver.plot_orbital import plot_molecule
 from deepqmc.solver.plot_orbital import plot_molecule_mayavi as plot_molecule
 from deepqmc.solver.plot_data import plot_observable
 
-# bond distance : 0.74 A -> 1.38 a
-# optimal H positions +0.69 and -0.69
-# ground state energy : -31.688 eV -> -1.16 hartree
-# bond dissociation energy 4.478 eV -> 0.16 hartree
-
-class OrbitalH2(Orbital):
-	def __init__(self,mol):
-		super(OrbitalH2,self).__init__(mol)
-
-	def pool(self,x):
-		return (x[:,0,0]*x[:,1,0]).view(-1,1)
-
-
 
 # define the molecule
-#mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', basis_type='sto', basis='sz',unit='bohr')
+mol = Molecule(atom='C 0 0 0; O 0 0 2.173', 
+               basis_type='sto', 
+               basis='sz', 
+               unit='bohr')
+
 
 # define the wave function
-wf = OrbitalH2(mol)
+wf = Orbital(mol)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -42,18 +34,20 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-solver.single_point()
+#pos = Variable(torch.rand(100,mol.nelec*3))
+#pos.requires_grad = True
+pos = solver.single_point()
 
 # plot the molecule
 #plot_molecule(solver)
 
 # optimize the geometry
-#solver.configure(task='geo_opt')
-#solver.observable(['local_energy','atomic_distances'])
-#solver.run(5,loss='energy')
+# solver.configure(task='geo_opt')
+# solver.observable(['local_energy','atomic_distances'])
+# solver.run(5,loss='energy')
 
 # plot the data
-#plot_observable(solver.obs_dict,e0=-1.16)
+# plot_observable(solver.obs_dict,e0=-1.16)
 
 
 
