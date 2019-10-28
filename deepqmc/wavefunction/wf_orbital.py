@@ -59,14 +59,14 @@ class Orbital(WaveFunction):
         Returns: values of psi
         '''
         
-        edist  = self.edist(x)
-        J = self.jastrow(edist)
+        #edist  = self.edist(x)
+        #J = self.jastrow(edist)
 
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
-
-        return J*x
+        return x
+        #return J*x
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points

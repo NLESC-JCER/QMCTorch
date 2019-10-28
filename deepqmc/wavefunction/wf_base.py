@@ -170,6 +170,10 @@ class WaveFunction(nn.Module):
         '''Variance of the energy at the sampling points.'''
         return torch.var(self.local_energy(pos))
 
+    def _energy_variance(self,pos):
+        el = self.local_energy(pos)
+        return torch.mean(el), torch.var(el)
+
     def pdf(self,pos):
         '''density of the wave function.'''
         return (self.forward(pos)**2).reshape(-1)

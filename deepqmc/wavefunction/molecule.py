@@ -94,7 +94,6 @@ class Molecule(object):
                 conv2bohr = 1.88973
             self.atom_coords.append([x*conv2bohr,y*conv2bohr,z*conv2bohr])
             
-
             self.atomic_number.append(element(atom_data[0]).atomic_number)
             self.nelec += element(atom_data[0]).electrons
 
@@ -255,7 +254,9 @@ class Molecule(object):
                         self.norb += 1
 
                         # store coeffs and exps of the bas
-                        self.bas_exp += np.array(shell['exponents']).astype('float').tolist()
+                        k = 1.88973
+                        k = 1
+                        self.bas_exp += (k*np.array(shell['exponents']).astype('float')).tolist()
                         self.bas_coeffs += np.array(shell['coefficients'][iangular]).astype('float').tolist()
 
                         # index of the contraction
@@ -298,7 +299,7 @@ class Molecule(object):
         else:
             pyscf_basis = self.basis
 
-        mol = gto.M(atom=self.atoms_str,basis=pyscf_basis)
+        mol = gto.M(atom=self.atoms_str,basis=pyscf_basis,unit=self.unit)
         rhf = scf.RHF(mol).run()
         return self._normalize_columns(rhf.mo_coeff)
 

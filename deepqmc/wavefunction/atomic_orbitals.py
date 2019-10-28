@@ -151,9 +151,9 @@ if __name__ == "__main__":
     from pyCHAMP.wavefunction.molecule import Molecule
 
     #m = Molecule(atom='H 0 0 0; H 0 0 1',basis_type='sto',basis='dz')
-    m = Molecule(atom='H 0 0 0; H 0 0 1',basis_type='gto',basis='sto-3g')
+    m = Molecule(atom='Li 0 0 0; H 0 0 3.015',basis_type='gto',basis='sto-3g')
 
     ao = AtomicOrbitals(m)
 
     pos = torch.rand(20,ao.nelec*3)
-    aoval = sto.forward(pos)
+    aoval = ao.forward(pos)
