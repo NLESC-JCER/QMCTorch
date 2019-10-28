@@ -23,7 +23,9 @@ class Molecule(object):
         # process the atom name/pos
         self.atoms = []
         self.atom_coords = []
+        self.atomic_number = []
         self.nelec = 0
+        self.unit = unit
 
         self.process_atom_str()
         self.get_bonds()
@@ -85,8 +87,15 @@ class Molecule(object):
         for a in atoms:
             atom_data = a.split()
             self.atoms.append(atom_data[0])
-            x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])
-            self.atom_coords.append([x,y,z])
+            x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])            
+            
+            conv2bohr = 1
+            if self.unit == 'angs':
+                conv2bohr = 1.88973
+            self.atom_coords.append([x*conv2bohr,y*conv2bohr,z*conv2bohr])
+            
+
+            self.atomic_number.append(element(atom_data[0]).atomic_number)
             self.nelec += element(atom_data[0]).electrons
 
         # size of the system

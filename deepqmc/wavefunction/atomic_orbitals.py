@@ -27,6 +27,7 @@ class AtomicOrbitals(nn.Module):
         self.atom_coords = nn.Parameter(torch.tensor(mol.atom_coords))
         self.atom_coords.requires_grad = True
         self.natoms = len(self.atom_coords)
+        self.atomic_number = mol.atomic_number
 
         # define the BAS positions
         self.nshells = torch.tensor(mol.nshells)
@@ -60,13 +61,15 @@ class AtomicOrbitals(nn.Module):
 
     def get_norm(self,basis_type):
 
-        #select the normalization
-        if basis_type == 'sto':
-            return self._norm_slater()
-        elif basis_type == 'gto':
-            return self._norm_gaussian()
-        elif basis_type == 'gto_cart':
-            return self._norm_gaussian_cart()
+        with torch.no_grad():
+
+            #select the normalization
+            if basis_type == 'sto':
+                return self._norm_slater()
+            elif basis_type == 'gto':
+                return self._norm_gaussian()
+            elif basis_type == 'gto_cart':
+                return self._norm_gaussian_cart()
 
     def _norm_slater(self):
         '''Normalization of the STO 
@@ -130,8 +133,8 @@ class AtomicOrbitals(nn.Module):
         
         # product with coefficients
         # -> (Nbatch,Nelec,Nbas)
-        #bas = self.norm_cst * self.bas_coeffs * R * Y
-        bas = self.bas_coeffs * R * Y
+        bas = self.norm_cst * self.bas_coeffs * R * Y
+        #bas = self.bas_coeffs * R * Y
 
         # contract the basis
         # -> (Nbatch,Nelec,Norb)
