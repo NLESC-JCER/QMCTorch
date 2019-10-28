@@ -59,14 +59,14 @@ class Orbital(WaveFunction):
         Returns: values of psi
         '''
         
-        #edist  = self.edist(x)
-        #J = self.jastrow(edist)
+        edist  = self.edist(x)
+        J = self.jastrow(edist)
 
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
-        return x
-        #return J*x
+        #return x
+        return J*x
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -100,13 +100,10 @@ class Orbital(WaveFunction):
         
         for ielec1 in range(self.nelec-1):
             epos1 = pos[:,ielec1*self.ndim:(ielec1+1)*self.ndim]
-            
             for ielec2 in range(ielec1+1,self.nelec):
                 epos2 = pos[:,ielec2*self.ndim:(ielec2+1)*self.ndim]
-                
                 r = torch.sqrt( ((epos1-epos2)**2).sum(1) ) + 1E-6
-                pot = (1./r) 
-
+                pot += (1./r) 
         return pot.view(-1,1)
 
     def nuclear_repulsion(self):
@@ -114,15 +111,16 @@ class Orbital(WaveFunction):
         Returns: values of Vnn
         '''
 
-        rnn = 0.
+        vnn = 0.
         for at1 in range(self.natom-1):
             c0 = self.ao.atom_coords[at1,:]
             Z0 = self.ao.atomic_number[at1]
             for at2 in range(at1+1,self.natom):
                 c1 = self.ao.atom_coords[at2,:]
                 Z1 = self.ao.atomic_number[at2]
-                rnn += torch.sqrt(   ((c0-c1)**2).sum()  )
-        return (Z0*Z1/rnn).view(-1,1)
+                rnn = torch.sqrt(   ((c0-c1)**2).sum()  )
+                vnn += Z0*Z1/rnn
+        return vnn
 
 
     def atomic_distances(self,pos):
@@ -133,7 +131,7 @@ class Orbital(WaveFunction):
             for iat2 in range(iat1+1,self.natom):
                 at2 = self.atoms[iat2]
                 c2 = self.ao.atom_coords[iat2,:]
-                d.append((at1,at2,torch.sqrt(   ((c1-c2)**2).sum())))
+                d.append((at1,at2,torch.sqrt(((c1-c2)**2).sum())))
         return d
 
     def get_configs(self,configs,mol):

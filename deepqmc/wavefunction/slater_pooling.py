@@ -73,8 +73,11 @@ class SlaterPooling(nn.Module):
             # https://github.com/pytorch/pytorch/issues/7500
             # we'll move to that asap but in the mean time 
             # using my own BatchDeterminant
-            #out[:,ic] = BatchDeterminant.apply(mo_up) * BatchDeterminant.apply(mo_down)
-            out[:,ic] = torch.det(mo_up) * torch.det(mo_down)
+            try:
+                out[:,ic] = torch.det(mo_up) * torch.det(mo_down)
+            except:
+                out[:,ic] = BatchDeterminant.apply(mo_up) * BatchDeterminant.apply(mo_down)
+            
 
         return out
 

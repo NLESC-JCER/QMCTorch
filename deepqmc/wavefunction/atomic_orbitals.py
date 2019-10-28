@@ -106,7 +106,7 @@ class AtomicOrbitals(nn.Module):
         return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
 
     def _norm_gaussian(self):
-        '''Comptational Quantum Chemistry: An interactive Intrduction to basis set theory
+        '''Computational Quantum Chemistry: An interactive Intrduction to basis set theory
             eq: 1.14 page 23.'''
 
         from scipy.special import factorial2 as f2
