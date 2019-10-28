@@ -83,8 +83,9 @@ class Orbital(WaveFunction):
             pelec = pos[:,(ielec*self.ndim):(ielec+1)*self.ndim]
             for iatom in range(self.natom):
                 patom = self.ao.atom_coords[iatom,:]
+                Z = self.ao.atomic_number[iatom]
                 r = torch.sqrt(   ((pelec-patom)**2).sum(1)  ) + 1E-6
-                p += (-1./r)
+                p += (-Z/r)
         return p.view(-1,1)
 
     def electronic_potential(self,pos):
@@ -116,10 +117,12 @@ class Orbital(WaveFunction):
         rnn = 0.
         for at1 in range(self.natom-1):
             c0 = self.ao.atom_coords[at1,:]
+            Z0 = self.ao.atomic_number[at1]
             for at2 in range(at1+1,self.natom):
                 c1 = self.ao.atom_coords[at2,:]
+                Z1 = self.ao.atomic_number[at2]
                 rnn += torch.sqrt(   ((c0-c1)**2).sum()  )
-        return (1./rnn).view(-1,1)
+        return (Z0*Z1/rnn).view(-1,1)
 
 
     def atomic_distances(self,pos):
