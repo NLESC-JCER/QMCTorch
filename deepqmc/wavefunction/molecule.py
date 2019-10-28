@@ -254,9 +254,7 @@ class Molecule(object):
                         self.norb += 1
 
                         # store coeffs and exps of the bas
-                        k = 1.88973
-                        k = 1
-                        self.bas_exp += (k*np.array(shell['exponents']).astype('float')).tolist()
+                        self.bas_exp += (np.array(shell['exponents']).astype('float')).tolist()
                         self.bas_coeffs += np.array(shell['coefficients'][iangular]).astype('float').tolist()
 
                         # index of the contraction

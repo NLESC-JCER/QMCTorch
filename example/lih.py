@@ -26,7 +26,7 @@ mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
 wf = Orbital(mol)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -34,11 +34,9 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-pos = Variable(torch.rand(100,mol.nelec*3))
-pos.requires_grad = True
-wf.ao(pos)
 
-#pos = solver.single_point()
+
+pos = solver.single_point()
 
 # plot the molecule
 #plot_molecule(solver)

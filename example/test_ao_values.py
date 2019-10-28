@@ -8,7 +8,7 @@ from pyscf import gto
 import matplotlib.pyplot as plt
 
 # define the molecule
-at = 'H 0 0 -1; H 0 0 1'
+at = 'N 0 0 -1; N 0 0 1'
 mol = Molecule(atom=at, 
                basis_type='gto', 
                basis='sto-3g', 
@@ -28,13 +28,13 @@ aovals = wf.ao(pos)
 
 
 # pyscf
-m = gto.M(atom=at, basis='sto-6g',unit='bohr')
+m = gto.M(atom=at, basis='sto-3g',unit='bohr')
 aovals_ref = m.eval_gto('GTOval_cart',pos.detach().numpy()[:,:3])
 
 norb = 2
 x = pos[:,2].detach().numpy()
-plt.plot(x,aovals[:,0,1].detach().numpy(),label='torch')
-plt.plot(x,aovals_ref[:,1],label='pyscf')
+plt.plot(x,aovals[:,0,3].detach().numpy(),label='torch')
+plt.plot(x,aovals_ref[:,4],label='pyscf')
 plt.legend()
 plt.show()
 
