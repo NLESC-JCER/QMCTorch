@@ -17,8 +17,8 @@ from deepqmc.solver.plot_data import plot_observable
 
 # define the molecule
 mol = Molecule(atom='C 0 0 0; O 0 0 2.173', 
-               basis_type='sto', 
-               basis='sz', 
+               basis_type='gto', 
+               basis='sto-3g', 
                unit='bohr')
 
 

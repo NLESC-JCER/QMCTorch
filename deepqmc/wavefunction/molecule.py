@@ -49,7 +49,7 @@ class Molecule(object):
         self.get_label = {0:'S',1:'P',2:'D'}
         self.get_l = {'S':0,'P':1,'D':2}
         self.mult_bas = {'S':1,'P':3,'D':5}
-        self.get_m = {'S':[0],'P':[-1,0,1],'D':[-2,-1,0,1,2]}
+        self.get_m = {'S':[0],'P':[-1,1,0],'D':[-2,-1,0,1,2]}
 
         # for cartesian 
         self.get_lmn_cart = {'S': [0,0,0],

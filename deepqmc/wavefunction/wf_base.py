@@ -99,10 +99,12 @@ class WaveFunction(nn.Module):
         hess = torch.zeros(jacob.shape[0])
         
         for idim in range(jacob.shape[1]):
+            print('____',idim,'/',jacob.shape[1])
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
-                      create_graph=True,
-                      allow_unused=True)[0]    
+                      retain_graph=True)[0]
+                      #create_graph=True)[0]
+                      #allow_unused=True)[0]    
             hess += tmp[:,idim]
         
         return -0.5 * hess.view(-1,1)
@@ -152,10 +154,11 @@ class WaveFunction(nn.Module):
 
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        #t0 = time()    
+        t0 = time()  
+        print('Kinetic Energy')  
         wf = self.forward(pos)
         ke = self.kinetic_energy(pos,out=wf)
-        #print('Kinetic done in %f' %(time()-t0))
+        print('Kinetic done in %f' %(time()-t0))
         
         return ke/wf \
              + self.nuclear_potential(pos)  \

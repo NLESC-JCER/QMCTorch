@@ -31,9 +31,7 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-pos = Variable(torch.rand(100,mol.nelec*3))
-pos.requires_grad = True
-solver.single_point(pos=pos)
+solver.single_point()
 
 # plot the molecule
 #plot_molecule(solver)
