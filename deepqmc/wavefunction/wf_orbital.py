@@ -68,6 +68,12 @@ class Orbital(WaveFunction):
         return x
         #return J*x
 
+    def kinetic_energy_jacobi(self,x):
+
+        A = self.mo(self.ao(x))
+        B = self.mo(self.ao(x,derivative=2))
+        
+
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
         Args:

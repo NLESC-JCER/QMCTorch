@@ -55,7 +55,7 @@ class AtomicOrbitals(nn.Module):
                        'gto_cart':self._radial_gausian_cart}
 
         self.radial = radial_dict[mol.basis_type]
-
+        
         # get the normaliationconstants
         self.norm_cst = self.get_norm(mol.basis_type)
 
@@ -94,19 +94,54 @@ class AtomicOrbitals(nn.Module):
         
         return torch.sqrt(B/C)*A
 
+    def _radial_slater(self, R, xyz=None, derivative=0):
+        if derivative == 0:
+            return R**self.bas_n * torch.exp(-self.bas_exp*R)
 
-    def _radial_slater(self,R):
-        return R**self.bas_n * torch.exp(-self.bas_exp*R)
+        elif derivative > 0:
+            sum_xyz = xyz.sum(3)
+            rn = R**(self.bas_n)
+            nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
+            er = torch.exp(-self.bas_exp*R)
+            nabla_er = - self.bas_exp * sum_xyz * er / r 
 
-    def _radial_gaussian(self,R):
-        return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
-        
+            if derivative == 1:
+                return nabla_rn*er + rn*nabla_er 
 
-    def _radial_gausian_cart(self,xyz,R):
+
+    def _radial_gaussian(self,R, xyz=None, derivative=0):
+        if derivative == 0:
+            return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
+
+        elif derivative > 0:
+            
+            sum_xyz = xyz.sum(3)
+            
+            rn = R**(self.bas_n)
+            nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
+
+            er = torch.exp(-self.bas_exp*R**2)
+            nabla_er = -2*self.bas_exp * sum_xyz * er
+
+            if derivative == 1:
+                return nabla_rn*er + rn*nabla_er 
+
+            elif derivative == 2:
+
+                lap_rn = self.bas_n * ( 3*R**(self.bas_n-2) \
+                    + (xyz**2).sum(3) * (self.bas_n-2) * R**(self.bas_n-4) )
+
+                lap_er = 4 * self.bas_exp**2 * (xyz**2).sum(3) * er \
+                - 6 * self.bas_exp * er
+
+                return lap_rn * er + 2*nabla_rn*nabla_er + rn * lap_er
+
+    def _radial_gausian_cart(self,R,xyz=None, derivative=0):
         raise NotImplementedError('Cartesian GTOs are on the to do list')
         #return xyz**self.lmn_cart * torch.exp(-self.bas_exp*R**2)
 
-    def forward(self,input):
+
+    def forward(self,input,derivative=0):
         
         nbatch = input.shape[0]
 
@@ -119,19 +154,38 @@ class AtomicOrbitals(nn.Module):
         
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
-        R = torch.sqrt((xyz**2).sum(3))
+        r = torch.sqrt((xyz**2).sum(3))
         
         # radial part
         # -> (Nbatch,Nelec,Nbas)
-        R = self.radial(R)
+        R = self.radial(r)
         
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
         Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m)
+
+        # treat the different cases
+        # of derivative values
+        if derivative == 0 :
+            bas = R * Y
+
+        elif derivative == 1 :
+            dR = self.radial(r,xyz=xyz,derivative=1)
+            dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
+            bas = dR * Y  + R * dY
+
+        elif derivative == 2:            
+            dR = self.radial(r,xyz=xyz,derivative=1)
+            dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
+            
+            d2R = self.radial(r,xyz=xyz,derivative=2)
+            d2Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=2)
+
+            bas = d2R * Y + 2 * dR * dY + R * d2Y
         
         # product with coefficients
         # -> (Nbatch,Nelec,Nbas)
-        bas = self.norm_cst * self.bas_coeffs * R * Y
+        bas = self.norm_cst * self.bas_coeffs * bas
 
         # contract the basis
         # -> (Nbatch,Nelec,Norb)
@@ -140,12 +194,9 @@ class AtomicOrbitals(nn.Module):
 
         return ao
 
-
-
-
 if __name__ == "__main__":
 
-    from pyCHAMP.wavefunction.molecule import Molecule
+    from deepqmc.wavefunction.molecule import Molecule
 
     #m = Molecule(atom='H 0 0 0; H 0 0 1',basis_type='sto',basis='dz')
     m = Molecule(atom='Li 0 0 0; H 0 0 3.015',basis_type='gto',basis='sto-3g')
@@ -153,4 +204,4 @@ if __name__ == "__main__":
     ao = AtomicOrbitals(m)
 
     pos = torch.rand(20,ao.nelec*3)
-    aoval = ao.forward(pos)
+    aoval = ao.forward(pos,derivative=1)

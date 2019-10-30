@@ -92,6 +92,7 @@ class WaveFunction(nn.Module):
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
+                     only_inputs=True,
                      create_graph=True)[0]
         
         # compute the diagonal element of the Hessian
@@ -99,12 +100,12 @@ class WaveFunction(nn.Module):
         hess = torch.zeros(jacob.shape[0])
         
         for idim in range(jacob.shape[1]):
-            print('____',idim,'/',jacob.shape[1])
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
-                      retain_graph=True)[0]
+                      retain_graph=True,
+                      only_inputs=True,
                       #create_graph=True)[0]
-                      #allow_unused=True)[0]    
+                      allow_unused=True)[0]    
             hess += tmp[:,idim]
         
         return -0.5 * hess.view(-1,1)

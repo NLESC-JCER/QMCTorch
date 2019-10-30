@@ -5,15 +5,17 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.wavefunction.molecule import Molecule
 from pyscf import gto
 
+import numpy as np
 import matplotlib.pyplot as plt
 
 # define the molecule
-at = 'C 0 0 -1; O 0 0 0'
+at = 'H 0 0 0; H 0 0 1'
 mol = Molecule(atom=at, 
                basis_type='gto', 
                basis='sto-3g', 
                unit='bohr')
 
+m = gto.M(atom=at, basis='sto-3g',unit='bohr')
 
 # define the wave function
 wf = Orbital(mol)
@@ -24,17 +26,32 @@ pos[:,2] = torch.linspace(-5,5,100)
 
 pos = Variable(pos)
 pos.requires_grad = True
+
+
 aovals = wf.ao(pos)
-
-
-# pyscf
-m = gto.M(atom=at, basis='sto-3g',unit='bohr')
 aovals_ref = m.eval_gto('GTOval_cart',pos.detach().numpy()[:,:3])
 
-norb = 9
+
+
+ip_aovals = wf.ao(pos,derivative=1)
+ip_aovals_ref = m.eval_gto('GTOval_ip_cart',pos.detach().numpy()[:,:3])
+ip_aovals_ref = ip_aovals_ref.sum(0)
+
+i2p_aovals = wf.ao(pos,derivative=2)
+
+norb = 0
 x = pos[:,2].detach().numpy()
+
 plt.plot(x,aovals[:,0,norb].detach().numpy(),label='torch')
-plt.plot(x,aovals_ref[:,norb],label='pyscf')
+plt.plot(x,aovals_ref[:,norb],'-o',label='pyscf')
+
+
+plt.plot(x,ip_aovals[:,0,norb].detach().numpy(),label='torch')
+plt.plot(x,ip_aovals_ref[:,norb],'-o',label='pyscf')
+
+plt.plot(x,i2p_aovals[:,0,norb].detach().numpy(),label='torch')
+plt.plot(x,np.gradient(ip_aovals_ref[:,norb],x),label='pyscf')
+
 plt.legend()
 plt.show()
 
