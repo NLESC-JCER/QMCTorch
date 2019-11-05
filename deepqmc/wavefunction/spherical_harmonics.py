@@ -23,23 +23,31 @@ def SphericalHarmonics(xyz,l,m,derivative=0):
 
     # l=1
     indl = (l==1)
-    for mval in [-1,0,1]:
-        indm = (m==mval)
-        ind = (indl*indm).nonzero().view(-1)
-        if derivative == 0:
-            Y[:,:,ind] = _spherical_harmonics_l1(xyz[:,:,ind,:],mval)
-        if derivative == 1:
-            Y[:,:,ind] = _nabla_spherical_harmonics_l1(xyz[:,:,ind,:],mval)
+    if torch.any(indl):
+        for mval in [-1,0,1]:
+            indm = (m==mval)
+            ind = (indl*indm).nonzero().view(-1)
+            if len(ind>0):
+                if derivative == 0:
+                    Y[:,:,ind] = _spherical_harmonics_l1(xyz[:,:,ind,:],mval)
+                if derivative == 1:
+                    Y[:,:,ind] = _nabla_spherical_harmonics_l1(xyz[:,:,ind,:],mval)
+                if derivative == 2:
+                    Y[:,:,ind] = _lap_spherical_harmonics_l1(xyz[:,:,ind,:],mval)
 
     # l=2
     indl = (l==2)
-    for mval in [-2,-1,0,1,2]:
-        indm = (m==mval)
-        ind = (indl*indm).nonzero().view(-1)
-        if derivative == 0:
-            Y[:,:,ind] = _spherical_harmonics_l2(xyz[:,:,ind,:],mval)
-        if derivative == 1:
-            Y[:,:,ind] = _nabla_spherical_harmonics_l2(xyz[:,:,ind,:],mval)
+    if torch.any(indl):
+        for mval in [-2,-1,0,1,2]:
+            indm = (m==mval)
+            ind = (indl*indm).nonzero().view(-1)
+            if len(ind>0):
+                if derivative == 0:
+                    Y[:,:,ind] = _spherical_harmonics_l2(xyz[:,:,ind,:],mval)
+                if derivative == 1:
+                    Y[:,:,ind] = _nabla_spherical_harmonics_l2(xyz[:,:,ind,:],mval)
+                if derivative == 2:
+                    Y[:,:,ind] = _lap_spherical_harmonics_l2(xyz[:,:,ind,:],mval)
 
     return Y
 
@@ -84,7 +92,7 @@ def _spherical_harmonics_l1(xyz,m):
         Y01  = \sqrt(3 / (4\pi)) x/r. (m=1)
     '''
     index = {-1:1,0:2,1:0}
-    r = torch.sqrt((xyz**2).sum(-1))
+    r = torch.sqrt((xyz**2).sum(3))
     c = 0.4886025119029199
     return  c * xyz[:,:,:,index[m]] / r
 
@@ -99,7 +107,7 @@ def _nabla_spherical_harmonics_l1(xyz,m):
         \nabla Y01  = \sqrt(3 / (4\pi)) ( 1/r - x (x+y+z)/r^3 ) (m= 1)
     '''
     index = {-1:1,0:2,1:0}
-    r = torch.sqrt((xyz**2).sum(-1))
+    r = torch.sqrt((xyz**2).sum(3))
     r3 = r**3
     c = 0.4886025119029199
     return c * (1./r - xyz[:,:,:,index[m]] * xyz.sum(3) / r3 )
@@ -115,7 +123,7 @@ def _lap_spherical_harmonics_l1(xyz,m):
         Y01  = \sqrt(3 / (4\pi)) ( -2x/r^3 ) (m= 1)
     '''
     index = {-1:1,0:2,1:0}
-    r = torch.sqrt((xyz**2).sum(-1))
+    r = torch.sqrt((xyz**2).sum(3))
     r3 = r**3
     c = 0.4886025119029199
     return c * (- 2*xyz[:,:,:,index[m]] / r3 )
@@ -161,8 +169,8 @@ def _nabla_spherical_harmonics_l2(xyz,m):
         Y21  = 1/2\sqrt(15/\pi) (x+z)/r^2 - 2 * xz (x+y+z)/r^3
         Y22  = 1/4\sqrt(15/\pi)  ( 2(x-y)/r^2 - 2 *(xx-yy)(x+y+z)/r^3  )
     '''
-
-    r = torch.sqrt((xyz**2)).sum(-1)
+    print('hello')
+    r = torch.sqrt((xyz**2).sum(3))
     r2 = r**2
     r3 = r**3
 
@@ -197,11 +205,11 @@ def _lap_spherical_harmonics_l2(xyz,m):
         Y22  = 1/4\sqrt(15/\pi)  ( 6/r6 * ( zz*(yy-xx)  +y^4 - x^4  )  )
     '''
 
-    r = torch.sqrt((xyz**2)).sum(-1)
+    r = torch.sqrt((xyz**2).sum(3))
     r2 = r**2
     r3 = r**3
     r4 = r**4
-    r6 + r**6
+    r6 = r**6
 
     if m == 0:
         c0 = 0.31539156525252005
