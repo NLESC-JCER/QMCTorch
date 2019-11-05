@@ -75,6 +75,10 @@ class AtomicOrbitals(nn.Module):
     def _norm_slater(self):
         '''Normalization of the STO 
         taken from www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
+
+        C Filippi Multiconf wave functions for QMC of first row diatomic molecules
+        JCP 105, 213 1996
+
         '''
         nfact = torch.tensor([np.math.factorial(2*n) for n in self.bas_n],dtype=torch.float32)
         return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
@@ -103,7 +107,7 @@ class AtomicOrbitals(nn.Module):
             rn = R**(self.bas_n)
             nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
             er = torch.exp(-self.bas_exp*R)
-            nabla_er = - self.bas_exp * sum_xyz * er / r 
+            nabla_er = - self.bas_exp * sum_xyz * er 
 
             if derivative == 1:
                 return nabla_rn*er + rn*nabla_er 

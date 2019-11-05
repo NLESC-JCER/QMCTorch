@@ -7,13 +7,12 @@ from torch import nn
 from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
+from deepqmc.wavefunction.kinetic_pooling import KineticPooling
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
-
-
 
 class Orbital(WaveFunction):
 
-    def __init__(self,mol,configs='ground_state',scf='pyscf'):
+    def __init__(self,mol,configs='ground_state',scf='pyscf',kinetic_jacobi=False):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
@@ -43,18 +42,23 @@ class Orbital(WaveFunction):
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs,mol.nup,mol.ndown)
 
+        # poolin operation to directly compute the kinetic energies via Jacobi formula
+        self.kinpool = KineticPooling(self.configs,mol.nup,mol.ndown)
+
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
         self.fc.weight.data.fill_(1.)
         self.fc.clip = False
+
+        if kinetic_jacobi:
+            self.kinetic_energy=self.kinetic_energy_jacobi
         
     def forward(self,x):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
         Args:
-            parameters : variational param of the wf
-            pos: position of the electrons
+            x: position of the electrons
 
         Returns: values of psi
         '''
@@ -65,13 +69,22 @@ class Orbital(WaveFunction):
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
-        return x
+        return self.fc(x)
         #return J*x
 
-    def kinetic_energy_jacobi(self,x):
+    def kinetic_energy_jacobi(self,x,**kwargs):
+        '''Compute the value of the kinetic enery using
+        the Jacobi formula for derivative of determinant.
 
-        A = self.mo(self.ao(x))
-        B = self.mo(self.ao(x,derivative=2))
+        Args:
+            x: position of the electrons
+
+        Returns: values of \Delta \Psi
+        '''
+
+        MO = self.mo(self.ao(x))
+        d2MO = self.mo(self.ao(x,derivative=2))
+        return self.fc(self.kinpool(MO,d2MO))
         
 
     def nuclear_potential(self,pos):

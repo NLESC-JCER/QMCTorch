@@ -104,8 +104,8 @@ class WaveFunction(nn.Module):
                       grad_outputs=z,
                       retain_graph=True,
                       only_inputs=True,
-                      #create_graph=True)[0]
                       allow_unused=True)[0]    
+            
             hess += tmp[:,idim]
         
         return -0.5 * hess.view(-1,1)
