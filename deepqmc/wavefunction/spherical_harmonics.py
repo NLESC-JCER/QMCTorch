@@ -169,7 +169,7 @@ def _nabla_spherical_harmonics_l2(xyz,m):
         Y21  = 1/2\sqrt(15/\pi) (x+z)/r^2 - 2 * xz (x+y+z)/r^3
         Y22  = 1/4\sqrt(15/\pi)  ( 2(x-y)/r^2 - 2 *(xx-yy)(x+y+z)/r^3  )
     '''
-    print('hello')
+    
     r = torch.sqrt((xyz**2).sum(3))
     r2 = r**2
     r3 = r**3

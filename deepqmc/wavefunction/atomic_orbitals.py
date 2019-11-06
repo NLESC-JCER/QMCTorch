@@ -98,7 +98,7 @@ class AtomicOrbitals(nn.Module):
         
         return torch.sqrt(B/C)*A
 
-    def _radial_slater(self, R, xyz=None, derivative=0):
+    def _radial_slater(self, R, xyz=None, derivative=0,jacobian=True):
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R)
 
@@ -113,37 +113,37 @@ class AtomicOrbitals(nn.Module):
                 return nabla_rn*er + rn*nabla_er 
 
 
-    def _radial_gaussian(self,R, xyz=None, derivative=0):
+    def _radial_gaussian(self,R, xyz=None, derivative=0,jacobian=True):
+
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
             
 
         elif derivative > 0:
             
-            sum_xyz = xyz.sum(3)
-            
             rn = R**(self.bas_n)
-            nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
+            nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
 
             er = torch.exp(-self.bas_exp*R**2)
-            nabla_er = -2*self.bas_exp * sum_xyz * er
+            nabla_er = -2*(self.bas_exp * er).unsqueeze(-1) * xyz
 
             if derivative == 1:
-                return nabla_rn *er + rn*nabla_er 
+                if jacobian:
+                    nabla_rn = nabla_rn.sum(3)
+                    nabla_er = nabla_er.sum(3)
+                    return nabla_rn*er + rn*nabla_er 
+                else:
+                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er 
                 
-
             elif derivative == 2:
 
                 lap_rn = self.bas_n * ( 3*R**(self.bas_n-2) \
-                    + (xyz**2).sum(3) * (self.bas_n-2) * R**(self.bas_n-4) )
+                   + (xyz**2).sum(3) * (self.bas_n-2) * R**(self.bas_n-4) )
 
                 lap_er = 4 * self.bas_exp**2 * (xyz**2).sum(3) * er \
                 - 6 * self.bas_exp * er
-                
-                print((lap_rn*er).shape)
-                print((nabla_rn*nabla_er).shape)
-                print((rn*lap_er).shape)
-                return lap_rn*er + 2*nabla_rn*nabla_er + rn*lap_er
+
+                return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
                 
 
     def _radial_gausian_cart(self,R,xyz=None, derivative=0):
@@ -179,12 +179,14 @@ class AtomicOrbitals(nn.Module):
         if derivative == 0 :
             #bas = R * Y
             bas = R
+            #bas = Y
 
         elif derivative == 1 :
             dR = self.radial(r,xyz=xyz,derivative=1)
             dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
             #bas = dR * Y  + R * dY
             bas = dR
+            #bas = dY
 
         elif derivative == 2:            
             dR = self.radial(r,xyz=xyz,derivative=1)
@@ -195,6 +197,7 @@ class AtomicOrbitals(nn.Module):
 
             #bas = d2R * Y + 2. * dR * dY + R * d2Y
             bas = d2R
+            #bas = d2Y
         
         # product with coefficients
         # -> (Nbatch,Nelec,Nbas)

@@ -128,6 +128,7 @@ mol = Molecule(atom=atom_str, basis_type='gto', basis='sto-3g',unit='bohr')
 wf = OrbitalH2(mol)
 
 x = Variable(torch.rand(5,3*mol.nelec))
+#x = Variable(torch.ones(3,3*mol.nelec))
 x.requires_grad=True
 
 dAO  = wf.ao(x,derivative=1)
