@@ -189,10 +189,10 @@ class AtomicOrbitals(nn.Module):
             #bas = dY
 
         elif derivative == 2:            
-            dR = self.radial(r,xyz=xyz,derivative=1)
+            dR = self.radial(r,xyz=xyz,derivative=1,jacobian=False)
             dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
             
-            d2R = self.radial(r,xyz=xyz,derivative=2)
+            d2R = self.radial(r,xyz=xyz,derivative=2,jacobian=False)
             d2Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=2)
 
             #bas = d2R * Y + 2. * dR * dY + R * d2Y
