@@ -10,7 +10,7 @@ from tqdm import tqdm
 from time import time
 
 def btrace(M):
-    return torch.diagonal(M,dim1=-2,dim2=-1).prod(-1)
+    return torch.diagonal(M,dim1=-2,dim2=-1).sum(-1)
 
 def bproj(M,P):
     return P.transpose(1,2) @ M @ P
@@ -84,14 +84,14 @@ class KineticPooling(nn.Module):
             
             d2Aup = d2MO.index_select(1,self.index_up).index_select(2,cup)
             d2Adown = d2MO.index_select(1,self.index_down).index_select(2,cdown)
+            pd = torch.det(Aup) * torch.det(Adown)
+            out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown)) * pd
 
-            out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown))
+            # if not return_local_energy:
+            #     pd = torch.det(Aup) * torch.det(Adown)
+            #     out[:,ic] *= pd
 
-            if not return_local_energy:
-                pd = torch.det(Aup) * torch.det(Adown)
-                out[:,ic] *= pd
-
-        return -0.5*out
+        return -0.5*out.view(-1,1)
 
     # def forward(self,A,dA,d2A):
 

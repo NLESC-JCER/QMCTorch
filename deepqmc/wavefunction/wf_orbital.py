@@ -28,7 +28,8 @@ class Orbital(WaveFunction):
 
         # initialize the MO coefficients
         mo_coeff =  torch.tensor(mol.get_mo_coeffs(code=scf)).float()
-        self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
+        self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))        
+        #self.mo.weight = nn.Parameter(torch.eye(mol.norb))
 
         # jastrow
         self.edist = ElectronDistance(mol.nelec,3)

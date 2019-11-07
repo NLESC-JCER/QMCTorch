@@ -26,7 +26,7 @@ mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
 wf = Orbital(mol,kinetic_jacobi=True)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=100, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer

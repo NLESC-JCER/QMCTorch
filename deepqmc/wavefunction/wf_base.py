@@ -87,7 +87,7 @@ class WaveFunction(nn.Module):
 
         if out is None:
             out = self.forward(pos)
-
+        
         # compute the jacobian            
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
@@ -108,7 +108,7 @@ class WaveFunction(nn.Module):
             
             hess += tmp[:,idim]
         
-        return -0.5 * hess.view(-1,1)
+        return -0.5 * hess.view(-1,1) 
     
     def kinetic_energy_finite_difference(self,pos,eps=1E-3):
         '''Compute the second derivative of the network
