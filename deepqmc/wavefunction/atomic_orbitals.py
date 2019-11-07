@@ -5,7 +5,7 @@ from math import pi as PI
 import numpy as np
 
 from deepqmc.wavefunction.spherical_harmonics import SphericalHarmonics
-
+from deepqmc.wavefunction.grad_spherical_harmonics import GradSphericalHarmonics
 class AtomicOrbitals(nn.Module):
 
     def __init__(self,mol):
@@ -177,27 +177,21 @@ class AtomicOrbitals(nn.Module):
         # treat the different cases
         # of derivative values
         if derivative == 0 :
-            #bas = R * Y
-            bas = R
-            #bas = Y
+            bas = R * Y
 
         elif derivative == 1 :
             dR = self.radial(r,xyz=xyz,derivative=1)
             dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
-            #bas = dR * Y  + R * dY
-            bas = dR
-            #bas = dY
+            bas = dR * Y  + R * dY
 
         elif derivative == 2:            
             dR = self.radial(r,xyz=xyz,derivative=1,jacobian=False)
-            dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
+            dY = GradSphericalHarmonics(xyz,self.bas_l,self.bas_m)
             
-            d2R = self.radial(r,xyz=xyz,derivative=2,jacobian=False)
+            d2R = self.radial(r,xyz=xyz,derivative=2)
             d2Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=2)
 
-            #bas = d2R * Y + 2. * dR * dY + R * d2Y
-            bas = d2R
-            #bas = d2Y
+            bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
         
         # product with coefficients
         # -> (Nbatch,Nelec,Nbas)
