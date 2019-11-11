@@ -2,7 +2,7 @@ import sys
 import numpy as np
 import torch
 from torch import nn
-
+from time import time
 
 from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
@@ -73,7 +73,20 @@ class Orbital(WaveFunction):
         return self.fc(x)
         #return J*x
 
-    def kinetic_energy_jacobi(self,x,**kwargs):
+
+    def local_energy(self,pos):
+        ''' local energy of the sampling points.'''
+        t0 = time()  
+        print('Kinetic Energy')  
+        ke = self.kinetic_energy_jacobi(pos,return_local_energy=True)
+        print('Kinetic done in %f' %(time()-t0))
+        
+        return ke \
+             + self.nuclear_potential(pos)  \
+             + self.electronic_potential(pos) \
+             + self.nuclear_repulsion()   
+
+    def kinetic_energy_jacobi(self,x,return_local_energy=False, **kwargs):
         '''Compute the value of the kinetic enery using
         the Jacobi formula for derivative of determinant.
 
@@ -85,7 +98,7 @@ class Orbital(WaveFunction):
 
         MO = self.mo(self.ao(x))
         d2MO = self.mo(self.ao(x,derivative=2))
-        return self.fc(self.kinpool(MO,d2MO))
+        return self.fc(self.kinpool(MO,d2MO,return_local_energy=return_local_energy))
         
 
     def nuclear_potential(self,pos):

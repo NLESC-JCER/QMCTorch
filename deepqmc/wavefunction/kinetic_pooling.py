@@ -84,12 +84,12 @@ class KineticPooling(nn.Module):
             
             d2Aup = d2MO.index_select(1,self.index_up).index_select(2,cup)
             d2Adown = d2MO.index_select(1,self.index_down).index_select(2,cdown)
-            pd = torch.det(Aup) * torch.det(Adown)
-            out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown)) * pd
+            #pd = torch.det(Aup) * torch.det(Adown)
+            out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown)) #* pd
 
-            # if not return_local_energy:
-            #     pd = torch.det(Aup) * torch.det(Adown)
-            #     out[:,ic] *= pd
+            if not return_local_energy:
+                pd = torch.det(Aup) * torch.det(Adown)
+                out[:,ic] *= pd
 
         return -0.5*out.view(-1,1)
 

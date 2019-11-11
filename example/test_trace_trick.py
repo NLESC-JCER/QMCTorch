@@ -181,7 +181,7 @@ class OrbitalH2(Orbital):
 # define the molecule
 #mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
 
-atom_str = 'Li 0 0 -0.69; H 0 0 0.69'
+atom_str = 'C 0 0 -0.69; O 0 0 0.69'
 m = gto.M(atom=atom_str, basis='sto-3g',unit='bohr')
 mol = Molecule(atom=atom_str, basis_type='gto', basis='sto-3g',unit='bohr')
 
