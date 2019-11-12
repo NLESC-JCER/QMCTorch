@@ -84,48 +84,10 @@ class KineticPooling(nn.Module):
             
             d2Aup = d2MO.index_select(1,self.index_up).index_select(2,cup)
             d2Adown = d2MO.index_select(1,self.index_down).index_select(2,cdown)
-            #pd = torch.det(Aup) * torch.det(Adown)
-            out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown)) #* pd
+            out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown))
 
             if not return_local_energy:
                 pd = torch.det(Aup) * torch.det(Adown)
                 out[:,ic] *= pd
 
         return -0.5*out.view(-1,1)
-
-    # def forward(self,A,dA,d2A):
-
-    #     ''' Compute the kinetic energy using the trace trick
-    #     for a product of spin up.down determinant
-    #     .. math::
-
-    #         T \Psi / \Psi =  T Dup Ddwn / (Dup Ddwn)
-    #                       = -1/2 ( \Delta Dup / Dup + 2 \nabla Dup/ Dup \nabla Ddwn / Ddwn + \Delta Ddwn / Ddwn)
-
-    #         using the trace trick with D = |A| :
-    #             OD/D = trace(A^{-1} O A)
-
-    #     Args:
-    #         A : matrix of MO vals (Nbatch, Nelec, Nmo)
-    #         dA : matrix of \nabla MO vals (Nbatch, Nelec, Nmo)
-    #         d2A : matrix of \Delta MO vals (Nbatch, Nelec, Nmo)
-    #     Return:
-    #         K : T Psi/Psi (Nbatch, Ndet)
-    #     '''
-    #     nbatch = A.shape[0]
-    #     out = torch.zeros(nbatch,self.nconfs)
-                
-    #     invAup = torch.inverse(bproj(A,self.Pup))
-    #     invAdown = torch.inverse(bproj(A,self.Pdown))
-
-    #     dAup = bproj(dA,self.Pup)
-    #     dAdown = bproj(dA,self.Pdown)
-            
-    #     d2Aup = bproj(d2A,self.Pup)
-    #     d2Adown = bproj(d2A,self.Pdown)            
-
-    #     out = btrace(invAup@d2Aup)  \
-    #         + 2*btrace( (invAup@dAup) @ (invAdown@dAdown) ) \
-    #         + btrace(invAdown@d2Adown)
-
-    #     return -0.5*out.view(-1,1)

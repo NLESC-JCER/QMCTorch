@@ -52,7 +52,8 @@ class Orbital(WaveFunction):
         self.fc.clip = False
 
         if kinetic_jacobi:
-            self.kinetic_energy=self.kinetic_energy_jacobi
+            self.kinetic_energy = self.kinetic_energy_jacobi
+            # self.local_energy = self.local_energy_jacobi
         
     def forward(self,x):
         ''' Compute the value of the wave function.
