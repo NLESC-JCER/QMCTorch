@@ -99,11 +99,12 @@ class WaveFunction(nn.Module):
         hess = torch.zeros(jacob.shape[0])
         
         for idim in range(jacob.shape[1]):
-            print('____',idim,'/',jacob.shape[1])
+            #print('____',idim,'/',jacob.shape[1])
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
-                      retain_graph=True)[0]
-                      #create_graph=True)[0]
+                      only_inputs=True,
+                      #retain_graph=True)[0]
+                      create_graph=True)[0] # create_graph is REQUIRED and is causing memory issues for large systems
                       #allow_unused=True)[0]    
             hess += tmp[:,idim]
         
