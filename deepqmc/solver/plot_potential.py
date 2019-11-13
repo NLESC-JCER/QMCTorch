@@ -1,3 +1,4 @@
+import os
 import torch
 from torch.autograd import Variable
 import numpy as np
@@ -39,7 +40,8 @@ def regular_mesh_3d(xmin=-2,xmax=2,ymin=-2.,ymax=2,zmin=-5,zmax=5,nx=5,ny=5,nz=5
 
 class plotter1d(object):
 
-    def __init__(self, wf, domain, res=51, sol = None, plot_weight=False, plot_grad=False):
+    def __init__(self, wf, domain, res=51, sol = None, 
+                 plot_weight=False, plot_grad=False, save=None):
         '''Dynamic plot of a 1D-wave function during the optimization
 
         Args:
@@ -58,6 +60,8 @@ class plotter1d(object):
 
         self.plot_weight = plot_weight
         self.plot_grad = plot_grad
+        self.save = save
+        self.iter = 0
 
         self.POS = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1))
         pos = self.POS.detach().numpy().flatten()  
@@ -86,6 +90,9 @@ class plotter1d(object):
         plt.draw()
         self.fig.canvas.flush_events()
 
+        if self.save is not None:
+            self._save_pic()
+
     def drawNow(self):
         '''Update the plot.'''
 
@@ -107,6 +114,15 @@ class plotter1d(object):
         #self.fig.canvas.draw() 
         plt.draw()
         self.fig.canvas.flush_events()
+
+        if self.save is not None:
+            self._save_pic()
+
+    def _save_pic(self):
+        fname = 'image_%03d.png' %self.iter
+        fname = os.path.join(self.save,fname)
+        plt.savefig(fname)
+        self.iter += 1
 
 def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=True,sol=None,ax=None,load=None):
         '''Plot a 1D wave function.

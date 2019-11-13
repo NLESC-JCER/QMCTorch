@@ -35,7 +35,7 @@ scheduler = optim.lr_scheduler.StepLR(opt,step_size=100,gamma=0.75)
 solver = SolverPotential(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
 
 # train the wave function
-plotter = plotter1d(wf,domain,100,sol=ho1d_sol)
+plotter = plotter1d(wf,domain,100,sol=ho1d_sol,save='./image/')
 solver.run(300,loss = 'variance', plot = plotter,save='model.pth' )
 
 # plot the final wave function 
