@@ -158,14 +158,24 @@ class Orbital(WaveFunction):
 
 
     def atomic_distances(self,pos):
+        '''Return atomic distances.'''
         d = []
         for iat1 in range(self.natom-1):
             at1 = self.atoms[iat1]
-            c1 = self.ao.atom_coords[iat1,:]
+            c1 = self.ao.atom_coords[iat1,:].detach().numpy()
             for iat2 in range(iat1+1,self.natom):
                 at2 = self.atoms[iat2]
-                c2 = self.ao.atom_coords[iat2,:]
-                d.append((at1,at2,torch.sqrt(((c1-c2)**2).sum())))
+                c2 = self.ao.atom_coords[iat2,:].detach().numpy()
+                d.append((at1,at2,np.sum(np.sqrt(((c1-c2)**2)))))
+        return d
+
+    def geometry(self,pos):
+        '''Return geometries.'''
+        d = []
+        for iat in range(self.natom):
+            at = self.atoms[iat]
+            xyz = self.ao.atom_coords[iat,:].detach().numpy().tolist()
+            d.append((at,xyz))
         return d
 
     def get_configs(self,configs,mol):
