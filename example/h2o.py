@@ -17,13 +17,13 @@ from deepqmc.solver.plot_data import plot_observable
 
 # define the molecule
 #mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
-mol = Molecule(atom='water.xyz', basis_type='gto', basis='sto-3g')
+mol = Molecule(atom='water_line.xyz', basis_type='gto', basis='sto-3g')
 
 # define the wave function
-wf = Orbital(mol)
+wf = Orbital(mol,kinetic_jacobi=True)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=5000, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -31,15 +31,15 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-solver.single_point()
+#pos, _ , _ = solver.single_point()
 
 # plot the molecule
 #plot_molecule(solver)
 
 # optimize the geometry
-# solver.configure(task='geo_opt')
-# solver.observable(['local_energy','atomic_distances'])
-# solver.run(5,loss='energy')
+solver.configure(task='geo_opt')
+solver.observable(['local_energy','atomic_distances'])
+solver.run(50,loss='energy')
 
 # plot the data
 # plot_observable(solver.obs_dict,e0=-1.16)
