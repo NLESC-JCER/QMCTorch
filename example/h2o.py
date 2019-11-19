@@ -1,5 +1,6 @@
 import sys
 import torch
+from torch import optim
 from torch.autograd import Variable
 from torch.optim import Adam
 
@@ -17,7 +18,8 @@ from deepqmc.solver.plot_data import plot_observable
 
 # define the molecule
 #mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
-mol = Molecule(atom='water_line.xyz', basis_type='gto', basis='sto-3g')
+mol = Molecule(atom='water_line_small.xyz', unit='angs', 
+			   basis_type='gto', basis='sto-3g')
 
 # define the wave function
 wf = Orbital(mol,kinetic_jacobi=True)
@@ -27,22 +29,23 @@ sampler = Metropolis(nwalkers=1000, nstep=5000, step_size = 0.5,
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
-opt = Adam(wf.parameters(),lr=0.01)
+opt = Adam(wf.parameters(),lr=0.1)
+
+# scheduler
+scheduler = optim.lr_scheduler.StepLR(opt,step_size=20,gamma=0.75)
 
 # solver
-solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-#pos, _ , _ = solver.single_point()
+solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
 
-# plot the molecule
-#plot_molecule(solver)
 
 # optimize the geometry
 solver.configure(task='geo_opt')
 solver.observable(['local_energy','atomic_distances'])
-solver.run(50,loss='energy')
+solver.run(150,loss='energy')
+solver.save_traj('h2o_traj.xyz')
 
 # plot the data
-# plot_observable(solver.obs_dict,e0=-1.16)
+plot_observable(solver.obs_dict)
 
 
 

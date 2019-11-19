@@ -22,8 +22,10 @@ def printd(rank,*args):
 
 class SolverOrbital(SolverBase):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None,
+                 scheduler=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
+        self.scheduler = scheduler
 
         # task
         self.configure(task='geo_opt')
@@ -102,6 +104,9 @@ class SolverOrbital(SolverBase):
         cumulative_loss = []
         min_loss = 1E3
 
+        # get the initial observalbe
+
+        self.get_observable(self.obs_dict,pos)
         for n in range(nepoch):
             print('----------------------------------------')
             print('epoch %d' %n)
@@ -152,5 +157,26 @@ class SolverOrbital(SolverBase):
                 
                 self.dataloader.dataset.data = pos
 
+            if self.scheduler is not None:
+                self.scheduler.step()
+
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
+
+    def save_traj(self,fname):
+
+        f = open(fname,'w')
+        xyz = self.obs_dict['geometry']
+        natom = len(xyz[0])
+        conv2bohr = 1.88973
+        for snap in xyz:
+            f.write('%d \n\n' %natom)
+            for at in snap:
+                f.write('%s % 7.5f % 7.5f %7.5f\n' %(at[0],at[1][0]/conv2bohr,
+                                                           at[1][1]/conv2bohr,
+                                                           at[1][2]/conv2bohr))
+            f.write('\n')
+        f.close()
+
+
+
