@@ -25,7 +25,7 @@ mol = Molecule(atom='water_line_small.xyz', unit='angs',
 wf = Orbital(mol,kinetic_jacobi=True)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=5000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer

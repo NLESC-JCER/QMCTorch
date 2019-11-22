@@ -16,9 +16,13 @@ class Orbital(WaveFunction):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
+        self.mol = mol
         self.atoms = mol.atoms
         self.bonds = mol.bonds
         self.natom = mol.natom
+
+        # scf code
+        self.scf_code = scf
 
         # define the atomic orbital layer
         self.ao = AtomicOrbitals(mol)
@@ -27,9 +31,7 @@ class Orbital(WaveFunction):
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
 
         # initialize the MO coefficients
-        mo_coeff =  torch.tensor(mol.get_mo_coeffs(code=scf)).float()
-        self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))        
-        #self.mo.weight = nn.Parameter(torch.eye(mol.norb))
+        self.mo.weight = self.get_mo_coeffs()
 
         # jastrow
         self.edist = ElectronDistance(mol.nelec,3)
@@ -37,7 +39,6 @@ class Orbital(WaveFunction):
 
         # define the SD we want
         self.configs = self.get_configs(configs,mol)
-        #self.configs = (torch.LongTensor([np.array([0])]), torch.LongTensor([np.array([0])]))
         self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
@@ -54,7 +55,15 @@ class Orbital(WaveFunction):
         if kinetic_jacobi:
             self.kinetic_energy = self.kinetic_energy_jacobi
             # self.local_energy = self.local_energy_jacobi
+
+    def get_mo_coeffs(self):
+        mo_coeff =  torch.tensor(self.mol.get_mo_coeffs(code=self.scf_code)).float()
+        return nn.Parameter(mo_coeff.transpose(0,1))        
         
+    def update_mo_coeffs(self):
+        self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
+        self.mo.weight = self.get_mo_coeffs()
+
     def forward(self,x):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
@@ -189,7 +198,6 @@ class Orbital(WaveFunction):
         conf = (torch.LongTensor([np.array(range(mol.nup))]), 
                 torch.LongTensor([np.array(range(mol.ndown))]))
         return conf
-
 
 
 

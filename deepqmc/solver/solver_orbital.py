@@ -157,6 +157,9 @@ class SolverOrbital(SolverBase):
                 
                 self.dataloader.dataset.data = pos
 
+            if self.task=='geo_opt':
+                self.wf.update_mo_coeffs()
+
             if self.scheduler is not None:
                 self.scheduler.step()
 

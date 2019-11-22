@@ -303,7 +303,6 @@ class Molecule(object):
             pyscf_basis = self.basis
 
         self._get_atoms_str()
-        print(self.atoms_str)
 
         mol = gto.M(atom=self.atoms_str,basis=pyscf_basis,unit=self.unit)
         rhf = scf.RHF(mol).run()
