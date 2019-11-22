@@ -81,8 +81,7 @@ class SolverBase(object):
         '''Performs a single point calculation.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
-        ##e = self.energy(pos)
-        #s = self.variance(pos)
+
         e,s = self.wf._energy_variance(pos)
         if prt:
             print('Energy   : ',e)

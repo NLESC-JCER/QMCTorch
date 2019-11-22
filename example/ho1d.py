@@ -41,9 +41,3 @@ solver.run(300,loss = 'variance', plot = plotter,save='model.pth' )
 # plot the final wave function 
 plot_results_1d(solver,domain,100,ho1d_sol,e0=0.5,load='model.pth')
 
-
-
-
-
-
-

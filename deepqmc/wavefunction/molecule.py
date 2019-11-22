@@ -271,6 +271,11 @@ class Molecule(object):
 
     def get_mo_coeffs(self,code='pyscf'):
 
+        if code is None:
+            code = self.code_mo
+        else:
+            self.code_mo = code
+
         if self.basis_type == 'gto':
 
             if code.lower() not in ['pyscf']:
@@ -297,9 +302,23 @@ class Molecule(object):
         else:
             pyscf_basis = self.basis
 
+        self._get_atoms_str()
+        print(self.atoms_str)
+
         mol = gto.M(atom=self.atoms_str,basis=pyscf_basis,unit=self.unit)
         rhf = scf.RHF(mol).run()
         return self._normalize_columns(rhf.mo_coeff)
+
+
+    def _get_atoms_str(self):
+        self.atoms_str = ''
+        for iA in range(self.natom):
+            self.atoms_str += self.atoms[iA] + ' '
+            self.atoms_str += ' '.join(str(xi) for xi in self.atom_coords[iA])
+            self.atoms_str += ';'
+
+    def update_mo_coeffs(self):
+        return self.get_mo_coeffs(code=None)
 
     @staticmethod
     def _normalize_columns(mat):

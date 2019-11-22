@@ -156,7 +156,6 @@ class Orbital(WaveFunction):
                 vnn += Z0*Z1/rnn
         return vnn
 
-
     def atomic_distances(self,pos):
         '''Return atomic distances.'''
         d = []
