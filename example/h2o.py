@@ -25,7 +25,7 @@ mol = Molecule(atom='water_line_small.xyz', unit='angs',
 wf = Orbital(mol,kinetic_jacobi=True)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=50, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -41,19 +41,8 @@ solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
 # optimize the geometry
 solver.configure(task='geo_opt')
 solver.observable(['local_energy','atomic_distances'])
-solver.run(150,loss='energy')
+solver.run(5,loss='energy')
 solver.save_traj('h2o_traj.xyz')
 
 # plot the data
 plot_observable(solver.obs_dict)
-
-
-
-
-
-
-
-
-
-
-

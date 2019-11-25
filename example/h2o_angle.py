@@ -37,13 +37,13 @@ wf = Orbital(mol,kinetic_jacobi=True)
 
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=50, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=5000, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler)
 pos,e,v = solver.single_point()
-sampler.nstep = 5
+sampler.nstep = 500
 
 angles = np.linspace(0,90,10)
 R = rot_mat(angles)
