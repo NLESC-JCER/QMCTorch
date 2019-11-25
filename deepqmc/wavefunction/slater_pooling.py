@@ -63,7 +63,7 @@ class SlaterPooling(nn.Module):
         '''
         nbatch = input.shape[0]
         out = torch.zeros(nbatch,self.nconfs)
-                
+           
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
 
             mo_up = input.index_select(1,self.index_up).index_select(2,cup)

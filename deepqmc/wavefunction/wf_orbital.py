@@ -2,24 +2,27 @@ import sys
 import numpy as np
 import torch
 from torch import nn
-
+from time import time
 
 from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
+from deepqmc.wavefunction.kinetic_pooling import KineticPooling
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
-
-
 
 class Orbital(WaveFunction):
 
-    def __init__(self,mol,configs='ground_state',scf='pyscf'):
+    def __init__(self,mol,configs='ground_state',scf='pyscf',kinetic_jacobi=False):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
+        self.mol = mol
         self.atoms = mol.atoms
         self.bonds = mol.bonds
         self.natom = mol.natom
+
+        # scf code
+        self.scf_code = scf
 
         # define the atomic orbital layer
         self.ao = AtomicOrbitals(mol)
@@ -28,8 +31,7 @@ class Orbital(WaveFunction):
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
 
         # initialize the MO coefficients
-        mo_coeff =  torch.tensor(mol.get_mo_coeffs(code=scf)).float()
-        self.mo.weight = nn.Parameter(mo_coeff.transpose(0,1))
+        self.mo.weight = self.get_mo_coeffs()
 
         # jastrow
         self.edist = ElectronDistance(mol.nelec,3)
@@ -37,24 +39,37 @@ class Orbital(WaveFunction):
 
         # define the SD we want
         self.configs = self.get_configs(configs,mol)
-        #self.configs = (torch.LongTensor([np.array([0])]), torch.LongTensor([np.array([0])]))
         self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs,mol.nup,mol.ndown)
 
+        # poolin operation to directly compute the kinetic energies via Jacobi formula
+        self.kinpool = KineticPooling(self.configs,mol.nup,mol.ndown)
+
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
         self.fc.weight.data.fill_(1.)
         self.fc.clip = False
+
+        if kinetic_jacobi:
+            self.kinetic_energy = self.kinetic_energy_jacobi
+            # self.local_energy = self.local_energy_jacobi
+
+    def get_mo_coeffs(self):
+        mo_coeff =  torch.tensor(self.mol.get_mo_coeffs(code=self.scf_code)).float()
+        return nn.Parameter(mo_coeff.transpose(0,1))        
         
+    def update_mo_coeffs(self):
+        self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
+        self.mo.weight = self.get_mo_coeffs()
+
     def forward(self,x):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
         Args:
-            parameters : variational param of the wf
-            pos: position of the electrons
+            x: position of the electrons
 
         Returns: values of psi
         '''
@@ -65,8 +80,36 @@ class Orbital(WaveFunction):
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
-        return x
+        return self.fc(x)
         #return J*x
+
+
+    def local_energy(self,pos):
+        ''' local energy of the sampling points.'''
+        t0 = time()  
+        print('Jacobi Kinetic Energy')  
+        ke = self.kinetic_energy_jacobi(pos,return_local_energy=True)
+        print('Jacobi Kinetic done in %f' %(time()-t0))
+        
+        return ke \
+             + self.nuclear_potential(pos)  \
+             + self.electronic_potential(pos) \
+             + self.nuclear_repulsion()   
+
+    def kinetic_energy_jacobi(self,x,return_local_energy=False, **kwargs):
+        '''Compute the value of the kinetic enery using
+        the Jacobi formula for derivative of determinant.
+
+        Args:
+            x: position of the electrons
+
+        Returns: values of \Delta \Psi
+        '''
+
+        MO = self.mo(self.ao(x))
+        d2MO = self.mo(self.ao(x,derivative=2))
+        return self.fc(self.kinpool(MO,d2MO,return_local_energy=return_local_energy))
+        
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -122,16 +165,25 @@ class Orbital(WaveFunction):
                 vnn += Z0*Z1/rnn
         return vnn
 
-
     def atomic_distances(self,pos):
+        '''Return atomic distances.'''
         d = []
         for iat1 in range(self.natom-1):
             at1 = self.atoms[iat1]
-            c1 = self.ao.atom_coords[iat1,:]
+            c1 = self.ao.atom_coords[iat1,:].detach().numpy()
             for iat2 in range(iat1+1,self.natom):
                 at2 = self.atoms[iat2]
-                c2 = self.ao.atom_coords[iat2,:]
-                d.append((at1,at2,torch.sqrt(((c1-c2)**2).sum())))
+                c2 = self.ao.atom_coords[iat2,:].detach().numpy()
+                d.append((at1,at2,np.sum(np.sqrt(((c1-c2)**2)))))
+        return d
+
+    def geometry(self,pos):
+        '''Return geometries.'''
+        d = []
+        for iat in range(self.natom):
+            at = self.atoms[iat]
+            xyz = self.ao.atom_coords[iat,:].detach().numpy().tolist()
+            d.append((at,xyz))
         return d
 
     def get_configs(self,configs,mol):
@@ -146,7 +198,6 @@ class Orbital(WaveFunction):
         conf = (torch.LongTensor([np.array(range(mol.nup))]), 
                 torch.LongTensor([np.array(range(mol.ndown))]))
         return conf
-
 
 
 

@@ -23,10 +23,16 @@ class SolverBase(object):
     def observable(self,obs):
         '''Create the observalbe we want to track.'''
         self.obs_dict = {}
+        
         for k in obs:
             self.obs_dict[k] = []
+
         if 'local_energy' not in self.obs_dict:
             self.obs_dict['local_energy'] = []
+
+        if self.task == 'geo_opt' and 'geometry' not in self.obs_dict:
+            self.obs_dict['geometry'] = []
+
 
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
         ''' sample the wave function.'''
@@ -75,8 +81,7 @@ class SolverBase(object):
         '''Performs a single point calculation.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
-        ##e = self.energy(pos)
-        #s = self.variance(pos)
+
         e,s = self.wf._energy_variance(pos)
         if prt:
             print('Energy   : ',e)

@@ -23,7 +23,7 @@ mol = Molecule(atom='C 0 0 0; O 0 0 2.173',
 
 
 # define the wave function
-wf = Orbital(mol)
+wf = Orbital(mol,kinetic_jacobi=False)
 
 #sampler
 sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 

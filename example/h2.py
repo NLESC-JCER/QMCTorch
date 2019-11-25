@@ -1,4 +1,6 @@
 import sys
+import torch
+from torch.autograd import Variable
 from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
@@ -18,8 +20,9 @@ from deepqmc.solver.plot_data import plot_observable
 # bond dissociation energy 4.478 eV -> 0.16 hartree
 
 class OrbitalH2(Orbital):
+
 	def __init__(self,mol):
-		super(OrbitalH2,self).__init__(mol)
+		super(OrbitalH2,self).__init__(mol,kinetic_jacobi=True)
 
 	def pool(self,x):
 		return (x[:,0,0]*x[:,1,0]).view(-1,1)
@@ -27,8 +30,8 @@ class OrbitalH2(Orbital):
 
 
 # define the molecule
-#mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', basis_type='sto', basis='sz',unit='bohr')
+mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='gto', basis='sto-3g',unit='bohr')
+#mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', basis_type='gto', basis='sto-3g',unit='bohr')
 
 # define the wave function
 wf = OrbitalH2(mol)
@@ -42,18 +45,18 @@ opt = Adam(wf.parameters(),lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
-solver.single_point()
+#pos = solver.single_point()
 
 # plot the molecule
 #plot_molecule(solver)
 
 # optimize the geometry
-#solver.configure(task='geo_opt')
-#solver.observable(['local_energy','atomic_distances'])
-#solver.run(5,loss='energy')
+solver.configure(task='geo_opt')
+solver.observable(['local_energy','atomic_distances'])
+solver.run(5,loss='energy')
 
 # plot the data
-#plot_observable(solver.obs_dict,e0=-1.16)
+plot_observable(solver.obs_dict,e0=-1.16)
 
 
 

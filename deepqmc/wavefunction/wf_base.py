@@ -87,11 +87,12 @@ class WaveFunction(nn.Module):
 
         if out is None:
             out = self.forward(pos)
-
+        
         # compute the jacobian            
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
+                     only_inputs=True,
                      create_graph=True)[0]
         
         # compute the diagonal element of the Hessian
@@ -99,16 +100,17 @@ class WaveFunction(nn.Module):
         hess = torch.zeros(jacob.shape[0])
         
         for idim in range(jacob.shape[1]):
-            #print('____',idim,'/',jacob.shape[1])
+
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
                       only_inputs=True,
                       #retain_graph=True)[0]
                       create_graph=True)[0] # create_graph is REQUIRED and is causing memory issues for large systems
                       #allow_unused=True)[0]    
+              
             hess += tmp[:,idim]
         
-        return -0.5 * hess.view(-1,1)
+        return -0.5 * hess.view(-1,1) 
     
     def kinetic_energy_finite_difference(self,pos,eps=1E-3):
         '''Compute the second derivative of the network
@@ -155,11 +157,9 @@ class WaveFunction(nn.Module):
 
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        t0 = time()  
-        print('Kinetic Energy')  
+        
         wf = self.forward(pos)
         ke = self.kinetic_energy(pos,out=wf)
-        print('Kinetic done in %f' %(time()-t0))
         
         return ke/wf \
              + self.nuclear_potential(pos)  \
