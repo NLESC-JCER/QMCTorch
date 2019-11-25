@@ -87,9 +87,9 @@ class Orbital(WaveFunction):
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
         t0 = time()  
-        print('Kinetic Energy')  
+        print('Jacobi Kinetic Energy')  
         ke = self.kinetic_energy_jacobi(pos,return_local_energy=True)
-        print('Kinetic done in %f' %(time()-t0))
+        print('Jacobi Kinetic done in %f' %(time()-t0))
         
         return ke \
              + self.nuclear_potential(pos)  \

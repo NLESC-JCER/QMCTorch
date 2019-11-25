@@ -155,11 +155,9 @@ class WaveFunction(nn.Module):
 
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        t0 = time()  
-        print('Kinetic Energy')  
+        
         wf = self.forward(pos)
         ke = self.kinetic_energy(pos,out=wf)
-        print('Kinetic done in %f' %(time()-t0))
         
         return ke/wf \
              + self.nuclear_potential(pos)  \
