@@ -11,7 +11,7 @@ from time import time
 
 class MolecularOrbitals(nn.Module):
 
-    """Applies a slater determinant pooling in the active space."""
+    """Computes the MO from the AO a la Ferminet."""
 
     def __init__(self,mo_coeffs,configs,nup,ndown):
 
@@ -27,22 +27,36 @@ class MolecularOrbitals(nn.Module):
         self.index_down = torch.arange(nup,nup+ndown)
 
         assert(nup==ndown)
-        self.W = torch.zeros(self.nconfs,self.nmo,self.nup)
+        self.nup = nup
+        self.ndown = ndown
 
-    def _get_matrix(self):
-           
+        self.Wup = torch.zeros(self.nconfs,self.nmo,self.nup)
+        self.Wdown = torch.zeros(self.nconfs,self.nmo,self.nup)
+
+        self._get_matrices()
+
+    def _get_matrices(self):
+        '''Computes the matrix W that expand the AO in the MOs of each
+        spin up / spin down configuration.'''
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
 
-            W[2*ic] = self.mo_coeffs.index_select(1,cup)
-            W[2*ic+1] = self.mo_coeffs.index_select(1,cdown)
+            self.Wup[ic] = self.mo_coeffs.index_select(1,cup)
+            self.Wdown[ic] = self.mo_coeffs.index_select(1,cdown)
+
+    def forward(self,ao):
+        """compute the MOs.
+        
+        Args:
+            ao (torch.tensor): values of the atomic orbitals
+        
+        Returns:
+            torch.tensor: values of the MO in each configuration
+        """
+        
+        return self._project(ao[:,:self.nup,:],self.Wup), \
+            self._project(ao[:,self.nup:,:],self.Wdown)
+
+    def _project(self,ao,w):
+        return ao.unsqueeze(1) @ w.unsqueeze(0)
+
             
-if __name__ == "__main__":
-
-
-    x = Variable(torch.rand(10,5,5))
-    x.requires_grad = True
-    det = BatchDeterminant.apply(x)
-    det.backward(torch.ones(10))
-
-    det_true = torch.tensor([torch.det(xi).item() for xi in x])
-    print(det-det_true)
