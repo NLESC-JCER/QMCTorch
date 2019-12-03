@@ -2,8 +2,7 @@
 
 Deep Learning for Quantum Monte Carlo Simulations
 
-[![Build Status](https://travis-ci.com/NLESC-JCER/DeepQMC.svg?branch=master)](https://travis-ci.org/NLESC-JCER/DeepQMC)
-
+[![Build Status](https://travis-ci.com/NLESC-JCER/DeepQMC.svg?branch=master)](https://travis-ci.com/NLESC-JCER/DeepQMC)
 [![Coverage Status](https://coveralls.io/repos/github/NLESC-JCER/DeepQMC/badge.svg?branch=master)](https://coveralls.io/github/NLESC-JCER/DeepQMC?branch=master)
 
 
