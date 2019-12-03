@@ -46,13 +46,15 @@ class SolverOrbital(SolverBase):
 
         if task == 'geo_opt':
             self.wf.ao.bas_exp.requires_grad = False
-            self.wf.mo.weight.requires_grad = False
+            self.wf.mo.Wup.requires_grad = False
+            self.wf.mo.Wdown.requires_grad = False
             self.wf.fc.weight.requires_grad = False
             self.wf.ao.atom_coords.requires_grad = True
 
         elif task == 'wf_opt':
             self.wf.ao.bas_exp.requires_grad = True
-            self.wf.mo.weight.requires_grad = True
+            self.wf.mo.Wup.requires_grad = True
+            self.wf.mo.Wdown.requires_grad = True
             self.wf.fc.weight.requires_grad = True
             self.wf.ao.atom_coords.requires_grad = False  
 

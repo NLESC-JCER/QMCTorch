@@ -13,7 +13,7 @@ class TracePooling(nn.Module):
 
     """Applies a slater determinant pooling in the active space."""
 
-    def __init__(self,configs,nup,ndown):
+    def __init__(self):
         super(TracePooling, self).__init__()
 
     def forward(self,mo_up,mo_down):
@@ -29,5 +29,5 @@ class TracePooling(nn.Module):
             torch.tensor: Values of the SDs
         """
 
-       return torch.det(mo_up) * torch.det(mo_down)
+        return torch.det(mo_up) * torch.det(mo_down)
             

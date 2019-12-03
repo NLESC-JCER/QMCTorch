@@ -39,9 +39,9 @@ class MolecularOrbitals(nn.Module):
         '''Computes the matrix W that expand the AO in the MOs of each
         spin up / spin down configuration.'''
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
-
-            self.Wup[ic] = self.mo_coeffs.index_select(1,cup)
-            self.Wdown[ic] = self.mo_coeffs.index_select(1,cdown)
+            print(cup)
+            self.Wup.data[ic] = self.mo_coeffs.index_select(1,cup)
+            self.Wdown.data[ic] = self.mo_coeffs.index_select(1,cdown)
 
     def forward(self,ao):
         """compute the MOs.
