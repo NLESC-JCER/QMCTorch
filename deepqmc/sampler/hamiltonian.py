@@ -59,7 +59,7 @@ class Hamiltonian(SamplerBase):
             ntherm = self.nstep+ntherm
 
         self.walkers.initialize(method=init,pos=pos)
-        self.walkers.pos = torch.tensor(self.walkers.pos).float()
+        self.walkers.pos = self.walkers.pos.clone()
 
         # get the logpdf function
         logpdf = self.log_func(pdf)
@@ -80,11 +80,11 @@ class Hamiltonian(SamplerBase):
 
             # store
             if istep>=ntherm:
-                POS.append(self.walkers.pos.detach().numpy())
+                POS.append(self.walkers.pos.detach())
 
         #print stats
         print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
-        return POS
+        return torch.cat(POS)
 
     @staticmethod
     def _step(U,get_grad,epsilon,L,qinit):

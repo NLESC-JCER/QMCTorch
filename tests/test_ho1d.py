@@ -1,160 +1,102 @@
 import torch
-from torch import nn
-from torch.autograd import Variable
-import torch.optim as optim
+from torch import optim, nn
+
+from deepqmc.sampler.metropolis import  Metropolis
+from deepqmc.sampler.hamiltonian import  Hamiltonian
+from deepqmc.wavefunction.wf_potential import Potential
+from deepqmc.solver.solver_potential import SolverPotential 
 
 import numpy as np
-
-from pyCHAMP.wavefunction.neural_wf_base import NEURAL_WF_BASE
-from pyCHAMP.wavefunction.rbf import RBF
-from pyCHAMP.solver.deepqmc import DeepQMC
-from pyCHAMP.sampler.metropolis import METROPOLIS_TORCH as METROPOLIS
-from pyCHAMP.sampler.hamiltonian import HAMILTONIAN_TORCH as HAMILTONIAN
-
 import unittest
 
-class RBF_HO1D(NEURAL_WF_BASE):
+def pot_func(pos):
+    '''Potential function desired.'''
+    return  0.5*pos**2
 
-    def __init__(self,nelec=1,ndim=1,ncenter=51):
-        super(RBF_HO1D,self).__init__(nelec,ndim)
+def ho1d_sol(pos):
+    '''Analytical solution of the 1D harmonic oscillator.'''
+    return torch.exp(-0.5*pos**2)
 
-        # get the RBF centers 
-        self.centers = torch.linspace(-5,5,ncenter).view(-1,1)
-        self.ncenter = len(self.centers)
-
-        # define the RBF layer
-        self.rbf = RBF(self.ndim_tot, self.ncenter,
-                      centers=self.centers, opt_centers=False,
-                      sigma = 1.)
-        
-        # define the fc layer
-        self.fc = nn.Linear(self.ncenter, 1, bias=False)
-        self.fc.clip = True
-
-        # initiaize the fc layer
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0,2] = 1.
-
-    def forward(self,x):
-        ''' Compute the value of the wave function.
-        for a multiple conformation of the electrons
-
-        Args:
-            parameters : variational param of the wf
-            pos: position of the electrons
-
-        Returns: values of psi
-        '''
-
-        batch_size = x.shape[0]
-        x = self.rbf(x)
-        x = self.fc(x)
-        return x.view(-1,1)
-
-    def nuclear_potential(self,pos):
-        '''Compute the potential of the wf points
-        Args:
-            pos: position of the electron
-
-        Returns: values of V * psi
-        '''
-        return (0.5*pos**2).flatten().view(-1,1)
-
-    def electronic_potential(self,pos):
-        return 0
-
-    def nuclear_repulsion(self):
-        return 0
-
-class TestRbfNetworkHarmonicOscillator1D(unittest.TestCase):
+class TestHarmonicOscillator1D(unittest.TestCase):
 
     def setUp(self):
 
         # wavefunction
-        self.wf = RBF_HO1D(ndim=1,nelec=1,ncenter=5)
+        domain, ncenter = {'xmin':-5.,'xmax':5.}, 11
+        self.wf = Potential(pot_func, domain, ncenter, 
+                            fcinit='random', nelec=1, sigma=2.)
 
         #sampler
-        self.mh_sampler = METROPOLIS(nwalkers=250, nstep=1000, 
-                             step_size = 3., nelec = self.wf.nelec, 
-                             ndim = self.wf.ndim, domain = {'min':-5,'max':5})
+        self.mh_sampler = Metropolis(nwalkers=1000, nstep=2000, 
+                                    step_size = 1., nelec = self.wf.nelec, 
+                                    ndim = self.wf.ndim, domain = {'min':-5,'max':5})
 
-        #sampler
-        self.hmc_sampler = HAMILTONIAN(nwalkers=250, nstep=1000, 
-                             step_size = 0.01, nelec = self.wf.nelec, 
-                             ndim = self.wf.ndim, domain = {'min':-5,'max':5}, L=5)
+        # sampler
+        self.hmc_sampler = Hamiltonian(nwalkers=1000, nstep=200, 
+                                      nelec = self.wf.nelec, ndim= self.wf.ndim,
+                                      step_size = 0.5, domain = {'min':-5,'max':5}, L=10,
+                                      move='all')
 
         # optimizer
-        self.opt = optim.Adam(self.wf.parameters(),lr=0.01)
+        self.opt = optim.Adam(self.wf.parameters(),lr=0.05)
+        self.scheduler = optim.lr_scheduler.StepLR(self.opt,step_size=100,gamma=0.75)
 
         # network
-        self.net = DeepQMC(wf=self.wf,sampler=self.mh_sampler,optimizer=self.opt)
+        self.solver = SolverPotential(wf=self.wf,sampler=self.mh_sampler,
+                                    optimizer=self.opt,scheduler=self.scheduler)
 
     def test_single_point_metropolis_hasting_sampling(self):
 
         # initiaize the fc layer
-        self.net.wf.fc.weight.data.fill_(0.)
-        self.net.wf.fc.weight.data[0,2] = 1.
+        self.solver.wf.fc.weight.data.fill_(0.)
+        self.solver.wf.fc.weight.data[0,5] = 1.
+        self.solver.wf.sigma = 2.
+
 
         # sample and compute observables
-        pos = self.net.sample(ntherm=-1,with_tqdm=False)
-        e = self.wf.energy(pos).detach().numpy()
-        v = self.wf.variance(pos).detach().numpy()
-        assert np.allclose([e,v],[0.5,0],atol=1E-6)
+        pos, e, v = self.solver.single_point()
+        assert np.allclose([e.data.numpy(),v.data.numpy()],[0.5,0],atol=1E-3)
 
     def test_single_point_hamiltonian_mc_sampling(self):
 
         #switch to HMC sampling
-        self.net.sampler = self.hmc_sampler
+        self.solver.sampler = self.hmc_sampler
 
         # initiaize the fc layer
-        self.net.wf.fc.weight.data.fill_(0.)
-        self.net.wf.fc.weight.data[0,2] = 1.
+        self.solver.wf.fc.weight.data.fill_(0.)
+        self.solver.wf.fc.weight.data[0,5] = 1.
+        self.solver.wf.sigma = 2.
 
         # sample and compute observables
-        pos = self.net.sample(ntherm=-1,with_tqdm=False)
-        e = self.wf.energy(pos).detach().numpy()
-        v = self.wf.variance(pos).detach().numpy()
-        assert np.allclose([e,v],[0.5,0],atol=1E-6)
+        pos, e, v = self.solver.single_point()
+        assert np.allclose([e.data.numpy(),v.data.numpy()],[0.5,0],atol=1E-3)
 
     def test_optimization(self):
 
         #switch to MH sampling
-        self.net.sampler = self.mh_sampler
-
-        # optimize the weight of the FC layer
-        # do not optimize the pos of the centers
-        self.net.wf.fc.weight.requires_grad = True
-        self.net.wf.rbf.centers.requires_grad = False
+        self.solver.sampler = self.mh_sampler
 
         # randomize the weights
-        nn.init.uniform_(self.wf.fc.weight,0,1)
+        nn.init.uniform_(self.solver.wf.fc.weight,0,1)
 
         # train
-        pos,obs_dict = self.net.train(250,
-                 batchsize=250,
-                 pos = None,
-                 obs_dict = None,
-                 resample = 100,
-                 resample_from_last = True,
-                 resample_every = 1,
-                 ntherm = -1,
-                 loss = 'variance',
-                 plot = None,
-                 save_model = 'best_model.pth')
+        self.solver.run(50,loss = 'variance')
 
         # load the best model
-        best_model = torch.load('best_model.pth')
-        self.net.wf.load_state_dict(best_model['model_state_dict'])
-        self.net.wf.eval()
+        best_model = torch.load('model.pth')
+        self.solver.wf.load_state_dict(best_model['model_state_dict'])
+        self.solver.wf.eval()
 
         # sample and compute variables
-        pos = self.net.sample()
-        e = self.wf.energy(pos).detach().numpy()
-        v = self.wf.variance(pos).detach().numpy()
-        assert np.allclose([e,v],[0.5,0],atol=1E-3)
+        pos, e, v = self.solver.single_point()
+        assert(e.data.numpy() < 1.)
+        assert(v.data.numpy() < 1.)
+        
 
 if __name__ == "__main__":
     unittest.main()
+
+
 
 
 

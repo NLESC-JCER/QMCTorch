@@ -15,7 +15,7 @@ before_install:
 
   # dependencies
   - conda install cython numpy
-  - conda install pytorch-cpu torchvision-cpu -c pytorch
+  - conda install pytorch torchvision cpuonly -c pytorch-nightly -c defaults -c conda-forge
 
   # codacy coverage
   - pip install -q coverage codacy-coverage coveralls
@@ -26,7 +26,7 @@ install:
 
 # command to run tests
 script:
-  - pytest --cov=pyCHAMP tests --cov-report xml:coverage.xml
+  - pytest --cov=deepqmc tests --cov-report xml:coverage.xml
   - mv coverage.xml ../
   - mv .coverage ../
   - cd ../
@@ -34,4 +34,3 @@ script:
 after_script:
 - python-codacy-coverage -r coverage.xml
 - coveralls
-
