@@ -22,12 +22,14 @@ class SolverPotential(SolverBase):
                  scheduler=None):
         SolverBase.__init__(self,wf,sampler,optimizer)
         self.scheduler = scheduler
-
+        self.task = "wf_opt"
+        
         #esampling
         self.resampling(ntherm=-1, resample=100,resample_from_last=True, resample_every=1)
 
         # observalbe
         self.observable(['local_energy'])
+
 
     def run(self,nepoch, batchsize=None, save='model.pth',  loss='variance', plot = None):
 
