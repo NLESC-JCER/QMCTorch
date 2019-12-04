@@ -38,8 +38,7 @@ scheduler = optim.lr_scheduler.StepLR(opt,step_size=20,gamma=0.75)
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
 solver.configure(task='wf_opt')
-pos = solver.sample()
-#pos, e, v = solver.single_point()
+pos, e, v = solver.single_point()
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

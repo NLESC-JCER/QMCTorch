@@ -130,6 +130,10 @@ class SolverOrbital(SolverBase):
                 self.opt.zero_grad()
                 loss.backward()
 
+                # agregate gradient
+                # if necesary
+                self.wf.sum_mo_grad()
+
                 # optimize
                 self.opt.step()
 
@@ -143,7 +147,7 @@ class SolverOrbital(SolverBase):
             self.get_observable(self.obs_dict,pos)
             print('loss %f' %(cumulative_loss))
             for k in self.obs_dict:
-                if k =='local_energy':
+                if k == 'local_energy':
                     print('variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
                     print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )
                 else:
@@ -184,6 +188,9 @@ class SolverOrbital(SolverBase):
                                                            at[1][2]/conv2bohr))
             f.write('\n')
         f.close()
+
+
+    
 
 
 
