@@ -33,24 +33,6 @@ class KineticPooling(nn.Module):
         self.index_up = torch.arange(nup)
         self.index_down = torch.arange(nup,nup+ndown)
 
-        #self.Pup, self.Pdown = self._get_projector()
-
-    # def _get_projector(self):
-
-    #     Pup = torch.zeros(self.nconfs,self.nelec,self.nup)
-    #     Pdown = torch.zeros(self.nconfs,self.nelec,self.ndown)
-
-        
-    #     for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])): 
-    #         for iup, idx_up in enumerate(cup):
-    #             Pup[ic,idx_up,iup] = 1
-    #         for idwn, idx_dwn in enumerate(cdown):
-    #             Pdown[ic,self.nup+idx_dwn,idwn] = 1
-
-    #     return Pup, Pdown
-
-
-
     def forward(self,MO, d2MO, return_local_energy=False):
 
         ''' Compute the kinetic energy using the trace trick
@@ -90,4 +72,4 @@ class KineticPooling(nn.Module):
                 pd = torch.det(Aup) * torch.det(Adown)
                 out[:,ic] *= pd
 
-        return -0.5*out.view(-1,1)
+        return -0.5*out

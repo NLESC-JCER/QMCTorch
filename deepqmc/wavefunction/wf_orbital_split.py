@@ -23,7 +23,8 @@ class OrbitalSplit(Orbital):
         self.nci = len(self.configs[0])
 
         # define the mo layer
-        self.mo = MolecularOrbitals(self.get_mo_coeffs(),self.configs,mol.nup,mol.ndown)
+        self.mo = MolecularOrbitals(self.mo.weight.transpose(0,1),
+                                    self.configs,mol.nup,mol.ndown)
 
         #  define the SD pooling layer
         self.pool = TracePooling()

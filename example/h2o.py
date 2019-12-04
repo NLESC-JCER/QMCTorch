@@ -4,7 +4,8 @@ from torch import optim
 from torch.autograd import Variable
 from torch.optim import Adam
 
-from deepqmc.wavefunction.wf_orbital_split import Orbital
+from deepqmc.wavefunction.wf_orbital_split import OrbitalSplit
+from deepqmc.wavefunction.wf_orbital import Orbital 
 from deepqmc.solver.solver_orbital import SolverOrbital
 #from deepqmc.solver.solver_orbital_distributed import DistSolverOrbital  as SolverOrbital
 
@@ -37,7 +38,8 @@ scheduler = optim.lr_scheduler.StepLR(opt,step_size=20,gamma=0.75)
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
 solver.configure(task='wf_opt')
-pos, e, v = solver.single_point()
+pos = solver.sample()
+#pos, e, v = solver.single_point()
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')
