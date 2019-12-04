@@ -45,16 +45,17 @@ class SolverOrbital(SolverBase):
         self.task = task
 
         if task == 'geo_opt':
-            self.wf.ao.bas_exp.requires_grad = False
-            self.wf.mo.Wup.requires_grad = False
-            self.wf.mo.Wdown.requires_grad = False
-            self.wf.fc.weight.requires_grad = False
             self.wf.ao.atom_coords.requires_grad = True
+            self.wf.ao.bas_exp.requires_grad = False
+            for param in self.wf.mo.parameters():
+                param.requires_grad = False
+            self.wf.fc.weight.requires_grad = False
+            
 
         elif task == 'wf_opt':
             self.wf.ao.bas_exp.requires_grad = True
-            self.wf.mo.Wup.requires_grad = True
-            self.wf.mo.Wdown.requires_grad = True
+            for param in self.wf.mo.parameters():
+                param.requires_grad = True
             self.wf.fc.weight.requires_grad = True
             self.wf.ao.atom_coords.requires_grad = False  
 
@@ -62,7 +63,8 @@ class SolverOrbital(SolverBase):
                 if name.lower() == 'ci':
                     self.wf.fc.weight.requires_grad = False
                 elif name.lower() == 'mo':
-                    self.wf.mo.weight.requires_grad = False
+                    for param in self.wf.mo.parameters():
+                        param.requires_grad = False
                 elif name.lower() == 'bas_exp':
                     self.wf.ao.bas_exp.requires_grad = False
                 else:

@@ -17,7 +17,7 @@ class MolecularOrbitals(nn.Module):
 
         super(MolecularOrbitals, self).__init__()
 
-        self.mo_coeffs = mo_coeffs
+        self.mo_coeffs = mo_coeffs.data
         self.nmo = self.mo_coeffs.shape[0]
 
         self.configs = configs
@@ -30,18 +30,18 @@ class MolecularOrbitals(nn.Module):
         self.nup = nup
         self.ndown = ndown
 
-        self.Wup = torch.zeros(self.nconfs,self.nmo,self.nup)
-        self.Wdown = torch.zeros(self.nconfs,self.nmo,self.nup)
+        self.Wup, self.Wdown = self.get_weight_matrices()
 
-        self._get_matrices()
-
-    def _get_matrices(self):
+    def get_weight_matrices(self):
         '''Computes the matrix W that expand the AO in the MOs of each
         spin up / spin down configuration.'''
+        Wup = torch.zeros(self.nconfs,self.nmo,self.nup)
+        Wdown = torch.zeros(self.nconfs,self.nmo,self.nup)
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
-            print(cup)
-            self.Wup.data[ic] = self.mo_coeffs.index_select(1,cup)
-            self.Wdown.data[ic] = self.mo_coeffs.index_select(1,cdown)
+            Wup.data[ic] = self.mo_coeffs.index_select(1,cup)
+            Wdown.data[ic] = self.mo_coeffs.index_select(1,cdown)
+
+        return nn.Parameter(Wup), nn.Parameter(Wdown)
 
     def forward(self,ao):
         """compute the MOs.
@@ -58,5 +58,3 @@ class MolecularOrbitals(nn.Module):
 
     def _project(self,ao,w):
         return ao.unsqueeze(1) @ w.unsqueeze(0)
-
-            
