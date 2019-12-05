@@ -130,10 +130,6 @@ class SolverOrbital(SolverBase):
                 self.opt.zero_grad()
                 loss.backward()
 
-                # agregate gradient
-                # if necesary
-                self.wf.sum_mo_grad()
-
                 # optimize
                 self.opt.step()
 
