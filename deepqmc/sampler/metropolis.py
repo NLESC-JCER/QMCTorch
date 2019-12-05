@@ -1,7 +1,7 @@
-import numpy as np 
+import numpy as np
 from deepqmc.sampler.sampler_base import SamplerBase
 from deepqmc.sampler.walkers import Walkers
-from tqdm import tqdm 
+from tqdm import tqdm
 import torch
 import time
 
@@ -29,7 +29,7 @@ class Metropolis(SamplerBase):
             X (list) : position of the walkers
         '''
         with torch.no_grad():
-            
+
             if ntherm < 0:
                 ntherm = self.nstep+ntherm
 
@@ -56,31 +56,30 @@ class Metropolis(SamplerBase):
                 t0 = time.time()
                 fxn = pdf(Xn)
                 df = (fxn/(fx)).double()
-                
+
                 # accept the moves
                 index = self._accept(df)
-                
+
                 # acceptance rate
                 rate += index.byte().sum().float()/self.walkers.nwalkers
-                
+
                 # update position/function value
                 self.walkers.pos[index,:] = Xn[index,:]
                 fx[index] = fxn[index]
                 fx[fx==0] = 1E-6
-            
+
                 if istep>=ntherm:
                     POS.append(self.walkers.pos.clone().detach())
 
             if with_tqdm:
                 print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
-            
+
         return torch.cat(POS)
 
-    
+
     def _accept(self,P):
         ones = torch.ones(self.nwalkers)
         P[P>1]=1.0
         tau = torch.rand(self.nwalkers).double()
         index = (P-tau>=0).reshape(-1)
         return index.type(torch.bool)
-
