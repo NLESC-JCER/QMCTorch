@@ -37,7 +37,7 @@ class TestH2(unittest.TestCase):
         self.wf = OrbitalH2(self.mol)
 
         #sampler
-        self.sampler = Metropolis(nwalkers=1000, nstep=2000, step_size = 0.5, 
+        self.sampler = Metropolis(nwalkers=1000, nstep=2000, step_size = 0.5,
                             ndim = self.wf.ndim, nelec = self.wf.nelec, move = 'one')
 
         #optimizer
@@ -69,7 +69,7 @@ class TestH2(unittest.TestCase):
 
 
     def test_geo_opt(self):
-        
+
         self.solver.wf.ao.atom_coords[0,2].data = torch.tensor(-0.37)
         self.solver.wf.ao.atom_coords[1,2].data = torch.tensor(0.37)
 
@@ -83,7 +83,7 @@ class TestH2(unittest.TestCase):
         self.solver.wf.eval()
 
         # sample and compute variables
-        pos,e,v = self.solver.single_point()
+        _,e,v = self.solver.single_point()
         e = e.data.numpy()
         v = v.data.numpy()
 
@@ -93,12 +93,3 @@ class TestH2(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-
-
-
-

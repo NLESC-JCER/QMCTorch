@@ -9,7 +9,7 @@ def plot_observable(obs_dict,e0=None,ax=None):
         obs_dict : dictioanry of observable
     '''
     show_plot = False
-    if ax is None:    
+    if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
         show_plot = True
@@ -18,7 +18,7 @@ def plot_observable(obs_dict,e0=None,ax=None):
         data = obs_dict['local_energy']
     else:
         data = np.hstack(np.squeeze(np.array(obs_dict)))
-        
+
     n = len(data)
     epoch = np.arange(n)
 

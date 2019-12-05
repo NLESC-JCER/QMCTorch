@@ -3,13 +3,13 @@ import math
 import numpy as np
 from mendeleev import element
 from pyscf import gto,scf
-import basis_set_exchange as bse 
-import json 
+import basis_set_exchange as bse
+import json
 
 class Molecule(object):
 
     def __init__(self,atom=None,
-                      basis_type='sto', 
+                      basis_type='sto',
                       basis='sz',
                       unit='bohr'):
 
@@ -51,7 +51,7 @@ class Molecule(object):
         self.mult_bas = {'S':1,'P':3,'D':5}
         self.get_m = {'S':[0],'P':[-1,1,0],'D':[-2,-1,0,1,2]}
 
-        # for cartesian 
+        # for cartesian
         self.get_lmn_cart = {'S': [0,0,0],
                              'P':[[1,0,0],
                                   [0,1,0],
@@ -87,13 +87,13 @@ class Molecule(object):
         for a in atoms:
             atom_data = a.split()
             self.atoms.append(atom_data[0])
-            x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])            
-            
+            x,y,z = float(atom_data[1]),float(atom_data[2]),float(atom_data[3])
+
             conv2bohr = 1
             if self.unit == 'angs':
                 conv2bohr = 1.88973
             self.atom_coords.append([x*conv2bohr,y*conv2bohr,z*conv2bohr])
-            
+
             self.atomic_number.append(element(atom_data[0]).atomic_number)
             self.nelec += element(atom_data[0]).electrons
 
@@ -145,7 +145,7 @@ class Molecule(object):
 
             # split the data
             bas = data[ibas].split()
-            
+
             if len(bas) == 0:
                 continue
 
@@ -162,7 +162,7 @@ class Molecule(object):
 
             # secondary qn and multiplicity
             l = self.get_l[bas_name[1]]
-            
+
             # store it
             if l not in atomic_data['electron_shells'][n]['angular_momentum']:
                 atomic_data['electron_shells'][n]['angular_momentum'].append(l)
@@ -218,7 +218,7 @@ class Molecule(object):
                     # number of shells
                     self.nshells[-1] += nbas*mult
 
-                
+
     def _process_gto(self):
 
         # number of orbs
@@ -268,7 +268,6 @@ class Molecule(object):
                     # number of shells
                     self.nshells[-1] += mult*nbas
 
-
     def get_mo_coeffs(self,code='pyscf'):
 
         if code is None:
@@ -284,7 +283,7 @@ class Molecule(object):
             if code.lower() == 'pyscf':
                 mo = self._get_mo_pyscf()
 
-        elif self.basis_type == 'sto': 
+        elif self.basis_type == 'sto':
 
             if code.lower() not in ['pyscf']:
                 raise ValueError(code + 'not currently supported for STO orbitals')
@@ -330,8 +329,3 @@ class Molecule(object):
     #m1 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='gto',basis='sto-3g')
     #m2 = Molecule(atom='H 0 0 0; O 0 0 1',basis_type='sto',basis='dzp')
     #m3 = Molecule(atom='water.xyz',basis_type='sto',basis='sz')
-
-    
-    
-
-

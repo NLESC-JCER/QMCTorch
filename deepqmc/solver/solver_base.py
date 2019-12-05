@@ -9,7 +9,7 @@ class SolverBase(object):
 
         self.wf = wf
         self.sampler = sampler
-        self.opt = optimizer  
+        self.opt = optimizer
 
 
     def resampling(self,ntherm=-1, resample=100,resample_from_last=True, resample_every=1):
@@ -23,7 +23,7 @@ class SolverBase(object):
     def observable(self,obs):
         '''Create the observalbe we want to track.'''
         self.obs_dict = {}
-        
+
         for k in obs:
             self.obs_dict[k] = []
 
@@ -36,7 +36,7 @@ class SolverBase(object):
 
     def sample(self,ntherm=-1,with_tqdm=True,pos=None):
         ''' sample the wave function.'''
-        
+
         pos = self.sampler.generate(self.wf.pdf,ntherm=ntherm,with_tqdm=with_tqdm,pos=pos)
         pos.requires_grad = True
         return pos.float()
@@ -45,7 +45,7 @@ class SolverBase(object):
         '''compute all the required observable.
 
         Args :
-            obs_dict : a dictionanry with all keys 
+            obs_dict : a dictionanry with all keys
                         corresponding to a method of self.wf
             **kwargs : the possible arguments for the methods
         TODO : match the signature of the callables

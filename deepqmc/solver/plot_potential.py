@@ -40,7 +40,7 @@ def regular_mesh_3d(xmin=-2,xmax=2,ymin=-2.,ymax=2,zmin=-5,zmax=5,nx=5,ny=5,nz=5
 
 class plotter1d(object):
 
-    def __init__(self, wf, domain, res=51, sol = None, 
+    def __init__(self, wf, domain, res=51, sol = None,
                  plot_weight=False, plot_grad=False, save=None):
         '''Dynamic plot of a 1D-wave function during the optimization
 
@@ -64,7 +64,7 @@ class plotter1d(object):
         self.iter = 0
 
         self.POS = Variable(torch.linspace(domain['xmin'],domain['xmax'],res).view(res,1))
-        pos = self.POS.detach().numpy().flatten()  
+        pos = self.POS.detach().numpy().flatten()
 
         if callable(sol):
             v = sol(self.POS).detach().numpy()
@@ -111,7 +111,7 @@ class plotter1d(object):
                 data /= np.linalg.norm(data)
                 self.pgrad.set_ydata(data)
 
-        #self.fig.canvas.draw() 
+        #self.fig.canvas.draw()
         plt.draw()
         self.fig.canvas.flush_events()
 
@@ -174,7 +174,7 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=True,sol=None,ax=None,lo
         if hist:
             pos = net.sample(ntherm=-1)
             ax.hist(pos.detach().numpy(),density=False)
-        
+
         ax.set_ylim((np.min(pot),1))
         ax.grid()
         ax.set_xlabel('X')
@@ -190,7 +190,7 @@ def plot_wf_1d(net,domain,res,grad=False,hist=False,pot=True,sol=None,ax=None,lo
 def plot_results_1d(net,domain,res,sol=None,e0=None,load=None):
     ''' Plot the summary of the results for a 1D problem.
 
-    Args: 
+    Args:
         net : network object
         obs_dict : dict containing the obserable
         sol : callable of the solutions
@@ -207,7 +207,7 @@ def plot_results_1d(net,domain,res,sol=None,e0=None,load=None):
     plot_observable(net.obs_dict,e0=e0,ax=ax1)
 
     plt.show()
- 
+
 
 ###########################################################################################
 ##  2D routnines
@@ -246,7 +246,7 @@ def plot_wf_2d(net,domain,res,sol=None):
         vn = vals.detach().numpy().reshape(res[0],res[1])
         vn /= np.linalg.norm(vn)
         ax.plot_surface(xx,yy,vn,cmap=cm.coolwarm,alpha=0.75,color='black',linewidth=2)
-    
+
         plt.show()
 
 class plotter2d(object):
@@ -296,8 +296,8 @@ class plotter2d(object):
 
         self.vals = self.wf(self.POS).view(self.res[0],self.res[1]).detach().numpy()
 
-        self.surf = self.ax.plot_surface( 
-                        self.xx, self.yy, self.vals, rstride=1, cstride=1, 
+        self.surf = self.ax.plot_surface(
+                        self.xx, self.yy, self.vals, rstride=1, cstride=1,
                         cmap=cm.coolwarm,alpha=0.75,color='black',linewidth=2,
                         antialiased=False )
         plt.draw()
@@ -307,17 +307,17 @@ class plotter2d(object):
         '''update the plot.'''
         self.surf.remove()
         self.vals = self.wf(self.POS).view(self.res[0],self.res[1]).detach().numpy()
-        self.surf = self.ax.plot_surface( 
-                        self.xx, self.yy, self.vals, rstride=1, cstride=1, 
+        self.surf = self.ax.plot_surface(
+                        self.xx, self.yy, self.vals, rstride=1, cstride=1,
                         cmap=cm.coolwarm,alpha=0.75,color='black',linewidth=2,
                         antialiased=False )
-        plt.draw()                     
+        plt.draw()
         self.fig.canvas.flush_events()
 
 def plot_results_2d(net,obs_dict,domain,res,sol=None,e0=None):
     ''' Plot the summary of the results for a 1D problem.
 
-    Args: 
+    Args:
         net : network object
         obs_dict : dict containing the obserable
         domain : boundary of the plot
@@ -379,7 +379,7 @@ def plot_results_2d(net,obs_dict,domain,res,sol=None,e0=None):
 def plot_results_3d(net,obs_dict,domain,res,wf=False,isoval=0.02,sol=None,e0=None,hist=False):
     ''' Plot the summary of the results for a 1D problem.
 
-    Args: 
+    Args:
         net : network object
         obs_dict : dict containing the obserable
         domain : boundary of the plot
@@ -459,8 +459,8 @@ def plot_wf_3d(net,domain,res,sol=None,
 
         vals = net.wf.nuclear_potential(POS)
         vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
-        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,pot_isoval,spacing=spacing_vals)        
-        
+        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,pot_isoval,spacing=spacing_vals)
+
         ax.plot_trisurf(verts[:,0]+domain['xmin'],
                         verts[:,1]+domain['ymin'],
                         faces,
@@ -473,8 +473,8 @@ def plot_wf_3d(net,domain,res,sol=None,
         #vals = net.wf.kinetic_energy_finite_difference(POS,eps=1E-3)
         vals = net.wf.kinetic_energy(POS)
         vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
-        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,grad_isoval,spacing=spacing_vals)        
-        
+        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,grad_isoval,spacing=spacing_vals)
+
         ax.plot_trisurf(verts[:,0]+domain['xmin'],
                         verts[:,1]+domain['ymin'],
                         faces,
@@ -485,8 +485,8 @@ def plot_wf_3d(net,domain,res,sol=None,
 
         vals = net.wf(POS)
         vn = vals.detach().numpy().reshape(res[0],res[1],res[2])
-        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,isoval,spacing=spacing_vals)        
-            
+        verts, faces, normals,values = measure.marching_cubes_lewiner(vn,isoval,spacing=spacing_vals)
+
         ax.plot_trisurf(verts[:,0]+domain['xmin'],
                         verts[:,1]+domain['ymin'],
                         faces,
@@ -500,6 +500,3 @@ def plot_wf_3d(net,domain,res,sol=None,
 
     if show_plot:
         plt.show()
-
-
-

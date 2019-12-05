@@ -1,5 +1,5 @@
 import inspect
-import numpy as np 
+import numpy as np
 
 import torch
 from torch import nn
@@ -12,7 +12,7 @@ from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper
 
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D 
+from mpl_toolkits.mplot3d import Axes3D
 from tqdm import tqdm
 import time
 
@@ -23,7 +23,7 @@ class SolverPotential(SolverBase):
         SolverBase.__init__(self,wf,sampler,optimizer)
         self.scheduler = scheduler
         self.task = "wf_opt"
-        
+
         #esampling
         self.resampling(ntherm=-1, resample=100,resample_from_last=True, resample_every=1)
 
@@ -69,10 +69,10 @@ class SolverPotential(SolverBase):
 
         # get the loss
         self.loss = Loss(self.wf,method=loss)
-                
+
         # clipper for the fc weights
         clipper = ZeroOneClipper()
-    
+
         cumulative_loss = []
         min_loss = 1E3
 
@@ -82,7 +82,7 @@ class SolverPotential(SolverBase):
 
             cumulative_loss = 0
             for data in self.dataloader:
-                
+
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
 
@@ -95,20 +95,20 @@ class SolverPotential(SolverBase):
 
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
-                
+
             if plot is not None:
                 plot.drawNow()
 
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(n,cumulative_loss,self.save_model)
-                 
+
             # get the observalbes
             self.get_observable(self.obs_dict,pos)
             print('loss %f' %(cumulative_loss))
             print('variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
-            print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )   
+            print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )
             print('----------------------------------------')
-            
+
             # resample the data
             if (n%self.resample.resample_every == 0) or (n == nepoch-1):
                 if self.resample.resample_from_last:
@@ -123,7 +123,3 @@ class SolverPotential(SolverBase):
 
         #restore the sampler number of step
         self.sampler.nstep = _nstep_save
-
-
-
-
