@@ -4,7 +4,7 @@ import torch
 class OrbitalProjector(object):
 
     def __init__(self,configs,mol):
-        
+
         self.configs = configs
         self.nconfs = len(configs[0])
         self.nmo = mol.norb
@@ -15,7 +15,7 @@ class OrbitalProjector(object):
 
     def get_projectors(self):
         """Get the projectors of the conf in the CI expansion
-        
+
         Returns:
             torch.tensor, torch.tensor : projectors
         """
@@ -31,7 +31,7 @@ class OrbitalProjector(object):
             for _id,imo in enumerate(cdown):
                 Pdown[ic][imo,_id] = 1.
 
-        return Pup.unsqueeze(1), Pdown.unsqueeze(1)        
+        return Pup.unsqueeze(1), Pdown.unsqueeze(1)
 
     def split_orbitals(self,mo):
         return mo[:,:self.nup,:] @ self.Pup, mo[:,self.nup:,:] @ self.Pdown

@@ -10,12 +10,12 @@ from tqdm import tqdm
 from time import time
 
 class ElectronDistance(nn.Module):
-    
+
     def __init__(self,nelec,ndim):
         super(ElectronDistance,self).__init__()
         self.nelec = nelec
         self.ndim = ndim
-        
+
     def forward(self,input):
         '''compute the pairwise distance between two sets of electrons.
         Args:
@@ -48,14 +48,14 @@ class TwoBodyJastrowFactor(nn.Module):
         self.static_weight = torch.cat( (bup,bdown),dim=0)
 
     def forward(self,input):
-        
+
         factors = torch.exp(self.static_weight * input / (1.0 + self.weight * input))
         factors = factors[:,torch.tril(torch.ones(self.nelec,self.nelec))==0].prod(1)
         return factors.view(-1,1)
 
         #return JastrowFunction.apply(input,self.weight,self.static_weight)
 
-        
+
 class JastrowFunction(torch.autograd.Function):
 
     @staticmethod
@@ -74,11 +74,11 @@ class JastrowFunction(torch.autograd.Function):
 
         # all jastrow for all electron pairs
         factors = torch.exp(static_weight * input / (1.0 + weight * input))
-        
-        # product of the off diag terms 
+
+        # product of the off diag terms
         nr,nc = input.shape[1], input.shape[2]
         factors = factors[:,torch.tril(torch.ones(nr,nc))==0].prod(1)
-        
+
         return factors.view(-1,1)
 
 
@@ -96,5 +96,3 @@ if __name__ == "__main__":
     edist = edist(pos)
     jastrow = TwoBodyJastrowFactor(1,1)
     val = jastrow(edist)
-
-   

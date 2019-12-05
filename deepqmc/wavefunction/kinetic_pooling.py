@@ -26,7 +26,6 @@ class KineticPooling(nn.Module):
 
         self.configs = configs
         self.nconfs = len(configs[0])
-        
 
         self.nup = mol.nup
         self.ndown = mol.ndown
@@ -41,10 +40,10 @@ class KineticPooling(nn.Module):
 
     def forward(self,MO, d2MO, return_local_energy=False):
         if self.use_projector:
-            return self._forward_proj(MO, d2MO, 
+            return self._forward_proj(MO, d2MO,
                                       return_local_energy=return_local_energy).view(-1,self.nconfs)
         else:
-            return self._forward_loop(MO, d2MO, 
+            return self._forward_loop(MO, d2MO,
                                       return_local_energy=return_local_energy)
 
     def _forward_proj(self,MO, d2MO, return_local_energy=False):
@@ -52,7 +51,7 @@ class KineticPooling(nn.Module):
         for a product of spin up/down determinant
         .. math::
 
-            T \Psi  =  T Dup Ddwn 
+            T \Psi  =  T Dup Ddwn
                     = -1/2 Dup * Ddown  * ( \Delta_up Dup  + \Delta_down Ddown)
 
             using the trace trick with D = |A| :
@@ -69,8 +68,8 @@ class KineticPooling(nn.Module):
         # shortcut up/down matrices
         Aup, Adown = self.orb_proj.split_orbitals(MO)
         d2Aup, d2Adown = self.orb_proj.split_orbitals(d2MO)
-        
-        # inverse of MO matrices        
+
+        # inverse of MO matrices
         iAup = torch.inverse(Aup)
         iAdown = torch.inverse(Adown)
 
@@ -89,7 +88,7 @@ class KineticPooling(nn.Module):
         for a product of spin up/down determinant
         .. math::
 
-            T \Psi  =  T Dup Ddwn 
+            T \Psi  =  T Dup Ddwn
                     = -1/2 Dup * Ddown  * ( \Delta_up Dup  + \Delta_down Ddown)
 
             using the trace trick with D = |A| :
@@ -105,15 +104,15 @@ class KineticPooling(nn.Module):
 
         nbatch = MO.shape[0]
         out = torch.zeros(nbatch,self.nconfs)
-                
+
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
 
             Aup = MO.index_select(1,self.index_up).index_select(2,cup)
             Adown = MO.index_select(1,self.index_down).index_select(2,cdown)
-            
+
             iAup = torch.inverse(Aup)
             iAdown = torch.inverse(Adown)
-            
+
             d2Aup = d2MO.index_select(1,self.index_up).index_select(2,cup)
             d2Adown = d2MO.index_select(1,self.index_down).index_select(2,cdown)
             out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown))

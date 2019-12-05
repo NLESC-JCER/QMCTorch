@@ -1,4 +1,4 @@
-import autograd.numpy as np 
+import autograd.numpy as np
 from autograd import elementwise_grad as egrad
 from autograd import hessian, jacobian
 from functools import partial
@@ -22,7 +22,7 @@ class WaveFunction(nn.Module):
         self.kinetic = kinetic
 
     def forward(self,x):
-        
+
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -33,7 +33,7 @@ class WaveFunction(nn.Module):
         Returns: values of psi
         '''
 
-        raise NotImplementedError()  
+        raise NotImplementedError()
 
     def electronic_potential(self,pos):
         '''Compute the potential of the wf points
@@ -42,7 +42,7 @@ class WaveFunction(nn.Module):
 
         Returns: values of Vee * psi
         '''
-        raise NotImplementedError()        
+        raise NotImplementedError()
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -54,11 +54,11 @@ class WaveFunction(nn.Module):
         raise NotImplementedError()
 
     def nuclear_repulsion(self):
-        '''Compute the nuclear repulsion term 
+        '''Compute the nuclear repulsion term
 
         Returns: values of Vnn * psi
         '''
-        raise NotImplementedError()        
+        raise NotImplementedError()
 
 
     def kinetic_energy(self,pos,out=None):
@@ -73,7 +73,7 @@ class WaveFunction(nn.Module):
 
     def kinetic_energy_autograd(self,pos,out=None):
         '''Compute the second derivative of the network
-        output w.r.t the value of the input. 
+        output w.r.t the value of the input.
 
         This is to compute the value of the kinetic operator.
 
@@ -87,18 +87,18 @@ class WaveFunction(nn.Module):
 
         if out is None:
             out = self.forward(pos)
-        
-        # compute the jacobian            
+
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape[0])
-        
+
         for idim in range(jacob.shape[1]):
 
             tmp = grad(jacob[:,idim],pos,
@@ -106,12 +106,12 @@ class WaveFunction(nn.Module):
                       only_inputs=True,
                       #retain_graph=True)[0]
                       create_graph=True)[0] # create_graph is REQUIRED and is causing memory issues for large systems
-                      #allow_unused=True)[0]    
-              
+                      #allow_unused=True)[0]
+
             hess += tmp[:,idim]
-        
-        return -0.5 * hess.view(-1,1) 
-    
+
+        return -0.5 * hess.view(-1,1)
+
     def kinetic_energy_finite_difference(self,pos,eps=1E-3):
         '''Compute the second derivative of the network
         output w.r.t the value of the input using finite difference.
@@ -125,7 +125,7 @@ class WaveFunction(nn.Module):
         Returns:
             values of nabla^2 * Psi
         '''
-        
+
         nwalk = pos.shape[0]
         ndim = pos.shape[1]
         out = torch.zeros(nwalk,1)
@@ -157,18 +157,18 @@ class WaveFunction(nn.Module):
 
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        
+
         wf = self.forward(pos)
         ke = self.kinetic_energy(pos,out=wf)
-        
+
         return ke/wf \
              + self.nuclear_potential(pos)  \
              + self.electronic_potential(pos) \
-             + self.nuclear_repulsion()        
+             + self.nuclear_repulsion()
 
     def energy(self,pos):
         '''Total energy for the sampling points.'''
-        return torch.mean(self.local_energy(pos)) 
+        return torch.mean(self.local_energy(pos))
 
     def variance(self, pos):
         '''Variance of the energy at the sampling points.'''

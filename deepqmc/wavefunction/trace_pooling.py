@@ -30,4 +30,3 @@ class TracePooling(nn.Module):
         """
 
         return torch.det(mo_up) * torch.det(mo_down)
-            
