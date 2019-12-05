@@ -6,6 +6,8 @@ from torch.autograd import grad, Variable
 import numpy as np
 from pyscf import scf, gto, mcscf
 
+from deepqmc.wf.orbital_projector import OrbitalProjector
+
 from tqdm import tqdm
 from time import time
 
@@ -44,16 +46,37 @@ class SlaterPooling(nn.Module):
 
     """Applies a slater determinant pooling in the active space."""
 
-    def __init__(self,configs,nup,ndown):
+    def __init__(self,configs,mol,use_projector=True):
         super(SlaterPooling, self).__init__()
 
         self.configs = configs
         self.nconfs = len(configs[0])
 
-        self.index_up = torch.arange(nup)
-        self.index_down = torch.arange(nup,nup+ndown)
+        self.nmo = mol.nmo
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+
+        self.index_up = torch.arange(self.nup)
+        self.index_down = torch.arange(self.nup,self.nup+self.ndown)
+
+        self.use_projector = use_projector
+
+        if use_projector:
+            self.orb_proj = OrbitalProjector(configs,mol)
+            
 
     def forward(self,input):
+        if self.use_projector:
+            self._forward_proj(self,input)
+        else:
+            self._forward_loop(self,input)
+
+    def _forward_proj(self,input):
+
+        moup, modown = self.orb_proj.split_orbitals(input)
+        return torch.det(mo_up) * torch.det(mo_down)
+
+    def _forward_loop(self,input):
 
         ''' Compute the product of spin up/down determinants
         Args:
@@ -78,10 +101,8 @@ class SlaterPooling(nn.Module):
             except:
                 out[:,ic] = BatchDeterminant.apply(mo_up) * BatchDeterminant.apply(mo_down)
             
-
         return out
-
-
+s=
 if __name__ == "__main__":
 
 
