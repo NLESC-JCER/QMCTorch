@@ -88,7 +88,7 @@ class TestH2(unittest.TestCase):
         v = v.data.numpy()
 
         # it might be too much to assert with the ground state energy
-        assert(e>self.ground_state_energy and e<-1.)
+        assert(e>2*self.ground_state_energy and e<-1.)
         assert(v>0 and v<1.5)
 
 if __name__ == "__main__":
