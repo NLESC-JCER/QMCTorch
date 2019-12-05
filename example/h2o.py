@@ -4,7 +4,6 @@ from torch import optim
 from torch.autograd import Variable
 from torch.optim import Adam
 
-from deepqmc.wavefunction.wf_orbital_split import OrbitalSplit
 from deepqmc.wavefunction.wf_orbital import Orbital 
 from deepqmc.solver.solver_orbital import SolverOrbital
 #from deepqmc.solver.solver_orbital_distributed import DistSolverOrbital  as SolverOrbital

@@ -7,7 +7,7 @@ class OrbitalProjector(object):
         
         self.configs = configs
         self.nconfs = len(configs[0])
-        self.nmo = mol.nmo
+        self.nmo = mol.norb
         self.nup = mol.nup
         self.ndown = mol.ndown
 

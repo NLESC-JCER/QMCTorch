@@ -39,7 +39,7 @@ class OrbitalSplit(Orbital):
         """
         nmo = self.mol.nmo
         nup = self.nup
-        Pup = torch.zeros(self.nconfs,.nmo,nup)
+        Pup = torch.zeros(self.nconfs,nmo,nup)
         Pdown = torch.zeros(self.nconfs,nmo,ndown)
 
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):

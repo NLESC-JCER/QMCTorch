@@ -42,17 +42,18 @@ class Orbital(WaveFunction):
         self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
-        self.pool = SlaterPooling(self.configs,mol.nup,mol.ndown)
+        self.pool = SlaterPooling(self.configs,mol)
 
-        # poolin operation to directly compute the kinetic energies via Jacobi formula
-        self.kinpool = KineticPooling(self.configs,mol.nup,mol.ndown)
+        # pooling operation to directly compute 
+        # the kinetic energies via Jacobi formula
+        self.kinpool = KineticPooling(self.configs,mol)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0][0] = 1.
-        self.fc.weight.data[0][1] = 0.01
-        self.fc.weight.data[0][2] = 0.01
+        self.fc.weight.data.fill_(1.)
+        # self.fc.weight.data[0][0] = 1.
+        # self.fc.weight.data[0][1] = 0.01
+        # self.fc.weight.data[0][2] = 0.01
         self.fc.clip = False
 
         if kinetic_jacobi:
@@ -274,16 +275,6 @@ class Orbital(WaveFunction):
         cup.append(new_cup)
         cdown.append(new_cdown)
         return cup, cdown
-
-     def fix_grad(self):
-         """Manipulate the gradients
-         This is necessary for the split orbital methods
-         where the grad of the W matrices need to be summed up
-         Returns:
-             None: Nothing for that case
-         """
-         return None
-
 
 
 

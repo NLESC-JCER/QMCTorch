@@ -3,7 +3,7 @@ import torch
 from torch.autograd import Variable
 from torch.optim import Adam
 
-from deepqmc.wavefunction.wf_orbital_split import Orbital
+from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 
 from deepqmc.sampler.metropolis import Metropolis
