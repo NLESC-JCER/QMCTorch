@@ -51,7 +51,7 @@ class RBF1D(nn.Module):
         out = F.linear(input,self.weight,self.bias)
         out = torch.exp( -(out-self.centers)**2 / self.sigma )
         return(out)
-        
+
 ########################################################################################################
 
 class RBF(nn.Module):
@@ -148,7 +148,7 @@ class RBF(nn.Module):
         out = (sigma**2).prod(1).view(-1,1)
         k = (2.*PI)**dim
         return torch.sqrt( k*out )
-        
+
     def forward(self,input):
         '''Compute the output of the RBF layer'''
 
@@ -183,8 +183,8 @@ class RBF(nn.Module):
         return X.view(-1,self.ncenter)
 
     def _slater_kernel(self,input):
-        
-    
+
+
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
         delta =  (input[:,None,:] - self.centers[None,...])
@@ -193,7 +193,7 @@ class RBF(nn.Module):
         X = ( torch.matmul(delta.unsqueeze(2),self.invCov).squeeze(2) * delta ).sum(2)
         X = (delta**2).sum(2)
         X = torch.sqrt(X)
-        
+
         # divide by the determinant of the cov mat
         X = torch.exp(-self.sigma_method*X)
 
@@ -239,7 +239,7 @@ class RBF_Gaussian(nn.Module):
         # get the standard deviation
         self.sigma = nn.Parameter(sigma*torch.ones(self.ncenter))
         self.sigma.requires_grad = opt_sigma
-        
+
     def forward(self,input):
         '''Compute the output of the RBF layer'''
 
@@ -286,14 +286,14 @@ class RBF_Slater(nn.Module):
         self.centers = nn.Parameter(centers)
         self.centers.requires_grad = True
         self.ncenter = len(self.centers)
-        
+
         # get the standard deviations
         self.sigma = nn.Parameter(sigma)
         self.sigma.requires_grad = True
 
     def forward(self,input):
-        
-    
+
+
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
         delta =  (input[:,None,:] - self.centers[None,...])
@@ -301,7 +301,7 @@ class RBF_Slater(nn.Module):
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
         X = (delta**2).sum(2)
         X = torch.sqrt(X)
-        
+
         # divide by the determinant of the cov mat
         X = torch.exp(-self.sigma*X)
 
@@ -340,7 +340,7 @@ class RBF_Slater_NELEC(nn.Module):
         self.centers = nn.Parameter(centers)
         self.centers.requires_grad = True
         self.ncenter = len(self.centers)
-        
+
         # get the standard deviations
         self.sigma = nn.Parameter(sigma)
         self.sigma.requires_grad = True
@@ -350,7 +350,7 @@ class RBF_Slater_NELEC(nn.Module):
         self.ndim = int(self.input_features/self.nelec)
 
     def forward(self,input):
-        
+
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nrbf,Ndim)
         delta =  (input.view(-1,self.nelec,1,self.ndim) - self.centers[None,...])
@@ -359,7 +359,7 @@ class RBF_Slater_NELEC(nn.Module):
         # -> (Nbatch,Nelec,Nrbf)
         X = (delta**2).sum(3)
         X = torch.sqrt(X)
-        
+
         # multiply by the exponent and take the exponential
         # -> (Nbatch,Nelec,Nrbf)
         X = torch.exp(-self.sigma*X)
@@ -396,7 +396,7 @@ class RBF_Slater_NELEC_GENERAL(nn.Module):
         self.centers = nn.Parameter(centers)
         self.centers.requires_grad = True
         self.ncenter = len(self.centers)
-        
+
         # get the standard deviations
         self.sigma = nn.Parameter(sigma)
         self.sigma.requires_grad = True
@@ -406,7 +406,7 @@ class RBF_Slater_NELEC_GENERAL(nn.Module):
         self.ndim = int(self.input_features/self.nelec)
 
     def forward(self,input):
-        
+
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nrbf,Ndim)
         delta =  (input.view(-1,self.nelec,1,self.ndim) - self.centers[None,...])
@@ -415,12 +415,9 @@ class RBF_Slater_NELEC_GENERAL(nn.Module):
         # -> (Nbatch,Nelec,Nrbf)
         X = (delta**2).sum(3)
         X = torch.sqrt(X)
-        
+
         # multiply by the exponent and take the exponential
         # -> (Nbatch,Nelec,Nrbf)
         X = torch.exp(-self.sigma*X)
 
         return X
-
-
-

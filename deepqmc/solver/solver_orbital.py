@@ -1,7 +1,7 @@
 import os
 import time
 from tqdm import tqdm
-import numpy as np 
+import numpy as np
 
 import torch
 from torch import nn
@@ -45,22 +45,26 @@ class SolverOrbital(SolverBase):
         self.task = task
 
         if task == 'geo_opt':
-            self.wf.ao.bas_exp.requires_grad = False
-            self.wf.mo.weight.requires_grad = False
-            self.wf.fc.weight.requires_grad = False
             self.wf.ao.atom_coords.requires_grad = True
+            self.wf.ao.bas_exp.requires_grad = False
+            for param in self.wf.mo.parameters():
+                param.requires_grad = False
+            self.wf.fc.weight.requires_grad = False
+
 
         elif task == 'wf_opt':
             self.wf.ao.bas_exp.requires_grad = True
-            self.wf.mo.weight.requires_grad = True
+            for param in self.wf.mo.parameters():
+                param.requires_grad = True
             self.wf.fc.weight.requires_grad = True
-            self.wf.ao.atom_coords.requires_grad = False  
+            self.wf.ao.atom_coords.requires_grad = False
 
             for name in freeze:
                 if name.lower() == 'ci':
                     self.wf.fc.weight.requires_grad = False
                 elif name.lower() == 'mo':
-                    self.wf.mo.weight.requires_grad = False
+                    for param in self.wf.mo.parameters():
+                        param.requires_grad = False
                 elif name.lower() == 'bas_exp':
                     self.wf.ao.bas_exp.requires_grad = False
                 else:
@@ -80,7 +84,7 @@ class SolverOrbital(SolverBase):
         #sample the wave function
         pos = self.sample(ntherm=self.resample.ntherm)
 
-        # handle the batch size        
+        # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
 
@@ -97,10 +101,10 @@ class SolverOrbital(SolverBase):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
-                
+
         # clipper for the fc weights
         clipper = ZeroOneClipper()
-    
+
         cumulative_loss = []
         min_loss = 1E3
 
@@ -113,7 +117,7 @@ class SolverOrbital(SolverBase):
 
             cumulative_loss = 0
             for data in self.dataloader:
-                
+
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
 
@@ -134,19 +138,19 @@ class SolverOrbital(SolverBase):
 
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(n,cumulative_loss,self.save_model)
-                 
+
 
             self.get_observable(self.obs_dict,pos)
             print('loss %f' %(cumulative_loss))
             for k in self.obs_dict:
-                if k =='local_energy':
+                if k == 'local_energy':
                     print('variance : %f' %np.var(self.obs_dict['local_energy'][-1]))
                     print('energy : %f' %np.mean(self.obs_dict['local_energy'][-1]) )
                 else:
                     print(k + ' : ', self.obs_dict[k][-1])
 
             print('----------------------------------------')
-            
+
             # resample the data
             if (n%self.resample.resample_every == 0) or (n == nepoch-1):
                 if self.resample.resample_from_last:
@@ -154,7 +158,7 @@ class SolverOrbital(SolverBase):
                 else:
                     pos = None
                 pos = self.sample(pos=pos,ntherm=self.resample.ntherm,with_tqdm=False)
-                
+
                 self.dataloader.dataset.data = pos
 
             if self.task=='geo_opt':
@@ -180,6 +184,3 @@ class SolverOrbital(SolverBase):
                                                            at[1][2]/conv2bohr))
             f.write('\n')
         f.close()
-
-
-

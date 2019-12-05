@@ -4,7 +4,7 @@ from torch import optim, nn
 from deepqmc.sampler.metropolis import  Metropolis
 from deepqmc.sampler.hamiltonian import  Hamiltonian
 from deepqmc.wavefunction.wf_potential import Potential
-from deepqmc.solver.solver_potential import SolverPotential 
+from deepqmc.solver.solver_potential import SolverPotential
 
 import numpy as np
 import unittest
@@ -23,16 +23,16 @@ class TestHarmonicOscillator1D(unittest.TestCase):
 
         # wavefunction
         domain, ncenter = {'xmin':-5.,'xmax':5.}, 11
-        self.wf = Potential(pot_func, domain, ncenter, 
+        self.wf = Potential(pot_func, domain, ncenter,
                             fcinit='random', nelec=1, sigma=2.)
 
         #sampler
-        self.mh_sampler = Metropolis(nwalkers=1000, nstep=2000, 
-                                    step_size = 1., nelec = self.wf.nelec, 
+        self.mh_sampler = Metropolis(nwalkers=1000, nstep=2000,
+                                    step_size = 1., nelec = self.wf.nelec,
                                     ndim = self.wf.ndim, domain = {'min':-5,'max':5})
 
         # sampler
-        self.hmc_sampler = Hamiltonian(nwalkers=1000, nstep=200, 
+        self.hmc_sampler = Hamiltonian(nwalkers=1000, nstep=200,
                                       nelec = self.wf.nelec, ndim= self.wf.ndim,
                                       step_size = 0.5, domain = {'min':-5,'max':5}, L=10,
                                       move='all')
@@ -54,7 +54,7 @@ class TestHarmonicOscillator1D(unittest.TestCase):
 
 
         # sample and compute observables
-        pos, e, v = self.solver.single_point()
+        _, e, v = self.solver.single_point()
         assert np.allclose([e.data.numpy(),v.data.numpy()],[0.5,0],atol=1E-3)
 
     def test_single_point_hamiltonian_mc_sampling(self):
@@ -89,20 +89,9 @@ class TestHarmonicOscillator1D(unittest.TestCase):
 
         # sample and compute variables
         pos, e, v = self.solver.single_point()
-        assert(e.data.numpy() < 1.)
-        assert(v.data.numpy() < 1.)
-        
+        assert(e.data.numpy() < 2.5)
+        assert(v.data.numpy() < 2.5)
+
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-
-
-
-
-
-

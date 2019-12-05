@@ -29,26 +29,26 @@ def second_der_autograd(xx):
 
     out = getA(xx)
 
-    # compute the jacobian            
+    # compute the jacobian
     z = Variable(torch.ones(out.shape))
     jacob = grad(out,xx,
                  grad_outputs=z,
                  allow_unused=True,
                  create_graph=True)[0]
-    
+
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
-    
+
     for idim in range(jacob.shape[1]):
         tmp = grad(jacob[:,idim],xx,
                   grad_outputs=z,
                   retain_graph=True,
                   only_inputs=True,
-                  allow_unused=True)[0]    
-        
+                  allow_unused=True)[0]
+
         hess[:,idim] = tmp[:,idim]
-    
+
     return hess
 
 
@@ -63,12 +63,3 @@ d2A_auto = second_der_autograd(xx)
 
 print(d2A.sum())
 print(d2A_auto.sum())
-
-
-
-
-
-
-
-
-    

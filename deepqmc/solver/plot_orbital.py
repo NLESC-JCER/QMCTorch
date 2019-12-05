@@ -28,12 +28,12 @@ def plot_molecule(solver, pos=None, loss='variance',alpha=0.025):
     if loss is not None:
         loss = Loss(solver.wf,method=loss)
         ortho_loss = OrthoReg()
-        l = loss(pos) 
+        l = loss(pos)
         if solver.wf.mo.weight.requires_grad:
             l += ortho_loss(solver.wf.mo.weight)
         l.backward()
 
-    # plot 
+    # plot
     plt.style.use('dark_background')
     fig = plt.figure()
 
@@ -47,7 +47,7 @@ def plot_molecule(solver, pos=None, loss='variance',alpha=0.025):
     d = pos.detach().numpy()
     for ielec in range(solver.wf.nelec):
         ax.scatter(d[:,3*ielec],d[:,3*ielec+1],d[:,3*ielec+2],alpha=alpha)
-    
+
     # plot atoms
     for iat in range(solver.wf.natom):
 
@@ -79,16 +79,16 @@ def plot_molecule_mayavi(solver, pos=None, loss=None,alpha=0.05):
     if loss is not None:
         loss = Loss(solver.wf,method=loss)
         ortho_loss = OrthoReg()
-        l = loss(pos) 
+        l = loss(pos)
         if solver.wf.mo.weight.requires_grad:
             l += ortho_loss(solver.wf.mo.weight)
         l.backward()
 
 
-    # plot 
+    # plot
     fig = mlab.figure(1, bgcolor=(0, 0, 0), size=(350, 350))
     mlab.clf()
-    
+
     # plot electrons
     d = pos.detach().numpy()
     for ielec in range(solver.wf.nelec):
@@ -97,7 +97,7 @@ def plot_molecule_mayavi(solver, pos=None, loss=None,alpha=0.05):
               resolution=5,
               color=cm.jet(int(256*(ielec/solver.wf.nelec)))[:-1],
               opacity=alpha)
-    
+
     # plot atoms
     for iat in range(solver.wf.natom):
 

@@ -22,13 +22,12 @@ class Hamiltonian(SamplerBase):
         SamplerBase.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain, move)
         self.traj_length = L
 
-       
     @staticmethod
     def get_grad(func,inp):
         '''Compute the gradient of the of a function
         wrt the value of its input
 
-        Args:   
+        Args:
             func : function to get the gradient of
             inp : input
         Returns:
@@ -40,7 +39,7 @@ class Hamiltonian(SamplerBase):
         z = Variable(torch.ones(val.shape))
         val.backward(z)
         grad = inp.grad.data
-        inp.grad.data.zero_() 
+        inp.grad.data.zero_()
         inp.requires_grad = False
         return grad
 
@@ -98,9 +97,9 @@ class Hamiltonian(SamplerBase):
             qinit (array) : initial positon of the walkers
         Returns:
             q : new positions of the walkers
-            rate : accept rate  
+            rate : accept rate
         '''
-        
+
         # init the momentum
         q = qinit.clone()
         p = torch.randn(q.shape)
@@ -137,4 +136,3 @@ class Hamiltonian(SamplerBase):
         rate = cond.sum().float()/cond.shape[0]
 
         return q, rate
-        

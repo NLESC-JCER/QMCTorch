@@ -13,8 +13,8 @@ class SamplerBase(object):
         self.domain = domain
         self.move = move
         self.nelec = nelec
-        self.ndim = ndim 
-        
+        self.ndim = ndim
+
         self.walkers = Walkers(nwalkers,nelec,ndim,domain)
 
     def set_ndim(self,ndim):

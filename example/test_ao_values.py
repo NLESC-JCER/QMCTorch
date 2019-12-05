@@ -10,9 +10,9 @@ import matplotlib.pyplot as plt
 
 # define the molecule
 at = 'H 0 0 0; H 0 0 1'
-mol = Molecule(atom=at, 
-               basis_type='gto', 
-               basis='sto-3g', 
+mol = Molecule(atom=at,
+               basis_type='gto',
+               basis='sto-3g',
                unit='bohr')
 
 m = gto.M(atom=at, basis='sto-3g',unit='bohr')
@@ -67,14 +67,3 @@ plt.show()
 
 # plot the data
 # plot_observable(solver.obs_dict,e0=-1.16)
-
-
-
-
-
-
-
-
-
-
-

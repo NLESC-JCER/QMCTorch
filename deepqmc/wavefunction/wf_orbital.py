@@ -12,7 +12,9 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 
 class Orbital(WaveFunction):
 
-    def __init__(self,mol,configs='ground_state',scf='pyscf',kinetic_jacobi=False):
+    def __init__(self,mol,configs='ground_state',scf='pyscf',
+                 kinetic_jacobi=False,
+                 use_projector=False):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
@@ -42,14 +44,19 @@ class Orbital(WaveFunction):
         self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
-        self.pool = SlaterPooling(self.configs,mol.nup,mol.ndown)
+        self.pool = SlaterPooling(self.configs,mol,use_projector=use_projector)
 
-        # poolin operation to directly compute the kinetic energies via Jacobi formula
-        self.kinpool = KineticPooling(self.configs,mol.nup,mol.ndown)
+        # pooling operation to directly compute
+        # the kinetic energies via Jacobi formula
+        self.kinpool = KineticPooling(self.configs,mol,use_projector=use_projector)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
         self.fc.weight.data.fill_(1.)
+        if self.nci > 1:
+            self.fc.weight.data.fill_(0.)
+            self.fc.weight.data[0][0] = 1.
+
         self.fc.clip = False
 
         if kinetic_jacobi:
@@ -58,8 +65,8 @@ class Orbital(WaveFunction):
 
     def get_mo_coeffs(self):
         mo_coeff =  torch.tensor(self.mol.get_mo_coeffs(code=self.scf_code)).float()
-        return nn.Parameter(mo_coeff.transpose(0,1))        
-        
+        return nn.Parameter(mo_coeff.transpose(0,1))
+
     def update_mo_coeffs(self):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
@@ -73,7 +80,7 @@ class Orbital(WaveFunction):
 
         Returns: values of psi
         '''
-        
+
         #edist  = self.edist(x)
         #J = self.jastrow(edist)
 
@@ -86,15 +93,13 @@ class Orbital(WaveFunction):
 
     def local_energy(self,pos):
         ''' local energy of the sampling points.'''
-        t0 = time()  
-        print('Jacobi Kinetic Energy')  
+
         ke = self.kinetic_energy_jacobi(pos,return_local_energy=True)
-        print('Jacobi Kinetic done in %f' %(time()-t0))
-        
+
         return ke \
              + self.nuclear_potential(pos)  \
              + self.electronic_potential(pos) \
-             + self.nuclear_repulsion()   
+             + self.nuclear_repulsion()
 
     def kinetic_energy_jacobi(self,x,return_local_energy=False, **kwargs):
         '''Compute the value of the kinetic enery using
@@ -109,7 +114,7 @@ class Orbital(WaveFunction):
         MO = self.mo(self.ao(x))
         d2MO = self.mo(self.ao(x,derivative=2))
         return self.fc(self.kinpool(MO,d2MO,return_local_energy=return_local_energy))
-        
+
 
     def nuclear_potential(self,pos):
         '''Compute the potential of the wf points
@@ -118,9 +123,9 @@ class Orbital(WaveFunction):
 
         Returns: values of V * psi
 
-        TODO : vecorize that !! 
+        TODO : vecorize that !!
         '''
-        
+
         p = torch.zeros(pos.shape[0])
         for ielec in range(self.nelec):
             pelec = pos[:,(ielec*self.ndim):(ielec+1)*self.ndim]
@@ -140,17 +145,17 @@ class Orbital(WaveFunction):
         '''
 
         pot = torch.zeros(pos.shape[0])
-        
+
         for ielec1 in range(self.nelec-1):
             epos1 = pos[:,ielec1*self.ndim:(ielec1+1)*self.ndim]
             for ielec2 in range(ielec1+1,self.nelec):
                 epos2 = pos[:,ielec2*self.ndim:(ielec2+1)*self.ndim]
                 r = torch.sqrt( ((epos1-epos2)**2).sum(1) ) + 1E-6
-                pot += (1./r) 
+                pot += (1./r)
         return pot.view(-1,1)
 
     def nuclear_repulsion(self):
-        '''Compute the nuclear repulsion term    
+        '''Compute the nuclear repulsion term
         Returns: values of Vnn
         '''
 
@@ -187,24 +192,89 @@ class Orbital(WaveFunction):
         return d
 
     def get_configs(self,configs,mol):
+        """Get the configuratio in the CI expansion
 
+        Args:
+            configs (str): name of the configs we want
+            mol (mol object): molecule object
+
+        Returns:
+            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down electronic confs
+        """
         if isinstance(configs,torch.Tensor):
             return configs
 
         elif configs == 'ground_state':
             return self._get_ground_state_config(mol)
 
+        elif configs.startswith('singlet'):
+            nocc,nvirt = eval(configs.lstrip("singlet"))
+            return self._get_singlet_state_config(mol,nocc,nvirt)
+
+        else:
+            raise ValueError(configs, " not recognized as valid configuration")
+
     def _get_ground_state_config(self,mol):
-        conf = (torch.LongTensor([np.array(range(mol.nup))]), 
+        """Return only the ground state configuration
+
+        Args:
+            mol (mol): mol object
+
+        Returns:
+            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down electronic confs
+        """
+        conf = (torch.LongTensor([np.array(range(mol.nup))]),
                 torch.LongTensor([np.array(range(mol.ndown))]))
         return conf
 
+    def _get_singlet_state_config(self,mol,nocc,nvirt):
+        """Get the confs of the singlet conformations
 
+        Args:
+            mol (mol): mol object
+            nocc (int): number of occupied orbitals in the active space
+            nvirt (int): number of virtual orbitals in the active space
+        """
 
+        _gs = list(range(mol.nup))
+        cup, cdown = [_gs], [_gs]
 
+        for ivirt in range(mol.nup,mol.nup+nvirt,1):
+            for iocc in range(mol.nup-1,mol.nup-1-nocc,-1):
 
+                _xt = self._create_excitation(_gs.copy(),iocc,ivirt)
+                cup, cdown = self._append_excitations(cup,cdown,_xt,_gs)
+                cup, cdown = self._append_excitations(cup,cdown,_gs,_xt)
 
+        return (torch.LongTensor(cup),torch.LongTensor(cdown))
 
+    @staticmethod
+    def _create_excitation(conf,iocc,ivirt):
+        """promote an electron from iocc to ivirt
 
+        Args:
+            conf (list): index of the occupied orbitals
+            iocc (int): index of the occupied orbital
+            ivirt (int): index of the virtual orbital
 
+        Returns:
+            list: new configuration
+        """
+        conf.pop(iocc)
+        conf += [ivirt]
+        return conf
 
+    @staticmethod
+    def _append_excitations(cup,cdown,new_cup,new_cdown):
+        """Append new excitations
+
+        Args:
+            cup (list): configurations of spin up
+            cdown (list): configurations of spin down
+            new_cup (list): new spin up confs
+            new_cdown (list): new spin down confs
+        """
+
+        cup.append(new_cup)
+        cdown.append(new_cdown)
+        return cup, cdown

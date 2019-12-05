@@ -1,7 +1,7 @@
 import os
 import time
 from tqdm import tqdm
-import numpy as np 
+import numpy as np
 from types import SimpleNamespace
 
 import torch
@@ -58,7 +58,7 @@ class DistSolverOrbital(SolverOrbital):
 
             self.distributed_training = True
             processes = []
-            
+
             manager = Manager()
             obs_data = manager.list()
 
@@ -67,7 +67,7 @@ class DistSolverOrbital(SolverOrbital):
                             args=( obs_data, rank, ndist, nepoch, batchsize, loss ))
                 p.start()
                 processes.append(p)
-                
+
             for p in processes:
                 p.join()
 
@@ -80,7 +80,7 @@ class DistSolverOrbital(SolverOrbital):
         dist.init_process_group(self.dist_backend, rank=rank, world_size=size)
         self._worker(nepoch,batchsize,loss)
         obs_data.append(self.obs_dict['local_energy'])
-        
+
     def _worker(self, nepoch, batchsize, loss ):
 
         '''Train the model.
@@ -106,7 +106,7 @@ class DistSolverOrbital(SolverOrbital):
         #sample the wave function
         pos = self.sample(ntherm=self.resample.ntherm)
 
-        # handle the batch size        
+        # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
 
@@ -123,10 +123,10 @@ class DistSolverOrbital(SolverOrbital):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
-                
+
         # clipper for the fc weights
         clipper = ZeroOneClipper()
-    
+
         cumulative_loss = []
         min_loss = 1E3
 
@@ -136,7 +136,7 @@ class DistSolverOrbital(SolverOrbital):
 
             cumulative_loss = 0
             for data in self.dataloader:
-                
+
                 lpos = Variable(data).float()
                 lpos.requires_grad = True
 
@@ -161,7 +161,7 @@ class DistSolverOrbital(SolverOrbital):
 
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(n,cumulative_loss,self.save_model)
-                 
+
 
             self.get_observable(self.obs_dict,pos)
             printd(rank,'loss %f' %(cumulative_loss))
@@ -173,7 +173,7 @@ class DistSolverOrbital(SolverOrbital):
                     printd(rank,k + ' : ', self.obs_dict[k][-1])
 
             printd(rank,'----------------------------------------')
-            
+
             # resample the data
             if (n%self.resample.resample_every == 0) or (n == nepoch-1):
                 if self.resample.resample_from_last:
@@ -181,7 +181,7 @@ class DistSolverOrbital(SolverOrbital):
                 else:
                     pos = None
                 pos = self.sample(pos=pos,ntherm=self.resample.ntherm,with_tqdm=False)
-                
+
                 self.dataloader.dataset.data = pos
 
         #restore the sampler number of step
@@ -205,9 +205,3 @@ class DistSolverOrbital(SolverOrbital):
             data_gather = [torch.zeros_like(data)] * dist.get_world_size()
             dist.all_gather(data_gather,data)
             self.obs_dict[k] = data_gather[data]
-
-
-
-
-    
-

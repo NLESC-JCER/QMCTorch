@@ -11,7 +11,7 @@ class Potential(WaveFunction):
     def __init__(self,fpot,domain,ncenter,nelec=1,ndim=1,fcinit=0.1,sigma=1.):
         super(Potential,self).__init__(nelec,ndim)
 
-        # get the RBF centers 
+        # get the RBF centers
         if not isinstance(ncenter,list):
             ncenter = [ncenter]
         self.centers = torch.linspace(domain['xmin'],domain['xmax'],ncenter[0]).view(-1,1)
@@ -22,7 +22,7 @@ class Potential(WaveFunction):
                       centers=self.centers, sigma = sigma,
                       opt_centers=True,
                       opt_sigma = True)
-        
+
         # define the fc layer
         self.fc = nn.Linear(self.ncenter, 1, bias=False)
         self.fc.clip = True
@@ -30,7 +30,7 @@ class Potential(WaveFunction):
         # initiaize the fc layer
         if fcinit == 'random':
             nn.init.uniform_(self.fc.weight,0,1)
-        elif isinstance(fcinit,float):  
+        elif isinstance(fcinit,float):
             self.fc.weight.data.fill_(fcinit)
 
         # book the potential function
@@ -76,10 +76,3 @@ class Potential(WaveFunction):
         Returns: values of Vee * psi
         '''
         return 0
-
-
-
-
-
-
-

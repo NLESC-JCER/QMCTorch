@@ -18,7 +18,7 @@ class Walkers(object):
             if len(pos) > self.nwalkers:
                 pos = pos[-self.nwalkers:,:]
             self.pos = pos
-        
+
         else:
             options = ['center','uniform']
             if method not in options:
@@ -28,7 +28,7 @@ class Walkers(object):
                 self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim ))
 
             elif method == options[1]:
-                self.pos = torch.rand(self.nwalkers, self.nelec*self.ndim) 
+                self.pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
                 self.pos *= (self.domain['max'] - self.domain['min'])
                 self.pos += self.domain['min']
 
@@ -63,13 +63,3 @@ class Walkers(object):
 
     def _random(self,step_size,size):
         return step_size * (2 * torch.rand(size) - 1)
-
-
-
-
-
-
-
-
-
-

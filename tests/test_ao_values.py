@@ -17,9 +17,9 @@ class TestAOvalues(unittest.TestCase):
 
         # define the molecule
         at = 'H 0 0 0; H 0 0 1'
-        self.mol = Molecule(atom=at, 
-                    basis_type='gto', 
-                    basis='sto-3g', 
+        self.mol = Molecule(atom=at,
+                    basis_type='gto',
+                    basis='sto-3g',
                     unit='bohr')
 
         self.m = gto.M(atom=at, basis='sto-3g',unit='bohr')
@@ -60,7 +60,7 @@ class TestAOvalues(unittest.TestCase):
 
         i2p_aovals_ref = np.gradient(ip_aovals_ref[:,self.iorb],self.x)
 
-        #assert np.allclose(i2p_aovals[:,0,self.iorb],i2p_aovals_ref)    
+        #assert np.allclose(i2p_aovals[:,0,self.iorb],i2p_aovals_ref)
 
         # plt.plot(self.x,i2p_aovals[:,0,self.iorb],label='torch')
         # plt.plot(self.x,i2p_aovals_ref,'o',label='pyscf')
@@ -69,15 +69,3 @@ class TestAOvalues(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
-
-
-
-
-
-
-
-
-
-
-

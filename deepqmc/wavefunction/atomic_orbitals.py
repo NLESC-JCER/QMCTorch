@@ -13,7 +13,7 @@ class AtomicOrbitals(nn.Module):
         '''Radial Basis Function Layer in N dimension
 
         Args:
-            mol: the molecule 
+            mol: the molecule
         '''
 
         super(AtomicOrbitals,self).__init__()
@@ -50,12 +50,12 @@ class AtomicOrbitals(nn.Module):
         self.bas_m = torch.tensor(mol.bas_m)
 
         # select the radial aprt
-        radial_dict = {'sto':self._radial_slater, 
+        radial_dict = {'sto':self._radial_slater,
                        'gto':self._radial_gaussian,
                        'gto_cart':self._radial_gausian_cart}
 
         self.radial = radial_dict[mol.basis_type]
-        
+
         # get the normaliationconstants
         self.norm_cst = self.get_norm(mol.basis_type)
 
@@ -73,7 +73,7 @@ class AtomicOrbitals(nn.Module):
 
 
     def _norm_slater(self):
-        '''Normalization of the STO 
+        '''Normalization of the STO
         taken from www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
 
         C Filippi Multiconf wave functions for QMC of first row diatomic molecules
@@ -95,7 +95,7 @@ class AtomicOrbitals(nn.Module):
         A = self.bas_exp**exp1
         B = 2**(2.*bas_n+3./2)
         C = torch.tensor(f2(2*bas_n.int()-1)*np.pi**0.5).float()
-        
+
         return torch.sqrt(B/C)*A
 
     def _radial_slater(self, R, xyz=None, derivative=0,jacobian=True):
@@ -107,20 +107,20 @@ class AtomicOrbitals(nn.Module):
             rn = R**(self.bas_n)
             nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
             er = torch.exp(-self.bas_exp*R)
-            nabla_er = - self.bas_exp * sum_xyz * er 
+            nabla_er = - self.bas_exp * sum_xyz * er
 
             if derivative == 1:
-                return nabla_rn*er + rn*nabla_er 
+                return nabla_rn*er + rn*nabla_er
 
 
     def _radial_gaussian(self,R, xyz=None, derivative=0,jacobian=True):
 
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
-            
+
 
         elif derivative > 0:
-            
+
             rn = R**(self.bas_n)
             nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
 
@@ -131,10 +131,10 @@ class AtomicOrbitals(nn.Module):
                 if jacobian:
                     nabla_rn = nabla_rn.sum(3)
                     nabla_er = nabla_er.sum(3)
-                    return nabla_rn*er + rn*nabla_er 
+                    return nabla_rn*er + rn*nabla_er
                 else:
-                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er 
-                
+                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er
+
             elif derivative == 2:
 
                 lap_rn = self.bas_n * ( 3*R**(self.bas_n-2) \
@@ -144,7 +144,7 @@ class AtomicOrbitals(nn.Module):
                 - 6 * self.bas_exp * er
 
                 return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
-                
+
 
     def _radial_gausian_cart(self,R,xyz=None, derivative=0):
         raise NotImplementedError('Cartesian GTOs are on the to do list')
@@ -152,7 +152,7 @@ class AtomicOrbitals(nn.Module):
 
 
     def forward(self,input,derivative=0):
-        
+
         nbatch = input.shape[0]
 
         # get the pos of the bas
@@ -161,15 +161,15 @@ class AtomicOrbitals(nn.Module):
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
         xyz =  (input.view(-1,self.nelec,1,self.ndim) - self.bas_coords[None,...])
-        
+
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
         r = torch.sqrt((xyz**2).sum(3))
-        
+
         # radial part
         # -> (Nbatch,Nelec,Nbas)
         R = self.radial(r)
-        
+
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
         Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m)
@@ -184,15 +184,15 @@ class AtomicOrbitals(nn.Module):
             dY = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=1)
             bas = dR * Y  + R * dY
 
-        elif derivative == 2:            
+        elif derivative == 2:
             dR = self.radial(r,xyz=xyz,derivative=1,jacobian=False)
             dY = GradSphericalHarmonics(xyz,self.bas_l,self.bas_m)
-            
+
             d2R = self.radial(r,xyz=xyz,derivative=2)
             d2Y = SphericalHarmonics(xyz,self.bas_l,self.bas_m,derivative=2)
 
             bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
-        
+
         # product with coefficients
         # -> (Nbatch,Nelec,Nbas)
         bas = self.norm_cst * self.bas_coeffs * bas

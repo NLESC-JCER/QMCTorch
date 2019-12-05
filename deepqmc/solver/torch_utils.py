@@ -37,7 +37,7 @@ class Loss(nn.Module):
 
 class OrthoReg(nn.Module):
     '''add a penalty to make matrice orthgonal.'''
-    
+
     def __init__(self,alpha=0.1):
         super(OrthoReg,self).__init__()
         self.alpha = alpha
@@ -55,7 +55,7 @@ class UnitNormClipper(object):
             w.div_(torch.norm(w).expand_as(w))
 
 class ZeroOneClipper(object):
-    
+
     def __call__(self, module):
         if hasattr(module,'weight'):
             w = module.weight.data

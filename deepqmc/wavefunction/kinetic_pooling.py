@@ -6,6 +6,8 @@ from torch.autograd import grad, Variable
 import numpy as np
 from pyscf import scf, gto, mcscf
 
+from deepqmc.wavefunction.orbital_projector import OrbitalProjector
+
 from tqdm import tqdm
 from time import time
 
@@ -17,48 +19,77 @@ def bproj(M,P):
 
 class KineticPooling(nn.Module):
 
-    """Comutes the kinetic energy of each configuration using the trace trick."""
+    """Computes the kinetic energy of each configuration using the trace trick."""
 
-    def __init__(self,configs,nup,ndown):
+    def __init__(self,configs,mol,use_projector=True):
         super(KineticPooling, self).__init__()
 
         self.configs = configs
         self.nconfs = len(configs[0])
-        
 
-        self.nup = nup
-        self.ndown = ndown
-        self.nelec = nup+ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelec = self.nup+self.ndown
 
-        self.index_up = torch.arange(nup)
-        self.index_down = torch.arange(nup,nup+ndown)
+        self.index_up = torch.arange(self.nup)
+        self.index_down = torch.arange(self.nup,self.nup+self.ndown)
 
-        #self.Pup, self.Pdown = self._get_projector()
-
-    # def _get_projector(self):
-
-    #     Pup = torch.zeros(self.nconfs,self.nelec,self.nup)
-    #     Pdown = torch.zeros(self.nconfs,self.nelec,self.ndown)
-
-        
-    #     for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])): 
-    #         for iup, idx_up in enumerate(cup):
-    #             Pup[ic,idx_up,iup] = 1
-    #         for idwn, idx_dwn in enumerate(cdown):
-    #             Pdown[ic,self.nup+idx_dwn,idwn] = 1
-
-    #     return Pup, Pdown
-
-
+        self.use_projector = use_projector
+        if use_projector:
+            self.orb_proj = OrbitalProjector(configs,mol)
 
     def forward(self,MO, d2MO, return_local_energy=False):
+        if self.use_projector:
+            return self._forward_proj(MO, d2MO,
+                                      return_local_energy=return_local_energy).view(-1,self.nconfs)
+        else:
+            return self._forward_loop(MO, d2MO,
+                                      return_local_energy=return_local_energy)
 
+    def _forward_proj(self,MO, d2MO, return_local_energy=False):
         ''' Compute the kinetic energy using the trace trick
         for a product of spin up/down determinant
         .. math::
 
-            T \Psi  =  T Dup Ddwn 
-                    = -1/2 Dup * Ddown  *( \Delta_up Dup  + \Delta_down Ddwn)
+            T \Psi  =  T Dup Ddwn
+                    = -1/2 Dup * Ddown  * ( \Delta_up Dup  + \Delta_down Ddown)
+
+            using the trace trick with D = |A| :
+                O(D) = D trace(A^{-1} O(A))
+                and Delta_up(D_down) = 0
+
+        Args:
+            A : matrix of MO vals (Nbatch, Nelec, Nmo)
+            d2A : matrix of \Delta MO vals (Nbatch, Nelec, Nmo)
+        Return:
+            K : T Psi (Nbatch, Ndet)
+        '''
+
+        # shortcut up/down matrices
+        Aup, Adown = self.orb_proj.split_orbitals(MO)
+        d2Aup, d2Adown = self.orb_proj.split_orbitals(d2MO)
+
+        # inverse of MO matrices
+        iAup = torch.inverse(Aup)
+        iAdown = torch.inverse(Adown)
+
+        # product
+        out = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown))
+
+        # multiply by det if necessary
+        if not return_local_energy:
+            pd = torch.det(Aup) * torch.det(Adown)
+            out *= pd
+
+        return -0.5*out
+
+    def _forward_loop(self,MO, d2MO, return_local_energy=False):
+        ''' Compute the kinetic energy using the trace trick
+        for a product of spin up/down determinant
+        .. math::
+
+            T \Psi  =  T Dup Ddwn
+                    = -1/2 Dup * Ddown  * ( \Delta_up Dup  + \Delta_down Ddown)
 
             using the trace trick with D = |A| :
                 O(D) = D trace(A^{-1} O(A))
@@ -73,15 +104,15 @@ class KineticPooling(nn.Module):
 
         nbatch = MO.shape[0]
         out = torch.zeros(nbatch,self.nconfs)
-                
+
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
 
             Aup = MO.index_select(1,self.index_up).index_select(2,cup)
             Adown = MO.index_select(1,self.index_down).index_select(2,cdown)
-            
+
             iAup = torch.inverse(Aup)
             iAdown = torch.inverse(Adown)
-            
+
             d2Aup = d2MO.index_select(1,self.index_up).index_select(2,cup)
             d2Adown = d2MO.index_select(1,self.index_down).index_select(2,cdown)
             out[:,ic] = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown))
@@ -90,4 +121,4 @@ class KineticPooling(nn.Module):
                 pd = torch.det(Aup) * torch.det(Adown)
                 out[:,ic] *= pd
 
-        return -0.5*out.view(-1,1)
+        return -0.5*out

@@ -3,7 +3,7 @@ from torch import optim
 
 from deepqmc.sampler.metropolis import  Metropolis
 from deepqmc.wavefunction.wf_potential import Potential
-from deepqmc.solver.solver_potential import SolverPotential 
+from deepqmc.solver.solver_potential import SolverPotential
 from deepqmc.solver.plot_potential import plot_results_1d, plotter1d
 
 def pot_func(pos):
@@ -21,8 +21,8 @@ domain, ncenter = {'xmin':-5.,'xmax':5.}, 11
 wf = Potential(pot_func,domain,ncenter,fcinit='random',nelec=1,sigma=0.5)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=2000, 
-                     step_size = 1., nelec = wf.nelec, 
+sampler = Metropolis(nwalkers=1000, nstep=2000,
+                     step_size = 1., nelec = wf.nelec,
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
@@ -38,6 +38,5 @@ solver = SolverPotential(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler
 plotter = plotter1d(wf,domain,100,sol=ho1d_sol,save='./image/')
 solver.run(300,loss = 'variance', plot = plotter,save='model.pth' )
 
-# plot the final wave function 
+# plot the final wave function
 plot_results_1d(solver,domain,100,ho1d_sol,e0=0.5,load='model.pth')
-
