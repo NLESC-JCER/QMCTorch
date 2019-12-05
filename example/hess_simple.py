@@ -15,7 +15,7 @@ def jac_f(xy):
     x, y = xy[:,0],xy[:,1]
 
     f[:,0] = 2*x - 12*x**2*y**2
-    f[:,1] = 3*y**2 - 8 * x**3*y 
+    f[:,1] = 3*y**2 - 8 * x**3*y
     return f
 
 def hess_f(xy):
@@ -27,31 +27,31 @@ def hess_f(xy):
 
 def hess_loop(out,pos):
 
-    
-    # compute the jacobian            
+
+    # compute the jacobian
     z = Variable(torch.ones(out.shape))
     jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
-    
+
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
-    
+
     for idim in range(jacob.shape[1]):
         tmp = grad(jacob[:,idim],pos,
                    grad_outputs=z,
                    retain_graph = True,
                    create_graph=False,
-                   allow_unused=False)[0]    
+                   allow_unused=False)[0]
         hess[:,idim] = tmp[:,idim]
-    
+
     return jacob, hess
 
 def hess_fast(out,pos):
 
-    # compute the jacobian            
+    # compute the jacobian
     z = Variable(torch.ones(out.shape))
     jacob = grad(out,pos,grad_outputs=z,create_graph=True)[0]
-    
+
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
@@ -63,21 +63,21 @@ def hess_fast(out,pos):
                    grad_outputs=z,
                    retain_graph=True,
                    create_graph=False,
-                   allow_unused=False)[0]    
-        hess[:,idim] = tmp[:,idim]   
+                   allow_unused=False)[0]
+        hess[:,idim] = tmp[:,idim]
     return jacob, hess
 
 
 def hess_fast(out,pos):
 
-    # compute the jacobian            
+    # compute the jacobian
     z = Variable(torch.ones(out.shape))
     jacob = grad(out,pos,grad_outputs=z,retain_graph=True,create_graph=True)[0]
-    
+
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
-    
+
     for idim in range(jacob.shape[1]):
         z = Variable(torch.zeros(jacob.shape))
         z[:,idim] = 1.
@@ -109,7 +109,3 @@ print('Fast : %f' %(time()-t0))
 
 print((jsol-j1).norm())
 print( (hsol-h1).norm())
-
-
-
-

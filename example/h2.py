@@ -26,7 +26,7 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', basis_type='gto', basis='sto-3g',
 wf = Orbital(mol,kinetic_jacobi=False)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5,
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -46,14 +46,3 @@ pos = solver.single_point()
 
 # # plot the data
 # plot_observable(solver.obs_dict,e0=-1.16)
-
-
-
-
-
-
-
-
-
-
-

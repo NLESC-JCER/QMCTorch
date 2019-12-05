@@ -26,8 +26,6 @@ def getdA(x1,x2):
     dAdx2 = torch.tensor([[0,0],[-a,-2*a]]) * A
     return dAdx1,dAdx2
 
-
-
 def getd2A(x1,x2):
     a=1
     A = torch.exp(torch.tensor([[-a*x1,-2*a*x1],[-a*x2,-2*a*x2]]))
@@ -37,7 +35,7 @@ def getd2A(x1,x2):
 
 def getdetA(x1,x2):
     a=1
-    return torch.exp(-a*(x1+x2))*(torch.exp(-a*x2)-torch.exp(-a*x1)) 
+    return torch.exp(-a*(x1+x2))*(torch.exp(-a*x2)-torch.exp(-a*x1))
 
 def d2detA(x1,x2):
     a=1
@@ -88,7 +86,7 @@ def second_der_autograd(x1,x2):
 
     h1 = grad(jac[0],xx,allow_unused=True,retain_graph=True)
     h2 = grad(jac[1],xx,allow_unused=True,retain_graph=True)
-    
+
     return h1,h2,jac
 
 
@@ -128,17 +126,3 @@ assert(torch.allclose(tt2,d2D2/detA))
 
 
 h1,h2,jjac = second_der_autograd(x1,x2)
-
-
-
-
-
-
-
-
-
-
-
-
-
-    

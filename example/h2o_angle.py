@@ -29,7 +29,7 @@ def bend_molecule(mol,r,index=1):
 
 
 # define the molecule
-mol = Molecule(atom='water_line.xyz', unit='angs', 
+mol = Molecule(atom='water_line.xyz', unit='angs',
                basis_type='gto', basis='sto-3g')
 
 # define the wave function
@@ -37,7 +37,7 @@ wf = Orbital(mol,kinetic_jacobi=True)
 
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=5000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=5000, step_size = 0.5,
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # solver
@@ -49,7 +49,7 @@ angles = np.linspace(0,90,10)
 R = rot_mat(angles)
 
 for iA in range(len(angles)):
-    
+
     # define the wave function
     wf = Orbital(mol,kinetic_jacobi=True)
     solver.wf = wf
@@ -58,17 +58,3 @@ for iA in range(len(angles)):
 
     # bend the mol
     mol = bend_molecule(mol,R)
-
-
-
-
-
-
-
-
-
-
-
-
-
-

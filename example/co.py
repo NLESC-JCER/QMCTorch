@@ -16,9 +16,9 @@ from deepqmc.solver.plot_data import plot_observable
 
 
 # define the molecule
-mol = Molecule(atom='C 0 0 0; O 0 0 2.173', 
-               basis_type='gto', 
-               basis='sto-3g', 
+mol = Molecule(atom='C 0 0 0; O 0 0 2.173',
+               basis_type='gto',
+               basis='sto-3g',
                unit='bohr')
 
 
@@ -26,7 +26,7 @@ mol = Molecule(atom='C 0 0 0; O 0 0 2.173',
 wf = Orbital(mol,kinetic_jacobi=False)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5,
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -48,14 +48,3 @@ pos = solver.single_point()
 
 # plot the data
 # plot_observable(solver.obs_dict,e0=-1.16)
-
-
-
-
-
-
-
-
-
-
-

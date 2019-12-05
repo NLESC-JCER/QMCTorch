@@ -28,7 +28,7 @@ class OrbitalH2(Orbital):
 
     def first_der_autograd(self,x):
 
-        out = self.ao(x)        
+        out = self.ao(x)
         #out = torch.det(out)
 
 
@@ -49,26 +49,26 @@ class OrbitalH2(Orbital):
 
         out = self.ao(pos)
 
-        # compute the jacobian            
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
-        
+
         for idim in range(jacob.shape[1]):
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
                       retain_graph=True,
                       only_inputs=True,
-                      allow_unused=True)[0]    
-            
+                      allow_unused=True)[0]
+
             hess[:,idim] = tmp[:,idim]
-        
+
         return hess
 
     def second_der_autograd_mo(self,pos,out=None):
@@ -76,26 +76,26 @@ class OrbitalH2(Orbital):
 
         out = self.mo(self.ao(pos))
 
-        # compute the jacobian            
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
-        
+
         for idim in range(jacob.shape[1]):
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
                       retain_graph=True,
                       only_inputs=True,
-                      allow_unused=True)[0]    
-            
+                      allow_unused=True)[0]
+
             hess[:,idim] = tmp[:,idim]
-        
+
         return hess
 
     def first_der_trace(self,x,dAO = None):
@@ -109,10 +109,10 @@ class OrbitalH2(Orbital):
 
 
     def test_grad_autograd(self,pos,out=None):
-        
+
         out = torch.det(self.ao_trunk(pos)).view(-1,1)
 
-        # compute the jacobian            
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
@@ -122,59 +122,59 @@ class OrbitalH2(Orbital):
         return jacob.sum(1).view(-1,1)
 
     def test_hess_autograd(self,pos,out=None):
-        
+
         out = torch.det(self.ao_trunk(pos)).view(-1,1)
 
-        # compute the jacobian            
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape[0])
-        
+
         for idim in range(jacob.shape[1]):
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
                       retain_graph=True,
                       only_inputs=True,
-                      allow_unused=True)[0]    
-            
+                      allow_unused=True)[0]
+
             hess += tmp[:,idim]
-        
+
         return  hess.view(-1,1)
 
 
     def test_kin_autograd(self,pos,out=None):
-        
+
         out = self.mo(self.ao(pos))
         out = out[:,:4,:4]
         out = torch.det(out[:,:2,:2])*torch.det(out[:,2:,:2])
         out = out.view(-1)
 
-        # compute the jacobian            
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape[0])
-        
+
         for idim in range(jacob.shape[1]):
             tmp = grad(jacob[:,idim],pos,
                       grad_outputs=z,
                       retain_graph=True,
                       only_inputs=True,
-                      allow_unused=True)[0]    
-            
+                      allow_unused=True)[0]
+
             hess += tmp[:,idim]
-        
+
         return  hess.view(-1,1)
 
 
@@ -219,7 +219,7 @@ iAO = torch.inverse(AO)
 
 
 print('\n-- Comparison of the Jacobian of det(AO)')
-jac_auto = wf.test_grad_autograd(x) 
+jac_auto = wf.test_grad_autograd(x)
 jac_trace = btrace(iAO@dAO[:,:4,:4])*torch.det(AO)
 print(jac_auto.sum())
 print(jac_trace.sum())
@@ -253,7 +253,7 @@ print(test_kin_trace.view(-1))
 
 print('\n-- Comparison of the kinetic energy')
 kin_auto = wf.kinetic_energy_autograd(x)
-kin_trace = wf.kinetic_energy_jacobi(x) 
+kin_trace = wf.kinetic_energy_jacobi(x)
 print(kin_auto.view(-1))
 print(kin_trace.view(-1))
 
@@ -268,14 +268,3 @@ print(kin_trace.view(-1))
 
 # plot the data
 #plot_observable(solver.obs_dict,e0=-1.16)
-
-
-
-
-
-
-
-
-
-
-

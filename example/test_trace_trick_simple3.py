@@ -6,7 +6,7 @@ from torch.autograd import Variable, grad
 class TestDerivative():
     def __init__(self):
         self.nbatch = 5
-        self.nelec = 2 
+        self.nelec = 2
         self.nbas = 2
         self.ndim=3
 
@@ -32,12 +32,12 @@ class TestDerivative():
                 return torch.exp(-self.bas_exp*R**2)
             if model == 2:
                 return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
-            
+
 
         elif derivative > 0:
-            
+
             sum_xyz = xyz.sum(3)
-            
+
             rn = R**(self.bas_n)
             nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
 
@@ -54,11 +54,11 @@ class TestDerivative():
                 if model==1:
                     return nabla_er
                 if model == 2:
-                    return nabla_rn*er + rn*nabla_er 
-                
+                    return nabla_rn*er + rn*nabla_er
+
 
             elif derivative == 2:
-                
+
                 if model==0:
                     return lap_rn
 
@@ -80,11 +80,11 @@ class TestDerivative():
 
             xyzp = xyz.clone()
             xyzp[:,idim] += eps
-            ap = self.getA(xyzp) 
+            ap = self.getA(xyzp)
 
             xyzm = xyz.clone()
             xyzm[:,idim] -= eps
-            am = self.getA(xyzm) 
+            am = self.getA(xyzm)
 
             out += (am+ap-2*a0)/eps**2
 
@@ -92,7 +92,7 @@ class TestDerivative():
 
     def first_der_autograd(self,x):
 
-        out = self.getA(x)        
+        out = self.getA(x)
         #out = torch.det(out)
 
 
@@ -107,28 +107,28 @@ class TestDerivative():
     def second_der_autograd(self,xyz):
 
         out = self.getA(xyz)
-        
 
-        # compute the jacobian            
+
+        # compute the jacobian
         z = Variable(torch.ones(out.shape))
         jacob = grad(out,xyz,
                      grad_outputs=z,
                      allow_unused=True,
                      create_graph=True)[0]
-        
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
-        
+
         for idim in range(jacob.shape[1]):
             tmp = grad(jacob[:,idim],xyz,
                       grad_outputs=z,
                       retain_graph=True,
                       only_inputs=True,
-                      allow_unused=True)[0]    
-            
+                      allow_unused=True)[0]
+
             hess[:,idim] = tmp[:,idim]
-        
+
         return hess
 
 
@@ -150,15 +150,3 @@ d2AO_auto = Test.second_der_autograd(xyz)
 print(d2AO.sum())
 print(d2AO_auto.sum())
 print(d2AO_num.sum())
-
-
-
-
-
-
-
-
-
-
-
-    
