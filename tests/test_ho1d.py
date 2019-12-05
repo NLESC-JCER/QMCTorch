@@ -89,8 +89,8 @@ class TestHarmonicOscillator1D(unittest.TestCase):
 
         # sample and compute variables
         pos, e, v = self.solver.single_point()
-        assert(e.data.numpy() < 1.)
-        assert(v.data.numpy() < 1.)
+        assert(e.data.numpy() < 2.5)
+        assert(v.data.numpy() < 2.5)
         
 
 if __name__ == "__main__":
