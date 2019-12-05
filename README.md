@@ -4,6 +4,7 @@ Deep Learning for Quantum Monte Carlo Simulations
 
 [![Build Status](https://travis-ci.com/NLESC-JCER/DeepQMC.svg?branch=master)](https://travis-ci.com/NLESC-JCER/DeepQMC)
 [![Coverage Status](https://coveralls.io/repos/github/NLESC-JCER/DeepQMC/badge.svg?branch=master)](https://coveralls.io/github/NLESC-JCER/DeepQMC?branch=master)
+[![Codacy Badge](https://api.codacy.com/project/badge/Grade/5d99212add2a4f0591adc6248fec258d)](https://www.codacy.com/manual/NicoRenaud/DeepQMC?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=NLESC-JCER/DeepQMC&amp;utm_campaign=Badge_Grade)
 
 
 
