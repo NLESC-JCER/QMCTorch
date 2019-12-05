@@ -12,7 +12,9 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 
 class Orbital(WaveFunction):
 
-    def __init__(self,mol,configs='ground_state',scf='pyscf',kinetic_jacobi=False):
+    def __init__(self,mol,configs='ground_state',scf='pyscf',
+                 kinetic_jacobi=False,
+                 use_projector=False):
         super(Orbital,self).__init__(mol.nelec,3)
 
         # number of atoms
@@ -42,18 +44,19 @@ class Orbital(WaveFunction):
         self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
-        self.pool = SlaterPooling(self.configs,mol)
+        self.pool = SlaterPooling(self.configs,mol,use_projector=use_projector)
 
         # pooling operation to directly compute 
         # the kinetic energies via Jacobi formula
-        self.kinpool = KineticPooling(self.configs,mol)
+        self.kinpool = KineticPooling(self.configs,mol,use_projector=use_projector)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0][0] = 1.
-        self.fc.weight.data[0][1] = 0.0
-        self.fc.weight.data[0][2] = 0.0
+        self.fc.weight.data.fill_(1.)
+        if self.nci > 1:
+            self.fc.weight.data.fill_(0.)
+            self.fc.weight.data[0][0] = 1.
+        
         self.fc.clip = False
 
         if kinetic_jacobi:

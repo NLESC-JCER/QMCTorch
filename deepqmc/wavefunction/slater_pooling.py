@@ -81,7 +81,7 @@ class SlaterPooling(nn.Module):
         '''
 
         mo_up, mo_down = self.orb_proj.split_orbitals(input)
-        return (torch.det(mo_up) * torch.det(mo_down)).view(-1,self.nconfs)
+        return (torch.det(mo_up) * torch.det(mo_down)).transpose(0,1).view(-1,self.nconfs)
 
     def _forward_loop(self,input):
 

@@ -22,10 +22,10 @@ mol = Molecule(atom='water_line_small.xyz', unit='angs',
 			   basis_type='gto', basis='sto-3g')
 
 # define the wave function
-wf = Orbital(mol,kinetic_jacobi=True,configs='singlet(1,1)')
+wf = Orbital(mol,kinetic_jacobi=True,configs='singlet(1,1)',use_projector=False)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=50, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5, 
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -36,7 +36,7 @@ scheduler = optim.lr_scheduler.StepLR(opt,step_size=20,gamma=0.75)
 
 # solver
 solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
-solver.configure(task='wf_opt')
+#solver.configure(task='wf_opt')
 pos, e, v = solver.single_point()
 
 # # optimize the geometry
