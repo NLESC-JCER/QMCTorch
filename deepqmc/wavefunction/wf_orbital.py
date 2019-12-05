@@ -50,10 +50,10 @@ class Orbital(WaveFunction):
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
-        self.fc.weight.data.fill_(1.)
-        # self.fc.weight.data[0][0] = 1.
-        # self.fc.weight.data[0][1] = 0.01
-        # self.fc.weight.data[0][2] = 0.01
+        self.fc.weight.data.fill_(0.)
+        self.fc.weight.data[0][0] = 1.
+        self.fc.weight.data[0][1] = 0.0
+        self.fc.weight.data[0][2] = 0.0
         self.fc.clip = False
 
         if kinetic_jacobi:

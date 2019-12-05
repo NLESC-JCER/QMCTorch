@@ -26,10 +26,10 @@ class OrbitalProjector(object):
         for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
 
             for _id,imo in enumerate(cup):
-                Pup[ic][_id,imo] = 1.
+                Pup[ic][imo,_id] = 1.
 
             for _id,imo in enumerate(cdown):
-                Pdown[ic][_id,imo] = 1.
+                Pdown[ic][imo,_id] = 1.
 
         return Pup.unsqueeze(1), Pdown.unsqueeze(1)        
 
