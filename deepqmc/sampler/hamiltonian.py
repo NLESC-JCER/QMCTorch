@@ -1,6 +1,5 @@
 import torch
 from tqdm import tqdm
-import time
 from torch.autograd import grad, Variable
 from deepqmc.sampler.sampler_base import SamplerBase
 

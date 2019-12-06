@@ -17,8 +17,10 @@ class Walkers(object):
         """Initalize the position of the walkers
 
         Args:
-            method (str, optional): how to initialize the positions. Defaults to 'uniform'.
-            pos ([type], optional): existing position of the walkers. Defaults to None.
+            method (str, optional): how to initialize the positions.
+                                    Defaults to 'uniform'.
+            pos ([type], optional): existing position of the walkers.
+                                    Defaults to None.
 
         Raises:
             ValueError: if the method is not recognized
@@ -32,8 +34,8 @@ class Walkers(object):
         else:
             options = ['center', 'uniform']
             if method not in options:
-                raise ValueError('method %s not recognized. Options are : %s ' % (
-                    method, ' '.join(options)))
+                raise ValueError('method %s not recognized. Options are : %s '
+                                 % (method, ' '.join(options)))
 
             if method == options[0]:
                 self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
@@ -50,7 +52,8 @@ class Walkers(object):
 
         Args:
             step_size (float): size of the MC moves
-            method (str, optional): move electrons one at a time or all at the same time
+            method (str, optional): move electrons one at a time or all at the
+                                    same time.
                                     'one' or 'all' . Defaults to 'one'.
 
         Returns:

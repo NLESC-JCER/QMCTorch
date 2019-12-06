@@ -1,7 +1,6 @@
 from deepqmc.sampler.sampler_base import SamplerBase
 from tqdm import tqdm
 import torch
-import time
 
 
 class Metropolis(SamplerBase):
