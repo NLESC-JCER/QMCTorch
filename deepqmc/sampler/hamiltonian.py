@@ -4,12 +4,12 @@ import time
 from torch.autograd import grad, Variable
 from deepqmc.sampler.sampler_base import SamplerBase
 
+
 class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=1000, nstep=None, nelec=1, ndim=3,
-             step_size = None, domain = None, L=10,
-             move='all'):
-
+                 step_size=None, domain=None, L=10,
+                 move='all'):
         ''' HMC SAMPLER
         Args:
             f (func) : function to sample
@@ -19,11 +19,12 @@ class Hamiltonian(SamplerBase):
             boudnary (float) : boudnary of the space
         '''
 
-        SamplerBase.__init__(self,nwalkers,nstep,nelec,ndim,step_size,domain, move)
+        SamplerBase.__init__(self, nwalkers, nstep, nelec,
+                             ndim, step_size, domain, move)
         self.traj_length = L
 
     @staticmethod
-    def get_grad(func,inp):
+    def get_grad(func, inp):
         '''Compute the gradient of the of a function
         wrt the value of its input
 
@@ -38,7 +39,6 @@ class Hamiltonian(SamplerBase):
         val = func(inp)
         z = Variable(torch.ones(val.shape))
         val.backward(z)
-        grad = inp.grad.data
         inp.grad.data.zero_()
         inp.requires_grad = False
         return grad
@@ -47,8 +47,8 @@ class Hamiltonian(SamplerBase):
     def log_func(func):
         return lambda x: -torch.log(func(x))
 
-    def generate(self,pdf,ntherm=10,with_tqdm=True,pos=None,init='uniform'):
-
+    def generate(self, pdf, ntherm=10, with_tqdm=True, pos=None,
+                 init='uniform'):
         '''perform a HMC sampling of the pdf
         Returns:
             X (list) : positions of the walkers
@@ -57,7 +57,7 @@ class Hamiltonian(SamplerBase):
         if ntherm < 0:
             ntherm = self.nstep+ntherm
 
-        self.walkers.initialize(method=init,pos=pos)
+        self.walkers.initialize(method=init, pos=pos)
         self.walkers.pos = self.walkers.pos.clone()
 
         # get the logpdf function
@@ -74,20 +74,21 @@ class Hamiltonian(SamplerBase):
         for istep in rng:
 
             # move the walkers
-            self.walkers.pos, _r = self._step(logpdf, self.get_grad, self.step_size, self.traj_length, self.walkers.pos)
+            self.walkers.pos, _r = self._step(
+                logpdf, self.get_grad, self.step_size, self.traj_length,
+                self.walkers.pos)
             rate += _r
 
             # store
-            if istep>=ntherm:
+            if istep >= ntherm:
                 POS.append(self.walkers.pos.detach())
 
-        #print stats
-        print("Acceptance rate %1.3f %%" % (rate/self.nstep*100) )
+        # print stats
+        print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
         return torch.cat(POS)
 
     @staticmethod
-    def _step(U,get_grad,epsilon,L,qinit):
-
+    def _step(U, get_grad, epsilon, L, qinit):
         '''Propagates all the walkers over on traj
         Args:
             pdf (callable): the target dist
@@ -108,18 +109,18 @@ class Hamiltonian(SamplerBase):
         Einit = U(q) + 0.5 * (p**2).sum(1)
 
         # half step in momentum space
-        p -= 0.5 * epsilon * get_grad(U,q)
+        p -= 0.5 * epsilon * get_grad(U, q)
 
         # full steps in q and p space
         for iL in range(L-1):
             q = q + epsilon * p
-            p -= 0.5 * epsilon * get_grad(U,q)
+            p -= 0.5 * epsilon * get_grad(U, q)
 
         # last full step in pos space
         q = q + epsilon * p
 
         # half step in momentum space
-        p -= 0.5 * epsilon * get_grad(U,q)
+        p -= 0.5 * epsilon * get_grad(U, q)
 
         # negate momentum
         p = -p

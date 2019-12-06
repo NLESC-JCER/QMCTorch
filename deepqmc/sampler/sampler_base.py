@@ -1,10 +1,10 @@
-
 from deepqmc.sampler.walkers import Walkers
+
 
 class SamplerBase(object):
 
-    def __init__(self,nwalkers=1000, nstep=1000, nelec=1, ndim=3,
-                 step_size = 3, domain = {'min':-2,'max':2},
+    def __init__(self, nwalkers=1000, nstep=1000, nelec=1, ndim=3,
+                 step_size=3, domain={'min': -2, 'max': 2},
                  move='all'):
 
         self.nwalkers = nwalkers
@@ -15,13 +15,13 @@ class SamplerBase(object):
         self.nelec = nelec
         self.ndim = ndim
 
-        self.walkers = Walkers(nwalkers,nelec,ndim,domain)
+        self.walkers = Walkers(nwalkers, nelec, ndim, domain)
 
-    def set_ndim(self,ndim):
+    def set_ndim(self, ndim):
         self.ndim = ndim
 
-    def set_initial_guess(self,guess):
+    def set_initial_guess(self, guess):
         self.initial_guess = guess
 
-    def generate(self,pdf):
+    def generate(self, pdf):
         raise NotImplementedError()
