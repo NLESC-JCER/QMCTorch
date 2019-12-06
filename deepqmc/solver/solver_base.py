@@ -96,5 +96,5 @@ class SolverBase(object):
         }, filename)
         return loss
 
-    def run(self):
+    def run(self, nepoch, batchsize=None, loss='variance'):
         raise NotImplementedError()

@@ -6,21 +6,19 @@ Deep Learning for Quantum Monte Carlo Simulations
 [![Coverage Status](https://coveralls.io/repos/github/NLESC-JCER/DeepQMC/badge.svg?branch=master)](https://coveralls.io/github/NLESC-JCER/DeepQMC?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5d99212add2a4f0591adc6248fec258d)](https://www.codacy.com/manual/NicoRenaud/DeepQMC?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=NLESC-JCER/DeepQMC&amp;utm_campaign=Badge_Grade)
 
-
-
 ## Introduction
 
-DeepQMC allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle-in-a-box model as well as molecular systems. It uses `pytorch` as a deep learning framework and `pyscf` to obtain the first guess of the molecular orbitals. 
+DeepQMC allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle-in-a-box model as well as molecular systems. It uses `pytorch` as a deep learning framework and `pyscf` to obtain the first guess of the molecular orbitals.
 
 The three main ingredients of any calculations are :
 
-  * a neural network that calculates the value of the wave function at a given point
-  * a sampler able to generate sampling points of the wave function
-  * an optimizer (as those provided by `pytorch`) 
+* a neural network that calculates the value of the wave function at a given point
+* a sampler able to generate sampling points of the wave function
+* an optimizer (as those provided by `pytorch`)
 
 ## Harmonic Oscillator in 1D
 
-The script below illustrates how to optimize the wave function of the one-dimensional harmonic oscillator `DeepQMC`. 
+The script below illustrates how to optimize the wave function of the one-dimensional harmonic oscillator `DeepQMC`.
 
 ```python
 import torch
@@ -47,8 +45,8 @@ def pot_func(pos):
 wf = Potential(pot_func,domain,ncenter,nelec=1)
 
 #sampler
-sampler = Metropolis(nwalkers=250, nstep=1000, 
-                     step_size = 1., nelec = wf.nelec, 
+sampler = Metropolis(nwalkers=250, nstep=1000,
+                     step_size = 1., nelec = wf.nelec,
                      ndim = wf.ndim, domain = {'min':-5,'max':5})
 
 # optimizer
@@ -62,11 +60,11 @@ plotter = plotter1d(wf,domain,50,sol=sol_func)
 solver.run(100, loss = 'variance', plot = plotter )
 
 
-# plot the final wave function 
+# plot the final wave function
 plot_results_1d(solver,domain,50,sol_func,e0=0.5)
 ```
 
-The `pot_func` function defines the potential for which we want to optimize the wave function. It is here given by a simple quadratic function. 
+The `pot_func` function defines the potential for which we want to optimize the wave function. It is here given by a simple quadratic function.
 
 After defining the domain in `domain` and the number of basis function in `ncenter`, we instantiate the `Potential` wave function class. This class defines a very simple neural network that, given a position computes the value of the wave function at that point. This neural network is composed of a layer of radial basis functions followed by a fully conneted layer to sum them up:
 
@@ -74,7 +72,7 @@ After defining the domain in `domain` and the number of basis function in `ncent
 <img src="./pics/rbf_nn.png" title="RBF neural network">
 </p>
 
-The then instantiate the sampler, here a simple `Metroplis` scheme. The sampler is used to sample the wave function and hence generate a bach of sampling points. These points are used as input of the neural network the compute the values of wave function at those points. We finally select the `Adam` optimizer to optimize the wave function paramters. 
+The then instantiate the sampler, here a simple `Metroplis` scheme. The sampler is used to sample the wave function and hence generate a bach of sampling points. These points are used as input of the neural network the compute the values of wave function at those points. We finally select the `Adam` optimizer to optimize the wave function paramters.
 
 We then define a `SolverPotential` instance that ties all the elements together and train the model to optimize the wave function paramters. We here use the variance of the sampling point energies as a loss and run 100 epochs. Many more parameters are accessible in the training routines.
 
@@ -83,7 +81,6 @@ After the optimization, the following result is obtained:
 <p align="center">
 <img src="./pics/ho1d.png" title="Results of the optimization">
 </p>
-
 
 ## Dihydrogen molecule
 
@@ -94,7 +91,7 @@ import sys
 from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital 
+from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
 from deepqmc.solver.plot_data import plot_observable
@@ -106,7 +103,7 @@ mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
 wf = Orbital(mol)
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5, 
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5,
                      ndim = wf.ndim, nelec = wf.nelec, move = 'one')
 
 # optimizer
@@ -129,7 +126,7 @@ The main difference compared to the harmonic oscillator case is the definition o
 <img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
 </p>
 
-Starting from the positions of the electrons in the system, we have define an `AtomicOrbital` layer that evaluates the values of all the atomic orbitals at all the electron positions. This is in spirit similar to the RBF layer used in the `Potential` wave function used in the previous example. The `AtomicOrbital` layer has several variational paramters: atomic positions, basis function exponents and coefficients. These parameters can be optimized during the training. 
+Starting from the positions of the electrons in the system, we have define an `AtomicOrbital` layer that evaluates the values of all the atomic orbitals at all the electron positions. This is in spirit similar to the RBF layer used in the `Potential` wave function used in the previous example. The `AtomicOrbital` layer has several variational paramters: atomic positions, basis function exponents and coefficients. These parameters can be optimized during the training.
 
 The network then computes the values of the molecular orbitals from those of the atomic orbitals. This achieved by a simple linear layer whose transformation matrix is given by the molecular orbital coefficients. These coefficients are also variational parameters of the layer and can therefore be optimized.
 
@@ -141,11 +138,8 @@ In parallel we also have defined a `JastrowFactor` layer that computes the e-e d
 
 The script presented above configures then the solver to run a geometry optimization on the model using the energy of the sampling points as a loss.
 
-
-The figure below shows the evolution of the system's eneergy during the geometry optimization of the molecule. 
+The figure below shows the evolution of the system's eneergy during the geometry optimization of the molecule.
 
 <p align="center">
 <img src="./pics/h2_go_opt.png" title="Geometry optimization of a H2 molecule">
 </p>
-
-

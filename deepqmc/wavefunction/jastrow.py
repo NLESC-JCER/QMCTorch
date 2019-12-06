@@ -46,10 +46,10 @@ class TwoBodyJastrowFactor(nn.Module):
                            torch.ones(ndown, ndown)), dim=1)
         self.static_weight = torch.cat((bup, bdown), dim=0)
 
-    def forward(self, input):
+    def forward(self, x):
 
-        factors = torch.exp(self.static_weight * input /
-                            (1.0 + self.weight * input))
+        factors = torch.exp(self.static_weight * x /
+                            (1.0 + self.weight * x))
         factors = factors[:, torch.tril(
             torch.ones(self.nelec, self.nelec)) == 0].prod(1)
         return factors.view(-1, 1)

@@ -101,8 +101,6 @@ def _grad_spherical_harmonics_l2(xyz, m):
     """
 
     r = torch.sqrt((xyz**2).sum(3))
-    r2 = r**2
-    r3 = r**3
     r4 = r**4
 
     x = xyz[:, :, :, 0]

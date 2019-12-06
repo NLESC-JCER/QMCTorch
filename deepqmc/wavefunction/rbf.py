@@ -384,7 +384,7 @@ class RBF_Slater_NELEC_GENERAL(nn.Module):
             opt_sigma : optmize the std or not
         '''
 
-        super(RBF_Slater_NELEC, self).__init__()
+        super(RBF_Slater_NELEC_GENERAL, self).__init__()
 
         # register dimension
         self.input_features = input_features

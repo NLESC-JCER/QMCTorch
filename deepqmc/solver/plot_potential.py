@@ -461,7 +461,7 @@ def plot_wf_3d(net, domain, res, sol=None,
 
         vals = sol(POS)
         vs = vals.detach().numpy().reshape(res[0], res[1], res[2])
-        verts, faces, normals, values = measure.marching_cubes_lewiner(
+        verts, faces, normals, _ = measure.marching_cubes_lewiner(
             vs, isoval, spacing=spacing_vals)
 
         ax.plot_trisurf(verts[:, 0]+domain['xmin'],
@@ -475,7 +475,7 @@ def plot_wf_3d(net, domain, res, sol=None,
 
         vals = net.wf.nuclear_potential(POS)
         vn = vals.detach().numpy().reshape(res[0], res[1], res[2])
-        verts, faces, normals, values = measure.marching_cubes_lewiner(
+        verts, faces, normals, _ = measure.marching_cubes_lewiner(
             vn, pot_isoval, spacing=spacing_vals)
 
         ax.plot_trisurf(verts[:, 0]+domain['xmin'],
@@ -489,7 +489,7 @@ def plot_wf_3d(net, domain, res, sol=None,
 
         vals = net.wf.kinetic_energy(POS)
         vn = vals.detach().numpy().reshape(res[0], res[1], res[2])
-        verts, faces, normals, values = measure.marching_cubes_lewiner(
+        verts, faces, normals, _ = measure.marching_cubes_lewiner(
             vn, grad_isoval, spacing=spacing_vals)
 
         ax.plot_trisurf(verts[:, 0]+domain['xmin'],
@@ -502,7 +502,7 @@ def plot_wf_3d(net, domain, res, sol=None,
 
         vals = net.wf(POS)
         vn = vals.detach().numpy().reshape(res[0], res[1], res[2])
-        verts, faces, normals, values = measure.marching_cubes_lewiner(
+        verts, faces, normals, _ = measure.marching_cubes_lewiner(
             vn, isoval, spacing=spacing_vals)
 
         ax.plot_trisurf(verts[:, 0]+domain['xmin'],
