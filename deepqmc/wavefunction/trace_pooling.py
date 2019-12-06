@@ -1,13 +1,6 @@
 import torch
 from torch import nn
-import torch.nn.functional as F
-from torch.autograd import grad, Variable
 
-import numpy as np
-from pyscf import scf, gto, mcscf
-
-from tqdm import tqdm
-from time import time
 
 class TracePooling(nn.Module):
 
@@ -16,8 +9,7 @@ class TracePooling(nn.Module):
     def __init__(self):
         super(TracePooling, self).__init__()
 
-    def forward(self,mo_up,mo_down):
-
+    def forward(self, mo_up, mo_down):
         """Compute the trace of the different MO matrices
         and mulitply spin up/down for each confs.
 

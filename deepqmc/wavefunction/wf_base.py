@@ -1,18 +1,12 @@
-import autograd.numpy as np
-from autograd import elementwise_grad as egrad
-from autograd import hessian, jacobian
-from functools import partial
-
 import torch
 from torch import nn
-import torch.nn.functional as F
+
 from torch.autograd import grad, Variable
 
-from time import time
 
 class WaveFunction(nn.Module):
 
-    def __init__(self,nelec, ndim, kinetic='auto'):
+    def __init__(self, nelec, ndim, kinetic='auto'):
 
         super(WaveFunction, self).__init__()
 
@@ -21,8 +15,7 @@ class WaveFunction(nn.Module):
         self.ndim_tot = self.nelec*self.ndim
         self.kinetic = kinetic
 
-    def forward(self,x):
-
+    def forward(self, x):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -35,7 +28,7 @@ class WaveFunction(nn.Module):
 
         raise NotImplementedError()
 
-    def electronic_potential(self,pos):
+    def electronic_potential(self, pos):
         '''Compute the potential of the wf points
         Args:
             pos: position of the electron
@@ -44,7 +37,7 @@ class WaveFunction(nn.Module):
         '''
         raise NotImplementedError()
 
-    def nuclear_potential(self,pos):
+    def nuclear_potential(self, pos):
         '''Compute the potential of the wf points
         Args:
             pos: position of the electron
@@ -60,18 +53,17 @@ class WaveFunction(nn.Module):
         '''
         raise NotImplementedError()
 
-
-    def kinetic_energy(self,pos,out=None):
+    def kinetic_energy(self, pos, out=None):
         '''Main switch for the kinetic energy.'''
 
         if self.kinetic == 'auto':
-            return self.kinetic_energy_autograd(pos,out)
+            return self.kinetic_energy_autograd(pos, out)
         elif self.kinetic == 'fd':
             return self.kinetic_energy_finite_difference(pos)
         else:
-            raise ValueError('kinetif %s not recognized' %self.kinetic)
+            raise ValueError('kinetif %s not recognized' % self.kinetic)
 
-    def kinetic_energy_autograd(self,pos,out=None):
+    def kinetic_energy_autograd(self, pos, out=None):
         '''Compute the second derivative of the network
         output w.r.t the value of the input.
 
@@ -90,7 +82,7 @@ class WaveFunction(nn.Module):
 
         # compute the jacobian
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out,pos,
+        jacob = grad(out, pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
@@ -101,18 +93,18 @@ class WaveFunction(nn.Module):
 
         for idim in range(jacob.shape[1]):
 
-            tmp = grad(jacob[:,idim],pos,
-                      grad_outputs=z,
-                      only_inputs=True,
-                      #retain_graph=True)[0]
-                      create_graph=True)[0] # create_graph is REQUIRED and is causing memory issues for large systems
-                      #allow_unused=True)[0]
+            tmp = grad(jacob[:, idim], pos,
+                       grad_outputs=z,
+                       only_inputs=True,
+                       # retain_graph=True)[0]
+                       create_graph=True)[0]  # create_graph is REQUIRED and is causing memory issues for large systems
+            # allow_unused=True)[0]
 
-            hess += tmp[:,idim]
+            hess += tmp[:, idim]
 
-        return -0.5 * hess.view(-1,1)
+        return -0.5 * hess.view(-1, 1)
 
-    def kinetic_energy_finite_difference(self,pos,eps=1E-3):
+    def kinetic_energy_finite_difference(self, pos, eps=1E-3):
         '''Compute the second derivative of the network
         output w.r.t the value of the input using finite difference.
 
@@ -128,7 +120,7 @@ class WaveFunction(nn.Module):
 
         nwalk = pos.shape[0]
         ndim = pos.shape[1]
-        out = torch.zeros(nwalk,1)
+        out = torch.zeros(nwalk, 1)
 
         for icol in range(ndim):
 
@@ -136,37 +128,36 @@ class WaveFunction(nn.Module):
             feps = -2*self.forward(pos_tmp)
 
             pos_tmp = pos.clone()
-            pos_tmp[:,icol] += eps
+            pos_tmp[:, icol] += eps
             feps += self.forward(pos_tmp)
 
             pos_tmp = pos.clone()
-            pos_tmp[:,icol] -= eps
+            pos_tmp[:, icol] -= eps
             feps += self.forward(pos_tmp)
 
             out += feps/(eps**2)
 
-        return -0.5*out.view(-1,1)
+        return -0.5*out.view(-1, 1)
 
-
-    def local_energy_save(self,pos):
+    def local_energy_save(self, pos):
         ''' local energy of the sampling points.'''
         return self.kinetic_energy(pos)/self.forward(pos) \
-             + self.nuclear_potential(pos)  \
-             + self.electronic_potential(pos) \
-             + self.nuclear_repulsion()
+            + self.nuclear_potential(pos)  \
+            + self.electronic_potential(pos) \
+            + self.nuclear_repulsion()
 
-    def local_energy(self,pos):
+    def local_energy(self, pos):
         ''' local energy of the sampling points.'''
 
         wf = self.forward(pos)
-        ke = self.kinetic_energy(pos,out=wf)
+        ke = self.kinetic_energy(pos, out=wf)
 
         return ke/wf \
-             + self.nuclear_potential(pos)  \
-             + self.electronic_potential(pos) \
-             + self.nuclear_repulsion()
+            + self.nuclear_potential(pos)  \
+            + self.electronic_potential(pos) \
+            + self.nuclear_repulsion()
 
-    def energy(self,pos):
+    def energy(self, pos):
         '''Total energy for the sampling points.'''
         return torch.mean(self.local_energy(pos))
 
@@ -174,10 +165,10 @@ class WaveFunction(nn.Module):
         '''Variance of the energy at the sampling points.'''
         return torch.var(self.local_energy(pos))
 
-    def _energy_variance(self,pos):
+    def _energy_variance(self, pos):
         el = self.local_energy(pos)
         return torch.mean(el), torch.var(el)
 
-    def pdf(self,pos):
+    def pdf(self, pos):
         '''density of the wave function.'''
         return (self.forward(pos)**2).reshape(-1)

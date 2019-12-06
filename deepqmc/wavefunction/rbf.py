@@ -3,17 +3,20 @@ from torch import nn
 import torch.nn.functional as F
 from math import pi as PI
 
-def pairwise_distance(x,y):
 
-    xn = (x**2).sum(1).view(-1,1)
-    yn = (y**2).sum(1).view(1,-1)
-    return xn + yn + 2.*x.mm(y.transpose(0,1))
+def pairwise_distance(x, y):
 
-########################################################################################################
+    xn = (x**2).sum(1).view(-1, 1)
+    yn = (y**2).sum(1).view(1, -1)
+    return xn + yn + 2.*x.mm(y.transpose(0, 1))
+
+##############################################################################
+
 
 class RBF1D(nn.Module):
 
-    def __init__(self,input_features,output_features,centers,opt_centers=True):
+    def __init__(self, input_features, output_features, centers,
+                 opt_centers=True):
         '''Radial Basis Function Layer in 1D
 
         Args:
@@ -23,7 +26,7 @@ class RBF1D(nn.Module):
             opt_centers : optmize the center positions
         '''
 
-        super(RBF1D,self).__init__()
+        super(RBF1D, self).__init__()
         self.input_features = input_features
         self.output_features = output_features
 
@@ -32,39 +35,39 @@ class RBF1D(nn.Module):
 
         self.sigma = self.get_sigma(self.centers)
 
-        self.weight = nn.Parameter(torch.Tensor(output_features,1))
+        self.weight = nn.Parameter(torch.Tensor(output_features, 1))
         self.weight.data.fill_(1.)
         self.weight.requires_grad = False
 
-        self.register_parameter('bias',None)
+        self.register_parameter('bias', None)
 
     @staticmethod
     def get_sigma(X):
         x = X.clone().detach()
-        xp = torch.cat((torch.tensor([x[1]]),x[:-1]))
-        xm = torch.cat((x[1:],torch.tensor([x[-2]])))
+        xp = torch.cat((torch.tensor([x[1]]), x[:-1]))
+        xm = torch.cat((x[1:], torch.tensor([x[-2]])))
         return 0.5*(torch.abs(x-xp) + torch.abs(x-xm))
 
-    def forward(self,input):
+    def forward(self, input):
         '''Compute the output of the RBF layer'''
         self.sigma = self.get_sigma(self.centers)
-        out = F.linear(input,self.weight,self.bias)
-        out = torch.exp( -(out-self.centers)**2 / self.sigma )
+        out = F.linear(input, self.weight, self.bias)
+        out = torch.exp(-(out-self.centers)**2 / self.sigma)
         return(out)
 
-########################################################################################################
+##############################################################################
+
 
 class RBF(nn.Module):
 
     def __init__(self,
-                input_features,
-                output_features,
-                centers,
-                kernel='gaussian',
-                opt_centers=True,
-                sigma = 1.0,
-                opt_sigma= False ):
-
+                 input_features,
+                 output_features,
+                 centers,
+                 kernel='gaussian',
+                 opt_centers=True,
+                 sigma=1.0,
+                 opt_sigma=False):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -76,7 +79,7 @@ class RBF(nn.Module):
             opt_sigma : optmize the std or not
         '''
 
-        super(RBF,self).__init__()
+        super(RBF, self).__init__()
 
         # register dimension
         self.input_features = input_features
@@ -97,7 +100,7 @@ class RBF(nn.Module):
         self.invCov = self.invCovMat(self.sigma)
 
         # GET THE DENOMINATOR
-        self.detS = self.denom(self.sigma,self.input_features)
+        self.detS = self.denom(self.sigma, self.input_features)
 
         # get the scaled determinant of the cov matrices
         # self.detS = (self.sigma**2).prod(1).view(-1,1)
@@ -106,16 +109,17 @@ class RBF(nn.Module):
 
     def get_sigma(self):
 
-        if isinstance(self.sigma_method,float):
+        if isinstance(self.sigma_method, float):
             return self.get_sigma_ones(self.centers, s=self.sigma_method)
-        elif isinstance(self.sigma_method,torch.Tensor):
+        elif isinstance(self.sigma_method, torch.Tensor):
             return self.sigma_method
         elif self.sigma_method == '1d':
             return self.get_sigma_1d(self.centers)
         elif self.sigma_method == 'mean':
             return self.get_sigma_average(self.centers)
         else:
-            raise ValueError(self.sigma_method, ' not a correct option for sigma')
+            raise ValueError(self.sigma_method,
+                             ' not a correct option for sigma')
 
     @staticmethod
     def get_sigma_average(X):
@@ -124,32 +128,31 @@ class RBF(nn.Module):
         delta = (X.max(0).values - X.min(0).values) / nsqrt
         return delta.expand(X.size())
 
-
     @staticmethod
     def get_sigma_1d(X):
         x = X.clone().detach().view(-1)
-        xp = torch.cat((torch.tensor([x[1]]),x[:-1]))
-        xm = torch.cat((x[1:],torch.tensor([x[-2]])))
-        return 0.5*(torch.abs(x-xp) + torch.abs(x-xm)).view(-1,1)
+        xp = torch.cat((torch.tensor([x[1]]), x[:-1]))
+        xm = torch.cat((x[1:], torch.tensor([x[-2]])))
+        return 0.5*(torch.abs(x-xp) + torch.abs(x-xm)).view(-1, 1)
 
     @staticmethod
-    def get_sigma_ones(X,s=1):
+    def get_sigma_ones(X, s=1):
         return s*torch.ones(X.shape)
 
     @staticmethod
     def invCovMat(sigma):
         s2 = sigma**2
-        I = torch.eye(sigma.size(1))
-        cov = s2.unsqueeze(2).expand(*s2.size(),s2.size(1))
-        return torch.inverse(cov * I)
+        eye = torch.eye(sigma.size(1))
+        cov = s2.unsqueeze(2).expand(*s2.size(), s2.size(1))
+        return torch.inverse(cov * eye)
 
     @staticmethod
-    def denom(sigma,dim):
-        out = (sigma**2).prod(1).view(-1,1)
+    def denom(sigma, dim):
+        out = (sigma**2).prod(1).view(-1, 1)
         k = (2.*PI)**dim
-        return torch.sqrt( k*out )
+        return torch.sqrt(k*out)
 
-    def forward(self,input):
+    def forward(self, input):
         '''Compute the output of the RBF layer'''
 
         if self.kernel == 'gaussian':
@@ -159,60 +162,57 @@ class RBF(nn.Module):
         else:
             raise ValueError('Kernel not recognized')
 
-    def _gaussian_kernel(self,input):
+    def _gaussian_kernel(self, input):
 
         if self.sigma.requires_grad:
             self.invCov = self.invCovMat(self.sigma)
-            self.detS = self.denom(self.sigma,self.input_features)
+            self.detS = self.denom(self.sigma, self.input_features)
 
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
-        delta =  (input[:,None,:] - self.centers[None,...])
+        delta = (input[:, None, :] - self.centers[None, ...])
 
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
-        X = ( torch.matmul(delta.unsqueeze(2),self.invCov).squeeze(2) * delta ).sum(2)
+        X = (torch.matmul(delta.unsqueeze(2), self.invCov).squeeze(2) * delta).sum(2)
 
         # slater kernel
         if self.kernel == 'slater':
             X = torch.sqrt(X)
-            self.detS[:,:] = 1.
+            self.detS[:, :] = 1.
 
         # divide by the determinant of the cov mat
         X = (torch.exp(-0.5*X).unsqueeze(2) / self.detS).squeeze()
 
-        return X.view(-1,self.ncenter)
+        return X.view(-1, self.ncenter)
 
-    def _slater_kernel(self,input):
-
+    def _slater_kernel(self, input):
 
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
-        delta =  (input[:,None,:] - self.centers[None,...])
+        delta = (input[:, None, :] - self.centers[None, ...])
 
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
-        X = ( torch.matmul(delta.unsqueeze(2),self.invCov).squeeze(2) * delta ).sum(2)
+        X = (torch.matmul(delta.unsqueeze(2), self.invCov).squeeze(2) * delta).sum(2)
         X = (delta**2).sum(2)
         X = torch.sqrt(X)
 
         # divide by the determinant of the cov mat
         X = torch.exp(-self.sigma_method*X)
 
-        return X.view(-1,self.ncenter)
+        return X.view(-1, self.ncenter)
 
 ########################################################################################################
-
 
 
 class RBF_Gaussian(nn.Module):
 
     def __init__(self,
-                input_features,
-                output_features,
-                centers,
-                opt_centers=True,
-                sigma = 1.0,
-                opt_sigma= False ):
-
+                 input_features,
+                 output_features,
+                 centers,
+                 opt_centers=True,
+                 sigma=1.0,
+                 opt_sigma=False):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -224,7 +224,7 @@ class RBF_Gaussian(nn.Module):
             opt_sigma : optmize the std or not
         '''
 
-        super(RBF_Gaussian,self).__init__()
+        super(RBF_Gaussian, self).__init__()
 
         # register dimension
         self.input_features = input_features
@@ -235,36 +235,35 @@ class RBF_Gaussian(nn.Module):
         self.ncenter = len(self.centers)
         self.centers.requires_grad = opt_centers
 
-
         # get the standard deviation
         self.sigma = nn.Parameter(sigma*torch.ones(self.ncenter))
         self.sigma.requires_grad = opt_sigma
 
-    def forward(self,input):
+    def forward(self, input):
         '''Compute the output of the RBF layer'''
 
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
-        delta =  (input[:,None,:] - self.centers[None,...])
+        delta = (input[:, None, :] - self.centers[None, ...])
 
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
-        X = ( delta**2 ).sum(2)
+        X = (delta**2).sum(2)
 
         # divide by the determinant of the cov mat
         X = torch.exp(-X/self.sigma)
 
-        return X.view(-1,self.ncenter)
+        return X.view(-1, self.ncenter)
 
-########################################################################################################
+############################################################################
+
 
 class RBF_Slater(nn.Module):
 
     def __init__(self,
-                input_features,
-                output_features,
-                centers,
-                sigma ):
-
+                 input_features,
+                 output_features,
+                 centers,
+                 sigma):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -276,7 +275,7 @@ class RBF_Slater(nn.Module):
             opt_sigma : optmize the std or not
         '''
 
-        super(RBF_Slater,self).__init__()
+        super(RBF_Slater, self).__init__()
 
         # register dimension
         self.input_features = input_features
@@ -291,12 +290,11 @@ class RBF_Slater(nn.Module):
         self.sigma = nn.Parameter(sigma)
         self.sigma.requires_grad = True
 
-    def forward(self,input):
-
+    def forward(self, input):
 
         # get the distancese of each point to each RBF center
         # (Nbatch,Nrbf,Ndim)
-        delta =  (input[:,None,:] - self.centers[None,...])
+        delta = (input[:, None, :] - self.centers[None, ...])
 
         # Compute (INPUT-MU).T x Sigma^-1 * (INPUT-MU)-> (Nbatch,Nrbf)
         X = (delta**2).sum(2)
@@ -305,20 +303,19 @@ class RBF_Slater(nn.Module):
         # divide by the determinant of the cov mat
         X = torch.exp(-self.sigma*X)
 
-        return X.view(-1,self.ncenter)
+        return X.view(-1, self.ncenter)
 
 
-################################################################################
+#################################################################
 
 class RBF_Slater_NELEC(nn.Module):
 
     def __init__(self,
-                input_features,
-                output_features,
-                centers,
-                sigma,
-                nelec):
-
+                 input_features,
+                 output_features,
+                 centers,
+                 sigma,
+                 nelec):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -330,7 +327,7 @@ class RBF_Slater_NELEC(nn.Module):
             opt_sigma : optmize the std or not
         '''
 
-        super(RBF_Slater_NELEC,self).__init__()
+        super(RBF_Slater_NELEC, self).__init__()
 
         # register dimension
         self.input_features = input_features
@@ -349,11 +346,12 @@ class RBF_Slater_NELEC(nn.Module):
         self.nelec = nelec
         self.ndim = int(self.input_features/self.nelec)
 
-    def forward(self,input):
+    def forward(self, input):
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nrbf,Ndim)
-        delta =  (input.view(-1,self.nelec,1,self.ndim) - self.centers[None,...])
+        delta = (input.view(-1, self.nelec, 1, self.ndim) -
+                 self.centers[None, ...])
 
         # compute the distance
         # -> (Nbatch,Nelec,Nrbf)
@@ -366,15 +364,15 @@ class RBF_Slater_NELEC(nn.Module):
 
         return X
 
+
 class RBF_Slater_NELEC_GENERAL(nn.Module):
 
     def __init__(self,
-                input_features,
-                output_features,
-                centers,
-                sigma,
-                nelec):
-
+                 input_features,
+                 output_features,
+                 centers,
+                 sigma,
+                 nelec):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -386,7 +384,7 @@ class RBF_Slater_NELEC_GENERAL(nn.Module):
             opt_sigma : optmize the std or not
         '''
 
-        super(RBF_Slater_NELEC,self).__init__()
+        super(RBF_Slater_NELEC, self).__init__()
 
         # register dimension
         self.input_features = input_features
@@ -405,11 +403,12 @@ class RBF_Slater_NELEC_GENERAL(nn.Module):
         self.nelec = nelec
         self.ndim = int(self.input_features/self.nelec)
 
-    def forward(self,input):
+    def forward(self, input):
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nrbf,Ndim)
-        delta =  (input.view(-1,self.nelec,1,self.ndim) - self.centers[None,...])
+        delta = (input.view(-1, self.nelec, 1, self.ndim) -
+                 self.centers[None, ...])
 
         # compute the distance
         # -> (Nbatch,Nelec,Nrbf)

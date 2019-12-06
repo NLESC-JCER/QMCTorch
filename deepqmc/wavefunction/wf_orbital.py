@@ -1,8 +1,7 @@
-import sys
 import numpy as np
 import torch
 from torch import nn
-from time import time
+
 
 from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
@@ -10,12 +9,13 @@ from deepqmc.wavefunction.slater_pooling import SlaterPooling
 from deepqmc.wavefunction.kinetic_pooling import KineticPooling
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 
+
 class Orbital(WaveFunction):
 
-    def __init__(self,mol,configs='ground_state',scf='pyscf',
+    def __init__(self, mol, configs='ground_state', scf='pyscf',
                  kinetic_jacobi=False,
                  use_projector=False):
-        super(Orbital,self).__init__(mol.nelec,3)
+        super(Orbital, self).__init__(mol.nelec, 3)
 
         # number of atoms
         self.mol = mol
@@ -36,19 +36,21 @@ class Orbital(WaveFunction):
         self.mo.weight = self.get_mo_coeffs()
 
         # jastrow
-        self.edist = ElectronDistance(mol.nelec,3)
-        self.jastrow = TwoBodyJastrowFactor(mol.nup,mol.ndown)
+        self.edist = ElectronDistance(mol.nelec, 3)
+        self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown)
 
         # define the SD we want
-        self.configs = self.get_configs(configs,mol)
+        self.configs = self.get_configs(configs, mol)
         self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
-        self.pool = SlaterPooling(self.configs,mol,use_projector=use_projector)
+        self.pool = SlaterPooling(
+            self.configs, mol, use_projector=use_projector)
 
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula
-        self.kinpool = KineticPooling(self.configs,mol,use_projector=use_projector)
+        self.kinpool = KineticPooling(
+            self.configs, mol, use_projector=use_projector)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
@@ -64,14 +66,15 @@ class Orbital(WaveFunction):
             # self.local_energy = self.local_energy_jacobi
 
     def get_mo_coeffs(self):
-        mo_coeff =  torch.tensor(self.mol.get_mo_coeffs(code=self.scf_code)).float()
-        return nn.Parameter(mo_coeff.transpose(0,1))
+        mo_coeff = torch.tensor(
+            self.mol.get_mo_coeffs(code=self.scf_code)).float()
+        return nn.Parameter(mo_coeff.transpose(0, 1))
 
     def update_mo_coeffs(self):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
-    def forward(self,x):
+    def forward(self, x):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -81,27 +84,26 @@ class Orbital(WaveFunction):
         Returns: values of psi
         '''
 
-        #edist  = self.edist(x)
-        #J = self.jastrow(edist)
+        # edist  = self.edist(x)
+        # J = self.jastrow(edist)
 
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
         return self.fc(x)
-        #return J*x
+        # return J*x
 
-
-    def local_energy(self,pos):
+    def local_energy(self, pos):
         ''' local energy of the sampling points.'''
 
-        ke = self.kinetic_energy_jacobi(pos,return_local_energy=True)
+        ke = self.kinetic_energy_jacobi(pos, return_local_energy=True)
 
         return ke \
-             + self.nuclear_potential(pos)  \
-             + self.electronic_potential(pos) \
-             + self.nuclear_repulsion()
+            + self.nuclear_potential(pos)  \
+            + self.electronic_potential(pos) \
+            + self.nuclear_repulsion()
 
-    def kinetic_energy_jacobi(self,x,return_local_energy=False, **kwargs):
+    def kinetic_energy_jacobi(self, x, return_local_energy=False, **kwargs):
         '''Compute the value of the kinetic enery using
         the Jacobi formula for derivative of determinant.
 
@@ -112,11 +114,11 @@ class Orbital(WaveFunction):
         '''
 
         MO = self.mo(self.ao(x))
-        d2MO = self.mo(self.ao(x,derivative=2))
-        return self.fc(self.kinpool(MO,d2MO,return_local_energy=return_local_energy))
+        d2MO = self.mo(self.ao(x, derivative=2))
+        return self.fc(self.kinpool(MO, d2MO,
+                                    return_local_energy=return_local_energy))
 
-
-    def nuclear_potential(self,pos):
+    def nuclear_potential(self, pos):
         '''Compute the potential of the wf points
         Args:
             pos: position of the electron
@@ -128,15 +130,15 @@ class Orbital(WaveFunction):
 
         p = torch.zeros(pos.shape[0])
         for ielec in range(self.nelec):
-            pelec = pos[:,(ielec*self.ndim):(ielec+1)*self.ndim]
+            pelec = pos[:, (ielec*self.ndim):(ielec+1)*self.ndim]
             for iatom in range(self.natom):
-                patom = self.ao.atom_coords[iatom,:]
+                patom = self.ao.atom_coords[iatom, :]
                 Z = self.ao.atomic_number[iatom]
-                r = torch.sqrt(   ((pelec-patom)**2).sum(1)  ) + 1E-6
+                r = torch.sqrt(((pelec-patom)**2).sum(1)) + 1E-6
                 p += (-Z/r)
-        return p.view(-1,1)
+        return p.view(-1, 1)
 
-    def electronic_potential(self,pos):
+    def electronic_potential(self, pos):
         '''Compute the potential of the wf points
         Args:
             pos: position of the electron
@@ -147,12 +149,12 @@ class Orbital(WaveFunction):
         pot = torch.zeros(pos.shape[0])
 
         for ielec1 in range(self.nelec-1):
-            epos1 = pos[:,ielec1*self.ndim:(ielec1+1)*self.ndim]
-            for ielec2 in range(ielec1+1,self.nelec):
-                epos2 = pos[:,ielec2*self.ndim:(ielec2+1)*self.ndim]
-                r = torch.sqrt( ((epos1-epos2)**2).sum(1) ) + 1E-6
+            epos1 = pos[:, ielec1*self.ndim:(ielec1+1)*self.ndim]
+            for ielec2 in range(ielec1+1, self.nelec):
+                epos2 = pos[:, ielec2*self.ndim:(ielec2+1)*self.ndim]
+                r = torch.sqrt(((epos1-epos2)**2).sum(1)) + 1E-6
                 pot += (1./r)
-        return pot.view(-1,1)
+        return pot.view(-1, 1)
 
     def nuclear_repulsion(self):
         '''Compute the nuclear repulsion term
@@ -161,37 +163,37 @@ class Orbital(WaveFunction):
 
         vnn = 0.
         for at1 in range(self.natom-1):
-            c0 = self.ao.atom_coords[at1,:]
+            c0 = self.ao.atom_coords[at1, :]
             Z0 = self.ao.atomic_number[at1]
-            for at2 in range(at1+1,self.natom):
-                c1 = self.ao.atom_coords[at2,:]
+            for at2 in range(at1+1, self.natom):
+                c1 = self.ao.atom_coords[at2, :]
                 Z1 = self.ao.atomic_number[at2]
-                rnn = torch.sqrt(   ((c0-c1)**2).sum()  )
+                rnn = torch.sqrt(((c0-c1)**2).sum())
                 vnn += Z0*Z1/rnn
         return vnn
 
-    def atomic_distances(self,pos):
+    def atomic_distances(self, pos):
         '''Return atomic distances.'''
         d = []
         for iat1 in range(self.natom-1):
             at1 = self.atoms[iat1]
-            c1 = self.ao.atom_coords[iat1,:].detach().numpy()
-            for iat2 in range(iat1+1,self.natom):
+            c1 = self.ao.atom_coords[iat1, :].detach().numpy()
+            for iat2 in range(iat1+1, self.natom):
                 at2 = self.atoms[iat2]
-                c2 = self.ao.atom_coords[iat2,:].detach().numpy()
-                d.append((at1,at2,np.sum(np.sqrt(((c1-c2)**2)))))
+                c2 = self.ao.atom_coords[iat2, :].detach().numpy()
+                d.append((at1, at2, np.sum(np.sqrt(((c1-c2)**2)))))
         return d
 
-    def geometry(self,pos):
+    def geometry(self, pos):
         '''Return geometries.'''
         d = []
         for iat in range(self.natom):
             at = self.atoms[iat]
-            xyz = self.ao.atom_coords[iat,:].detach().numpy().tolist()
-            d.append((at,xyz))
+            xyz = self.ao.atom_coords[iat, :].detach().numpy().tolist()
+            d.append((at, xyz))
         return d
 
-    def get_configs(self,configs,mol):
+    def get_configs(self, configs, mol):
         """Get the configuratio in the CI expansion
 
         Args:
@@ -199,35 +201,37 @@ class Orbital(WaveFunction):
             mol (mol object): molecule object
 
         Returns:
-            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down electronic confs
+            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
+            electronic confs
         """
-        if isinstance(configs,torch.Tensor):
+        if isinstance(configs, torch.Tensor):
             return configs
 
         elif configs == 'ground_state':
             return self._get_ground_state_config(mol)
 
         elif configs.startswith('singlet'):
-            nocc,nvirt = eval(configs.lstrip("singlet"))
-            return self._get_singlet_state_config(mol,nocc,nvirt)
+            nocc, nvirt = eval(configs.lstrip("singlet"))
+            return self._get_singlet_state_config(mol, nocc, nvirt)
 
         else:
             raise ValueError(configs, " not recognized as valid configuration")
 
-    def _get_ground_state_config(self,mol):
+    def _get_ground_state_config(self, mol):
         """Return only the ground state configuration
 
         Args:
             mol (mol): mol object
 
         Returns:
-            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down electronic confs
+            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
+            electronic confs
         """
         conf = (torch.LongTensor([np.array(range(mol.nup))]),
                 torch.LongTensor([np.array(range(mol.ndown))]))
         return conf
 
-    def _get_singlet_state_config(self,mol,nocc,nvirt):
+    def _get_singlet_state_config(self, mol, nocc, nvirt):
         """Get the confs of the singlet conformations
 
         Args:
@@ -239,17 +243,17 @@ class Orbital(WaveFunction):
         _gs = list(range(mol.nup))
         cup, cdown = [_gs], [_gs]
 
-        for ivirt in range(mol.nup,mol.nup+nvirt,1):
-            for iocc in range(mol.nup-1,mol.nup-1-nocc,-1):
+        for ivirt in range(mol.nup, mol.nup+nvirt, 1):
+            for iocc in range(mol.nup-1, mol.nup-1-nocc, -1):
 
-                _xt = self._create_excitation(_gs.copy(),iocc,ivirt)
-                cup, cdown = self._append_excitations(cup,cdown,_xt,_gs)
-                cup, cdown = self._append_excitations(cup,cdown,_gs,_xt)
+                _xt = self._create_excitation(_gs.copy(), iocc, ivirt)
+                cup, cdown = self._append_excitations(cup, cdown, _xt, _gs)
+                cup, cdown = self._append_excitations(cup, cdown, _gs, _xt)
 
-        return (torch.LongTensor(cup),torch.LongTensor(cdown))
+        return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
     @staticmethod
-    def _create_excitation(conf,iocc,ivirt):
+    def _create_excitation(conf, iocc, ivirt):
         """promote an electron from iocc to ivirt
 
         Args:
@@ -265,7 +269,7 @@ class Orbital(WaveFunction):
         return conf
 
     @staticmethod
-    def _append_excitations(cup,cdown,new_cup,new_cdown):
+    def _append_excitations(cup, cdown, new_cup, new_cdown):
         """Append new excitations
 
         Args:

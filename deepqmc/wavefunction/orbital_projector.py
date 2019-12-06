@@ -3,7 +3,7 @@ import torch
 
 class OrbitalProjector(object):
 
-    def __init__(self,configs,mol):
+    def __init__(self, configs, mol):
 
         self.configs = configs
         self.nconfs = len(configs[0])
@@ -20,18 +20,18 @@ class OrbitalProjector(object):
             torch.tensor, torch.tensor : projectors
         """
 
-        Pup = torch.zeros(self.nconfs,self.nmo,self.nup)
-        Pdown = torch.zeros(self.nconfs,self.nmo,self.ndown)
+        Pup = torch.zeros(self.nconfs, self.nmo, self.nup)
+        Pdown = torch.zeros(self.nconfs, self.nmo, self.ndown)
 
-        for ic,(cup,cdown) in enumerate(zip(self.configs[0],self.configs[1])):
+        for ic, (cup, cdown) in enumerate(zip(self.configs[0], self.configs[1])):
 
-            for _id,imo in enumerate(cup):
-                Pup[ic][imo,_id] = 1.
+            for _id, imo in enumerate(cup):
+                Pup[ic][imo, _id] = 1.
 
-            for _id,imo in enumerate(cdown):
-                Pdown[ic][imo,_id] = 1.
+            for _id, imo in enumerate(cdown):
+                Pdown[ic][imo, _id] = 1.
 
         return Pup.unsqueeze(1), Pdown.unsqueeze(1)
 
-    def split_orbitals(self,mo):
-        return mo[:,:self.nup,:] @ self.Pup, mo[:,self.nup:,:] @ self.Pdown
+    def split_orbitals(self, mo):
+        return mo[:, :self.nup, :] @ self.Pup, mo[:, self.nup:, :] @ self.Pdown
