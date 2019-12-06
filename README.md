@@ -79,7 +79,7 @@ We then define a `SolverPotential` instance that ties all the elements together 
 After the optimization, the following result is obtained:
 
 <p align="center">
-<img src="./pics/ho1d.png" title="Results of the optimization">
+<img src="./pics/ho1d.gif" title="Results of the optimization">
 </p>
 
 ## Dihydrogen molecule
