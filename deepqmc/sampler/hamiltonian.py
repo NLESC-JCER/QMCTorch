@@ -1,6 +1,6 @@
 import torch
 from tqdm import tqdm
-from torch.autograd import grad, Variable
+from torch.autograd import Variable
 from deepqmc.sampler.sampler_base import SamplerBase
 
 
@@ -38,9 +38,10 @@ class Hamiltonian(SamplerBase):
         val = func(inp)
         z = Variable(torch.ones(val.shape))
         val.backward(z)
+        fgrad = inp.grad.data
         inp.grad.data.zero_()
         inp.requires_grad = False
-        return grad
+        return fgrad
 
     @staticmethod
     def log_func(func):
