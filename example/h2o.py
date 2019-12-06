@@ -1,42 +1,36 @@
-import sys
-import torch
 from torch import optim
-from torch.autograd import Variable
 from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
-#from deepqmc.solver.solver_orbital_distributed import DistSolverOrbital  as SolverOrbital
+
 
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
 
-from deepqmc.solver.plot_orbital import plot_molecule
-from deepqmc.solver.plot_orbital import plot_molecule_mayavi as plot_molecule
-from deepqmc.solver.plot_data import plot_observable
-
-
 # define the molecule
-#mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
+# mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
 mol = Molecule(atom='water_line_small.xyz', unit='angs',
-			   basis_type='gto', basis='sto-3g')
+               basis_type='gto', basis='sto-3g')
 
 # define the wave function
-wf = Orbital(mol,kinetic_jacobi=True,configs='singlet(1,1)',use_projector=False)
+wf = Orbital(mol, kinetic_jacobi=True,
+             configs='singlet(1,1)', use_projector=False)
 
-#sampler
-sampler = Metropolis(nwalkers=1000, nstep=500, step_size = 0.5,
-                     ndim = wf.ndim, nelec = wf.nelec, move = 'one')
+# sampler
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size=0.5,
+                     ndim=wf.ndim, nelec=wf.nelec, move='one')
 
 # optimizer
-opt = Adam(wf.parameters(),lr=0.1)
+opt = Adam(wf.parameters(), lr=0.1)
 
 # scheduler
-scheduler = optim.lr_scheduler.StepLR(opt,step_size=20,gamma=0.75)
+scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
 
 # solver
-solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt,scheduler=scheduler)
-#solver.configure(task='wf_opt')
+solver = SolverOrbital(wf=wf, sampler=sampler,
+                       optimizer=opt, scheduler=scheduler)
+# solver.configure(task='wf_opt')
 pos, e, v = solver.single_point()
 
 # # optimize the geometry
