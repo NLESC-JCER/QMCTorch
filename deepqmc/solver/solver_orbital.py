@@ -32,7 +32,7 @@ class SolverOrbital(SolverBase):
         # distributed model
         self.save_model = 'model.pth'
 
-    def configure(self, task='wf_opt', freeze=[]):
+    def configure(self, task='wf_opt', freeze=None):
         '''Configure the optimzier for specific tasks.'''
         self.task = task
 
@@ -50,6 +50,8 @@ class SolverOrbital(SolverBase):
             self.wf.fc.weight.requires_grad = True
             self.wf.ao.atom_coords.requires_grad = False
 
+            if not isinstance(freeze, list):
+                freeze = [freeze]
             for name in freeze:
                 if name.lower() == 'ci':
                     self.wf.fc.weight.requires_grad = False

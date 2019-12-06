@@ -103,7 +103,8 @@ class Walkers(object):
 
         return new_pos.view(self.nwalkers, self.nelec*self.ndim)
 
-    def _random(self, step_size, size):
+    @staticmethod
+    def _random(step_size, size):
         """Return a random array of length size between
         [-step_size,step_size]
 

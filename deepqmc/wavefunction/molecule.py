@@ -17,6 +17,7 @@ class Molecule(object):
         self.atoms_str = atom
         self.basis_type = basis_type.lower()
         self.basis = basis.lower()
+        self.code_mo = 'pyscf'
 
         if self.basis_type not in ['sto', 'gto']:
             raise ValueError("basis_type must be sto or gto")

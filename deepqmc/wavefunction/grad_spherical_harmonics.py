@@ -137,7 +137,7 @@ def _grad_spherical_harmonics_l2(xyz, m):
                                  x*(x*x+y*y-z*z)],
                                 dim=-1))
     if m == 2:
-        c2 = 0.5462742152960396
+        c0 = 0.5462742152960396
         p = (c0/r4).unsqueeze(-1)
         return p * (torch.stack([4*x*y*y + 2*x*z*z,
                                  -4*x*x*y - 2*y*z*z,

@@ -1,12 +1,11 @@
-import numpy as np
 import pymc3 as pm
 import torch
 from pyCHAMP.sampler.sampler_base import SAMPLER_BASE
 
+
 class PYMC3(SAMPLER_BASE):
 
     def __init__(self, nwalkers=1000, ndim=3):
-
         ''' Wrapper around the pymc3 samplers
         Args:
             f (func) : function to sample
@@ -16,11 +15,11 @@ class PYMC3(SAMPLER_BASE):
             boudnary (float) : boudnary of the space
         '''
 
-        SAMPLER_BASE.__init__(self,nwalkers,None,None,None,None,None,None)
+        SAMPLER_BASE.__init__(self, nwalkers, None, None,
+                              None, None, None, None)
         self.ndim = ndim
 
-    def generate(self,pdf,ntherm=-1,with_tqdm=True,pos=None,init=None):
-
+    def generate(self, pdf, ntherm=-1, with_tqdm=True, pos=None, init=None):
         ''' perform a MC sampling of the function f
         Returns:
             X (list) : position of the walkers
@@ -33,9 +32,9 @@ class PYMC3(SAMPLER_BASE):
 
         with pot:
             trace = pm.sample(self.nwalkers,
-                      tune=1000,
-                      target_accept=0.9,
-                      cores=2
-                      )
+                              tune=1000,
+                              target_accept=0.9,
+                              cores=2
+                              )
 
         return trace['pot']

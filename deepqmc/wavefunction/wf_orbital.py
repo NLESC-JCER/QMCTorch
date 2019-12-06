@@ -217,7 +217,8 @@ class Orbital(WaveFunction):
         else:
             raise ValueError(configs, " not recognized as valid configuration")
 
-    def _get_ground_state_config(self, mol):
+    @staticmethod
+    def _get_ground_state_config(mol):
         """Return only the ground state configuration
 
         Args:
