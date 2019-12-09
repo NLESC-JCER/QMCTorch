@@ -32,11 +32,12 @@ class SolverBase(object):
         if self.task == 'geo_opt' and 'geometry' not in self.obs_dict:
             self.obs_dict['geometry'] = []
 
-    def sample(self, ntherm=-1, with_tqdm=True, pos=None):
+    def sample(self, ntherm=-1, ndecor=100, with_tqdm=True, pos=None):
         ''' sample the wave function.'''
 
         pos = self.sampler.generate(
-            self.wf.pdf, ntherm=ntherm, with_tqdm=with_tqdm, pos=pos)
+            self.wf.pdf, ntherm=ntherm, ndecor=ndecor,
+            with_tqdm=with_tqdm, pos=pos)
         pos.requires_grad = True
         return pos.float()
 
@@ -76,10 +77,10 @@ class SolverBase(object):
             pos = self.sample(ntherm=-1)
         return self.wf.variance(pos)
 
-    def single_point(self, pos=None, prt=True):
+    def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
         '''Performs a single point calculation.'''
         if pos is None:
-            pos = self.sample(ntherm=-1)
+            pos = self.sample(ntherm=ntherm, ndecor=ndecor)
 
         e, s = self.wf._energy_variance(pos)
         if prt:
@@ -95,6 +96,12 @@ class SolverBase(object):
             'loss': loss
         }, filename)
         return loss
+
+    def sampling_traj(self, pos):
+        ndim = pos.shape[-1]
+        p = pos.view(-1, self.sampler.nwalkers, ndim)
+        el = [self.wf.local_energy(ip).detach().numpy() for ip in p]
+        return {'local_energy': el, 'pos': p}
 
     def run(self, nepoch, batchsize=None, loss='variance'):
         raise NotImplementedError()

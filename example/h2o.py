@@ -8,18 +8,20 @@ from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
 
+from deepqmc.solver.plot_data import plot_observable
 # define the molecule
-# mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
-mol = Molecule(atom='water_line_small.xyz', unit='angs',
+#mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
+mol = Molecule(atom='water.xyz', unit='angs',
                basis_type='gto', basis='sto-3g')
 
 # define the wave function
 wf = Orbital(mol, kinetic_jacobi=True,
-             configs='singlet(1,1)', use_projector=False)
+             configs='ground_state', use_projector=True)
 
 # sampler
-sampler = Metropolis(nwalkers=1000, nstep=500, step_size=0.5,
-                     ndim=wf.ndim, nelec=wf.nelec, move='one')
+sampler = Metropolis(nwalkers=100, nstep=2000, step_size=0.5,
+                     ndim=wf.ndim, nelec=wf.nelec, move='one',
+                     domain=mol.get_domain('sphere'))
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.1)
@@ -30,8 +32,13 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=scheduler)
+
 # solver.configure(task='wf_opt')
-pos, e, v = solver.single_point()
+pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
+
+#pos = solver.sample(ntherm=0, ndecor=100)
+#obs = solver.sampling_traj(pos)
+#plot_observable(obs, e0=-74, ax=None)
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

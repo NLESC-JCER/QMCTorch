@@ -17,11 +17,5 @@ class SamplerBase(object):
 
         self.walkers = Walkers(nwalkers, nelec, ndim, domain)
 
-    def set_ndim(self, ndim):
-        self.ndim = ndim
-
-    def set_initial_guess(self, guess):
-        self.initial_guess = guess
-
     def generate(self, pdf):
         raise NotImplementedError()

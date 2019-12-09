@@ -6,37 +6,53 @@ import torch
 class Metropolis(SamplerBase):
 
     def __init__(self, nwalkers=1000, nstep=1000, nelec=1, ndim=3,
-                 step_size=3, domain={'min': -2, 'max': 2},
+                 step_size=3, domain={'type': 'uniform', 'min': -5, 'max': 5},
                  move='all'):
-        ''' METROPOLIS HASTING SAMPLER
+        """Metroplis Hasting sampler
+
         Args:
-            f (func) : function to sample
-            nstep (int) : number of mc step
-            nwalkers (int) : number of walkers
-            eps (float) : size of the mc step
-            boudnary (float) : boudnary of the space
-        '''
+            nwalkers (int, optional): [description]. Defaults to 1000.
+            nstep (int, optional): [description]. Defaults to 1000.
+            nelec (int, optional): [description]. Defaults to 1.
+            ndim (int, optional): [description]. Defaults to 3.
+            step_size (int, optional): [description]. Defaults to 3.
+            domain (dict, optional): [description].
+                    Defaults to {'type': 'uniform', 'min': -5, 'max': 5}.
+            move (str, optional): [description]. Defaults to 'all'.
+        """
 
         SamplerBase.__init__(self, nwalkers, nstep, nelec,
                              ndim, step_size, domain, move)
 
-    def generate(self, pdf, ntherm=10, with_tqdm=True, pos=None,
-                 init='uniform'):
-        ''' perform a MC sampling of the function f
+    def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
+                 with_tqdm=True):
+        """Generate a series of point using MC sampling
+
+        Args:
+            pdf (callable): probability distribution function to be sampled
+            ntherm (int, optional): number of step before thermalization.
+                                    Defaults to 10.
+            ndecor (int, optional): number of steps for decorrelation.
+                                    Defaults to 50.
+            pos (torch.tensor, optional): position to start with.
+                                          Defaults to None.
+            with_tqdm (bool, optional): tqdm progress bar. Defaults to True.
+
         Returns:
-            X (list) : position of the walkers
-        '''
+            torch.tensor: positions of the walkers
+        """
         with torch.no_grad():
 
             if ntherm < 0:
                 ntherm = self.nstep+ntherm
 
-            self.walkers.initialize(method=init, pos=pos)
+            self.walkers.initialize(method=self.domain['type'], pos=pos)
 
             fx = pdf(self.walkers.pos)
-            fx[fx == 0] = 1E-6
-            POS = []
+            fx[fx == 0] = 1E-16
+            pos = []
             rate = 0
+            idecor = 0
 
             if with_tqdm:
                 rng = tqdm(range(self.nstep))
@@ -50,6 +66,7 @@ class Metropolis(SamplerBase):
 
                 # new function
                 fxn = pdf(Xn)
+                fxn[fxn == 0.] = 1E-16
                 df = (fxn/(fx)).double()
 
                 # accept the moves
@@ -61,15 +78,17 @@ class Metropolis(SamplerBase):
                 # update position/function value
                 self.walkers.pos[index, :] = Xn[index, :]
                 fx[index] = fxn[index]
-                fx[fx == 0] = 1E-6
+                fx[fx == 0] = 1E-16
 
-                if istep >= ntherm:
-                    POS.append(self.walkers.pos.clone().detach())
+                if (istep >= ntherm):
+                    if (idecor % ndecor == 0):
+                        pos.append(self.walkers.pos.clone().detach())
+                    idecor += 1
 
             if with_tqdm:
                 print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
 
-        return torch.cat(POS)
+        return torch.cat(pos)
 
     def _accept(self, P):
         """accept the move or not

@@ -1,4 +1,5 @@
 import torch
+from torch.distributions import MultivariateNormal
 
 
 class Walkers(object):
@@ -32,7 +33,7 @@ class Walkers(object):
             self.pos = pos
 
         else:
-            options = ['center', 'uniform']
+            options = ['center', 'uniform', 'sphere']
             if method not in options:
                 raise ValueError('method %s not recognized. Options are : %s '
                                  % (method, ' '.join(options)))
@@ -41,11 +42,25 @@ class Walkers(object):
                 self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
 
             elif method == options[1]:
-                self.pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
-                self.pos *= (self.domain['max'] - self.domain['min'])
-                self.pos += self.domain['min']
+                self.pos = self._uniform()
+
+            elif method == options[2]:
+                self.pos = self._multivar()
 
         self.status = torch.ones((self.nwalkers, 1))
+
+    def _uniform(self):
+        pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
+        pos *= (self.domain['max'] - self.domain['min'])
+        pos += self.domain['min']
+        return pos
+
+    def _multivar(self):
+        multi = MultivariateNormal(
+            torch.tensor(self.domain['mean']),
+            torch.tensor(self.domain['sigma']))
+        pos = multi.sample((self.nwalkers, self.nelec))
+        return pos.view(self.nwalkers, self.nelec*self.ndim).float()
 
     def move(self, step_size, method='one'):
         """Main swith to propose new moves

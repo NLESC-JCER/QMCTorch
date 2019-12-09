@@ -7,7 +7,7 @@ from deepqmc.sampler.sampler_base import SamplerBase
 class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=1000, nstep=None, nelec=1, ndim=3,
-                 step_size=None, domain=None, L=10,
+                 step_size=None, domain={'min': -2, 'max': 2}, L=10,
                  move='all'):
         ''' HMC SAMPLER
         Args:
@@ -47,7 +47,7 @@ class Hamiltonian(SamplerBase):
     def log_func(func):
         return lambda x: -torch.log(func(x))
 
-    def generate(self, pdf, ntherm=10, with_tqdm=True, pos=None,
+    def generate(self, pdf, ntherm=10, ndecor=10, with_tqdm=True, pos=None,
                  init='uniform'):
         '''perform a HMC sampling of the pdf
         Returns:
@@ -63,8 +63,9 @@ class Hamiltonian(SamplerBase):
         # get the logpdf function
         logpdf = self.log_func(pdf)
 
-        POS = []
+        pos = []
         rate = 0
+        idecor = 0
 
         if with_tqdm:
             rng = tqdm(range(self.nstep))
@@ -80,12 +81,14 @@ class Hamiltonian(SamplerBase):
             rate += _r
 
             # store
-            if istep >= ntherm:
-                POS.append(self.walkers.pos.detach())
+            if (istep >= ntherm):
+                if (idecor % ndecor == 0):
+                    pos.append(self.walkers.pos.detach())
+                idecor += 1
 
         # print stats
         print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
-        return torch.cat(POS)
+        return torch.cat(pos)
 
     @staticmethod
     def _step(U, get_grad, epsilon, L, qinit):
