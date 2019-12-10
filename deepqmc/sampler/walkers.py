@@ -15,22 +15,6 @@ class Walkers(object):
         self.pos = None
         self.status = None
 
-    @staticmethod
-    def _get_init_domain(init):
-
-        domain = dict()
-        mol, method = init
-        domain['type'] = method
-
-        if method == 'uniform':
-            domain['min'] = np.min(mol.atom_coords) - 0.5
-            domain['max'] = np.max(mol.atom_coords) + 0.5
-
-        if method == 'sphere':
-            domain['mean'] = np.mean(mol.atom_coords, 0)
-            domain['sigma'] = np.diag(np.std(mol.atom_coords, 0)+0.25)
-        return domain
-
     def initialize(self, pos=None):
         """Initalize the position of the walkers
 
@@ -50,7 +34,7 @@ class Walkers(object):
             self.pos = pos
 
         else:
-            options = ['center', 'uniform', 'sphere']
+            options = ['center', 'uniform', 'normal']
             if self.init_domain['type'] not in options:
                 raise ValueError('method %s not recognized. Options are : %s '
                                  % (self.init_domain['type'], ' '.join(options)))

@@ -1,14 +1,18 @@
+from deepqmc.sampler.walkers import Walkers
+
+
 class SamplerBase(object):
 
-    def __init__(self, walkers, nstep=1000,
-                 step_size=3):
+    def __init__(self, nwalkers, nstep, step_size, nelec, ndim, init):
 
-        self.walkers = walkers
-        self.nwalkers = walkers.nwalkers
-        self.nelec = walkers.nelec
-        self.ndim = walkers.ndim
+        self.nwalkers = nwalkers
+        self.nelec = nelec
+        self.ndim = ndim
         self.nstep = nstep
         self.step_size = step_size
+
+        self.walkers = Walkers(
+            nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init)
 
     def generate(self, pdf):
         raise NotImplementedError()
