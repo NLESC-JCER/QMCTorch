@@ -1,28 +1,22 @@
 from deepqmc.sampler.sampler_base import SamplerBase
 from tqdm import tqdm
 import torch
+from torch.distributions import MultivariateNormal
 
 
 class Metropolis(SamplerBase):
 
-    def __init__(self, nwalkers=1000, nstep=1000, nelec=1, ndim=3,
-                 step_size=3, domain={'type': 'uniform', 'min': -5, 'max': 5},
-                 move='all'):
+    def __init__(self, walkers, nstep=1000, step_size=3, move='uniform'):
         """Metroplis Hasting sampler
 
         Args:
-            nwalkers (int, optional): [description]. Defaults to 1000.
+            walkers (walkers): a walker object
             nstep (int, optional): [description]. Defaults to 1000.
-            nelec (int, optional): [description]. Defaults to 1.
-            ndim (int, optional): [description]. Defaults to 3.
             step_size (int, optional): [description]. Defaults to 3.
-            domain (dict, optional): [description].
-                    Defaults to {'type': 'uniform', 'min': -5, 'max': 5}.
-            move (str, optional): [description]. Defaults to 'all'.
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep, nelec,
-                             ndim, step_size, domain, move)
+        SamplerBase.__init__(self, walkers, nstep, step_size)
+        self.move = move
 
     def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
                  with_tqdm=True):
@@ -46,7 +40,7 @@ class Metropolis(SamplerBase):
             if ntherm < 0:
                 ntherm = self.nstep+ntherm
 
-            self.walkers.initialize(method=self.domain['type'], pos=pos)
+            self.walkers.initialize(pos=pos)
 
             fx = pdf(self.walkers.pos)
             fx[fx == 0] = 1E-16
@@ -62,7 +56,7 @@ class Metropolis(SamplerBase):
             for istep in rng:
 
                 # new positions
-                Xn = self.walkers.move(self.step_size, method=self.move)
+                Xn = self.move(pdf)
 
                 # new function
                 fxn = pdf(Xn)
@@ -73,7 +67,7 @@ class Metropolis(SamplerBase):
                 index = self._accept(df)
 
                 # acceptance rate
-                rate += index.byte().sum().float()/self.walkers.nwalkers
+                rate += index.byte().sum().float()/self.nwalkers
 
                 # update position/function value
                 self.walkers.pos[index, :] = Xn[index, :]
@@ -90,6 +84,87 @@ class Metropolis(SamplerBase):
 
         return torch.cat(pos)
 
+    def move(self, pdf):
+        """Move electron one at a time in a vectorized way.
+
+        Args:
+            step_size (float): size of the MC moves
+
+        Returns:
+            torch.tensor: new positions of the walkers
+        """
+        if self.nelec == 1:
+            return self.walkers.pos + self._get_new_coord()
+
+        else:
+            # clone and reshape data : Nwlaker, Nelec, Ndim
+            new_pos = self.walkers.pos.clone()
+            new_pos = new_pos.view(self.nwalkers,
+                                   self.nelec, self.ndim)
+
+            # get indexes
+            index = torch.LongTensor(self.nwalkers).random_(
+                0, self.nelec)
+
+            # change selected data
+            if self.move == 'uniform':
+                new_pos[range(self.nwalkers), index,
+                        :] += self._move_uniform()
+
+            elif self.move == 'drift':
+                new_pos[range(self.nwalkers), index,
+                        :] += self._move_drift(pdf, index)
+
+            return new_pos.view(self.nwalkers, self.nelec*self.ndim)
+
+    def _move_uniform(self):
+        """Return a random array of length size between
+        [-step_size,step_size]
+
+        Args:
+            step_size (float): boundary of the array
+            size (int): number of points in the array
+
+        Returns:
+            torch.tensor: random array
+        """
+
+        return self.step_size * (2 * torch.rand((self.nwalkers, self.ndim)) - 1)
+
+    def _move_drift(self, pdf, index):
+
+        drift_val = 0.5 * \
+            self.get_grad(pdf, self.walkers.pos) / pdf(self.walkers.pos)
+        drift_val = drift_val.view(self.nwalkers,
+                                   self.nelec, self.ndim)
+
+        mv = MultivariateNormal(torch.zeros(self.ndim), torch.sqrt(
+            self.step_size)*torch.eye(self.ndim))
+
+        return self.step_size * drift_val[range(self.nwalkers), index, :] + \
+            mv.sample((self.nwalkers, self.ndim))
+
+    @staticmethod
+    def _get_grad(func, inp):
+        '''Compute the gradient of a function
+        wrt the value of its input
+
+        Args:
+            func : function to get the gradient of
+            inp : input
+        Returns:
+            grad : gradient of the func wrt the input
+        '''
+
+        inp.requires_grad = True
+        val = func(inp)
+        z = Variable(torch.ones(val.shape))
+        val.backward(z)
+        fgrad = inp.grad.data
+        inp.grad.data.zero_()
+        inp.requires_grad = False
+        return fgrad
+
     def _accept(self, P):
         """accept the move or not
 
@@ -100,6 +175,6 @@ class Metropolis(SamplerBase):
             t0rch.tensor: the indx of the accepted moves
         """
         P[P > 1] = 1.0
-        tau = torch.rand(self.nwalkers).double()
+        tau = torch.rand(self.walkers.nwalkers).double()
         index = (P-tau >= 0).reshape(-1)
         return index.type(torch.bool)

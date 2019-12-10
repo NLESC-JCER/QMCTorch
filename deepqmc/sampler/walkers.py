@@ -1,20 +1,38 @@
 import torch
 from torch.distributions import MultivariateNormal
+import numpy as np
 
 
 class Walkers(object):
 
-    def __init__(self, nwalkers, nelec, ndim, domain):
+    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, move=None):
 
         self.nwalkers = nwalkers
         self.ndim = ndim
         self.nelec = nelec
-        self.domain = domain
+        self.init_domain = self._get_init_domain(init)
+        self.move = move
 
         self.pos = None
         self.status = None
 
-    def initialize(self, method='uniform', pos=None):
+    @staticmethod
+    def _get_init_domain(init):
+
+        domain = dict()
+        mol, method = init
+        domain['type'] = method
+
+        if method == 'uniform':
+            domain['min'] = np.min(mol.atom_coords) - 0.5
+            domain['max'] = np.max(mol.atom_coords) + 0.5
+
+        if method == 'sphere':
+            domain['mean'] = np.mean(mol.atom_coords, 0)
+            domain['sigma'] = np.diag(np.std(mol.atom_coords, 0)+0.5)
+        return domain
+
+    def initialize(self, pos=None):
         """Initalize the position of the walkers
 
         Args:
@@ -34,35 +52,33 @@ class Walkers(object):
 
         else:
             options = ['center', 'uniform', 'sphere']
-            if method not in options:
+            if self.init_domain['type'] not in options:
                 raise ValueError('method %s not recognized. Options are : %s '
-                                 % (method, ' '.join(options)))
+                                 % (self.init_domain['type'], ' '.join(options)))
 
-            if method == options[0]:
+            if self.init_domain['type'] == options[0]:
                 self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
 
-            elif method == options[1]:
-                self.pos = self._uniform()
+            elif self.init_domain['type'] == options[1]:
+                self.pos = self._init_uniform()
 
-            elif method == options[2]:
-                self.pos = self._multivar()
+            elif self.init_domain['type'] == options[2]:
+                self.pos = self._init_multivar()
 
-        self.status = torch.ones((self.nwalkers, 1))
-
-    def _uniform(self):
+    def _init_uniform(self):
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
-        pos *= (self.domain['max'] - self.domain['min'])
-        pos += self.domain['min']
+        pos *= (self.init_domain['max'] - self.init_domain['min'])
+        pos += self.init_domain['min']
         return pos
 
-    def _multivar(self):
+    def _init_multivar(self):
         multi = MultivariateNormal(
-            torch.tensor(self.domain['mean']),
-            torch.tensor(self.domain['sigma']))
+            torch.tensor(self.init_domain['mean']),
+            torch.tensor(self.init_domain['sigma']))
         pos = multi.sample((self.nwalkers, self.nelec))
         return pos.view(self.nwalkers, self.nelec*self.ndim).float()
 
-    def move(self, step_size, method='one'):
+    def move(self, step_size):
         """Main swith to propose new moves
 
         Args:
@@ -75,16 +91,16 @@ class Walkers(object):
             torch.tensor: new positions of the walkers
         """
 
-        if method == 'one':
-            new_pos = self._move_one_vect(step_size)
+        if self.nelec == 1:
+            new_pos = self._move_only_elec(step_size)
 
-        elif method == 'all':
-            new_pos = self._move_all(step_size)
+        else:
+            new_pos = self._move_one_vect(step_size)
 
         return new_pos
 
-    def _move_all(self, step_size):
-        """Move all electrons at the same time.
+    def _move_only_elec(self, step_size):
+        """Move the only electron there.
 
         Args:
             step_size (float): size of the MC moves
@@ -93,7 +109,7 @@ class Walkers(object):
             torch.tensor: new positions of the walkers
         """
         _size = (self.nwalkers, self.nelec*self.ndim)
-        return self.pos + self.status * self._random(step_size, _size)
+        return self.pos + self._get_new_coord(step_size, _size)
 
     def _move_one_vect(self, step_size):
         """Move electron one at a time in a vectorized way.
@@ -114,12 +130,20 @@ class Walkers(object):
 
         # change selected data
         new_pos[range(self.nwalkers), index,
-                :] += self._random(step_size, (self.nwalkers, self.ndim))
+                :] += self._get_new_coord(step_size, (self.nwalkers, self.ndim))
 
         return new_pos.view(self.nwalkers, self.nelec*self.ndim)
 
+    def _get_new_coord(self, step_size, size):
+
+        if self.move == 'uniform':
+            return self._get_uniform(step_size, size)
+
+        elif self.move == 'drift':
+            raise ValueError('drift sampling not implemtented yet')
+
     @staticmethod
-    def _random(step_size, size):
+    def _get_uniform(step_size, size):
         """Return a random array of length size between
         [-step_size,step_size]
 

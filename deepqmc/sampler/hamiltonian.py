@@ -24,7 +24,7 @@ class Hamiltonian(SamplerBase):
 
     @staticmethod
     def get_grad(func, inp):
-        '''Compute the gradient of the of a function
+        '''Compute the gradient of a function
         wrt the value of its input
 
         Args:

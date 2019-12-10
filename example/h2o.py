@@ -5,12 +5,13 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 
 
+from deepqmc.sampler.walkers import Walkers
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
 
 from deepqmc.solver.plot_data import plot_observable
+
 # define the molecule
-#mol = Molecule(atom='water.xyz', basis_type='sto', basis='sz')
 mol = Molecule(atom='water.xyz', unit='angs',
                basis_type='gto', basis='sto-3g')
 
@@ -18,10 +19,14 @@ mol = Molecule(atom='water.xyz', unit='angs',
 wf = Orbital(mol, kinetic_jacobi=True,
              configs='ground_state', use_projector=True)
 
+# walkers
+walkers = Walkers(nwalkers=100,
+                  ndim=wf.ndim, nelec=wf.nelec,
+                  init=(mol, 'sphere'),
+                  move='uniform')
+
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=2000, step_size=0.5,
-                     ndim=wf.ndim, nelec=wf.nelec, move='one',
-                     domain=mol.get_domain('sphere'))
+sampler = Metropolis(walkers, nstep=2000, step_size=0.5)
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.1)
@@ -36,9 +41,9 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # solver.configure(task='wf_opt')
 pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
 
-#pos = solver.sample(ntherm=0, ndecor=100)
-#obs = solver.sampling_traj(pos)
-#plot_observable(obs, e0=-74, ax=None)
+# pos = solver.sample(ntherm=0, ndecor=100)
+# obs = solver.sampling_traj(pos)
+# plot_observable(obs, e0=-74, ax=None)
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')
