@@ -1,3 +1,4 @@
+import torch
 from torch import optim
 from torch.optim import Adam
 
@@ -20,13 +21,12 @@ wf = Orbital(mol, kinetic_jacobi=True,
              configs='ground_state', use_projector=True)
 
 # walkers
-walkers = Walkers(nwalkers=100,
+walkers = Walkers(nwalkers=200,
                   ndim=wf.ndim, nelec=wf.nelec,
-                  init=(mol, 'sphere'),
-                  move='uniform')
+                  init=(mol, 'sphere'))
 
 # sampler
-sampler = Metropolis(walkers, nstep=2000, step_size=0.5)
+sampler = Metropolis(walkers, nstep=500, step_size=0.25, transition='uniform')
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.1)
@@ -39,11 +39,11 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=scheduler)
 
 # solver.configure(task='wf_opt')
-pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
+# pos, e, v = solver.single_point(ntherm=-1, ndecor=10)
 
-# pos = solver.sample(ntherm=0, ndecor=100)
-# obs = solver.sampling_traj(pos)
-# plot_observable(obs, e0=-74, ax=None)
+pos = solver.sample(ntherm=0, ndecor=10)
+obs = solver.sampling_traj(pos)
+plot_observable(obs, e0=-74, ax=None)
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')
