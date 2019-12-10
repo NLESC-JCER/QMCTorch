@@ -20,13 +20,9 @@ mol = Molecule(atom='water.xyz', unit='angs',
 wf = Orbital(mol, kinetic_jacobi=True,
              configs='ground_state', use_projector=True)
 
-# walkers
-walkers = Walkers(nwalkers=200,
-                  ndim=wf.ndim, nelec=wf.nelec,
-                  init=(mol, 'sphere'))
-
 # sampler
-sampler = Metropolis(walkers, nstep=500, step_size=0.25, transition='uniform')
+sampler = Metropolis(nwalkers=100, nstep=500, step_size=0.25,
+                     nelec=wf.nelec, ndim=wf.ndim, init=mol.domain('normal'))
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.1)

@@ -328,10 +328,9 @@ class Molecule(object):
         norm = np.sqrt((mat**2).sum(0))
         return mat / norm
 
-    def _get_init_domain(self, init):
+    def domain(self, method):
 
         domain = dict()
-        mol, method = init
         domain['type'] = method
 
         if method == 'uniform':

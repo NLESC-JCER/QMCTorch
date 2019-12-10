@@ -10,7 +10,7 @@ class Walkers(object):
         self.nwalkers = nwalkers
         self.ndim = ndim
         self.nelec = nelec
-        self.init_domain = self._get_init_domain(init)
+        self.init_domain = init
 
         self.pos = None
         self.status = None
