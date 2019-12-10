@@ -5,13 +5,12 @@ import numpy as np
 
 class Walkers(object):
 
-    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, move=None):
+    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
 
         self.nwalkers = nwalkers
         self.ndim = ndim
         self.nelec = nelec
         self.init_domain = self._get_init_domain(init)
-        self.move = move
 
         self.pos = None
         self.status = None
@@ -29,7 +28,7 @@ class Walkers(object):
 
         if method == 'sphere':
             domain['mean'] = np.mean(mol.atom_coords, 0)
-            domain['sigma'] = np.diag(np.std(mol.atom_coords, 0)+0.5)
+            domain['sigma'] = np.diag(np.std(mol.atom_coords, 0)+0.25)
         return domain
 
     def initialize(self, pos=None):
@@ -77,81 +76,3 @@ class Walkers(object):
             torch.tensor(self.init_domain['sigma']))
         pos = multi.sample((self.nwalkers, self.nelec))
         return pos.view(self.nwalkers, self.nelec*self.ndim).float()
-
-    def move(self, step_size):
-        """Main swith to propose new moves
-
-        Args:
-            step_size (float): size of the MC moves
-            method (str, optional): move electrons one at a time or all at the
-                                    same time.
-                                    'one' or 'all' . Defaults to 'one'.
-
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-
-        if self.nelec == 1:
-            new_pos = self._move_only_elec(step_size)
-
-        else:
-            new_pos = self._move_one_vect(step_size)
-
-        return new_pos
-
-    def _move_only_elec(self, step_size):
-        """Move the only electron there.
-
-        Args:
-            step_size (float): size of the MC moves
-
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-        _size = (self.nwalkers, self.nelec*self.ndim)
-        return self.pos + self._get_new_coord(step_size, _size)
-
-    def _move_one_vect(self, step_size):
-        """Move electron one at a time in a vectorized way.
-
-        Args:
-            step_size (float): size of the MC moves
-
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-
-        # clone and reshape data : Nwlaker, Nelec, Ndim
-        new_pos = self.pos.clone()
-        new_pos = new_pos.view(self.nwalkers, self.nelec, self.ndim)
-
-        # get indexes
-        index = torch.LongTensor(self.nwalkers).random_(0, self.nelec)
-
-        # change selected data
-        new_pos[range(self.nwalkers), index,
-                :] += self._get_new_coord(step_size, (self.nwalkers, self.ndim))
-
-        return new_pos.view(self.nwalkers, self.nelec*self.ndim)
-
-    def _get_new_coord(self, step_size, size):
-
-        if self.move == 'uniform':
-            return self._get_uniform(step_size, size)
-
-        elif self.move == 'drift':
-            raise ValueError('drift sampling not implemtented yet')
-
-    @staticmethod
-    def _get_uniform(step_size, size):
-        """Return a random array of length size between
-        [-step_size,step_size]
-
-        Args:
-            step_size (float): boundary of the array
-            size (int): number of points in the array
-
-        Returns:
-            torch.tensor: random array
-        """
-        return step_size * (2 * torch.rand(size) - 1)

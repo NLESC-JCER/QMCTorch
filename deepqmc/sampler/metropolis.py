@@ -1,12 +1,14 @@
 from deepqmc.sampler.sampler_base import SamplerBase
 from tqdm import tqdm
 import torch
+from torch.autograd import Variable
 from torch.distributions import MultivariateNormal
+import numpy as np
 
 
 class Metropolis(SamplerBase):
 
-    def __init__(self, walkers, nstep=1000, step_size=3, move='uniform'):
+    def __init__(self, walkers, nstep=1000, step_size=3, transition='uniform'):
         """Metroplis Hasting sampler
 
         Args:
@@ -16,7 +18,7 @@ class Metropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, walkers, nstep, step_size)
-        self.move = move
+        self.transition = transition
 
     def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
                  with_tqdm=True):
@@ -107,11 +109,11 @@ class Metropolis(SamplerBase):
                 0, self.nelec)
 
             # change selected data
-            if self.move == 'uniform':
+            if self.transition == 'uniform':
                 new_pos[range(self.nwalkers), index,
                         :] += self._move_uniform()
 
-            elif self.move == 'drift':
+            elif self.transition == 'drift':
                 new_pos[range(self.nwalkers), index,
                         :] += self._move_drift(pdf, index)
 
@@ -134,15 +136,16 @@ class Metropolis(SamplerBase):
     def _move_drift(self, pdf, index):
 
         drift_val = 0.5 * \
-            self.get_grad(pdf, self.walkers.pos) / pdf(self.walkers.pos)
+            self._get_grad(pdf, self.walkers.pos) / \
+            pdf(self.walkers.pos).view(-1, 1)
         drift_val = drift_val.view(self.nwalkers,
                                    self.nelec, self.ndim)
 
-        mv = MultivariateNormal(torch.zeros(self.ndim), torch.sqrt(
+        mv = MultivariateNormal(torch.zeros(self.ndim), np.sqrt(
             self.step_size)*torch.eye(self.ndim))
 
-        return self.step_size * drift_val[range(self.nwalkers), index, :] + \
-            mv.sample((self.nwalkers, self.ndim))
+        return self.step_size * drift_val[range(self.nwalkers), index, :] \
+            + mv.sample((self.nwalkers, 1)).squeeze()
 
     @staticmethod
     def _get_grad(func, inp):
@@ -155,15 +158,15 @@ class Metropolis(SamplerBase):
         Returns:
             grad : gradient of the func wrt the input
         '''
-
-        inp.requires_grad = True
-        val = func(inp)
-        z = Variable(torch.ones(val.shape))
-        val.backward(z)
-        fgrad = inp.grad.data
-        inp.grad.data.zero_()
-        inp.requires_grad = False
-        return fgrad
+        with torch.enable_grad():
+            inp.requires_grad = True
+            val = func(inp)
+            z = Variable(torch.ones(val.shape))
+            val.backward(z)
+            fgrad = inp.grad.data
+            inp.grad.data.zero_()
+            inp.requires_grad = False
+            return fgrad
 
     def _accept(self, P):
         """accept the move or not
