@@ -15,7 +15,7 @@ class Potential(WaveFunction):
         if not isinstance(ncenter, list):
             ncenter = [ncenter]
         self.centers = torch.linspace(
-            domain['xmin'], domain['xmax'], ncenter[0]).view(-1, 1)
+            domain['min'], domain['max'], ncenter[0]).view(-1, 1)
         self.ncenter = ncenter[0]
 
         # define the RBF layer

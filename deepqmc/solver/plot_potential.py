@@ -64,7 +64,7 @@ class plotter1d(object):
         self.iter = 0
 
         self.POS = Variable(torch.linspace(
-            domain['xmin'], domain['xmax'], res).view(res, 1))
+            domain['min'], domain['max'], res).view(res, 1))
         pos = self.POS.detach().numpy().flatten()
 
         if callable(sol):
@@ -152,7 +152,7 @@ def plot_wf_1d(net, domain, res, grad=False, hist=False, pot=True, sol=None,
         epoch = checkpoint['epoch']
 
     X = Variable(torch.linspace(
-        domain['xmin'], domain['xmax'], res).view(res, 1))
+        domain['min'], domain['max'], res).view(res, 1))
     X.requires_grad = True
     xn = X.detach().numpy().flatten()
 

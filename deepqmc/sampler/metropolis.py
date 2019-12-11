@@ -7,7 +7,7 @@ class Metropolis(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  nelec=1, ndim=1,
-                 init={'type': 'uniform', 'min': -5, 'max': 5}):
+                 init={'min': -5, 'max': 5}):
         """Metroplis Hasting sampler
 
         Args:
@@ -89,7 +89,7 @@ class Metropolis(SamplerBase):
         """Move electron one at a time in a vectorized way.
 
         Args:
-            step_size (float): size of the MC moves
+            pdf (callable): function to sample
 
         Returns:
             torch.tensor: new positions of the walkers
@@ -125,7 +125,7 @@ class Metropolis(SamplerBase):
             torch.tensor: random array
         """
 
-        return self.step_size * (2 * torch.rand((self.nwalkers, self.ndim)) - 1)
+        return self.step_size * (2. * torch.rand((self.nwalkers, self.ndim)) - 1.)
 
     def _accept(self, P):
         """accept the move or not

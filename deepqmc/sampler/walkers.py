@@ -1,6 +1,5 @@
 import torch
 from torch.distributions import MultivariateNormal
-import numpy as np
 
 
 class Walkers(object):
@@ -34,19 +33,18 @@ class Walkers(object):
             self.pos = pos
 
         else:
-            options = ['center', 'uniform', 'normal']
-            if self.init_domain['type'] not in options:
-                raise ValueError('method %s not recognized. Options are : %s '
-                                 % (self.init_domain['type'], ' '.join(options)))
 
-            if self.init_domain['type'] == options[0]:
+            if self.init_domain is None:
                 self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
 
-            elif self.init_domain['type'] == options[1]:
+            elif 'min' in self.init_domain.keys():
                 self.pos = self._init_uniform()
 
-            elif self.init_domain['type'] == options[2]:
+            elif 'mean' in self.init_domain.keys():
                 self.pos = self._init_multivar()
+
+            else:
+                raise ValueError('Init walkers not recognized')
 
     def _init_uniform(self):
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)

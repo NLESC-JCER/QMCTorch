@@ -331,7 +331,6 @@ class Molecule(object):
     def domain(self, method):
 
         domain = dict()
-        domain['type'] = method
 
         if method == 'uniform':
             domain['min'] = np.min(self.atom_coords) - 0.5
@@ -340,4 +339,5 @@ class Molecule(object):
         if method == 'normal':
             domain['mean'] = np.mean(self.atom_coords, 0)
             domain['sigma'] = np.diag(np.std(self.atom_coords, 0)+0.25)
+
         return domain
