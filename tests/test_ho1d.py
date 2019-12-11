@@ -25,7 +25,7 @@ class TestHarmonicOscillator1D(unittest.TestCase):
     def setUp(self):
 
         # wavefunction
-        domain, ncenter = {'xmin': -5., 'xmax': 5.}, 11
+        domain, ncenter = {'min': -5., 'max': 5.}, 11
         self.wf = Potential(pot_func, domain, ncenter,
                             fcinit='random', nelec=1, sigma=2.)
 

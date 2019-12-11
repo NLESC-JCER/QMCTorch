@@ -50,20 +50,21 @@ class SolverOrbital(SolverBase):
             self.wf.fc.weight.requires_grad = True
             self.wf.ao.atom_coords.requires_grad = False
 
-            if not isinstance(freeze, list):
-                freeze = [freeze]
-            for name in freeze:
-                if name.lower() == 'ci':
-                    self.wf.fc.weight.requires_grad = False
-                elif name.lower() == 'mo':
-                    for param in self.wf.mo.parameters():
-                        param.requires_grad = False
-                elif name.lower() == 'bas_exp':
-                    self.wf.ao.bas_exp.requires_grad = False
-                else:
-                    opt_freeze = ['ci', 'mo', 'bas_exp']
-                    raise ValueError(
-                        'Valid arguments for freeze are :', opt_freeze)
+            if freeze is not None:
+                if not isinstance(freeze, list):
+                    freeze = [freeze]
+                for name in freeze:
+                    if name.lower() == 'ci':
+                        self.wf.fc.weight.requires_grad = False
+                    elif name.lower() == 'mo':
+                        for param in self.wf.mo.parameters():
+                            param.requires_grad = False
+                    elif name.lower() == 'bas_exp':
+                        self.wf.ao.bas_exp.requires_grad = False
+                    else:
+                        opt_freeze = ['ci', 'mo', 'bas_exp']
+                        raise ValueError(
+                            'Valid arguments for freeze are :', opt_freeze)
 
     def run(self, nepoch, batchsize=None, loss='variance'):
         '''Train the model.
