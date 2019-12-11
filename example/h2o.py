@@ -37,7 +37,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # solver.configure(task='wf_opt')
 # pos, e, v = solver.single_point(ntherm=-1, ndecor=10)
 
-pos = solver.sample(ntherm=0, ndecor=10)
+pos = solver.sample(ntherm=0, ndecor=1)
 obs = solver.sampling_traj(pos)
 plot_observable(obs, e0=-74, ax=None)
 

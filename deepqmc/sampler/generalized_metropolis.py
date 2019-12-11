@@ -1,10 +1,9 @@
 from deepqmc.sampler.sampler_base import SamplerBase
 from tqdm import tqdm
 import torch
-from torch.autograd import Variable
+from torch.autograd import Variable, grad
 from torch.distributions import MultivariateNormal
 import numpy as np
-from autograd import grad
 
 
 class GeneralizedMetropolis(SamplerBase):
@@ -40,9 +39,6 @@ class GeneralizedMetropolis(SamplerBase):
         Returns:
             torch.tensor: positions of the walkers
         """
-
-        gpdf = grad(pdf)
-
         with torch.no_grad():
 
             if ntherm < 0:
@@ -50,11 +46,14 @@ class GeneralizedMetropolis(SamplerBase):
 
             self.walkers.initialize(pos=pos)
 
-            fx = pdf(self.walkers.pos)
-            fx[fx == 0] = 1E-16
-            pos = []
-            rate = 0
-            idecor = 0
+            xi = self.walkers.pos.clone()
+            xi.requires_grad = True
+
+            rhoi = pdf(xi)
+            drifti = self.get_drift(pdf, xi)
+
+            rhoi[rhoi == 0] = 1E-16
+            pos, rate, idecor = [], 0, 0
 
             if with_tqdm:
                 rng = tqdm(range(self.nstep))
@@ -64,35 +63,43 @@ class GeneralizedMetropolis(SamplerBase):
             for istep in rng:
 
                 # new positions
-                Xn = self.move(pdf)
+                xf = self.move(drifti)
 
                 # new function
-                fxn = pdf(Xn)
-                fxn[fxn == 0.] = 1E-16
-                df = (fxn/(fx)).double()
+                rhof = pdf(xf)
+                driftf = self.get_drift(pdf, xf)
+                rhof[rhof == 0.] = 1E-16
+
+                # transtions
+                Tif = self.trans(xi, xf, driftf)
+                Tfi = self.trans(xf, xi, drifti)
+                pmat = (Tif*rhof)/(Tfi*rhoi).double()
 
                 # accept the moves
-                index = self._accept(df)
+                index = self._accept(pmat)
 
                 # acceptance rate
                 rate += index.byte().sum().float()/self.nwalkers
 
                 # update position/function value
-                self.walkers.pos[index, :] = Xn[index, :]
-                fx[index] = fxn[index]
-                fx[fx == 0] = 1E-16
+                xi[index, :] = xf[index, :]
+                rhoi[index] = rhof[index]
+                rhoi[rhoi == 0] = 1E-16
+
+                drifti[index, :] = driftf[index, :]
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):
-                        pos.append(self.walkers.pos.clone().detach())
+                        pos.append(xi.clone().detach())
                     idecor += 1
 
             if with_tqdm:
                 print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
 
+            self.walkers.pos.data = xi.data
         return torch.cat(pos)
 
-    def move(self, pdf):
+    def move(self, drift):
         """Move electron one at a time in a vectorized way.
 
         Args:
@@ -112,47 +119,33 @@ class GeneralizedMetropolis(SamplerBase):
             0, self.nelec)
 
         new_pos[range(self.nwalkers), index,
-                :] += self._move(pdf, index)
+                :] += self._move(drift, index)
 
         return new_pos.view(self.nwalkers, self.nelec*self.ndim)
 
-    def _move(self, pdf, index):
+    def _move(self, drift, index):
 
-        drift_val = 0.5 * \
-            self._get_grad(pdf, self.walkers.pos) / \
-            pdf(self.walkers.pos).view(-1, 1)
-        drift_val = drift_val.view(self.nwalkers,
-                                   self.nelec, self.ndim)
+        d = drift.view(self.nwalkers,
+                       self.nelec, self.ndim)
 
         mv = MultivariateNormal(torch.zeros(self.ndim), np.sqrt(
             self.step_size)*torch.eye(self.ndim))
 
-        return self.step_size * drift_val[range(self.nwalkers), index, :] \
+        return self.step_size * d[range(self.nwalkers), index, :] \
             + mv.sample((self.nwalkers, 1)).squeeze()
 
-    def trans(self, xi, xf):
-        return torch.exp(- 0.5*((xf - xi - self.drift(xi)*self.step_size)**2) / self.step_size)
+    def trans(self, xf, xi, drifti):
+        return torch.exp(- 0.5*(((xf - xi - drifti*self.step_size)**2).sum(1))
+                         / self.step_size)
 
-    @staticmethod
-    def _get_grad(func, inp):
-        '''Compute the gradient of a function
-        wrt the value of its input
-
-        Args:
-            func : function to get the gradient of
-            inp : input
-        Returns:
-            grad : gradient of the func wrt the input
-        '''
+    def get_drift(self, pdf, x):
         with torch.enable_grad():
-            inp.requires_grad = True
-            val = func(inp)
-            z = Variable(torch.ones(val.shape))
-            val.backward(z)
-            fgrad = inp.grad.data
-            inp.grad.data.zero_()
-            inp.requires_grad = False
-            return fgrad
+
+            x.requires_grad = True
+            rho = pdf(x).view(-1, 1)
+            grad_rho = grad(rho, x, grad_outputs=torch.ones_like(
+                rho), retain_graph=False)[0]
+            return 0.5*grad_rho/rho
 
     def _accept(self, P):
         """accept the move or not

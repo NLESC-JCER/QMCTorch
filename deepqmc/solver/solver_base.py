@@ -1,5 +1,6 @@
 import torch
 from types import SimpleNamespace
+from tqdm import tqdm
 
 
 class SolverBase(object):
@@ -100,7 +101,9 @@ class SolverBase(object):
     def sampling_traj(self, pos):
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.nwalkers, ndim)
-        el = [self.wf.local_energy(ip).detach().numpy() for ip in p]
+        el = []
+        for ip in tqdm(p):
+            el.append(self.wf.local_energy(ip).detach().numpy())
         return {'local_energy': el, 'pos': p}
 
     def run(self, nepoch, batchsize=None, loss='variance'):
