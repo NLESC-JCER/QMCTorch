@@ -82,14 +82,14 @@ class Orbital(WaveFunction):
         Returns: values of psi
         '''
 
-        #edist = self.edist(x)
-        #J = self.jastrow(edist)
+        edist = self.edist(x)
+        J = self.jastrow(edist)
 
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
-        return self.fc(x)
-        # return J*x
+        # return self.fc(x)
+        return J*self.fc(x)
 
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''

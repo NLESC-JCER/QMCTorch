@@ -24,7 +24,7 @@ wf = Orbital(mol, kinetic='auto',
              configs='ground_state', use_projector=True)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=100, step_size=0.1,
+sampler = Metropolis(nwalkers=100, nstep=1000, step_size=0.1,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'))
 
@@ -39,11 +39,11 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=scheduler)
 
 # solver.configure(task='wf_opt')
-# pos, e, v = solver.single_point(ntherm=500, ndecor=100)
+pos, e, v = solver.single_point(ntherm=500, ndecor=100)
 
-pos = solver.sample(ntherm=0, ndecor=10)
-obs = solver.sampling_traj(pos)
-plot_observable(obs, e0=-8., ax=None)
+# pos = solver.sample(ntherm=0, ndecor=10)
+# obs = solver.sampling_traj(pos)
+# plot_observable(obs, e0=-111., ax=None)
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

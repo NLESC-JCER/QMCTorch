@@ -61,7 +61,7 @@ class WaveFunction(nn.Module):
         elif self.kinetic == 'fd':
             return self.kinetic_energy_finite_difference(pos)
         else:
-            raise ValueError('kinetif %s not recognized' % self.kinetic)
+            raise ValueError('kinetic %s not recognized' % self.kinetic)
 
     def kinetic_energy_autograd(self, pos, out=None):
         '''Compute the second derivative of the network
@@ -76,7 +76,7 @@ class WaveFunction(nn.Module):
         Returns:
             values of nabla^2 * Psi
         '''
-
+        print('autograd kinetic energy')
         if out is None:
             out = self.forward(pos)
 
