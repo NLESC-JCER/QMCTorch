@@ -42,7 +42,7 @@ class SlaterPooling(nn.Module):
 
     """Applies a slater determinant pooling in the active space."""
 
-    def __init__(self, configs, mol, use_projector=True):
+    def __init__(self, configs, mol):
         super(SlaterPooling, self).__init__()
 
         self.configs = configs
@@ -55,19 +55,9 @@ class SlaterPooling(nn.Module):
         self.index_up = torch.arange(self.nup)
         self.index_down = torch.arange(self.nup, self.nup+self.ndown)
 
-        self.use_projector = use_projector
-        if use_projector:
-            self.orb_proj = OrbitalProjector(configs, mol)
+        self.orb_proj = OrbitalProjector(configs, mol)
 
     def forward(self, input):
-
-        if self.use_projector:
-            return self._forward_proj(input)
-
-        else:
-            return self._forward_loop(input)
-
-    def _forward_proj(self, input):
         ''' Compute the product of spin up/down determinants
         Args:
             input : MO values (Nbatch, Nelec, Nmo)
@@ -84,6 +74,8 @@ class SlaterPooling(nn.Module):
             input : MO values (Nbatch, Nelec, Nmo)
         Returnn:
             determiant (Nbatch, Ndet)
+
+        DEPRECATED
         '''
         nbatch = input.shape[0]
         out = torch.zeros(nbatch, self.nconfs)

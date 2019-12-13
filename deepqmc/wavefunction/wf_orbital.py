@@ -100,10 +100,10 @@ class Orbital(WaveFunction):
 
         ke = self.kinetic_energy_jacobi(pos, return_local_energy=True)
 
-        return ke
-        + self.nuclear_potential(pos)
-        + self.electronic_potential(pos)
-        + self.nuclear_repulsion()
+        return ke \
+            + self.nuclear_potential(pos) \
+            + self.electronic_potential(pos) \
+            + self.nuclear_repulsion()
 
     def kinetic_energy_jacobi(self, x, return_local_energy=False, **kwargs):
         '''Compute the value of the kinetic enery using
@@ -122,8 +122,8 @@ class Orbital(WaveFunction):
         if self.use_jastrow:
 
             J = self.jastrow(x)
-            dJ = self.jastrow(x, deriative=1).sum(2) / J
-            d2J = self.jastrow(x, deriative=2).sum(2) / J
+            dJ = self.jastrow(x, derivative=1).sum(2) / J
+            d2J = self.jastrow(x, derivative=2).sum(2) / J
 
             dJdMO = dJ.unsqueeze(-1) * self.mo(self.ao(x, derivative=1))
             d2JMO = d2J.unsqueeze(-1) * MO

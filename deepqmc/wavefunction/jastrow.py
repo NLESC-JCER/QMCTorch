@@ -101,12 +101,15 @@ class TwoBodyJastrowFactor(nn.Module):
             return self._unique_pair_prod(jast)
 
         elif derivative == 1:
-            return self._jastrow_derivative(r, jast)
+            dr = self.edist(pos, derivative=1)
+            return self._jastrow_derivative(r, dr, jast)
 
         elif derivative == 2:
-            return self._jastrow_second_derivative(r, jast)
+            dr = self.edist(pos, derivative=1)
+            d2r = self.edist(pos, derivative=2)
+            return self._jastrow_second_derivative(r, dr, d2r, jast)
 
-    def _jastrow_derivative(self, r, jast):
+    def _jastrow_derivative(self, r, dr, jast):
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -119,13 +122,12 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        dr = self.edist(pos, derivative=1)
         djast = self._get_der_jastrow_elements(r, dr) * jast.unsqueeze(1)
         grad_jast = self._replace_one_element_and_prod(jast, djast)
 
         return grad_jast
 
-    def _jastrow_second_derivative(self, r, jast):
+    def _jastrow_second_derivative(self, r, dr, d2r, jast):
         """Compute the value of the pure 2nd derivative of the Jastrow factor
 
         Args:
@@ -138,12 +140,7 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        nbatch = r.shape[0]
-
-        dr = self.edist(pos, derivative=1)
         djast = self._get_der_jastrow_elements(r, dr) * jast.unsqueeze(1)
-
-        d2r = self.edist(pos, derivative=2)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r) * jast.unsqueeze(1)
 
