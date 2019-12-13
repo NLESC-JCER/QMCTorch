@@ -21,7 +21,7 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                basis_type='gto', basis='sto-6g', unit='bohr')
 
 # define the wave function
-wf = Orbital(mol, kinetic='auto',
+wf = Orbital(mol, kinetic='jacobi',
              configs='singlet(1,1)', use_projector=False)
 
 # sampler
@@ -34,15 +34,16 @@ opt = Adam(wf.parameters(), lr=0.005)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
+solver.single_point()
 
 #pos = solver.sample(ntherm=0, ndecor=10)
 ##obs = solver.sampling_traj(pos)
 #plot_observable(obs, e0=-1.16, ax=None)
 
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
-solver.observable(['local_energy'])
-solver.run(10, loss='energy')
+# solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
+# solver.observable(['local_energy'])
+# solver.run(10, loss='energy')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')
@@ -50,4 +51,4 @@ solver.run(10, loss='energy')
 # solver.run(5,loss='energy')
 
 # # plot the data
-plot_observable(solver.obs_dict, e0=-1.16)
+#plot_observable(solver.obs_dict, e0=-1.16)
