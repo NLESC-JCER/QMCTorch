@@ -62,18 +62,22 @@ class KineticPooling(nn.Module):
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
         iAdown = torch.inverse(Adown)
+        print(iAup.shape)
+        print(Bup.shape)
 
         # product
         out = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
+        print(out.shape)
 
         # multiply by det if necessary
         if not return_local_energy:
             pd = torch.det(Aup) * torch.det(Adown)
             out *= pd
 
-        return -0.5*out.view(-1, self.nconfs)
+        return -0.5*out.transpose(0, 1)
 
-    def _forward_loop(self, MO, d2MO, return_local_energy=False):
+    def _forward_loop(self, MO, d2MO, dJdMO=None, d2JMO=None,
+                      return_local_energy=False):
         ''' Compute the kinetic energy using the trace trick
         for a product of spin up/down determinant
         DEPRECATED  keep just in case
