@@ -17,7 +17,7 @@ class KineticPooling(nn.Module):
     """Computes the kinetic energy of each configuration
        using the trace trick."""
 
-    def __init__(self, configs, mol, use_projector=True):
+    def __init__(self, configs, mol):
         super(KineticPooling, self).__init__()
 
         self.configs = configs
@@ -30,19 +30,10 @@ class KineticPooling(nn.Module):
         self.index_up = torch.arange(self.nup)
         self.index_down = torch.arange(self.nup, self.nup+self.ndown)
 
-        self.use_projector = use_projector
-        if use_projector:
-            self.orb_proj = OrbitalProjector(configs, mol)
+        self.orb_proj = OrbitalProjector(configs, mol)
 
-    def forward(self, MO, d2MO, return_local_energy=False):
-        if self.use_projector:
-            return self._forward_proj(MO, d2MO,
-                                      return_local_energy=return_local_energy).view(-1, self.nconfs)
-        else:
-            return self._forward_loop(MO, d2MO,
-                                      return_local_energy=return_local_energy)
-
-    def _forward_proj(self, MO, d2MO, return_local_energy=False):
+    def forward(self, MO, d2MO, dJdMO=None, d2JMO=None,
+                return_local_energy=False):
         ''' Compute the kinetic energy using the trace trick
         for a product of spin up/down determinant
         .. math::
@@ -63,25 +54,29 @@ class KineticPooling(nn.Module):
 
         # shortcut up/down matrices
         Aup, Adown = self.orb_proj.split_orbitals(MO)
-        d2Aup, d2Adown = self.orb_proj.split_orbitals(d2MO)
+        if dJdMO is None and d2JMO is None:
+            Bup, Bdown = self.orb_proj.split_orbitals(d2MO)
+        else:
+            Bup, Bdown = self.orb_proj.split_orbitals(d2MO + 2*dJdMO + d2JMO)
 
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
         iAdown = torch.inverse(Adown)
 
         # product
-        out = (btrace(iAup@d2Aup) + btrace(iAdown@d2Adown))
+        out = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
 
         # multiply by det if necessary
         if not return_local_energy:
             pd = torch.det(Aup) * torch.det(Adown)
             out *= pd
 
-        return -0.5*out
+        return -0.5*out.view(-1, self.nconfs)
 
     def _forward_loop(self, MO, d2MO, return_local_energy=False):
         ''' Compute the kinetic energy using the trace trick
         for a product of spin up/down determinant
+        DEPRECATED  keep just in case
         .. math::
 
             T \Psi  =  T Dup Ddwn
