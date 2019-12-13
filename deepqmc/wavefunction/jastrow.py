@@ -34,6 +34,7 @@ class ElectronDistance(nn.Module):
         '''
 
         input = input.view(-1, self.nelec, self.ndim)
+
         norm = (input**2).sum(-1).unsqueeze(-1)
         dist = norm + norm.transpose(1, 2) - 2.0 * \
             torch.bmm(input, input.transpose(1, 2))
@@ -75,6 +76,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
         bdown = torch.cat((0.5*torch.ones(ndown, nup), 0.25 *
                            torch.ones(ndown, ndown)), dim=1)
+
         self.static_weight = torch.cat((bup, bdown), dim=0)
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
@@ -343,12 +345,22 @@ class TwoBodyJastrowFactor(nn.Module):
 
 if __name__ == "__main__":
 
+    import torch
+    from torch.autograd import grad
+    torch.autograd.set_detect_anomaly(True)
+
     pos = torch.rand(10, 12)
+    pos.requires_grad = True
+
     jastrow = TwoBodyJastrowFactor(2, 2)
-    val = jastrow(pos)
 
     r = jastrow.edist(pos)
+    dr_check = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
     dr = jastrow.edist(pos, derivative=1)
-    d2r = jastrow.edist(pos, derivative=2)
-    dval = jastrow(pos, derivative=1)
-    d2val = jastrow(pos, derivative=2)
+
+    # val = jastrow(pos)
+    # dval = jastrow(pos, derivative=1)
+    # dval_check = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+
+    # d2r = jastrow.edist(pos, derivative=2)
+    # d2val = jastrow(pos, derivative=2)
