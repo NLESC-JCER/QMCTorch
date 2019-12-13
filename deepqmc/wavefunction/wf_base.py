@@ -61,7 +61,7 @@ class WaveFunction(nn.Module):
         elif self.kinetic == 'fd':
             return self.kinetic_energy_finite_difference(pos)
         else:
-            raise ValueError('kinetif %s not recognized' % self.kinetic)
+            raise ValueError('kinetic %s not recognized' % self.kinetic)
 
     def kinetic_energy_autograd(self, pos, out=None):
         '''Compute the second derivative of the network
@@ -76,7 +76,7 @@ class WaveFunction(nn.Module):
         Returns:
             values of nabla^2 * Psi
         '''
-
+        print('autograd kinetic energy')
         if out is None:
             out = self.forward(pos)
 
@@ -96,9 +96,10 @@ class WaveFunction(nn.Module):
             tmp = grad(jacob[:, idim], pos,
                        grad_outputs=z,
                        only_inputs=True,
-                       # retain_graph=True)[0]
-                       create_graph=True)[0]  # create_graph is REQUIRED and is causing memory issues for large systems
-            # allow_unused=True)[0]
+                       # create_graph is REQUIRED and
+                       # is causing memory issues
+                       # for large systems
+                       create_graph=True)[0]
 
             hess += tmp[:, idim]
 
@@ -138,13 +139,6 @@ class WaveFunction(nn.Module):
             out += feps/(eps**2)
 
         return -0.5*out.view(-1, 1)
-
-    def local_energy_save(self, pos):
-        ''' local energy of the sampling points.'''
-        return self.kinetic_energy(pos)/self.forward(pos) \
-            + self.nuclear_potential(pos)  \
-            + self.electronic_potential(pos) \
-            + self.nuclear_repulsion()
 
     def local_energy(self, pos):
         ''' local energy of the sampling points.'''

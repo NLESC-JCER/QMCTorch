@@ -25,7 +25,7 @@ class TestHarmonicOscillator1D(unittest.TestCase):
     def setUp(self):
 
         # wavefunction
-        domain, ncenter = {'xmin': -5., 'xmax': 5.}, 11
+        domain, ncenter = {'min': -5., 'max': 5.}, 11
         self.wf = Potential(pot_func, domain, ncenter,
                             fcinit='random', nelec=1, sigma=2.)
 
@@ -33,15 +33,14 @@ class TestHarmonicOscillator1D(unittest.TestCase):
         self.mh_sampler = Metropolis(nwalkers=1000, nstep=2000,
                                      step_size=1., nelec=self.wf.nelec,
                                      ndim=self.wf.ndim,
-                                     domain={'min': -5, 'max': 5})
+                                     init={'min': -5, 'max': 5})
 
         # sampler
         self.hmc_sampler = Hamiltonian(nwalkers=1000, nstep=200,
                                        nelec=self.wf.nelec, ndim=self.wf.ndim,
                                        step_size=0.5,
-                                       domain={'min': -5, 'max': 5},
-                                       L=10,
-                                       move='all')
+                                       init={'min': -5, 'max': 5},
+                                       L=10)
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.05)

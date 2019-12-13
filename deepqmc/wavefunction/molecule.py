@@ -327,3 +327,17 @@ class Molecule(object):
     def _normalize_columns(mat):
         norm = np.sqrt((mat**2).sum(0))
         return mat / norm
+
+    def domain(self, method):
+
+        domain = dict()
+
+        if method == 'uniform':
+            domain['min'] = np.min(self.atom_coords) - 0.5
+            domain['max'] = np.max(self.atom_coords) + 0.5
+
+        if method == 'normal':
+            domain['mean'] = np.mean(self.atom_coords, 0)
+            domain['sigma'] = np.diag(np.std(self.atom_coords, 0)+0.25)
+
+        return domain

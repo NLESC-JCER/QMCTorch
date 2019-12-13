@@ -64,22 +64,27 @@ solver.run(100, loss = 'variance', plot = plotter )
 plot_results_1d(solver,domain,50,sol_func,e0=0.5)
 ```
 
-The `pot_func` function defines the potential for which we want to optimize the wave function. It is here given by a simple quadratic function.
+<!-- The `pot_func` function defines the potential for which we want to optimize the wave function. It is here given by a simple quadratic function.
 
-After defining the domain in `domain` and the number of basis function in `ncenter`, we instantiate the `Potential` wave function class. This class defines a very simple neural network that, given a position computes the value of the wave function at that point. This neural network is composed of a layer of radial basis functions followed by a fully conneted layer to sum them up:
+After defining the domain in `domain` and the number of basis function in `ncenter`, we instantiate the `Potential` wave function class. This class defines a very simple neural network that, given a position computes the value of the wave function at that point. This neural network is composed of a layer of radial basis functions followed by a fully connected layer to sum them up.
 
-<p align="center">
-<img src="./pics/rbf_nn.png" title="RBF neural network">
-</p>
 
-The then instantiate the sampler, here a simple `Metroplis` scheme. The sampler is used to sample the wave function and hence generate a bach of sampling points. These points are used as input of the neural network the compute the values of wave function at those points. We finally select the `Adam` optimizer to optimize the wave function paramters.
+We then instantiate the sampler, here a simple `Metroplis` scheme. The sampler is used to sample the wave function and hence generate a bach of sampling points. These points are used as input of the neural network the compute the values of wave function at those points. We finally select the `Adam` optimizer to optimize the wave function paramters.
 
 We then define a `SolverPotential` instance that ties all the elements together and train the model to optimize the wave function paramters. We here use the variance of the sampling point energies as a loss and run 100 epochs. Many more parameters are accessible in the training routines.
 
-After the optimization, the following result is obtained:
+After the optimization, the following result is obtained: -->
+
+After otpimization the following trajectory can easily be generated :
 
 <p align="center">
-<img src="./pics/ho1d.gif" title="Results of the optimization">
+<img src="./pics/ho1d.gif" title="Optimization of the wave function">
+</p>
+
+The same procedure can be done on different potentials. The figure below shows the performace of the method on the harmonic oscillator and the morse potential.
+
+<p align="center">
+<img src="./pics/rbf1d_summary.png" title="Results of the optimization">
 </p>
 
 ## Dihydrogen molecule

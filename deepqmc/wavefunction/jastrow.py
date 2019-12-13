@@ -37,7 +37,7 @@ class TwoBodyJastrowFactor(nn.Module):
         self.ndown = ndown
         self.nelec = nup+ndown
 
-        self.weight = Variable(torch.tensor([1.0]))
+        self.weight = nn.Parameter(torch.tensor([1.0]))
         self.weight.requires_grad = True
 
         bup = torch.cat((0.25*torch.ones(nup, nup), 0.5 *

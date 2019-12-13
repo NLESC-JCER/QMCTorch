@@ -13,7 +13,8 @@ import unittest
 class OrbitalH2(Orbital):
 
     def __init__(self, mol):
-        super(OrbitalH2, self).__init__(mol, kinetic_jacobi=True)
+        super(OrbitalH2, self).__init__(
+            mol, kinetic='jacobi', use_projector=False)
 
     def pool(self, x):
         return (x[:, 0, 0]*x[:, 1, 0]).view(-1, 1)
@@ -37,7 +38,7 @@ class TestH2(unittest.TestCase):
         # sampler
         self.sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
                                   ndim=self.wf.ndim, nelec=self.wf.nelec,
-                                  move='one')
+                                  init=self.mol.domain('normal'))
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)

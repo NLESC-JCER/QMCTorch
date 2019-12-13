@@ -1,19 +1,20 @@
 import torch
+from torch.distributions import MultivariateNormal
 
 
 class Walkers(object):
 
-    def __init__(self, nwalkers, nelec, ndim, domain):
+    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
 
         self.nwalkers = nwalkers
         self.ndim = ndim
         self.nelec = nelec
-        self.domain = domain
+        self.init_domain = init
 
         self.pos = None
         self.status = None
 
-    def initialize(self, method='uniform', pos=None):
+    def initialize(self, pos=None):
         """Initalize the position of the walkers
 
         Args:
@@ -32,87 +33,28 @@ class Walkers(object):
             self.pos = pos
 
         else:
-            options = ['center', 'uniform']
-            if method not in options:
-                raise ValueError('method %s not recognized. Options are : %s '
-                                 % (method, ' '.join(options)))
 
-            if method == options[0]:
+            if self.init_domain is None:
                 self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
 
-            elif method == options[1]:
-                self.pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
-                self.pos *= (self.domain['max'] - self.domain['min'])
-                self.pos += self.domain['min']
+            elif 'min' in self.init_domain.keys():
+                self.pos = self._init_uniform()
 
-        self.status = torch.ones((self.nwalkers, 1))
+            elif 'mean' in self.init_domain.keys():
+                self.pos = self._init_multivar()
 
-    def move(self, step_size, method='one'):
-        """Main swith to propose new moves
+            else:
+                raise ValueError('Init walkers not recognized')
 
-        Args:
-            step_size (float): size of the MC moves
-            method (str, optional): move electrons one at a time or all at the
-                                    same time.
-                                    'one' or 'all' . Defaults to 'one'.
+    def _init_uniform(self):
+        pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
+        pos *= (self.init_domain['max'] - self.init_domain['min'])
+        pos += self.init_domain['min']
+        return pos
 
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-
-        if method == 'one':
-            new_pos = self._move_one_vect(step_size)
-
-        elif method == 'all':
-            new_pos = self._move_all(step_size)
-
-        return new_pos
-
-    def _move_all(self, step_size):
-        """Move all electrons at the same time.
-
-        Args:
-            step_size (float): size of the MC moves
-
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-        _size = (self.nwalkers, self.nelec*self.ndim)
-        return self.pos + self.status * self._random(step_size, _size)
-
-    def _move_one_vect(self, step_size):
-        """Move electron one at a time in a vectorized way.
-
-        Args:
-            step_size (float): size of the MC moves
-
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-
-        # clone and reshape data : Nwlaker, Nelec, Ndim
-        new_pos = self.pos.clone()
-        new_pos = new_pos.view(self.nwalkers, self.nelec, self.ndim)
-
-        # get indexes
-        index = torch.LongTensor(self.nwalkers).random_(0, self.nelec)
-
-        # change selected data
-        new_pos[range(self.nwalkers), index,
-                :] += self._random(step_size, (self.nwalkers, self.ndim))
-
-        return new_pos.view(self.nwalkers, self.nelec*self.ndim)
-
-    @staticmethod
-    def _random(step_size, size):
-        """Return a random array of length size between
-        [-step_size,step_size]
-
-        Args:
-            step_size (float): boundary of the array
-            size (int): number of points in the array
-
-        Returns:
-            torch.tensor: random array
-        """
-        return step_size * (2 * torch.rand(size) - 1)
+    def _init_multivar(self):
+        multi = MultivariateNormal(
+            torch.tensor(self.init_domain['mean']),
+            torch.tensor(self.init_domain['sigma']))
+        pos = multi.sample((self.nwalkers, self.nelec))
+        return pos.view(self.nwalkers, self.nelec*self.ndim).float()

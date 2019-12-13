@@ -56,24 +56,26 @@ class Metropolis(SamplerBase):
 
             for istep in rng:
 
-                # new positions
-                Xn = self.move(pdf)
+                for ielec in range(self.nelec):
 
-                # new function
-                fxn = pdf(Xn)
-                fxn[fxn == 0.] = 1E-16
-                df = (fxn/(fx)).double()
+                    # new positions
+                    Xn = self.move(pdf, ielec)
 
-                # accept the moves
-                index = self._accept(df)
+                    # new function
+                    fxn = pdf(Xn)
+                    fxn[fxn == 0.] = 1E-16
+                    df = (fxn/(fx)).double()
 
-                # acceptance rate
-                rate += index.byte().sum().float()/self.nwalkers
+                    # accept the moves
+                    index = self._accept(df)
 
-                # update position/function value
-                self.walkers.pos[index, :] = Xn[index, :]
-                fx[index] = fxn[index]
-                fx[fx == 0] = 1E-16
+                    # acceptance rate
+                    rate += index.byte().sum().float()/self.nwalkers
+
+                    # update position/function value
+                    self.walkers.pos[index, :] = Xn[index, :]
+                    fx[index] = fxn[index]
+                    fx[fx == 0] = 1E-16
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):
@@ -81,11 +83,12 @@ class Metropolis(SamplerBase):
                     idecor += 1
 
             if with_tqdm:
-                print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
+                print("Acceptance rate %1.3f %%" %
+                      (rate/(self.nstep*self.nelec)*100))
 
         return torch.cat(pos)
 
-    def move(self, pdf):
+    def move(self, pdf, ielec):
         """Move electron one at a time in a vectorized way.
 
         Args:
@@ -94,24 +97,20 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: new positions of the walkers
         """
-        if self.nelec == 1:
-            return self.walkers.pos + self._move()
 
-        else:
-            # clone and reshape data : Nwlaker, Nelec, Ndim
-            new_pos = self.walkers.pos.clone()
-            new_pos = new_pos.view(self.nwalkers,
-                                   self.nelec, self.ndim)
+        # clone and reshape data : Nwlaker, Nelec, Ndim
+        new_pos = self.walkers.pos.clone()
+        new_pos = new_pos.view(self.nwalkers,
+                               self.nelec, self.ndim)
 
-            # get indexes
-            index = torch.LongTensor(self.nwalkers).random_(
-                0, self.nelec)
+        # get indexes
+        index = torch.LongTensor(self.nwalkers).fill_(ielec)
 
-            # change selected data
-            new_pos[range(self.nwalkers), index,
-                    :] += self._move()
+        # change selected data
+        new_pos[range(self.nwalkers), index,
+                :] += self._move()
 
-            return new_pos.view(self.nwalkers, self.nelec*self.ndim)
+        return new_pos.view(self.nwalkers, self.nelec*self.ndim)
 
     def _move(self):
         """Return a random array of length size between

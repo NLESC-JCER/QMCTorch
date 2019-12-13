@@ -13,9 +13,8 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state', scf='pyscf',
-                 kinetic_jacobi=False,
-                 use_projector=False):
-        super(Orbital, self).__init__(mol.nelec, 3)
+                 kinetic='jacobi', use_projector=False):
+        super(Orbital, self).__init__(mol.nelec, 3, kinetic)
 
         # number of atoms
         self.mol = mol
@@ -61,9 +60,8 @@ class Orbital(WaveFunction):
 
         self.fc.clip = False
 
-        if kinetic_jacobi:
-            self.kinetic_energy = self.kinetic_energy_jacobi
-            # self.local_energy = self.local_energy_jacobi
+        if kinetic == 'jacobi':
+            self.local_energy = self.local_energy_jacobi
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
@@ -84,16 +82,16 @@ class Orbital(WaveFunction):
         Returns: values of psi
         '''
 
-        # edist  = self.edist(x)
-        # J = self.jastrow(edist)
+        #edist = self.edist(x)
+        #J = self.jastrow(edist)
 
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
         return self.fc(x)
-        # return J*x
+        # return J*self.fc(x)
 
-    def local_energy(self, pos):
+    def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
 
         ke = self.kinetic_energy_jacobi(pos, return_local_energy=True)

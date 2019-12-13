@@ -6,9 +6,8 @@ from deepqmc.sampler.sampler_base import SamplerBase
 
 class Hamiltonian(SamplerBase):
 
-    def __init__(self, nwalkers=1000, nstep=None, nelec=1, ndim=3,
-                 step_size=None, domain=None, L=10,
-                 move='all'):
+    def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
+                 step_size=None, init={'min': -2, 'max': 2}, L=10):
         ''' HMC SAMPLER
         Args:
             f (func) : function to sample
@@ -18,13 +17,13 @@ class Hamiltonian(SamplerBase):
             boudnary (float) : boudnary of the space
         '''
 
-        SamplerBase.__init__(self, nwalkers, nstep, nelec,
-                             ndim, step_size, domain, move)
+        SamplerBase.__init__(self, nwalkers, nstep,
+                             step_size, nelec, ndim, init)
         self.traj_length = L
 
     @staticmethod
     def get_grad(func, inp):
-        '''Compute the gradient of the of a function
+        '''Compute the gradient of a function
         wrt the value of its input
 
         Args:
@@ -47,8 +46,7 @@ class Hamiltonian(SamplerBase):
     def log_func(func):
         return lambda x: -torch.log(func(x))
 
-    def generate(self, pdf, ntherm=10, with_tqdm=True, pos=None,
-                 init='uniform'):
+    def generate(self, pdf, ntherm=10, ndecor=10, with_tqdm=True, pos=None):
         '''perform a HMC sampling of the pdf
         Returns:
             X (list) : positions of the walkers
@@ -57,14 +55,15 @@ class Hamiltonian(SamplerBase):
         if ntherm < 0:
             ntherm = self.nstep+ntherm
 
-        self.walkers.initialize(method=init, pos=pos)
+        self.walkers.initialize(pos=pos)
         self.walkers.pos = self.walkers.pos.clone()
 
         # get the logpdf function
         logpdf = self.log_func(pdf)
 
-        POS = []
+        pos = []
         rate = 0
+        idecor = 0
 
         if with_tqdm:
             rng = tqdm(range(self.nstep))
@@ -80,12 +79,14 @@ class Hamiltonian(SamplerBase):
             rate += _r
 
             # store
-            if istep >= ntherm:
-                POS.append(self.walkers.pos.detach())
+            if (istep >= ntherm):
+                if (idecor % ndecor == 0):
+                    pos.append(self.walkers.pos.detach())
+                idecor += 1
 
         # print stats
         print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
-        return torch.cat(POS)
+        return torch.cat(pos)
 
     @staticmethod
     def _step(U, get_grad, epsilon, L, qinit):
