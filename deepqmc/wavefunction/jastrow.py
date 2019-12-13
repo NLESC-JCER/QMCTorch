@@ -104,7 +104,7 @@ class TwoBodyJastrowFactor(nn.Module):
             return self._jastrow_derivative(r, jast)
 
         elif derivative == 2:
-            return self._second_jastrow_derivative(r, jast)
+            return self._jastrow_second_derivative(r, jast)
 
     def _jastrow_derivative(self, r, jast):
         """Compute the value of the derivative of the Jastrow factor
@@ -261,14 +261,14 @@ class TwoBodyJastrowFactor(nn.Module):
 
         for idx in range(self.nelec):
 
-            index_pairs = [(idx, j) for j in range(idx+1, self.nelec)] \
-                 + [(j, idx) for j in range(0, idx)]
+            index_pairs = [(idx, j) for j in range(
+                idx+1, self.nelec)] + [(j, idx) for j in range(0, idx)]
 
             for (i, j) in index_pairs:
                 out_mat[:, idx] += self._unique_pair_prod(
                     org_mat, not_el=(i, j)) * new_mat[..., i, j]
 
-       return out_mat
+        return out_mat
 
     def _replace_two_elements_and_prod(self, org_mat, new_mat, out_mat=None):
         """That's really complicated to explain ....
@@ -305,17 +305,17 @@ class TwoBodyJastrowFactor(nn.Module):
 
         for idx in range(self.nelec):
 
-            index_pairs = [(idx,j) for j in range(idx+1,self.nelec)] \
-                 + [(j,idx) for j in range(0, idx)]
+            index_pairs = [(idx, j) for j in range(idx+1, self.nelec)] \
+                + [(j, idx) for j in range(0, idx)]
 
-            for p1 in  range(len(index_pairs)-1):
-                i1,j1 = index_pairs[p1]
-                for p2 in range(p1+1,len(index_pairs)):
-                    i2,j2 = index_pairs[p2]
+            for p1 in range(len(index_pairs)-1):
+                i1, j1 = index_pairs[p1]
+                for p2 in range(p1+1, len(index_pairs)):
+                    i2, j2 = index_pairs[p2]
                     out_mat[:, idx] += self._unique_pair_prod(
-                        org_mat, not_el=[(i1, j1),(i,j2)]) \
+                        org_mat, not_el=[(i1, j1), (i2, j2)]) \
                         * new_mat[..., i1, j1] * new_mat[..., i2, j2]
-
+        return out_mat
 
     def _unique_pair_prod(self, mat, not_el=None):
         """Compute the product of the lower mat elements
@@ -333,7 +333,7 @@ class TwoBodyJastrowFactor(nn.Module):
         mat_cpy = mat.clone()
         if not_el is not None:
 
-            if not isinstance(not_el,list):
+            if not isinstance(not_el, list):
                 not_el = [not_el]
 
             for _el in not_el:
@@ -354,3 +354,4 @@ if __name__ == "__main__":
     dr = jastrow.edist(pos, derivative=1)
     d2r = jastrow.edist(pos, derivative=2)
     dval = jastrow(pos, derivative=1)
+    d2val = jastrow(pos, derivative=2)
