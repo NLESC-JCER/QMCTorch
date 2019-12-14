@@ -14,7 +14,7 @@ class ElectronDistance(nn.Module):
         Or the derivative of these elements
 
         Args:
-            input ([type]): [description]
+            input ([type]): position of the electron Nbatch x [NelecxNdim]
             derivative (int, optional): degre of the derivative.
                                         Defaults to 0.
 
@@ -36,24 +36,25 @@ class ElectronDistance(nn.Module):
         input = input.view(-1, self.nelec, self.ndim)
 
         norm = (input**2).sum(-1).unsqueeze(-1)
-        dist = norm + norm.transpose(1, 2) - 2.0 * \
-            torch.bmm(input, input.transpose(1, 2))
+        dist = (norm + norm.transpose(1, 2) - 2.0 *
+                torch.bmm(input, input.transpose(1, 2)))**(0.5)
 
         if derivative == 0:
             return dist
 
         elif derivative == 1:
 
-            invr = (1./dist).unsqueeze_(1)
-            diff_axis = input.transpose(1, 2).unsqueeze_(3)
+            invr = (1./(dist+1E-16)).unsqueeze(1)
+            diff_axis = input.transpose(1, 2).unsqueeze(3)
             diff_axis = diff_axis - diff_axis.transpose(2, 3)
             return diff_axis * invr
 
         elif derivative == 2:
 
-            invr3 = (1./dist**3).unsqueeze(1)
-            diff_axis = input.transpose(1, 2).unsqueeze_(3)
+            invr3 = (1./(dist**3+1E-16)).unsqueeze(1)
+            diff_axis = input.transpose(1, 2).unsqueeze(3)
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
+
             diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
             return diff_axis * invr3
 
@@ -168,8 +169,10 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: matrix fof the jastrow elements
                           Nbatch x Nelec x Nelec
         """
-        return torch.exp(self.static_weight * r /
-                         (1.0 + self.weight * r))
+        return torch.exp(self._compute_kernel(r))
+
+    def _compute_kernel(self, r):
+        return self.static_weight * r / (1.0 + self.weight * r)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow matrix
@@ -190,13 +193,13 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r.unsqueeze_(1)
-        denom = 1. / (1.0 + self.weight * r)
+        r_ = r.unsqueeze(1)
+        denom = 1. / (1.0 + self.weight * r_)
 
-        a = self.static_weight * dr * denom
-        b = - self.static_weight * self.weight * r * dr * denom**2
-        r.squeeze_()
-        return (a+b)
+        a = self.static_weight * dr
+        b = - self.static_weight * self.weight * r_ * dr * denom
+
+        return (a+b) * denom
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow matrix
@@ -345,22 +348,25 @@ class TwoBodyJastrowFactor(nn.Module):
 
 if __name__ == "__main__":
 
-    import torch
     from torch.autograd import grad
-    torch.autograd.set_detect_anomaly(True)
+    # torch.autograd.set_detect_anomaly(True)
 
-    pos = torch.rand(10, 12)
+    pos = torch.rand(3, 6)
     pos.requires_grad = True
 
-    jastrow = TwoBodyJastrowFactor(2, 2)
+    jastrow = TwoBodyJastrowFactor(1, 1)
 
     r = jastrow.edist(pos)
-    dr_check = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
     dr = jastrow.edist(pos, derivative=1)
+    dr_check = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
 
-    # val = jastrow(pos)
-    # dval = jastrow(pos, derivative=1)
-    # dval_check = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+    val = jastrow(pos)
 
-    # d2r = jastrow.edist(pos, derivative=2)
-    # d2val = jastrow(pos, derivative=2)
+    jast_el = jastrow._get_jastrow_elements(r)
+    der_jast_el = jastrow._get_der_jastrow_elements(
+        r, dr) * jast_el.unsqueeze(1)
+    dval = jastrow(pos, derivative=1)
+    #dval_check = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+
+    d2r = jastrow.edist(pos, derivative=2)
+    d2val = jastrow(pos, derivative=2)

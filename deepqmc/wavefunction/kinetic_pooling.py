@@ -57,17 +57,15 @@ class KineticPooling(nn.Module):
         if dJdMO is None and d2JMO is None:
             Bup, Bdown = self.orb_proj.split_orbitals(d2MO)
         else:
-            Bup, Bdown = self.orb_proj.split_orbitals(d2MO + 2*dJdMO + d2JMO)
+            Bup, Bdown = self.orb_proj.split_orbitals(
+                d2MO + 2*dJdMO + d2JMO)
 
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
         iAdown = torch.inverse(Adown)
-        print(iAup.shape)
-        print(Bup.shape)
 
         # product
         out = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
-        print(out.shape)
 
         # multiply by det if necessary
         if not return_local_energy:
