@@ -219,14 +219,14 @@ class TwoBodyJastrowFactor(nn.Module):
 
         r.unsqueeze_(1)
         denom = 1. / (1.0 + self.weight * r)
-
+        dr_square = dr**2
         a = self.static_weight * d2r * denom
-        b = -2 * self.static_weight * self.weight * dr * denom**2
-        c = -2 * self.static_weight * self.weight**2 * r * dr * denom**3
+        b = -2 * self.static_weight * self.weight * dr_square * denom**2
+        c = - self.static_weight*self.weight * r * d2r * denom**2
+        d = +2 * self.static_weight * self.weight**2 * r * dr_square * denom**3
         r.squeeze_()
 
-        d = self._get_der_jastrow_elements(r, dr)
-        return a+b+c+d**2
+        return a+b+c+d
 
     def _replace_one_element_and_prod(self, org_mat, new_mat, out_mat=None):
         """That's really complicated to explain ....
