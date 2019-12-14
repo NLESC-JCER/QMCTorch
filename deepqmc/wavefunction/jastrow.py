@@ -37,7 +37,7 @@ class ElectronDistance(nn.Module):
 
         norm = (input**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input, input.transpose(1, 2)))**(0.5)
+                torch.bmm(input, input.transpose(1, 2))+1E-16)**(0.5)
 
         if derivative == 0:
             return dist
@@ -69,7 +69,7 @@ class TwoBodyJastrowFactor(nn.Module):
         self.nelec = nup+ndown
         self.ndim = 3
 
-        self.weight = nn.Parameter(torch.tensor([1.0]))
+        self.weight = nn.Parameter(torch.tensor([2.5]))
         self.weight.requires_grad = True
 
         bup = torch.cat((0.25*torch.ones(nup, nup), 0.5 *
@@ -193,13 +193,14 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
+        r = r.unsqueeze_(1)
+        denom = 1. / (1.0 + self.weight * r)
 
-        a = self.static_weight * dr
-        b = - self.static_weight * self.weight * r_ * dr * denom
+        a = self.static_weight * dr * denom
+        b = - self.static_weight * self.weight * r * dr * denom**2
+        r.squeeze_()
 
-        return (a+b) * denom
+        return a + b
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow matrix
@@ -222,11 +223,13 @@ class TwoBodyJastrowFactor(nn.Module):
         dr_square = dr**2
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom**2
-        c = - self.static_weight*self.weight * r * d2r * denom**2
-        d = +2 * self.static_weight * self.weight**2 * r * dr_square * denom**3
+        c = - self.static_weight * self.weight * r * d2r * denom**2
+        d = 2 * self.static_weight * self.weight**2 * r * dr_square * denom**3
         r.squeeze_()
 
-        return a+b+c+d
+        e = self._get_der_jastrow_elements(r, dr)
+
+        return a + b + c + d + e**2
 
     def _replace_one_element_and_prod(self, org_mat, new_mat, out_mat=None):
         """That's really complicated to explain ....
