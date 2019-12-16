@@ -9,21 +9,42 @@ class Metropolis(SamplerBase):
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  nelec=1, ndim=1,
                  init={'min': -5, 'max': 5},
-                 move={'elec': 'one', 'proba': 'uniform'}):
-        """Metroplis Hasting sampler
+                 move={'type': 'one-elec', 'proba': 'uniform'}):
+        """Metroplois Hasting generator
 
         Args:
-            walkers (walkers): a walker object
-            nstep (int, optional): [description]. Defaults to 1000.
-            step_size (int, optional): [description]. Defaults to 3.
+            nwalkers (int, optional): Number of walkers. Defaults to 100.
+            nstep (int, optional): Number of steps. Defaults to 1000.
+            step_size (int, optional): length of the step. Defaults to 3.
+            nelec (int, optional): total number of electrons. Defaults to 1.
+            ndim (int, optional): total number of dimension. Defaults to 1.
+            init (dict, optional): method to init the positions of the walkers.
+                                   uniform : {'min': min_val, 'max': max_val}
+                                   normal : {'mean' : [x,y,z],
+                                             'sigma':3x3 matrix}
+                                   See Molecule.domain
+                                   Defaults to {'min': -5, 'max': 5}.
+            move (dict, optional): method to move the electrons.
+                                   'type' :
+                                        'one-elec': move a single electron
+                                                    per iteration
+                                        'all-elec': move all electrons at
+                                                    the same time
+                                        'all-elec-iter': move all electrons
+                                                        by iterating
+                                                        through single elec
+                                                        moves
+                                    'proba' : 'uniform', 'normal'
+                                    Defaults to {'type': 'one-elec',
+                                                 'proba': 'uniform'}.
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, nelec, ndim, init, move)
 
-        if 'elec' not in self.movedict.keys():
+        if 'type' not in self.movedict.keys():
             print('Metroplis : Set 1 electron move by default')
-            self.movedict['elec'] = 'one'
+            self.movedict['type'] = 'one-elec'
 
         if 'proba' not in self.movedict.keys():
             print('Metroplis : Set uniform trial move probability')
@@ -34,6 +55,13 @@ class Metropolis(SamplerBase):
                 (2*torch.sqrt(2*torch.log(torch.tensor(2.))))
             self.multiVariate = MultivariateNormal(
                 torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
+
+        self._move_per_iter = 1
+        if self.movedict['type'] == 'all-elec-iterate':
+            self.fixed_id_elec_list = range(self.nelec)
+            self._move_per_iter = self.nelec
+        else:
+            self.fixed_id_elec_list = [None]
 
     def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
                  with_tqdm=True):
@@ -72,24 +100,27 @@ class Metropolis(SamplerBase):
 
             for istep in rng:
 
-                # new positions
-                Xn = self.move(pdf)
+                for id_elec in self.fixed_id_elec_list:
 
-                # new function
-                fxn = pdf(Xn)
-                fxn[fxn == 0.] = 1E-16
-                df = (fxn/(fx)).double()
+                    # new positions
+                    Xn = self.move(pdf, id_elec)
 
-                # accept the moves
-                index = self._accept(df)
+                    # new function
+                    fxn = pdf(Xn)
+                    fxn[fxn == 0.] = 1E-16
+                    df = (fxn/(fx)).double()
 
-                # acceptance rate
-                rate += index.byte().sum().float()/self.nwalkers
+                    # accept the moves
+                    index = self._accept(df)
 
-                # update position/function value
-                self.walkers.pos[index, :] = Xn[index, :]
-                fx[index] = fxn[index]
-                fx[fx == 0] = 1E-16
+                    # acceptance rate
+                    rate += index.byte().sum().float() / \
+                        (self.nwalkers*self._move_per_iter)
+
+                    # update position/function value
+                    self.walkers.pos[index, :] = Xn[index, :]
+                    fx[index] = fxn[index]
+                    fx[fx == 0] = 1E-16
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):
@@ -101,7 +132,7 @@ class Metropolis(SamplerBase):
 
         return torch.cat(pos)
 
-    def move(self, pdf):
+    def move(self, pdf, id_elec):
         """Move electron one at a time in a vectorized way.
 
         Args:
@@ -110,7 +141,7 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: new positions of the walkers
         """
-        if self.nelec == 1 or self.movedict['elec'] == 'all':
+        if self.nelec == 1 or self.movedict['type'] == 'all-elec':
             return self.walkers.pos + self._move(self.nelec)
 
         else:
@@ -121,8 +152,11 @@ class Metropolis(SamplerBase):
                                    self.nelec, self.ndim)
 
             # get indexes
-            index = torch.LongTensor(self.nwalkers).random_(
-                0, self.nelec)
+            if id_elec is None:
+                index = torch.LongTensor(self.nwalkers).random_(
+                    0, self.nelec)
+            else:
+                index = torch.LongTensor(self.nwalkers).fill_(id_elec)
 
             # change selected data
             new_pos[range(self.nwalkers), index,
