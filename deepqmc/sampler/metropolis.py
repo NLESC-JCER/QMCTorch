@@ -1,13 +1,15 @@
 from deepqmc.sampler.sampler_base import SamplerBase
 from tqdm import tqdm
 import torch
+from torch.distributions import MultivariateNormal
 
 
 class Metropolis(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  nelec=1, ndim=1,
-                 init={'min': -5, 'max': 5}):
+                 init={'min': -5, 'max': 5},
+                 move={'elec': 'one', 'proba': 'uniform'}):
         """Metroplis Hasting sampler
 
         Args:
@@ -17,7 +19,21 @@ class Metropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, nelec, ndim, init)
+                             step_size, nelec, ndim, init, move)
+
+        if 'elec' not in self.movedict.keys():
+            print('Metroplis : Set 1 electron move by default')
+            self.movedict['elec'] = 'one'
+
+        if 'proba' not in self.movedict.keys():
+            print('Metroplis : Set uniform trial move probability')
+            self.movedict['proba'] = 'uniform'
+
+        if self.movedict['proba'] == 'normal':
+            _sigma = self.step_size / \
+                (2*torch.sqrt(2*torch.log(torch.tensor(2.))))
+            self.multiVariate = MultivariateNormal(
+                torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
 
     def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
                  with_tqdm=True):
@@ -94,10 +110,11 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: new positions of the walkers
         """
-        if self.nelec == 1:
-            return self.walkers.pos + self._move()
+        if self.nelec == 1 or self.movedict['elec'] == 'all':
+            return self.walkers.pos + self._move(self.nelec)
 
         else:
+
             # clone and reshape data : Nwlaker, Nelec, Ndim
             new_pos = self.walkers.pos.clone()
             new_pos = new_pos.view(self.nwalkers,
@@ -109,11 +126,11 @@ class Metropolis(SamplerBase):
 
             # change selected data
             new_pos[range(self.nwalkers), index,
-                    :] += self._move()
+                    :] += self._move(1)
 
             return new_pos.view(self.nwalkers, self.nelec*self.ndim)
 
-    def _move(self):
+    def _move(self, num_elec):
         """Return a random array of length size between
         [-step_size,step_size]
 
@@ -124,8 +141,12 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: random array
         """
+        if self.movedict['proba'] == 'uniform':
+            return self.step_size * (2. * torch.rand((self.nwalkers, self.ndim)) - 1.)
 
-        return self.step_size * (2. * torch.rand((self.nwalkers, self.ndim)) - 1.)
+        elif self.movedict['proba'] == 'normal':
+            displacement = self.multiVariate.sample((self.nwalkers, num_elec))
+            return displacement.view(self.nwalkers, num_elec*self.ndim)
 
     def _accept(self, P):
         """accept the move or not
