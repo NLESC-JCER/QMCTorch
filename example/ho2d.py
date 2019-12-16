@@ -37,7 +37,7 @@ solver = SolverPotential(wf=wf, sampler=sampler,
 # pos, e, v = solver.single_point()
 
 # train the wave function
-plotter = plotter2d(wf, domain, [11, 11])  # , save='./image/')
+plotter = plotter2d(wf, domain, [51, 51], save='./image/')
 solver.run(250, loss='variance', plot=plotter, save='model.pth')
 
 # # plot the final wave function

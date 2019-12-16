@@ -276,7 +276,8 @@ def plot_wf_2d(net, domain, res, sol=None, ax=None, load=None):
 
 class plotter2d(object):
 
-    def __init__(self, wf, domain, res, pot=False, kinetic=False, sol=None):
+    def __init__(self, wf, domain, res, pot=False, kinetic=False, sol=None,
+                 save=None):
         '''Dynamic plot of a 2D-wave function during the optimization
 
         Args:
@@ -291,6 +292,8 @@ class plotter2d(object):
         self.res = res
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
+        self.save = save
+        self.iter = 0
 
         points = regular_mesh_2d(xmin=domain['min'], xmax=domain['max'],
                                  ymin=domain['min'], ymax=domain['max'],
@@ -342,6 +345,15 @@ class plotter2d(object):
             antialiased=False)
         plt.draw()
         self.fig.canvas.flush_events()
+
+        if self.save is not None:
+            self._save_pic()
+
+    def _save_pic(self):
+        fname = 'image_%03d.png' % self.iter
+        fname = os.path.join(self.save, fname)
+        plt.savefig(fname)
+        self.iter += 1
 
 
 def plot_results_2d(net, domain, res, sol=None, e0=None, load=None):
