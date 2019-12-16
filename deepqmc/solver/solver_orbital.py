@@ -24,7 +24,8 @@ class SolverOrbital(SolverBase):
 
         # esampling
         self.resampling(ntherm=-1, resample=100,
-                        resample_from_last=True, resample_every=1)
+                        resample_from_last=True,
+                        resample_every=1)
 
         # observalbe
         self.observable(['local_energy'])

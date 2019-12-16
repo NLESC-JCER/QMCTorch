@@ -18,7 +18,7 @@ mol = Molecule(atom='water.xyz', unit='angs',
 
 # define the wave function
 wf = Orbital(mol, kinetic='auto',
-             configs='singlet(1,1)', use_projector=True)
+             configs='singlet(1,1)', use_jastrow=True)
 
 # sampler
 sampler = Metropolis(nwalkers=100, nstep=2000, step_size=0.5,
@@ -37,7 +37,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 
 # # single point
-# pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
+pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
 
 # # sampling traj
 # pos = solver.sample(ntherm=500, ndecor=10)
@@ -47,7 +47,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # # optimize the wave function
 solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
 solver.observable(['local_energy'])
-solver.run(10, loss='energy')
+solver.run(15, loss='energy')
 plot_observable(solver.obs_dict, e0=-76.)
 
 # # optimize the geometry

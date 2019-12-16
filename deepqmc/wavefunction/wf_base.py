@@ -76,7 +76,7 @@ class WaveFunction(nn.Module):
         Returns:
             values of nabla^2 * Psi
         '''
-        print('autograd kinetic energy')
+        #print('autograd kinetic energy')
         if out is None:
             out = self.forward(pos)
 

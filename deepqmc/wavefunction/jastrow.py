@@ -193,12 +193,10 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r = r.unsqueeze_(1)
-        denom = 1. / (1.0 + self.weight * r)
-
+        r_ = r.unsqueeze(1)
+        denom = 1. / (1.0 + self.weight * r_)
         a = self.static_weight * dr * denom
-        b = - self.static_weight * self.weight * r * dr * denom**2
-        r.squeeze_()
+        b = - self.static_weight * self.weight * r_ * dr * denom**2
 
         return a + b
 
@@ -218,14 +216,13 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r.unsqueeze_(1)
-        denom = 1. / (1.0 + self.weight * r)
+        r_ = r.unsqueeze(1)
+        denom = 1. / (1.0 + self.weight * r_)
         dr_square = dr**2
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom**2
-        c = - self.static_weight * self.weight * r * d2r * denom**2
-        d = 2 * self.static_weight * self.weight**2 * r * dr_square * denom**3
-        r.squeeze_()
+        c = - self.static_weight * self.weight * r_ * d2r * denom**2
+        d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 
