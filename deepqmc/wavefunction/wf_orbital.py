@@ -122,8 +122,8 @@ class Orbital(WaveFunction):
         if self.use_jastrow:
 
             J = self.jastrow(x)
-            dJ = self.jastrow(x, derivative=1).sum(2) / J
-            d2J = self.jastrow(x, derivative=2).sum(2) / J
+            dJ = self.jastrow(x, derivative=1) / J
+            d2J = self.jastrow(x, derivative=2) / J
 
             dJdMO = dJ.unsqueeze(-1) * self.mo(self.ao(x, derivative=1))
             d2JMO = d2J.unsqueeze(-1) * MO

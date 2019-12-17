@@ -22,29 +22,30 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='singlet(1,1)', use_jastrow=True)
+             configs='singlet(1,1)',
+             use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=200, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
-                     init=mol.domain('normal'))
+                     init=mol.domain('normal'),
+                     move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
-# solver.single_point()
+solver.single_point()
 
 # pos = solver.sample(ntherm=0, ndecor=10)
 # obs = solver.sampling_traj(pos)
 # plot_observable(obs, e0=-1.16, ax=None)
 
 # optimize the wave function
-torch.autograd.set_detect_anomaly(True)
-solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
-solver.observable(['local_energy'])
-solver.run(100, loss='energy')
+# solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
+# solver.observable(['local_energy'])
+# solver.run(100, loss='energy')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

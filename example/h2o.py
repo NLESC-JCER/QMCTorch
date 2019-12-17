@@ -18,10 +18,10 @@ mol = Molecule(atom='water.xyz', unit='angs',
 
 # define the wave function
 wf = Orbital(mol, kinetic='auto',
-             configs='singlet(1,1)', use_jastrow=True)
+             configs='singlet(1,1)', use_jastrow=False)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=2000, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'))
 
@@ -37,7 +37,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 
 # # single point
-pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
+pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
 
 # # sampling traj
 # pos = solver.sample(ntherm=500, ndecor=10)

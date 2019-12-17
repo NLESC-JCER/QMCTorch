@@ -46,8 +46,12 @@ class KineticPooling(nn.Module):
                 and Delta_up(D_down) = 0
 
         Args:
-            A : matrix of MO vals (Nbatch, Nelec, Nmo)
-            d2A : matrix of \Delta MO vals (Nbatch, Nelec, Nmo)
+            MO : matrix of MO vals (Nbatch, Nelec, Nmo)
+            d2MO : matrix of \Delta MO vals (Nbatch, Nelec, Nmo)
+            dJdMO : matrix of the \frac{\nabla J}{J} \nabla MO
+            d2JMO : matrix of the \frac{\Delta J}{J} MO
+            return_local_energy : divide the contrbutions by det(MO) to get
+                                  local energy instead of kinetic energy
         Return:
             K : T Psi (Nbatch, Ndet)
         '''

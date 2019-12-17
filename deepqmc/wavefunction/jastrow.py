@@ -96,6 +96,8 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             [type]: [description]
         """
+        size = pos.shape
+        assert size[1] == self.nelec*self.ndim
 
         r = self.edist(pos)
         jast = self._get_jastrow_elements(r)
@@ -125,12 +127,8 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        # djast = self._get_der_jastrow_elements(r, dr) * jast.unsqueeze(1)
-        # grad_jast = self._replace_one_element_and_prod(jast, djast)
-        # return grad_jast
-
         djast = self._get_der_jastrow_elements(r, dr).sum(1)
-        prod_val = jastrow._prod_unique_pairs(jast)
+        prod_val = self._prod_unique_pairs(jast)
 
         return (self._sum_unique_pairs(djast, axis=-1) -
                 self._sum_unique_pairs(djast, axis=-2)) * prod_val
@@ -148,18 +146,18 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        djast = self._get_der_jastrow_elements(r, dr) * jast.unsqueeze(1)
-        d2jast = self._get_second_der_jastrow_elements(
-            r, dr, d2r) * jast.unsqueeze(1)
-
         # pure second derivative terms
-        hess_jast = self._replace_one_element_and_prod(jast, d2jast)
+        prod_val = self._prod_unique_pairs(jast)
+        d2jast = self._get_second_der_jastrow_elements(
+            r, dr, d2r).sum(1)
+        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1) +
+                     self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
-        hess_jast = self._replace_two_elements_and_prod(
-            jast, djast, out_mat=hess_jast)
+        djast = (self._get_der_jastrow_elements(r, dr)).sum(1)
+        hess_jast += self._partial_derivative(djast, out_mat=hess_jast)
 
-        return hess_jast
+        return 0.5 * hess_jast * prod_val
 
     def _get_jastrow_elements(self, r):
         """Get the elements of the jastrow matrix :
@@ -233,97 +231,27 @@ class TwoBodyJastrowFactor(nn.Module):
 
         return a + b + c + d + e**2
 
-    def _replace_one_element_and_prod(self, org_mat, new_mat, out_mat=None):
-        """That's really complicated to explain ....
-
-        for electron idx replace each element of org_mat where idx is involved
-        by the corresponding element in new_mat. Compute the prod of the unique terms
-        and aggregate in the correspondign element of the output matrix.
-
-        say that we have the org mat :
-        f_01 f_02 f_03
-             f_12 f_13
-                  f_23
-
-        will compute :
-            g_01 f_02 f_03 f_12 f_13 f_23 +
-            f_01 f_02 f_03 f_12 f_13 f_23 +
-            f_01 f_02 g_03 f_12 f_13 f_23
-
-        where fij is the ij value of the new matrix
-        and put that sum in out[...,0,...]
-
-        Args:
-            org_mat (torch.tensor): orginal matrix Nbatch, Nelec, Nelec
-                                    usually the jastrow elements
-            new_mat (torch.tensor): new matrix Nbatch, Ndim, Nelec, Nelec
-                                    usually the derivative of jastro element
-            out_mat (torch.tensor optional): out put matrix. Defaults to None.
-                                             Nbatch, Nelec, Ndim
-        """
+    def _partial_derivative(self, djast, out_mat=None):
 
         if out_mat is None:
-            nbatch = org_mat.shape[0]
-            out_mat = torch.zeros(nbatch, self.nelec, self.ndim)
+            nbatch = djast.shape[0]
+            out_mat = torch.zeros(nbatch, self.nelec)
 
         for idx in range(self.nelec):
 
             index_pairs = [(idx, j) for j in range(
                 idx+1, self.nelec)] + [(j, idx) for j in range(0, idx)]
 
-            for (i, j) in index_pairs:
-                out_mat[:, idx] += self._prod_unique_pairs(
-                    org_mat, not_el=(i, j)) * new_mat[..., i, j]
-
-        return out_mat
-
-    def _replace_two_elements_and_prod(self, org_mat, new_mat, out_mat=None):
-        """That's really complicated to explain ....
-
-        for electron idx replace each pair of element of org_mat where idx
-        is involved by the corresponding elements in new_mat. Compute the
-        prod of the unique terms and aggregate in the correspondign element
-        of the output matrix.
-
-        say that we have the org mat :
-        f_01 f_02 f_03
-             f_12 f_13
-                  f_23
-
-        will compute :
-            g_01 g_02 f_03 f_12 f_13 f_23 +
-            g_01 f_02 g_03 f_12 f_13 f_23 +
-            f_01 g_02 g_03 f_12 f_13 f_23
-
-        where gij is the ij value of the new matrix
-        and put that sum in out[...,0,...]
-
-        Args:
-            org_mat (torch.tensor): orginal matrix Nbatch, Nelec, Nelec
-                                    usually the jastrow elements
-            new_mat (torch.tensor): new matrix Nbatch, Ndim, Nelec, Nelec
-                                    usually the derivative of jastro element
-            out_mat (torch.tensor optional): out put matrix. Defaults to None.
-                                             Nbatch, Nelec, Ndim
-        """
-
-        if out_mat is None:
-            nbatch = org_mat.shape[0]
-            out_mat = torch.zeros(nbatch, self.nelec, self.ndim)
-
-        for idx in range(self.nelec):
-
-            index_pairs = [(idx, j) for j in range(idx+1, self.nelec)] \
-                + [(j, idx) for j in range(0, idx)]
-
             for p1 in range(len(index_pairs)-1):
                 i1, j1 = index_pairs[p1]
                 for p2 in range(p1+1, len(index_pairs)):
                     i2, j2 = index_pairs[p2]
-                    out_mat[:, idx] += self._unique_pair_prod(
-                        org_mat, not_el=[(i1, j1), (i2, j2)]) \
-                        * new_mat[..., i1, j1] * new_mat[..., i2, j2]
-        return out_mat
+
+                    d1 = djast[..., i1, j1] * (-1)**(i1 > j1)
+                    d2 = djast[..., i2, j2] * (-1)**(i2 > j2)
+                    out_mat[:, idx] += (d1*d2)
+
+            return out_mat
 
     def _prod_unique_pairs(self, mat, not_el=None):
         """Compute the product of the lower mat elements
@@ -363,22 +291,38 @@ class TwoBodyJastrowFactor(nn.Module):
 
 if __name__ == "__main__":
 
-    from torch.autograd import grad, gradcheck
+    from torch.autograd import grad, gradcheck, Variable
     # torch.autograd.set_detect_anomaly(True)
     torch.set_default_tensor_type(torch.DoubleTensor)
+
+    def hess(out, pos):
+        # compute the jacobian
+        z = Variable(torch.ones(out.shape))
+        jacob = grad(out, pos,
+                     grad_outputs=z,
+                     only_inputs=True,
+                     create_graph=True)[0]
+        print(jacob.shape)
+        # compute the diagonal element of the Hessian
+        z = Variable(torch.ones(jacob.shape[0]))
+        hess = torch.zeros(jacob.shape)
+
+        for idim in range(jacob.shape[1]):
+
+            tmp = grad(jacob[:, idim], pos,
+                       grad_outputs=z,
+                       only_inputs=True,
+                       # create_graph is REQUIRED and
+                       # is causing memory issues
+                       # for large systems
+                       create_graph=True)[0]
+
+            hess[:, idim] = tmp[:, idim]
+
+        return hess
+
     pos = torch.rand(4, 9)
     pos.requires_grad = True
-
-    def check_grad(f, df, r, dr):
-        fval = f(r)
-        dfval = df(r, dr)
-
-        dfval_grad = grad(fval, r, grad_outputs=torch.ones_like(fval))[0]
-        gradcheck(f, r)
-
-        print(dfval.sum())
-        print(dfval_grad.sum())
-        return (dfval, dfval_grad)
 
     jastrow = TwoBodyJastrowFactor(1, 2)
 
@@ -387,20 +331,17 @@ if __name__ == "__main__":
     dr_grad = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
     dr_gradcheck = gradcheck(jastrow.edist, pos)
 
-    # der_el = check_grad(jastrow._compute_kernel,
-    #                     jastrow._get_der_jastrow_elements,
-    #                     r, dr)
-
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
     dval_check = gradcheck(jastrow, pos)
 
-    # jast_el = jastrow._get_jastrow_elements(r)
-    # der_jast_el = jastrow._get_der_jastrow_elements(
-    #     r, dr) * jast_el.unsqueeze(1)
-    # dval = jastrow(pos, derivative=1)
-    # #
+    d2r = jastrow.edist(pos, derivative=2)
+    d2el = jastrow._get_second_der_jastrow_elements(r, dr, d2r)
+    d2val = jastrow(pos, derivative=2)
 
-    # d2r = jastrow.edist(pos, derivative=2)
-    # d2val = jastrow(pos, derivative=2)
+    val = jastrow(pos)
+    d2val_grad = hess(val, pos)
+
+    print(d2val_grad.sum())
+    print(d2val.sum())
