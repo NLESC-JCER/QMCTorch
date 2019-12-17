@@ -10,16 +10,6 @@ from deepqmc.wavefunction.molecule import Molecule
 import unittest
 
 
-class OrbitalH2(Orbital):
-
-    def __init__(self, mol):
-        super(OrbitalH2, self).__init__(
-            mol, kinetic='jacobi', use_projector=False)
-
-    def pool(self, x):
-        return (x[:, 0, 0]*x[:, 1, 0]).view(-1, 1)
-
-
 class TestH2(unittest.TestCase):
 
     def setUp(self):
@@ -33,12 +23,15 @@ class TestH2(unittest.TestCase):
                             basis_type='gto', basis='sto-3g')
 
         # wave function
-        self.wf = OrbitalH2(self.mol)
+        self.wf = Orbital(self.mol, kinetic='auto',
+                          configs='singlet(1,1)',
+                          use_jastrow=True)
 
         # sampler
         self.sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
                                   ndim=self.wf.ndim, nelec=self.wf.nelec,
-                                  init=self.mol.domain('normal'))
+                                  init=self.mol.domain('normal'),
+                                  move={'type': 'all-elec', 'proba': 'normal'})
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)

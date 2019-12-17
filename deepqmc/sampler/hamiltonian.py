@@ -18,7 +18,7 @@ class Hamiltonian(SamplerBase):
         '''
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, nelec, ndim, init)
+                             step_size, nelec, ndim, init, None)
         self.traj_length = L
 
     @staticmethod
