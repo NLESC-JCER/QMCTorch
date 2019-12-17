@@ -7,13 +7,13 @@ from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
 from deepqmc.wavefunction.kinetic_pooling import KineticPooling
-from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor, ElectronDistance
+from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state', scf='pyscf',
-                 kinetic='jacobi', use_projector=False):
+                 kinetic='jacobi', use_jastrow=True):
         super(Orbital, self).__init__(mol.nelec, 3, kinetic)
 
         # number of atoms
@@ -35,8 +35,9 @@ class Orbital(WaveFunction):
         self.mo.weight = self.get_mo_coeffs()
 
         # jastrow
-        self.edist = ElectronDistance(mol.nelec, 3)
-        self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown)
+        self.use_jastrow = use_jastrow
+        if self.use_jastrow:
+            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown)
 
         # define the SD we want
         self.configs = self.get_configs(configs, mol)
@@ -44,12 +45,12 @@ class Orbital(WaveFunction):
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(
-            self.configs, mol, use_projector=use_projector)
+            self.configs, mol)
 
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula
         self.kinpool = KineticPooling(
-            self.configs, mol, use_projector=use_projector)
+            self.configs, mol)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
@@ -82,14 +83,17 @@ class Orbital(WaveFunction):
         Returns: values of psi
         '''
 
-        #edist = self.edist(x)
-        #J = self.jastrow(edist)
+        if self.use_jastrow:
+            J = self.jastrow(x)
 
         x = self.ao(x)
         x = self.mo(x)
         x = self.pool(x)
+
+        if self.use_jastrow:
+            return J*self.fc(x)
+
         return self.fc(x)
-        # return J*self.fc(x)
 
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
@@ -97,7 +101,7 @@ class Orbital(WaveFunction):
         ke = self.kinetic_energy_jacobi(pos, return_local_energy=True)
 
         return ke \
-            + self.nuclear_potential(pos)  \
+            + self.nuclear_potential(pos) \
             + self.electronic_potential(pos) \
             + self.nuclear_repulsion()
 
@@ -113,7 +117,18 @@ class Orbital(WaveFunction):
 
         MO = self.mo(self.ao(x))
         d2MO = self.mo(self.ao(x, derivative=2))
-        return self.fc(self.kinpool(MO, d2MO,
+        dJdMO, d2JMO = None, None
+
+        if self.use_jastrow:
+
+            J = self.jastrow(x)
+            dJ = self.jastrow(x, derivative=1) / J
+            d2J = self.jastrow(x, derivative=2) / J
+
+            dJdMO = dJ.unsqueeze(-1) * self.mo(self.ao(x, derivative=1))
+            d2JMO = d2J.unsqueeze(-1) * MO
+
+        return self.fc(self.kinpool(MO, d2MO, dJdMO, d2JMO,
                                     return_local_energy=return_local_energy))
 
     def nuclear_potential(self, pos):

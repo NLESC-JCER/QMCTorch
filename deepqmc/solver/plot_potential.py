@@ -5,6 +5,7 @@ import numpy as np
 
 import matplotlib.pyplot as plt
 from matplotlib import cm
+from mpl_toolkits.mplot3d import Axes3D
 from skimage import measure
 
 from deepqmc.solver.plot_data import plot_observable
@@ -220,7 +221,7 @@ def plot_results_1d(net, domain, res, sol=None, e0=None, load=None):
 # 2D routnines
 ##############################################################################
 
-def plot_wf_2d(net, domain, res, sol=None):
+def plot_wf_2d(net, domain, res, sol=None, ax=None, load=None):
     '''Plot a 2D wave function.
 
     Args:
@@ -230,11 +231,20 @@ def plot_wf_2d(net, domain, res, sol=None):
         sol : callabale of the solution
     '''
 
-    fig = plt.figure()
-    ax = fig.add_subplot(111, projection='3d')
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        show_plot = True
+    else:
+        show_plot = False
 
-    points = regular_mesh_2d(xmin=domain['xmin'], xmax=domain['xmax'],
-                             ymin=domain['ymin'], ymax=domain['ymax'],
+    if load is not None:
+        checkpoint = torch.load(load)
+        net.wf.load_state_dict(checkpoint['model_state_dict'])
+        epoch = checkpoint['epoch']
+
+    points = regular_mesh_2d(xmin=domain['min'], xmax=domain['max'],
+                             ymin=domain['min'], ymax=domain['max'],
                              nx=res[0], ny=res[1])
 
     POS = Variable(torch.tensor(points))
@@ -255,12 +265,19 @@ def plot_wf_2d(net, domain, res, sol=None):
     ax.plot_surface(xx, yy, vn, cmap=cm.coolwarm,
                     alpha=0.75, color='black', linewidth=2)
 
-    plt.show()
+    if load is None:
+        ax.set_ylabel('Wavefuntion')
+    else:
+        ax.set_ylabel('Wavefuntion %d epoch' % epoch)
+
+    if show_plot:
+        plt.show()
 
 
 class plotter2d(object):
 
-    def __init__(self, wf, domain, res, pot=False, kinetic=False, sol=None):
+    def __init__(self, wf, domain, res, pot=False, kinetic=False, sol=None,
+                 save=None):
         '''Dynamic plot of a 2D-wave function during the optimization
 
         Args:
@@ -275,9 +292,11 @@ class plotter2d(object):
         self.res = res
         self.fig = plt.figure()
         self.ax = self.fig.add_subplot(111, projection='3d')
+        self.save = save
+        self.iter = 0
 
-        points = regular_mesh_2d(xmin=domain['xmin'], xmax=domain['xmax'],
-                                 ymin=domain['ymin'], ymax=domain['ymax'],
+        points = regular_mesh_2d(xmin=domain['min'], xmax=domain['max'],
+                                 ymin=domain['min'], ymax=domain['max'],
                                  nx=res[0], ny=res[1])
 
         self.POS = Variable(torch.tensor(points))
@@ -327,63 +346,34 @@ class plotter2d(object):
         plt.draw()
         self.fig.canvas.flush_events()
 
+        if self.save is not None:
+            self._save_pic()
 
-def plot_results_2d(net, obs_dict, domain, res, sol=None, e0=None):
+    def _save_pic(self):
+        fname = 'image_%03d.png' % self.iter
+        fname = os.path.join(self.save, fname)
+        plt.savefig(fname)
+        self.iter += 1
+
+
+def plot_results_2d(net, domain, res, sol=None, e0=None, load=None):
     ''' Plot the summary of the results for a 1D problem.
 
     Args:
         net : network object
         obs_dict : dict containing the obserable
-        domain : boundary of the plot
-        res : number of points in the x axis
         sol : callable of the solutions
         e0 : energy of the solution
+        domain : boundary of the plot
+        res : number of points in the x axis
     '''
     plt.ioff()
     fig = plt.figure()
     ax0 = fig.add_subplot(211, projection='3d')
     ax1 = fig.add_subplot(212)
 
-    points = regular_mesh_2d(xmin=domain['xmin'], xmax=domain['xmax'],
-                             ymin=domain['ymin'], ymax=domain['ymax'],
-                             nx=res[0], ny=res[1])
-
-    POS = Variable(torch.tensor(points))
-    POS.requires_grad = True
-
-    pos = POS.detach().numpy()
-    xx = pos[:, 0].reshape(res[0], res[1])
-    yy = pos[:, 1].reshape(res[0], res[1])
-
-    if callable(sol):
-        vs = sol(POS).view(res[0], res[1]).detach().numpy()
-        vs /= np.linalg.norm(vs)
-        ax0.plot_wireframe(xx, yy, vs, color='black', linewidth=1)
-
-    vals = net.wf(POS)
-    vn = vals.detach().numpy().reshape(res[0], res[1])
-    vn /= np.linalg.norm(vn)
-    ax0.plot_surface(xx, yy, vn, cmap=cm.coolwarm,
-                     alpha=0.75, color='black', linewidth=2)
-
-    ax0.set_xlabel('X')
-    ax0.set_ylabel('Y')
-    ax0.set_zlabel('Wavefunction')
-
-    n = len(obs_dict['energy'])
-    epoch = np.arange(n)
-
-    emax = [np.quantile(e, 0.75) for e in obs_dict['local_energy']]
-    emin = [np.quantile(e, 0.25) for e in obs_dict['local_energy']]
-
-    ax1.fill_between(epoch, emin, emax, alpha=0.5, color='#4298f4')
-    ax1.plot(epoch, obs_dict['energy'], color='#144477')
-    if e0 is not None:
-        ax1.axhline(e0, color='black', linestyle='--')
-
-    ax1.grid()
-    ax1.set_xlabel('Number of epoch')
-    ax1.set_ylabel('Energy')
+    plot_wf_2d(net, domain, res, sol=sol, ax=ax0, load=load)
+    plot_observable(net.obs_dict, e0=e0, ax=ax1)
 
     plt.show()
 
