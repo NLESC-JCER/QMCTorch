@@ -33,11 +33,11 @@ class ElectronDistance(nn.Module):
             mat (Nbatch,Nelec1,Nelec2) : pairwise distance between electrons
         '''
 
-        input = input.view(-1, self.nelec, self.ndim)
+        input_ = input.view(-1, self.nelec, self.ndim)
 
-        norm = (input**2).sum(-1).unsqueeze(-1)
+        norm = (input_**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input, input.transpose(1, 2))+1E-16)**(0.5)
+                torch.bmm(input_, input_.transpose(1, 2))+1E-16)**(0.5)
 
         if derivative == 0:
             return dist
@@ -45,14 +45,14 @@ class ElectronDistance(nn.Module):
         elif derivative == 1:
 
             invr = (1./(dist+1E-16)).unsqueeze(1)
-            diff_axis = input.transpose(1, 2).unsqueeze(3)
+            diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = diff_axis - diff_axis.transpose(2, 3)
             return diff_axis * invr
 
         elif derivative == 2:
 
             invr3 = (1./(dist**3+1E-16)).unsqueeze(1)
-            diff_axis = input.transpose(1, 2).unsqueeze(3)
+            diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
 
             diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
@@ -61,7 +61,7 @@ class ElectronDistance(nn.Module):
 
 class TwoBodyJastrowFactor(nn.Module):
 
-    def __init__(self, nup, ndown):
+    def __init__(self, nup, ndown, w=1.):
         super(TwoBodyJastrowFactor, self).__init__()
 
         self.nup = nup
@@ -69,7 +69,7 @@ class TwoBodyJastrowFactor(nn.Module):
         self.nelec = nup+ndown
         self.ndim = 3
 
-        self.weight = nn.Parameter(torch.tensor([2.5]))
+        self.weight = nn.Parameter(torch.tensor([w]))
         self.weight.requires_grad = True
 
         bup = torch.cat((0.25*torch.ones(nup, nup), 0.5 *
@@ -101,7 +101,7 @@ class TwoBodyJastrowFactor(nn.Module):
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-            return self._unique_pair_prod(jast)
+            return self._prod_unique_pairs(jast)
 
         elif derivative == 1:
             dr = self.edist(pos, derivative=1)
@@ -125,10 +125,15 @@ class TwoBodyJastrowFactor(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        djast = self._get_der_jastrow_elements(r, dr) * jast.unsqueeze(1)
-        grad_jast = self._replace_one_element_and_prod(jast, djast)
+        # djast = self._get_der_jastrow_elements(r, dr) * jast.unsqueeze(1)
+        # grad_jast = self._replace_one_element_and_prod(jast, djast)
+        # return grad_jast
 
-        return grad_jast
+        djast = self._get_der_jastrow_elements(r, dr).sum(1)
+        prod_val = jastrow._prod_unique_pairs(jast)
+
+        return (self._sum_unique_pairs(djast, axis=-1) -
+                self._sum_unique_pairs(djast, axis=-2)) * prod_val
 
     def _jastrow_second_derivative(self, r, dr, d2r, jast):
         """Compute the value of the pure 2nd derivative of the Jastrow factor
@@ -198,7 +203,7 @@ class TwoBodyJastrowFactor(nn.Module):
         a = self.static_weight * dr * denom
         b = - self.static_weight * self.weight * r_ * dr * denom**2
 
-        return a + b
+        return (a + b)
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow matrix
@@ -267,7 +272,7 @@ class TwoBodyJastrowFactor(nn.Module):
                 idx+1, self.nelec)] + [(j, idx) for j in range(0, idx)]
 
             for (i, j) in index_pairs:
-                out_mat[:, idx] += self._unique_pair_prod(
+                out_mat[:, idx] += self._prod_unique_pairs(
                     org_mat, not_el=(i, j)) * new_mat[..., i, j]
 
         return out_mat
@@ -275,9 +280,10 @@ class TwoBodyJastrowFactor(nn.Module):
     def _replace_two_elements_and_prod(self, org_mat, new_mat, out_mat=None):
         """That's really complicated to explain ....
 
-        for electron idx replace each pair of element of org_mat where idx is involved
-        by the corresponding elements in new_mat. Compute the prod of the unique terms
-        and aggregate in the correspondign element of the output matrix.
+        for electron idx replace each pair of element of org_mat where idx
+        is involved by the corresponding elements in new_mat. Compute the
+        prod of the unique terms and aggregate in the correspondign element
+        of the output matrix.
 
         say that we have the org mat :
         f_01 f_02 f_03
@@ -319,7 +325,7 @@ class TwoBodyJastrowFactor(nn.Module):
                         * new_mat[..., i1, j1] * new_mat[..., i2, j2]
         return out_mat
 
-    def _unique_pair_prod(self, mat, not_el=None):
+    def _prod_unique_pairs(self, mat, not_el=None):
         """Compute the product of the lower mat elements
 
         Args:
@@ -342,31 +348,59 @@ class TwoBodyJastrowFactor(nn.Module):
                 i, j = _el
                 mat_cpy[..., i, j] = 1
 
-        return mat_cpy[:, torch.tril(
+        return mat_cpy[..., torch.tril(
             torch.ones(self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
+
+    def _sum_unique_pairs(self, mat, axis=None):
+        mat_cpy = mat.clone()
+        mat_cpy[..., torch.tril(
+            torch.ones(self.nelec, self.nelec)) == 0] = 0
+        if axis is None:
+            return mat_cpy.sum()
+        else:
+            return mat_cpy.sum(axis)
 
 
 if __name__ == "__main__":
 
-    from torch.autograd import grad
+    from torch.autograd import grad, gradcheck
     # torch.autograd.set_detect_anomaly(True)
-
-    pos = torch.rand(3, 6)
+    torch.set_default_tensor_type(torch.DoubleTensor)
+    pos = torch.rand(4, 9)
     pos.requires_grad = True
 
-    jastrow = TwoBodyJastrowFactor(1, 1)
+    def check_grad(f, df, r, dr):
+        fval = f(r)
+        dfval = df(r, dr)
+
+        dfval_grad = grad(fval, r, grad_outputs=torch.ones_like(fval))[0]
+        gradcheck(f, r)
+
+        print(dfval.sum())
+        print(dfval_grad.sum())
+        return (dfval, dfval_grad)
+
+    jastrow = TwoBodyJastrowFactor(1, 2)
 
     r = jastrow.edist(pos)
     dr = jastrow.edist(pos, derivative=1)
-    dr_check = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
+    dr_grad = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
+    dr_gradcheck = gradcheck(jastrow.edist, pos)
+
+    # der_el = check_grad(jastrow._compute_kernel,
+    #                     jastrow._get_der_jastrow_elements,
+    #                     r, dr)
 
     val = jastrow(pos)
-
-    jast_el = jastrow._get_jastrow_elements(r)
-    der_jast_el = jastrow._get_der_jastrow_elements(
-        r, dr) * jast_el.unsqueeze(1)
     dval = jastrow(pos, derivative=1)
-    #dval_check = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+    dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+    dval_check = gradcheck(jastrow, pos)
 
-    d2r = jastrow.edist(pos, derivative=2)
-    d2val = jastrow(pos, derivative=2)
+    # jast_el = jastrow._get_jastrow_elements(r)
+    # der_jast_el = jastrow._get_der_jastrow_elements(
+    #     r, dr) * jast_el.unsqueeze(1)
+    # dval = jastrow(pos, derivative=1)
+    # #
+
+    # d2r = jastrow.edist(pos, derivative=2)
+    # d2val = jastrow(pos, derivative=2)
