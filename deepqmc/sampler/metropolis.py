@@ -10,7 +10,7 @@ class Metropolis(SamplerBase):
                  nelec=1, ndim=1,
                  init={'min': -5, 'max': 5},
                  move={'type': 'one-elec', 'proba': 'uniform'}):
-        """Metroplois Hasting generator
+        """Metropolis Hasting generator
 
         Args:
             nwalkers (int, optional): Number of walkers. Defaults to 100.
@@ -80,6 +80,12 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: positions of the walkers
         """
+        _type_ = torch.get_default_dtype()
+        if _type_ == torch.float32:
+            eps = 1E-7
+        elif _type_ == torch.float64:
+            eps = 1E-16
+
         with torch.no_grad():
 
             if ntherm < 0:
@@ -88,10 +94,8 @@ class Metropolis(SamplerBase):
             self.walkers.initialize(pos=pos)
 
             fx = pdf(self.walkers.pos)
-            fx[fx == 0] = 1E-16
-            pos = []
-            rate = 0
-            idecor = 0
+            fx[fx == 0] = eps
+            pos, rate, idecor = [], 0, 0
 
             if with_tqdm:
                 rng = tqdm(range(self.nstep))
@@ -107,8 +111,8 @@ class Metropolis(SamplerBase):
 
                     # new function
                     fxn = pdf(Xn)
-                    fxn[fxn == 0.] = 1E-16
-                    df = (fxn/(fx)).double()
+                    fxn[fxn == 0.] = eps
+                    df = fxn/fx
 
                     # accept the moves
                     index = self._accept(df)
@@ -120,7 +124,7 @@ class Metropolis(SamplerBase):
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
                     fx[index] = fxn[index]
-                    fx[fx == 0] = 1E-16
+                    fx[fx == 0] = eps
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):

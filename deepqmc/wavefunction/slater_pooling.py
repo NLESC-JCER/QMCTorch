@@ -16,7 +16,7 @@ class BatchDeterminant(torch.autograd.Function):
 
         # get the number of permuations
         s = (pivots != torch.tensor(
-            range(1, input.shape[1]+1)).int()).sum(1).float()
+            range(1, input.shape[1]+1)).int()).sum(1).type(torch.get_default_dtype())
 
         # get the prod of the diag of U
         d = torch.diagonal(inpu, dim1=-2, dim2=-1).prod(1)

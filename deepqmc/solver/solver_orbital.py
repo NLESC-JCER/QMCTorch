@@ -4,7 +4,8 @@ from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.solver.torch_utils import DataSet, Loss, ZeroOneClipper, OrthoReg
+from deepqmc.solver.torch_utils import (DataSet, Loss,
+                                        ZeroOneClipper, OrthoReg)
 
 
 def printd(rank, *args):
@@ -113,7 +114,7 @@ class SolverOrbital(SolverBase):
             cumulative_loss = 0
             for data in self.dataloader:
 
-                lpos = Variable(data).float()
+                lpos = Variable(data)
                 lpos.requires_grad = True
 
                 loss = self.loss(lpos)

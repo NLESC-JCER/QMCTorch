@@ -26,7 +26,6 @@ class Walkers(object):
         Raises:
             ValueError: if the method is not recognized
         """
-
         if pos is not None:
             if len(pos) > self.nwalkers:
                 pos = pos[-self.nwalkers:, :]
@@ -50,11 +49,13 @@ class Walkers(object):
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
         pos *= (self.init_domain['max'] - self.init_domain['min'])
         pos += self.init_domain['min']
-        return pos
+        return pos.type(torch.get_default_dtype())
 
     def _init_multivar(self):
         multi = MultivariateNormal(
             torch.tensor(self.init_domain['mean']),
             torch.tensor(self.init_domain['sigma']))
-        pos = multi.sample((self.nwalkers, self.nelec))
-        return pos.view(self.nwalkers, self.nelec*self.ndim).float()
+        pos = multi.sample((self.nwalkers, self.nelec)).type(
+            torch.get_default_dtype())
+
+        return pos.view(self.nwalkers, self.nelec*self.ndim)
