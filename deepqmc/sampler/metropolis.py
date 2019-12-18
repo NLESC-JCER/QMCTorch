@@ -91,7 +91,6 @@ class Metropolis(SamplerBase):
             if ntherm < 0:
                 ntherm = self.nstep+ntherm
 
-            print('init')
             self.walkers.initialize(pos=pos)
 
             fx = pdf(self.walkers.pos)

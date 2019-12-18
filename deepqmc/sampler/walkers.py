@@ -26,7 +26,6 @@ class Walkers(object):
         Raises:
             ValueError: if the method is not recognized
         """
-
         if pos is not None:
             if len(pos) > self.nwalkers:
                 pos = pos[-self.nwalkers:, :]

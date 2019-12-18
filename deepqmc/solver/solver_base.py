@@ -2,8 +2,6 @@ import torch
 from types import SimpleNamespace
 from tqdm import tqdm
 
-from deepqmc.solver.torch_utils import set_torch_single_precision
-
 
 class SolverBase(object):
 
@@ -12,7 +10,6 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.opt = optimizer
-        set_torch_single_precision()
 
     def resampling(self, ntherm=-1, resample=100, resample_from_last=True,
                    resample_every=1):
