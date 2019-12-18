@@ -3,6 +3,16 @@ from torch import nn
 from torch.utils.data import Dataset
 
 
+def set_torch_double_precision():
+    torch.set_default_dtype = torch.float64
+    torch.set_default_tensor_type(torch.DoubleTensor)
+
+
+def set_torch_single_precision():
+    torch.set_default_dtype = torch.float32
+    torch.set_default_tensor_type(torch.FloatTensor)
+
+
 class DataSet(Dataset):
 
     def __init__(self, data):

@@ -1,7 +1,6 @@
-import numpy as np
 import torch
 from torch import nn
-
+import numpy as np
 
 from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
@@ -66,7 +65,7 @@ class Orbital(WaveFunction):
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
-            self.mol.get_mo_coeffs(code=self.scf_code)).float()
+            self.mol.get_mo_coeffs(code=self.scf_code)).type(torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1))
 
     def update_mo_coeffs(self):

@@ -79,7 +79,7 @@ class SolverPotential(SolverBase):
             cumulative_loss = 0
             for data in self.dataloader:
 
-                lpos = Variable(data).float()
+                lpos = Variable(data)
                 lpos.requires_grad = True
 
                 loss = self.loss(lpos)

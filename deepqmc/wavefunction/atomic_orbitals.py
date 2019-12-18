@@ -45,7 +45,7 @@ class AtomicOrbitals(nn.Module):
         self.bas_exp.requires_grad = True
 
         # get the quantum number
-        self.bas_n = torch.tensor(mol.bas_n).float()
+        self.bas_n = torch.tensor(mol.bas_n).type(torch.get_default_dtype())
         self.bas_l = torch.tensor(mol.bas_l)
         self.bas_m = torch.tensor(mol.bas_m)
 
@@ -82,7 +82,7 @@ class AtomicOrbitals(nn.Module):
 
         '''
         nfact = torch.tensor([np.math.factorial(2*n)
-                              for n in self.bas_n], dtype=torch.float32)
+                              for n in self.bas_n], dtype=torch.get_default_dtype())
         return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
 
     def _norm_gaussian(self):
@@ -96,7 +96,8 @@ class AtomicOrbitals(nn.Module):
 
         A = self.bas_exp**exp1
         B = 2**(2.*bas_n+3./2)
-        C = torch.tensor(f2(2*bas_n.int()-1)*np.pi**0.5).float()
+        C = torch.tensor(f2(2*bas_n.int()-1)*np.pi **
+                         0.5).type(torch.get_default_dtype())
 
         return torch.sqrt(B/C)*A
 

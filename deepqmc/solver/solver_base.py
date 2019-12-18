@@ -2,6 +2,8 @@ import torch
 from types import SimpleNamespace
 from tqdm import tqdm
 
+from deepqmc.solver.torch_utils import set_torch_single_precision
+
 
 class SolverBase(object):
 
@@ -10,6 +12,7 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.opt = optimizer
+        set_torch_single_precision()
 
     def resampling(self, ntherm=-1, resample=100, resample_from_last=True,
                    resample_every=1):
@@ -40,7 +43,7 @@ class SolverBase(object):
             self.wf.pdf, ntherm=ntherm, ndecor=ndecor,
             with_tqdm=with_tqdm, pos=pos)
         pos.requires_grad = True
-        return pos.float()
+        return pos
 
     def get_observable(self, obs_dict, pos, **kwargs):
         '''compute all the required observable.
