@@ -23,9 +23,6 @@ def hess(out, pos):
         tmp = grad(jacob[:, idim], pos,
                    grad_outputs=z,
                    only_inputs=True,
-                   # create_graph is REQUIRED and
-                   # is causing memory issues
-                   # for large systems
                    create_graph=True)[0]
 
         hess[:, idim] = tmp[:, idim]
