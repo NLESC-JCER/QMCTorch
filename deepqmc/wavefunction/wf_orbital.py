@@ -12,7 +12,8 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state', scf='pyscf',
-                 kinetic='jacobi', use_jastrow=True):
+                 kinetic='jacobi', use_jastrow=True, device='cpu'):
+
         super(Orbital, self).__init__(mol.nelec, 3, kinetic)
 
         # number of atoms

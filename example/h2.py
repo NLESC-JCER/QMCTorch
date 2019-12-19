@@ -26,13 +26,14 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
              configs='singlet(1,1)',
-             use_jastrow=True)
+             use_jastrow=True, device='cuda')
 
 # sampler
 sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec', 'proba': 'normal'},
+                     device='cuda')
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.01)
