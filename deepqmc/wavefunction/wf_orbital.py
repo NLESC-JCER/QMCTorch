@@ -142,7 +142,7 @@ class Orbital(WaveFunction):
         TODO : vecorize that !!
         '''
 
-        p = torch.zeros(pos.shape[0])
+        p = torch.zeros(pos.shape[0], device=self.device)
         for ielec in range(self.nelec):
             pelec = pos[:, (ielec*self.ndim):(ielec+1)*self.ndim]
             for iatom in range(self.natom):
@@ -160,7 +160,7 @@ class Orbital(WaveFunction):
         Returns: values of Vee * psi
         '''
 
-        pot = torch.zeros(pos.shape[0])
+        pot = torch.zeros(pos.shape[0], device=self.device)
 
         for ielec1 in range(self.nelec-1):
             epos1 = pos[:, ielec1*self.ndim:(ielec1+1)*self.ndim]
@@ -297,3 +297,16 @@ class Orbital(WaveFunction):
         cup.append(new_cup)
         cdown.append(new_cdown)
         return cup, cdown
+
+
+if __name__ == "__main__":
+
+    from deepqmc.wavefunction.molecule import Molecule
+
+    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
+                   basis_type='gto', basis='sto-3g')
+
+    # define the wave function
+    wf = Orbital(mol, kinetic='jacobi',
+                 configs='singlet(1,1)',
+                 use_jastrow=True, cuda=True)
