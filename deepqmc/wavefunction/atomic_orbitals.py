@@ -8,7 +8,7 @@ from deepqmc.wavefunction.grad_spherical_harmonics import GradSphericalHarmonics
 
 class AtomicOrbitals(nn.Module):
 
-    def __init__(self, mol):
+    def __init__(self, mol, cuda=False):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -58,9 +58,10 @@ class AtomicOrbitals(nn.Module):
         # get the normaliationconstants
         self.norm_cst = self.get_norm(mol.basis_type)
 
-        self.cuda = False
+        self.cuda = cuda
         self.device = torch.device('cpu')
-        self.to_device = True
+        if self.cuda:
+            self._to_device()
 
     def get_norm(self, basis_type):
 
@@ -155,17 +156,15 @@ class AtomicOrbitals(nn.Module):
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
-        self.to_device = False
+
         self.device = torch.device('cuda')
+        self.to(self.device)
         attrs = ['bas_n', 'bas_l', 'bas_m', 'bas_coeffs',
                  'nshells', 'norm_cst', 'index_ctr']
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, input, derivative=0):
-
-        if self.cuda and self.to_device:
-            self._to_device()
 
         nbatch = input.shape[0]
 
@@ -228,8 +227,6 @@ if __name__ == "__main__":
     m = Molecule(atom='Li 0 0 0; H 0 0 3.015',
                  basis_type='gto', basis='sto-3g')
 
-    ao = AtomicOrbitals(m)
-    ao.cuda = True
-    ao.to('cuda')
-    pos = torch.rand(20, ao.nelec*3)
+    ao = AtomicOrbitals(m, cuda=True)
+    pos = torch.rand(20, ao.nelec*3).to('cuda')
     aoval = ao.forward(pos, derivative=1)
