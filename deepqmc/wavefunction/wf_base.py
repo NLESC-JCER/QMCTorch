@@ -6,7 +6,7 @@ from torch.autograd import grad, Variable
 
 class WaveFunction(nn.Module):
 
-    def __init__(self, nelec, ndim, kinetic='auto'):
+    def __init__(self, nelec, ndim, kinetic='auto', cuda=False):
 
         super(WaveFunction, self).__init__()
 
@@ -14,6 +14,8 @@ class WaveFunction(nn.Module):
         self.nelec = nelec
         self.ndim_tot = self.nelec*self.ndim
         self.kinetic = kinetic
+        self.cuda = cuda
+        self.device = torch.device('cpu')
 
     def forward(self, x):
         ''' Compute the value of the wave function.

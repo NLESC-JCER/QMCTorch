@@ -4,7 +4,7 @@ from torch.distributions import MultivariateNormal
 
 class Walkers(object):
 
-    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, cuda=False):
+    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
 
         self.nwalkers = nwalkers
         self.ndim = ndim
@@ -14,10 +14,8 @@ class Walkers(object):
         self.pos = None
         self.status = None
 
-        if cuda:
-            self.device = torch.device('cuda')
-        else:
-            self.device = torch.device('cpu')
+        self.cuda = False
+        self.device = torch.device('cpu')
 
     def initialize(self, pos=None):
         """Initalize the position of the walkers
@@ -31,6 +29,9 @@ class Walkers(object):
         Raises:
             ValueError: if the method is not recognized
         """
+        if self.cuda:
+            self.device = torch.device('cuda')
+
         if pos is not None:
             if len(pos) > self.nwalkers:
                 pos = pos[-self.nwalkers:, :]

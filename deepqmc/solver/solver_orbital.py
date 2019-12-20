@@ -16,7 +16,7 @@ def printd(rank, *args):
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None, device='cpu'):
+                 scheduler=None, cuda=False):
 
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
@@ -36,12 +36,18 @@ class SolverOrbital(SolverBase):
         self.save_model = 'model.pth'
 
         # check for cuda
-        if not torch.cuda.is_available and device == 'cuda':
+        if not torch.cuda.is_available and cuda:
             raise ValueError('Cuda not available')
 
-        if device == 'cuda':
+        if cuda:
             self.device = torch.device('cuda')
             self.wf.to(device=self.device)
+            self.wf.device = torch.device('cuda')
+            self.wf.cuda = True
+            self.sampler.cuda = True
+            self.sampler.walkers.cuda = True
+        else:
+            self.device = torch.device('cpu')
 
     def configure(self, task='wf_opt', freeze=None):
         '''Configure the optimzier for specific tasks.'''
@@ -123,7 +129,7 @@ class SolverOrbital(SolverBase):
             cumulative_loss = 0
             for data in self.dataloader:
 
-                lpos = Variable(data)
+                lpos = data.to(self.device)
                 lpos.requires_grad = True
 
                 loss = self.loss(lpos)

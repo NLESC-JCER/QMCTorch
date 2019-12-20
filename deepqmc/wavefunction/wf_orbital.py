@@ -12,9 +12,9 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state', scf='pyscf',
-                 kinetic='jacobi', use_jastrow=True, device='cpu'):
+                 kinetic='jacobi', use_jastrow=True, cuda=False):
 
-        super(Orbital, self).__init__(mol.nelec, 3, kinetic)
+        super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
 
         # number of atoms
         self.mol = mol
@@ -67,7 +67,7 @@ class Orbital(WaveFunction):
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
             self.mol.get_mo_coeffs(code=self.scf_code)).type(torch.get_default_dtype())
-        return nn.Parameter(mo_coeff.transpose(0, 1))
+        return nn.Parameter(mo_coeff.transpose(0, 1)).to(self.device)
 
     def update_mo_coeffs(self):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()

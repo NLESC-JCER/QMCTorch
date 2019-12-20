@@ -9,8 +9,7 @@ class Metropolis(SamplerBase):
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  nelec=1, ndim=1,
                  init={'min': -5, 'max': 5},
-                 move={'type': 'one-elec', 'proba': 'uniform'},
-                 cuda=False):
+                 move={'type': 'one-elec', 'proba': 'uniform'}):
         """Metropolis Hasting generator
 
         Args:
@@ -41,7 +40,7 @@ class Metropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, nelec, ndim, init, move, cuda)
+                             step_size, nelec, ndim, init, move)
 
         if 'type' not in self.movedict.keys():
             print('Metroplis : Set 1 electron move by default')
@@ -198,7 +197,17 @@ class Metropolis(SamplerBase):
         Returns:
             t0rch.tensor: the indx of the accepted moves
         """
+
         P[P > 1] = 1.0
         tau = torch.rand_like(P)
         index = (P-tau >= 0).reshape(-1)
         return index.type(torch.bool)
+
+
+if __name__ == "__main__":
+
+    def pdf(pos):
+        return torch.exp(-(pos**2).prod(1))
+
+    sampler = Metropolis()
+    pos = sampler.generate(pdf)
