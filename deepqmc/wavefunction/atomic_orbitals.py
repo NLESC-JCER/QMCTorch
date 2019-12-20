@@ -53,11 +53,14 @@ class AtomicOrbitals(nn.Module):
         radial_dict = {'sto': self._radial_slater,
                        'gto': self._radial_gaussian,
                        'gto_cart': self._radial_gausian_cart}
-
         self.radial = radial_dict[mol.basis_type]
 
         # get the normaliationconstants
         self.norm_cst = self.get_norm(mol.basis_type)
+
+        self.cuda = False
+        self.device = torch.device('cpu')
+        self.to_device = True
 
     def get_norm(self, basis_type):
 
@@ -150,7 +153,18 @@ class AtomicOrbitals(nn.Module):
         raise NotImplementedError('Cartesian GTOs are on the to do list')
         # return xyz**self.lmn_cart * torch.exp(-self.bas_exp*R**2)
 
+    def _to_device(self):
+        """Export the non parameter variable to the device."""
+        self.to_device = False
+        self.bas_n = self.bas_n.to(self.device)
+        self.bas_l = self.bas_l.to(self.device)
+        self.bas_m = self.bas_m.to(self.device)
+        self.bas_coeffs = self.bas_coeffs.to(self.device)
+
     def forward(self, input, derivative=0):
+
+        if self.cuda and self.to_device:
+            self._to_device()
 
         nbatch = input.shape[0]
 
@@ -200,7 +214,7 @@ class AtomicOrbitals(nn.Module):
 
         # contract the basis
         # -> (Nbatch,Nelec,Norb)
-        ao = torch.zeros(nbatch, self.nelec, self.norb)
+        ao = torch.zeros(nbatch, self.nelec, self.norb, device=self.device)
         ao.index_add_(2, self.index_ctr, bas)
 
         return ao
