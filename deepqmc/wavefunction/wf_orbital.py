@@ -68,7 +68,7 @@ class Orbital(WaveFunction):
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
             self.mol.get_mo_coeffs(code=self.scf_code)).type(torch.get_default_dtype())
-        return nn.Parameter(mo_coeff.transpose(0, 1)).to(self.device)
+        return nn.Parameter(mo_coeff.transpose(0, 1))
 
     def update_mo_coeffs(self):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
