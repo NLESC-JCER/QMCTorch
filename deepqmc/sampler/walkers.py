@@ -4,7 +4,7 @@ from torch.distributions import MultivariateNormal
 
 class Walkers(object):
 
-    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
+    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, cuda=False):
 
         self.nwalkers = nwalkers
         self.ndim = ndim
@@ -13,6 +13,11 @@ class Walkers(object):
 
         self.pos = None
         self.status = None
+
+        if cuda:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
 
     def initialize(self, pos=None):
         """Initalize the position of the walkers
@@ -34,7 +39,8 @@ class Walkers(object):
         else:
 
             if self.init_domain is None:
-                self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
+                self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim),
+                                       device=self.device)
 
             elif 'min' in self.init_domain.keys():
                 self.pos = self._init_uniform()
@@ -49,7 +55,7 @@ class Walkers(object):
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
         pos *= (self.init_domain['max'] - self.init_domain['min'])
         pos += self.init_domain['min']
-        return pos.type(torch.get_default_dtype())
+        return pos.type(torch.get_default_dtype()).to(device=self.device)
 
     def _init_multivar(self):
         multi = MultivariateNormal(
@@ -57,5 +63,5 @@ class Walkers(object):
             torch.tensor(self.init_domain['sigma']))
         pos = multi.sample((self.nwalkers, self.nelec)).type(
             torch.get_default_dtype())
-
-        return pos.view(self.nwalkers, self.nelec*self.ndim)
+        pos = pos.view(self.nwalkers, self.nelec*self.ndim)
+        return pos.to(device=self.device)

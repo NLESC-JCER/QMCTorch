@@ -1,5 +1,5 @@
 import numpy as np
-
+import torch
 from torch.autograd import Variable
 from torch.utils.data import DataLoader
 
@@ -16,7 +16,8 @@ def printd(rank, *args):
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None):
+                 scheduler=None, device='cpu'):
+
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
 
@@ -33,6 +34,14 @@ class SolverOrbital(SolverBase):
 
         # distributed model
         self.save_model = 'model.pth'
+
+        # check for cuda
+        if not torch.cuda.is_available and device == 'cuda':
+            raise ValueError('Cuda not available')
+
+        if device == 'cuda':
+            self.device = torch.device('cuda')
+            self.wf.to(device=self.device)
 
     def configure(self, task='wf_opt', freeze=None):
         '''Configure the optimzier for specific tasks.'''
