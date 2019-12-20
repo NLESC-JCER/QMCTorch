@@ -86,6 +86,10 @@ class Metropolis(SamplerBase):
         elif _type_ == torch.float64:
             eps = 1E-16
 
+        if self.cuda:
+            self.walkers.cuda = True
+            self.device = torch.device('cuda')
+
         with torch.no_grad():
 
             if ntherm < 0:
