@@ -156,6 +156,7 @@ class AtomicOrbitals(nn.Module):
     def _to_device(self):
         """Export the non parameter variable to the device."""
         self.to_device = False
+        self.device = torch.device('cuda')
         attrs = ['bas_n', 'bas_l', 'bas_m', 'bas_coeffs',
                  'nshells', 'norm_cst', 'index_ctr']
         for at in attrs:
