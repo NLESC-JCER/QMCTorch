@@ -85,14 +85,14 @@ class WaveFunction(nn.Module):
             out = self.forward(pos)
 
         # compute the jacobian
-        z = Variable(torch.ones(out.shape))
+        z = Variable(torch.ones_like(out))
         jacob = grad(out, pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
 
         # compute the diagonal element of the Hessian
-        z = Variable(torch.ones(jacob.shape[0]))
+        z = Variable(torch.ones(jacob.shape[0])).to(self.device)
         hess = torch.zeros(jacob.shape[0])
 
         for idim in range(jacob.shape[1]):

@@ -9,6 +9,12 @@ class ElectronDistance(nn.Module):
         self.nelec = nelec
         self.ndim = ndim
 
+        _type_ = torch.get_default_dtype()
+        if _type_ == torch.float32:
+            self.eps = 1E-7
+        elif _type_ == torch.float64:
+            self.eps = 1E-16
+
     def forward(self, input, derivative=0):
         """compute the pairwise distance between two sets of electrons
         Or the derivative of these elements
@@ -37,21 +43,26 @@ class ElectronDistance(nn.Module):
 
         norm = (input_**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input_, input_.transpose(1, 2))+1E-16)**(0.5)
+                torch.bmm(input_, input_.transpose(1, 2))+self.eps)**(0.5)
 
         if derivative == 0:
             return dist
 
         elif derivative == 1:
 
-            invr = (1./(dist+1E-16)).unsqueeze(1)
+            eps_ = self.eps * \
+                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+
+            invr = (1./(dist+eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = diff_axis - diff_axis.transpose(2, 3)
             return diff_axis * invr
 
         elif derivative == 2:
 
-            invr3 = (1./(dist**3+1E-16)).unsqueeze(1)
+            eps_ = self.eps * \
+                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+            invr3 = (1./(dist**3+eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
 
@@ -297,7 +308,7 @@ class TwoBodyJastrowFactor(nn.Module):
 if __name__ == "__main__":
 
     from torch.autograd import grad, gradcheck, Variable
-    # torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True)
     torch.set_default_tensor_type(torch.DoubleTensor)
 
     def hess(out, pos):
@@ -334,12 +345,12 @@ if __name__ == "__main__":
     r = jastrow.edist(pos)
     dr = jastrow.edist(pos, derivative=1)
     dr_grad = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
-    dr_gradcheck = gradcheck(jastrow.edist, pos)
+    #dr_gradcheck = gradcheck(jastrow.edist, pos)
 
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
-    dval_check = gradcheck(jastrow, pos)
+    #dval_check = gradcheck(jastrow, pos)
 
     d2r = jastrow.edist(pos, derivative=2)
     d2el = jastrow._get_second_der_jastrow_elements(r, dr, d2r)
