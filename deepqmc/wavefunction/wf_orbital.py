@@ -26,18 +26,18 @@ class Orbital(WaveFunction):
         self.scf_code = scf
 
         # define the atomic orbital layer
-        self.ao = AtomicOrbitals(mol)
+        self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
-
-        # initialize the MO coefficients
         self.mo.weight = self.get_mo_coeffs()
+        if self.cuda:
+            self.mo.to(self.device)
 
         # jastrow
         self.use_jastrow = use_jastrow
         if self.use_jastrow:
-            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown)
+            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown, cuda)
 
         # define the SD we want
         self.configs = self.get_configs(configs, mol)

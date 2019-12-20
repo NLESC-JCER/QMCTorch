@@ -16,6 +16,8 @@ class WaveFunction(nn.Module):
         self.kinetic = kinetic
         self.cuda = cuda
         self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
 
     def forward(self, x):
         ''' Compute the value of the wave function.

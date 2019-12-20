@@ -61,7 +61,7 @@ class ElectronDistance(nn.Module):
 
 class TwoBodyJastrowFactor(nn.Module):
 
-    def __init__(self, nup, ndown, w=1.):
+    def __init__(self, nup, ndown, w=1., cuda=False):
         super(TwoBodyJastrowFactor, self).__init__()
 
         self.nup = nup
@@ -69,7 +69,12 @@ class TwoBodyJastrowFactor(nn.Module):
         self.nelec = nup+ndown
         self.ndim = 3
 
-        self.weight = nn.Parameter(torch.tensor([w]))
+        self.cuda = cuda
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
+
+        self.weight = nn.Parameter(torch.tensor([w])).to(self.device)
         self.weight.requires_grad = True
 
         bup = torch.cat((0.25*torch.ones(nup, nup), 0.5 *
@@ -78,7 +83,7 @@ class TwoBodyJastrowFactor(nn.Module):
         bdown = torch.cat((0.5*torch.ones(ndown, nup), 0.25 *
                            torch.ones(ndown, ndown)), dim=1)
 
-        self.static_weight = torch.cat((bup, bdown), dim=0)
+        self.static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
