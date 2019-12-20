@@ -66,6 +66,9 @@ class Orbital(WaveFunction):
         if kinetic == 'jacobi':
             self.local_energy = self.local_energy_jacobi
 
+        if self.cuda:
+            self.to(self.device)
+
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
             self.mol.get_mo_coeffs(code=self.scf_code)).type(torch.get_default_dtype())

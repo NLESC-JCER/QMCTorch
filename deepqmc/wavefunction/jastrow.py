@@ -74,7 +74,7 @@ class TwoBodyJastrowFactor(nn.Module):
         if self.cuda:
             self.device = torch.device('cuda')
 
-        self.weight = nn.Parameter(torch.tensor([w])).to(self.device)
+        self.weight = nn.Parameter(torch.tensor([w]))
         self.weight.requires_grad = True
 
         bup = torch.cat((0.25*torch.ones(nup, nup), 0.5 *
