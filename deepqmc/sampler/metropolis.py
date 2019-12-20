@@ -185,7 +185,7 @@ class Metropolis(SamplerBase):
 
         elif self.movedict['proba'] == 'normal':
             displacement = self.multiVariate.sample(
-                (self.nwalkers, num_elec), device=self.device)
+                (self.nwalkers, num_elec)).to(self.device)
             return displacement.view(self.nwalkers, num_elec*self.ndim)
 
     def _accept(self, P):
