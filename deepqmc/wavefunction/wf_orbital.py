@@ -50,7 +50,7 @@ class Orbital(WaveFunction):
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula
         self.kinpool = KineticPooling(
-            self.configs, mol)
+            self.configs, mol, cuda)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
@@ -58,7 +58,8 @@ class Orbital(WaveFunction):
         if self.nci > 1:
             self.fc.weight.data.fill_(0.)
             self.fc.weight.data[0][0] = 1.
-
+        if self.cuda:
+            self.fc = self.fc.to(self.device)
         self.fc.clip = False
 
         if kinetic == 'jacobi':

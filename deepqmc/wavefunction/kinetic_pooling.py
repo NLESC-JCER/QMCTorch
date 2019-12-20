@@ -17,7 +17,7 @@ class KineticPooling(nn.Module):
     """Computes the kinetic energy of each configuration
        using the trace trick."""
 
-    def __init__(self, configs, mol):
+    def __init__(self, configs, mol, cuda=False):
         super(KineticPooling, self).__init__()
 
         self.configs = configs
@@ -27,10 +27,12 @@ class KineticPooling(nn.Module):
         self.ndown = mol.ndown
         self.nelec = self.nup+self.ndown
 
-        self.index_up = torch.arange(self.nup)
-        self.index_down = torch.arange(self.nup, self.nup+self.ndown)
-
         self.orb_proj = OrbitalProjector(configs, mol)
+
+        if cuda:
+            self.device = torch.device('cuda')
+            self.orb_proj.Pup = self.orb_proj.Pup.to(self.device)
+            self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, MO, d2MO, dJdMO=None, d2JMO=None,
                 return_local_energy=False):
