@@ -156,10 +156,10 @@ class AtomicOrbitals(nn.Module):
     def _to_device(self):
         """Export the non parameter variable to the device."""
         self.to_device = False
-        self.bas_n = self.bas_n.to(self.device)
-        self.bas_l = self.bas_l.to(self.device)
-        self.bas_m = self.bas_m.to(self.device)
-        self.bas_coeffs = self.bas_coeffs.to(self.device)
+        attrs = ['bas_n', 'bas_l', 'bas_m', 'bas_coeffs',
+                 'nshells', 'norm_cst', 'index_ctr']
+        for at in attrs:
+            self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, input, derivative=0):
 
@@ -228,6 +228,7 @@ if __name__ == "__main__":
                  basis_type='gto', basis='sto-3g')
 
     ao = AtomicOrbitals(m)
-
+    ao.cuda = True
+    ao.to('cuda')
     pos = torch.rand(20, ao.nelec*3)
     aoval = ao.forward(pos, derivative=1)
