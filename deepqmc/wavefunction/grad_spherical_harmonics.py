@@ -49,7 +49,7 @@ def _grad_spherical_harmonics_l0(xyz):
     Returns
         \nabla * Y00 = 0
     '''
-    return torch.zeros(xyz.shape)
+    return torch.zeros_like(xyz)
 
 
 def _grad_spherical_harmonics_l1(xyz, m):
