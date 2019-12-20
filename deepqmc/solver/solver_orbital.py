@@ -130,7 +130,6 @@ class SolverOrbital(SolverBase):
             for data in self.dataloader:
 
                 lpos = data.to(self.device)
-                lpos.requires_grad = True
 
                 loss = self.loss(lpos)
                 if self.wf.mo.weight.requires_grad:
