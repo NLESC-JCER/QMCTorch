@@ -42,8 +42,9 @@ class ElectronDistance(nn.Module):
         input_ = input.view(-1, self.nelec, self.ndim)
 
         norm = (input_**2).sum(-1).unsqueeze(-1)
-        dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input_, input_.transpose(1, 2))+self.eps)**(0.5)
+        dist = torch.sqrt(norm + norm.transpose(1, 2) - 2.0 *
+                          torch.bmm(input_, input_.transpose(1, 2))+self.eps**2)
+        dist[torch.isnan(dist)] = 0
 
         if derivative == 0:
             return dist
@@ -297,8 +298,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
     def _sum_unique_pairs(self, mat, axis=None):
         mat_cpy = mat.clone()
-        mat_cpy[..., torch.tril(
-            torch.ones(self.nelec, self.nelec)) == 0] = 0
+        mat_cpy[..., torch.tril(torch.ones(self.nelec, self.nelec)) == 0] = 0
         if axis is None:
             return mat_cpy.sum()
         else:

@@ -93,7 +93,7 @@ class WaveFunction(nn.Module):
 
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0])).to(self.device)
-        hess = torch.zeros(jacob.shape[0])
+        hess = torch.zeros(jacob.shape[0]).to(self.device)
 
         for idim in range(jacob.shape[1]):
 
