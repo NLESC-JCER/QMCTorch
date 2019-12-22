@@ -42,8 +42,11 @@ class ElectronDistance(nn.Module):
         input_ = input.view(-1, self.nelec, self.ndim)
 
         norm = (input_**2).sum(-1).unsqueeze(-1)
-        dist = torch.sqrt(norm + norm.transpose(1, 2) - 2.0 *
-                          torch.bmm(input_, input_.transpose(1, 2)) + self.eps**2)
+        dist = (norm + norm.transpose(1, 2) - 2.0 *
+                torch.bmm(input_, input_.transpose(1, 2)))
+        eps_ = self.eps * \
+            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+        dist = torch.sqrt(dist + eps_)
 
         if derivative == 0:
             return dist
@@ -67,7 +70,7 @@ class ElectronDistance(nn.Module):
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
 
             diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
-            return diff_axis * invr3
+            return 2*(diff_axis * invr3)
 
 
 class TwoBodyJastrowFactor(nn.Module):
@@ -166,8 +169,8 @@ class TwoBodyJastrowFactor(nn.Module):
         prod_val = self._prod_unique_pairs(jast)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = 0.5*(self._sum_unique_pairs(d2jast, axis=-1) +
-                         self._sum_unique_pairs(d2jast, axis=-2))
+        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1) +
+                     self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr)).sum(1)
@@ -267,7 +270,7 @@ class TwoBodyJastrowFactor(nn.Module):
                     d2 = djast[..., i2, j2] * (-1)**(i2 > j2)
                     out_mat[:, idx] += (d1*d2)
 
-            return out_mat
+        return out_mat
 
     def _prod_unique_pairs(self, mat, not_el=None):
         """Compute the product of the lower mat elements
@@ -307,6 +310,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
 if __name__ == "__main__":
 
+    import torch
     from torch.autograd import grad, gradcheck, Variable
     torch.autograd.set_detect_anomaly(True)
     torch.set_default_tensor_type(torch.DoubleTensor)
@@ -337,6 +341,7 @@ if __name__ == "__main__":
 
         return hess
 
+    torch.manual_seed(0)
     pos = torch.rand(4, 9)
     pos.requires_grad = True
 
@@ -345,21 +350,21 @@ if __name__ == "__main__":
     r = jastrow.edist(pos)
     dr = jastrow.edist(pos, derivative=1)
     dr_grad = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
-    #dr_gradcheck = gradcheck(jastrow.edist, pos)
+
+    r = jastrow.edist(pos)
+    d2r = jastrow.edist(pos, derivative=2)
+    d2r_grad = hess(r, pos)
+    print(d2r.sum(), d2r_grad.sum())
 
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
     print(dval)
     print(dval_grad.view(4, 3, 3).sum(2))
-    #dval_check = gradcheck(jastrow, pos)
 
-    d2r = jastrow.edist(pos, derivative=2)
-    d2el = jastrow._get_second_der_jastrow_elements(r, dr, d2r)
-    d2val = jastrow(pos, derivative=2)
+    #d2el = jastrow._get_second_der_jastrow_elements(r, dr, d2r)
 
     val = jastrow(pos)
     d2val_grad = hess(val, pos)
-
-    print(d2val_grad.sum())
-    print(d2val.sum())
+    d2val = jastrow(pos, derivative=2)
+    print(d2val.sum(), d2val_grad.sum())
