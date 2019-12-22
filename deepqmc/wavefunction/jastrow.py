@@ -43,8 +43,7 @@ class ElectronDistance(nn.Module):
 
         norm = (input_**2).sum(-1).unsqueeze(-1)
         dist = torch.sqrt(norm + norm.transpose(1, 2) - 2.0 *
-                          torch.bmm(input_, input_.transpose(1, 2))+self.eps**2)
-        dist[torch.isnan(dist)] = 0
+                          torch.bmm(input_, input_.transpose(1, 2)) + self.eps**2)
 
         if derivative == 0:
             return dist
@@ -298,7 +297,8 @@ class TwoBodyJastrowFactor(nn.Module):
 
     def _sum_unique_pairs(self, mat, axis=None):
         mat_cpy = mat.clone()
-        mat_cpy[..., torch.tril(torch.ones(self.nelec, self.nelec)) == 0] = 0
+        mat_cpy[..., torch.tril(torch.ones(self.nelec, self.nelec)) == 1] = 0
+
         if axis is None:
             return mat_cpy.sum()
         else:
@@ -318,7 +318,7 @@ if __name__ == "__main__":
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        print(jacob.shape)
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
@@ -350,6 +350,8 @@ if __name__ == "__main__":
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+    print(dval)
+    print(dval_grad.view(4, 3, 3).sum(2))
     #dval_check = gradcheck(jastrow, pos)
 
     d2r = jastrow.edist(pos, derivative=2)
