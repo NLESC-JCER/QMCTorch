@@ -70,7 +70,7 @@ class ElectronDistance(nn.Module):
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
 
             diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
-            return 2*(diff_axis * invr3)
+            return (diff_axis * invr3)
 
 
 class TwoBodyJastrowFactor(nn.Module):
@@ -169,8 +169,8 @@ class TwoBodyJastrowFactor(nn.Module):
         prod_val = self._prod_unique_pairs(jast)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1) +
-                     self._sum_unique_pairs(d2jast, axis=-2))
+        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1)
+                     + self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr)).sum(1)
@@ -341,11 +341,13 @@ if __name__ == "__main__":
 
         return hess
 
-    torch.manual_seed(0)
-    pos = torch.rand(4, 9)
+    torch.manual_seed(1)
+    pos = torch.rand(4, 12)
     pos.requires_grad = True
 
-    jastrow = TwoBodyJastrowFactor(1, 2)
+    n1, n2 = 2, 2
+    n = n1+n2
+    jastrow = TwoBodyJastrowFactor(n1, n2)
 
     r = jastrow.edist(pos)
     dr = jastrow.edist(pos, derivative=1)
@@ -354,16 +356,14 @@ if __name__ == "__main__":
     r = jastrow.edist(pos)
     d2r = jastrow.edist(pos, derivative=2)
     d2r_grad = hess(r, pos)
-    print(d2r.sum(), d2r_grad.sum())
+    print(2*d2r.sum(), d2r_grad.sum())
 
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
     print(dval)
-    print(dval_grad.view(4, 3, 3).sum(2))
-
-    #d2el = jastrow._get_second_der_jastrow_elements(r, dr, d2r)
-
+    print(dval_grad.view(4, n, 3).sum(2))
+    
     val = jastrow(pos)
     d2val_grad = hess(val, pos)
     d2val = jastrow(pos, derivative=2)
