@@ -294,16 +294,16 @@ class TwoBodyJastrowFactor(nn.Module):
 
         for idx in range(self.nelec):
 
-            index_pairs = [(idx, j) for j in range(
-                idx+1, self.nelec)] + [(j, idx) for j in range(0, idx)]
-
+            index_pairs = [(idx, j, 1) for j in range(
+                idx+1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
+            print(idx, index_pairs)
             for p1 in range(len(index_pairs)-1):
-                i1, j1 = index_pairs[p1]
+                i1, j1, w1 = index_pairs[p1]
                 for p2 in range(p1+1, len(index_pairs)):
-                    i2, j2 = index_pairs[p2]
+                    i2, j2, w2 = index_pairs[p2]
 
-                    d1 = djast[..., i1, j1] * (-1)**(i1 > j1)
-                    d2 = djast[..., i2, j2] * (-1)**(i2 > j2)
+                    d1 = djast[..., i1, j1] * w1
+                    d2 = djast[..., i2, j2] * w2
 
                     out_mat[..., idx] += (d1*d2).sum(1)
 
