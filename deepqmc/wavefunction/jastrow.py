@@ -170,11 +170,11 @@ class TwoBodyJastrowFactor(nn.Module):
         prod_val = self._prod_unique_pairs(jast)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1)
-                     + self._sum_unique_pairs(d2jast, axis=-2))
+        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1))
+        # + self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
-        djast = (self._get_der_jastrow_elements(r, dr)).sum(1)
+        djast = (self._get_der_jastrow_elements(r, dr))  # .sum(1)
         hess_jast += self._partial_derivative(djast, out_mat=hess_jast)
 
         return hess_jast * prod_val
@@ -262,10 +262,11 @@ class TwoBodyJastrowFactor(nn.Module):
 
         r_ = r.unsqueeze(1)
         denom = 1. / (1.0 + self.weight * r_)
+        denom2 = denom**2
         dr_square = dr**2
         a = self.static_weight * d2r * denom
-        b = -2 * self.static_weight * self.weight * dr_square * denom**2
-        c = - self.static_weight * self.weight * r_ * d2r * denom**2
+        b = -2 * self.static_weight * self.weight * dr_square * denom2
+        c = - self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
@@ -303,7 +304,8 @@ class TwoBodyJastrowFactor(nn.Module):
 
                     d1 = djast[..., i1, j1] * (-1)**(i1 > j1)
                     d2 = djast[..., i2, j2] * (-1)**(i2 > j2)
-                    out_mat[:, idx] += (d1*d2)
+
+                    out_mat[..., idx] += (d1*d2).sum(1)
 
         return out_mat
 
