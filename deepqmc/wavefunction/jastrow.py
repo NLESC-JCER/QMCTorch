@@ -17,7 +17,8 @@ class ElectronDistance(nn.Module):
 
     def forward(self, input, derivative=0):
         """compute the pairwise distance between two sets of electrons
-        Or the derivative of these elements
+        or the derivative of these elements wrt to the first electron
+        i.e. d r_ij / dx_i (as opposed to d r_ij / dx_j)
 
         Args:
             input ([type]): position of the electron Nbatch x [NelecxNdim]
@@ -105,8 +106,8 @@ class TwoBodyJastrowFactor(nn.Module):
         """Compute the Jastrow factors as :
 
         .. math::
-            J(ri,rj) = \Prod_{i,j} \exp(B_{ij}) with
-            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
+            J = \Prod_{i<j} \exp(B_{ij}) with
+            B_{ij} = \frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
         Args:
             pos ([type]): [description]
@@ -194,15 +195,31 @@ class TwoBodyJastrowFactor(nn.Module):
         return torch.exp(self._compute_kernel(r))
 
     def _compute_kernel(self, r):
+        """ Get the jastrow kernel.
+        .. math::
+            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: matrix of the jastrow kernels
+                          Nbatch x Nelec x Nelec
+        """
         return self.static_weight * r / (1.0 + self.weight * r)
 
     def _get_der_jastrow_elements(self, r, dr):
-        """Get the elements of the derivative of the jastrow matrix
+        """Get the elements of the derivative of the jastrow kernels
+        wrt to the first electrons
+
         .. math::
 
-            out_{k,i,j} = A + B
-            A_{kij} = b \frac{dr_{ij}}{dk_i} / (1+b'r_{ij})
-            B_{kij} = - b b' r_{ij} \frac{dr_{ij}}{dk_i} / (1+b'r_{ij})^ 2
+            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
+
+            out_{k,i,j} = A1 + A2
+            A1_{kij} = w0 \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})
+            A2_{kij} = - w0 w' r_{ij} \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -223,7 +240,12 @@ class TwoBodyJastrowFactor(nn.Module):
         return (a + b)
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
-        """Get the elements of the pure 2nd derivative of the jastrow matrix
+        """Get the elements of the pure 2nd derivative of the jastrow kernels
+        wrt to the first electron
+
+        .. math ::
+
+            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -251,6 +273,19 @@ class TwoBodyJastrowFactor(nn.Module):
         return a + b + c + d + e**2
 
     def _partial_derivative(self, djast, out_mat=None):
+        """Get the product of the mixed second deriative terms.
+
+        .. math ::
+
+            d B_{ij} / d x_i * d B_{kl} / d x_k
+
+        Args:
+            djast (torch.tensor): first derivative of the jastrow kernels
+            out_mat (torch.tensor, optional): output matrix. Defaults to None.
+
+        Returns:
+            torch.tensor:
+        """
 
         if out_mat is None:
             nbatch = djast.shape[0]
@@ -299,6 +334,16 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.ones(self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
 
     def _sum_unique_pairs(self, mat, axis=None):
+        """Sum the unique pairs of the lower triangluar matrix
+
+        Args:
+            mat (torch.tensor): input matrix [..., N x N]
+            axis (int, optional): index of the axis to sum. Defaults to None.
+
+        Returns:
+            torch.tensor:
+        """
+
         mat_cpy = mat.clone()
         mat_cpy[..., torch.tril(torch.ones(self.nelec, self.nelec)) == 1] = 0
 
@@ -363,7 +408,7 @@ if __name__ == "__main__":
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
     print(dval)
     print(dval_grad.view(4, n, 3).sum(2))
-    
+
     val = jastrow(pos)
     d2val_grad = hess(val, pos)
     d2val = jastrow(pos, derivative=2)
