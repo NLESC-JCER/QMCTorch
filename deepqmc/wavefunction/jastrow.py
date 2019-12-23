@@ -170,8 +170,8 @@ class TwoBodyJastrowFactor(nn.Module):
         prod_val = self._prod_unique_pairs(jast)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = (self._sum_unique_pairs(d2jast, axis=-1))
-        # + self._sum_unique_pairs(d2jast, axis=-2))
+        hess_jast = 0.5*(self._sum_unique_pairs(d2jast, axis=-1)
+                         + self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr))  # .sum(1)
@@ -296,7 +296,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
             index_pairs = [(idx, j, 1) for j in range(
                 idx+1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
-            print(idx, index_pairs)
+
             for p1 in range(len(index_pairs)-1):
                 i1, j1, w1 = index_pairs[p1]
                 for p2 in range(p1+1, len(index_pairs)):
@@ -389,12 +389,14 @@ if __name__ == "__main__":
         return hess
 
     torch.manual_seed(1)
-    pos = torch.rand(4, 12)
-    pos.requires_grad = True
+    nbatch = 5
 
     n1, n2 = 2, 2
     n = n1+n2
     jastrow = TwoBodyJastrowFactor(n1, n2)
+
+    pos = torch.rand(nbatch, n*3)
+    pos.requires_grad = True
 
     r = jastrow.edist(pos)
     dr = jastrow.edist(pos, derivative=1)
@@ -409,9 +411,11 @@ if __name__ == "__main__":
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
     print(dval)
-    print(dval_grad.view(4, n, 3).sum(2))
+    print(dval_grad.view(nbatch, n, 3).sum(2))
 
     val = jastrow(pos)
     d2val_grad = hess(val, pos)
     d2val = jastrow(pos, derivative=2)
     print(d2val.sum(), d2val_grad.sum())
+    print(d2val)
+    print(d2val_grad.view(nbatch, n, 3).sum(2))

@@ -64,11 +64,9 @@ class TestJastrow(unittest.TestCase):
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
-        print(d2val.sum())
-        print(d2val_grad.sum())
 
         # still an issue there :(
-        # assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 
 if __name__ == "__main__":

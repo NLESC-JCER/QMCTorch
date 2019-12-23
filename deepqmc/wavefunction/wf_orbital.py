@@ -313,7 +313,7 @@ if __name__ == "__main__":
     # define the wave function
     wf = Orbital(mol, kinetic='jacobi',
                  configs='singlet(1,1)',
-                 use_jastrow=True, cuda=False)
+                 use_jastrow=False, cuda=False)
 
     pos = torch.rand(20, wf.ao.nelec*3)  # .to('cuda')
     # pos_cpu = pos.to('cpu')
