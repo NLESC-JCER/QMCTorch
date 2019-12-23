@@ -11,7 +11,7 @@ class ElectronDistance(nn.Module):
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
-            self.eps = 1E-7
+            self.eps = 1E-6
         elif _type_ == torch.float64:
             self.eps = 1E-16
 

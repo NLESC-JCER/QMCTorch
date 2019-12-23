@@ -85,7 +85,7 @@ class WaveFunction(nn.Module):
             out = self.forward(pos)
 
         # compute the jacobian
-        z = Variable(torch.ones_like(out))
+        z = torch.ones_like(out)
         jacob = grad(out, pos,
                      grad_outputs=z,
                      only_inputs=True,
