@@ -236,7 +236,7 @@ class TestTrace(unittest.TestCase):
 
         # define the wave function
         self.wf = OrbitalTest(self.mol)
-        self.x = Variable(torch.rand(5, 3*self.mol.nelec))
+        self.x = 2*torch.rand(5, 3*self.mol.nelec)-1.
         self.x.requires_grad = True
 
     def test_ao_der(self):
@@ -281,6 +281,7 @@ class TestTrace(unittest.TestCase):
         kin_trace = self.wf.kinetic_energy_jacobi(
             self.x, return_local_energy=True)
         delta = kin_auto / kin_trace
+        print(self.wf(self.x))
         print(kin_auto)
         print(kin_trace)
         print(delta)
