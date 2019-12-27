@@ -72,20 +72,30 @@ class SolverBase(object):
         '''Get the energy of the wave function.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
+
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
+
         return self.wf.energy(pos)
 
     def variance(self, pos):
         '''Get the variance of the wave function.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
+
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
+
         return self.wf.variance(pos)
 
     def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
         '''Performs a single point calculation.'''
         if pos is None:
             pos = self.sample(ntherm=ntherm, ndecor=ndecor)
-        if self.wf.cuda:
+
+        if self.wf.cuda and pos.device.type == 'cpu':
             pos = pos.to(self.device)
+
         e, s = self.wf._energy_variance(pos)
         if prt:
             print('Energy   : ', e)
