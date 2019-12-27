@@ -10,6 +10,8 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.opt = optimizer
+        self.cuda = False
+        self.device = torch.device('cpu')
 
     def resampling(self, ntherm=-1, resample=100, resample_from_last=True,
                    resample_every=1):
@@ -82,7 +84,8 @@ class SolverBase(object):
         '''Performs a single point calculation.'''
         if pos is None:
             pos = self.sample(ntherm=ntherm, ndecor=ndecor)
-
+        if self.wf.cuda:
+            pos = pos.to(self.device)
         e, s = self.wf._energy_variance(pos)
         if prt:
             print('Energy   : ', e)
