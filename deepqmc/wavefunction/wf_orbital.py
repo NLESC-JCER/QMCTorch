@@ -322,20 +322,14 @@ if __name__ == "__main__":
 
     # define the wave function
     wf = Orbital(mol, kinetic='jacobi',
-                 configs='ground_state',
-                 # configs='singlet(1,1)',
+                 configs='singlet(1,1)',
                  use_jastrow=True, cuda=False)
 
-    pos = torch.rand(20, wf.ao.nelec*3)  # .to('cuda')
+    pos = torch.rand(20, wf.ao.nelec*3)
     pos.requires_grad = True
 
-    delta = (wf.kinetic_energy_autograd(pos) / wf(pos)) / \
-        wf.kinetic_energy_jacobi(pos, return_local_energy=True)
-    print(delta)
-
-    # pos_cpu = pos.to('cpu')
-
-    # # define the wave function
-    # wf_cpu = Orbital(mol, kinetic='jacobi',
-    #                  configs='singlet(1,1)',
-    #                  use_jastrow=True, cuda=False)
+    if torch.cuda.is_available():
+        pos_gpu = pos.to('cuda')
+        wf_gpu = Orbital(mol, kinetic='jacobi',
+                         configs='singlet(1,1)',
+                         use_jastrow=True, cuda=True)
