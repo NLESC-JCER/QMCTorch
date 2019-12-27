@@ -75,8 +75,7 @@ class KineticPooling(nn.Module):
 
         # multiply by det if necessary
         if not return_local_energy:
-            pd = torch.det(Aup) * torch.det(Adown)
-            out *= pd
+            out *= torch.det(Aup) * torch.det(Adown)
 
         return -0.5*out.transpose(0, 1)
 

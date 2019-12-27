@@ -98,8 +98,8 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
             return J*self.fc(x)
-
-        return self.fc(x)
+        else:
+            return self.fc(x)
 
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
@@ -127,15 +127,18 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
 
+            if return_local_energy is False:
+                raise ValueError('Jacobi kinetic energy can only return local energy \
+                                  when using jastrow factors')
+
             J = self.jastrow(x)
             dJ = self.jastrow(
                 x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
-            d2J = self.jastrow(x, derivative=2) / J
-
             dAO = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
             dMO = self.mo(dAO).transpose(2, 3)
-
             dJdMO = (dJ.unsqueeze(2) * dMO).sum(-1)
+
+            d2J = self.jastrow(x, derivative=2) / J
             d2JMO = d2J.unsqueeze(-1) * MO
 
         return self.fc(self.kinpool(MO, d2MO, dJdMO, d2JMO,
@@ -238,7 +241,9 @@ class Orbital(WaveFunction):
             return self._get_singlet_state_config(mol, nocc, nvirt)
 
         else:
-            raise ValueError(configs, " not recognized as valid configuration")
+            print(configs, " not recognized as valid configuration")
+            print('Options are : ground_state or singlet(nocc,nvirt)')
+            raise ValueError()
 
     @staticmethod
     def _get_ground_state_config(mol):
@@ -317,11 +322,16 @@ if __name__ == "__main__":
 
     # define the wave function
     wf = Orbital(mol, kinetic='jacobi',
-                 configs='singlet(1,1)',
+                 configs='ground_state',
+                 # configs='singlet(1,1)',
                  use_jastrow=True, cuda=False)
 
     pos = torch.rand(20, wf.ao.nelec*3)  # .to('cuda')
     pos.requires_grad = True
+
+    delta = (wf.kinetic_energy_autograd(pos) / wf(pos)) / \
+        wf.kinetic_energy_jacobi(pos, return_local_energy=True)
+    print(delta)
 
     # pos_cpu = pos.to('cpu')
 
