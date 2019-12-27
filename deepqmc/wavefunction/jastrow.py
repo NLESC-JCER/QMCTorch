@@ -102,6 +102,15 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
+    def _to_device(self):
+        """Export the non parameter variable to the device."""
+
+        self.device = torch.device('cuda')
+        self.to(self.device)
+        attrs = ['static_weight']
+        for at in attrs:
+            self.__dict__[at] = self.__dict__[at].to(self.device)
+
     def forward(self, pos, derivative=0, jacobian=True):
         """Compute the Jastrow factors as :
 

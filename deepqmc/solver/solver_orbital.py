@@ -131,7 +131,7 @@ class SolverOrbital(SolverBase):
 
                 lpos = data.to(self.device)
 
-                loss = self.loss(lpos)
+                loss, eloc = self.loss(lpos)
                 if self.wf.mo.weight.requires_grad:
                     loss += self.ortho_loss(self.wf.mo.weight)
                 cumulative_loss += loss
@@ -150,23 +150,15 @@ class SolverOrbital(SolverBase):
                 min_loss = self.save_checkpoint(
                     n, cumulative_loss, self.save_model)
 
-            self.get_observable(self.obs_dict, pos)
-            print('loss %f' % (cumulative_loss))
-            for k in self.obs_dict:
-                if k == 'local_energy':
-                    print('variance : %f' %
-                          np.var(self.obs_dict['local_energy'][-1]))
-                    print('energy : %f' %
-                          np.mean(self.obs_dict['local_energy'][-1]))
-                else:
-                    print(k + ' : ', self.obs_dict[k][-1])
+            self.get_observable(self.obs_dict, pos, local_energy=eloc)
+            self.print_observable(cumulative_loss)
 
             print('----------------------------------------')
 
             # resample the data
             if (n % self.resample.resample_every == 0) or (n == nepoch-1):
                 if self.resample.resample_from_last:
-                    pos = pos.clone().detach()
+                    pos = pos.clone().detach().to(self.device)
                 else:
                     pos = None
                 pos = self.sample(

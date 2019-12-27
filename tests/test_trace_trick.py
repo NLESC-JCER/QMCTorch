@@ -278,6 +278,7 @@ class TestTrace(unittest.TestCase):
         """Test the values kinetic energy computed via autograd and
         trace trick."""
 
+        # gives Nan on trvis servers when used with Jastrow
         kin_auto = self.wf.kinetic_energy_autograd(self.x)
         wfv = self.wf(self.x)
         kin_auto /= wfv
@@ -286,13 +287,8 @@ class TestTrace(unittest.TestCase):
             self.x, return_local_energy=True)
 
         delta = kin_auto / kin_trace
-
-        # print(wfv)
-        # print(kin_auto)
-        # print(kin_trace)
         print(delta)
 
-        # fails on travis servers and I dont know why !!??
         # assert torch.allclose(delta, torch.ones_like(
         #     delta), atol=1e-3, rtol=1E-3)
 
