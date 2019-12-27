@@ -277,9 +277,9 @@ class TestTrace(unittest.TestCase):
     def test_kinetic(self):
         """Test the values kinetic energy computed via autograd and
         trace trick."""
-        kin_auto = self.wf.kinetic_energy_autograd(self.x)/self.wf(self.x)
+        kin_auto = self.wf.kinetic_energy_autograd(self.x)
         kin_trace = self.wf.kinetic_energy_jacobi(
-            self.x, return_local_energy=True)
+            self.x, return_local_energy=True)*self.wf(self.x)
         delta = kin_auto / kin_trace
 
         assert torch.allclose(delta, torch.ones_like(
