@@ -102,7 +102,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
-    def forward(self, pos, derivative=0):
+    def forward(self, pos, derivative=0, jacobian=True):
         """Compute the Jastrow factors as :
 
         .. math::
@@ -110,12 +110,21 @@ class TwoBodyJastrowFactor(nn.Module):
             B_{ij} = \frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
         Args:
-            pos ([type]): [description]
-            derivative (int, optional): [description]. Defaults to 0.
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+            derivative (int, optional): order of the derivative (0,1,2,).
+                            Defaults to 0.
+            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+                                       the derivatives) or the individual
+                                       terms. Defaults to True.
+                                       False only for derivative=1
 
         Returns:
             [type]: [description]
         """
+        if not jacobian:
+            assert(derivative == 1)
+
         size = pos.shape
         assert size[1] == self.nelec*self.ndim
 
@@ -127,14 +136,14 @@ class TwoBodyJastrowFactor(nn.Module):
 
         elif derivative == 1:
             dr = self.edist(pos, derivative=1)
-            return self._jastrow_derivative(r, dr, jast)
+            return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
             dr = self.edist(pos, derivative=1)
             d2r = self.edist(pos, derivative=2)
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
-    def _jastrow_derivative(self, r, dr, jast):
+    def _jastrow_derivative(self, r, dr, jast, jacobian):
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -146,9 +155,13 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
+        if jacobian:
+            djast = self._get_der_jastrow_elements(r, dr).sum(1)
+            prod_val = self._prod_unique_pairs(jast)
 
-        djast = self._get_der_jastrow_elements(r, dr).sum(1)
-        prod_val = self._prod_unique_pairs(jast)
+        else:
+            djast = self._get_der_jastrow_elements(r, dr)
+            prod_val = self._prod_unique_pairs(jast).unsqueeze(-1)
 
         return (self._sum_unique_pairs(djast, axis=-1) -
                 self._sum_unique_pairs(djast, axis=-2)) * prod_val

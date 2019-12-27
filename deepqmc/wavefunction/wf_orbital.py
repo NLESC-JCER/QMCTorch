@@ -71,7 +71,8 @@ class Orbital(WaveFunction):
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
-            self.mol.get_mo_coeffs(code=self.scf_code)).type(torch.get_default_dtype())
+            self.mol.get_mo_coeffs(code=self.scf_code)).type(
+                torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1))
 
     def update_mo_coeffs(self):
@@ -127,10 +128,14 @@ class Orbital(WaveFunction):
         if self.use_jastrow:
 
             J = self.jastrow(x)
-            dJ = self.jastrow(x, derivative=1) / J
+            dJ = self.jastrow(
+                x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
             d2J = self.jastrow(x, derivative=2) / J
 
-            dJdMO = dJ.unsqueeze(-1) * self.mo(self.ao(x, derivative=1))
+            dAO = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
+            dMO = self.mo(dAO).transpose(2, 3)
+
+            dJdMO = (dJ.unsqueeze(2) * dMO).sum(-1)
             d2JMO = d2J.unsqueeze(-1) * MO
 
         return self.fc(self.kinpool(MO, d2MO, dJdMO, d2JMO,
@@ -313,9 +318,11 @@ if __name__ == "__main__":
     # define the wave function
     wf = Orbital(mol, kinetic='jacobi',
                  configs='singlet(1,1)',
-                 use_jastrow=False, cuda=False)
+                 use_jastrow=True, cuda=False)
 
     pos = torch.rand(20, wf.ao.nelec*3)  # .to('cuda')
+    pos.requires_grad = True
+
     # pos_cpu = pos.to('cpu')
 
     # # define the wave function
