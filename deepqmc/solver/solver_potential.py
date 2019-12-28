@@ -82,7 +82,7 @@ class SolverPotential(SolverBase):
                 lpos = Variable(data)
                 lpos.requires_grad = True
 
-                loss = self.loss(lpos)
+                loss, eloc = self.loss(lpos)
                 cumulative_loss += loss
 
                 self.opt.zero_grad()
@@ -100,11 +100,8 @@ class SolverPotential(SolverBase):
                     n, cumulative_loss, self.save_model)
 
             # get the observalbes
-            self.get_observable(self.obs_dict, pos)
-            print('loss %f' % (cumulative_loss))
-            print('variance : %f' % np.var(self.obs_dict['local_energy'][-1]))
-            print('energy : %f' % np.mean(self.obs_dict['local_energy'][-1]))
-            print('----------------------------------------')
+            self.get_observable(self.obs_dict, pos, local_energy=eloc)
+            self.print_observable(cumulative_loss)
 
             # resample the data
             if (n % self.resample.resample_every == 0) or (n == nepoch-1):

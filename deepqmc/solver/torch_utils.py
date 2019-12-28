@@ -35,16 +35,17 @@ class Loss(nn.Module):
 
     def forward(self, pos):
 
+        local_energies = self.wf.local_energy(pos)
         if self.method == 'variance':
-            loss = self.wf.variance(pos)
+            loss = torch.var(local_energies)
 
         elif self.method == 'energy':
-            loss = self.wf.energy(pos)
+            loss = torch.mean(local_energies)
 
         else:
             raise ValueError('method must be variance, energy')
 
-        return loss
+        return loss, local_energies
 
 
 class OrthoReg(nn.Module):

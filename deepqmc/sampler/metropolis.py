@@ -86,6 +86,10 @@ class Metropolis(SamplerBase):
         elif _type_ == torch.float64:
             eps = 1E-16
 
+        if self.cuda:
+            self.walkers.cuda = True
+            self.device = torch.device('cuda')
+
         with torch.no_grad():
 
             if ntherm < 0:
@@ -118,7 +122,7 @@ class Metropolis(SamplerBase):
                     index = self._accept(df)
 
                     # acceptance rate
-                    rate += index.byte().sum().float() / \
+                    rate += index.byte().sum().float().to('cpu') / \
                         (self.nwalkers*self._move_per_iter)
 
                     # update position/function value
@@ -128,7 +132,7 @@ class Metropolis(SamplerBase):
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):
-                        pos.append(self.walkers.pos.clone().detach())
+                        pos.append(self.walkers.pos.to('cpu'))
                     idecor += 1
 
             if with_tqdm:
@@ -180,10 +184,12 @@ class Metropolis(SamplerBase):
             torch.tensor: random array
         """
         if self.movedict['proba'] == 'uniform':
-            return self.step_size * (2. * torch.rand((self.nwalkers, self.ndim)) - 1.)
+            d = torch.rand((self.nwalkers, self.ndim), device=self.device)
+            return self.step_size * (2. * d - 1.)
 
         elif self.movedict['proba'] == 'normal':
-            displacement = self.multiVariate.sample((self.nwalkers, num_elec))
+            displacement = self.multiVariate.sample(
+                (self.nwalkers, num_elec)).to(self.device)
             return displacement.view(self.nwalkers, num_elec*self.ndim)
 
     def _accept(self, P):
@@ -195,7 +201,17 @@ class Metropolis(SamplerBase):
         Returns:
             t0rch.tensor: the indx of the accepted moves
         """
+
         P[P > 1] = 1.0
-        tau = torch.rand(self.walkers.nwalkers).double()
+        tau = torch.rand_like(P)
         index = (P-tau >= 0).reshape(-1)
         return index.type(torch.bool)
+
+
+if __name__ == "__main__":
+
+    def pdf(pos):
+        return torch.exp(-(pos**2).prod(1))
+
+    sampler = Metropolis()
+    pos = sampler.generate(pdf)

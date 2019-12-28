@@ -14,6 +14,9 @@ class Walkers(object):
         self.pos = None
         self.status = None
 
+        self.cuda = False
+        self.device = torch.device('cpu')
+
     def initialize(self, pos=None):
         """Initalize the position of the walkers
 
@@ -26,6 +29,9 @@ class Walkers(object):
         Raises:
             ValueError: if the method is not recognized
         """
+        if self.cuda:
+            self.device = torch.device('cuda')
+
         if pos is not None:
             if len(pos) > self.nwalkers:
                 pos = pos[-self.nwalkers:, :]
@@ -34,7 +40,8 @@ class Walkers(object):
         else:
 
             if self.init_domain is None:
-                self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim))
+                self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim),
+                                       device=self.device)
 
             elif 'min' in self.init_domain.keys():
                 self.pos = self._init_uniform()
@@ -49,7 +56,7 @@ class Walkers(object):
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
         pos *= (self.init_domain['max'] - self.init_domain['min'])
         pos += self.init_domain['min']
-        return pos.type(torch.get_default_dtype())
+        return pos.type(torch.get_default_dtype()).to(device=self.device)
 
     def _init_multivar(self):
         multi = MultivariateNormal(
@@ -57,5 +64,5 @@ class Walkers(object):
             torch.tensor(self.init_domain['sigma']))
         pos = multi.sample((self.nwalkers, self.nelec)).type(
             torch.get_default_dtype())
-
-        return pos.view(self.nwalkers, self.nelec*self.ndim)
+        pos = pos.view(self.nwalkers, self.nelec*self.ndim)
+        return pos.to(device=self.device)

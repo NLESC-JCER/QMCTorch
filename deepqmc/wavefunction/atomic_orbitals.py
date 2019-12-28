@@ -8,7 +8,7 @@ from deepqmc.wavefunction.grad_spherical_harmonics import GradSphericalHarmonics
 
 class AtomicOrbitals(nn.Module):
 
-    def __init__(self, mol):
+    def __init__(self, mol, cuda=False):
         '''Radial Basis Function Layer in N dimension
 
         Args:
@@ -53,11 +53,15 @@ class AtomicOrbitals(nn.Module):
         radial_dict = {'sto': self._radial_slater,
                        'gto': self._radial_gaussian,
                        'gto_cart': self._radial_gausian_cart}
-
         self.radial = radial_dict[mol.basis_type]
 
         # get the normaliationconstants
         self.norm_cst = self.get_norm(mol.basis_type)
+
+        self.cuda = cuda
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self._to_device()
 
     def get_norm(self, basis_type):
 
@@ -150,7 +154,37 @@ class AtomicOrbitals(nn.Module):
         raise NotImplementedError('Cartesian GTOs are on the to do list')
         # return xyz**self.lmn_cart * torch.exp(-self.bas_exp*R**2)
 
-    def forward(self, input, derivative=0):
+    def _to_device(self):
+        """Export the non parameter variable to the device."""
+
+        self.device = torch.device('cuda')
+        self.to(self.device)
+        attrs = ['bas_n', 'bas_l', 'bas_m', 'bas_coeffs',
+                 'nshells', 'norm_cst', 'index_ctr']
+        for at in attrs:
+            self.__dict__[at] = self.__dict__[at].to(self.device)
+
+    def forward(self, input, derivative=0, jacobian=True):
+        """Computes the values of the atomic orbitals (or their derivatives)
+        for the electrons positions in input.
+
+        Args:
+            input (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+            derivative (int, optional): order of the derivative (0,1,2,).
+                                        Defaults to 0.
+            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+                                       the derivatives) or the individual
+                                       terms. Defaults to True.
+                                       False only for derivative=1
+        Returns:
+            torch.tensor: Value of the AO (or their derivatives)
+                          size : Nbatch, Nelec, Norb (jacobian = True)
+                          size : Nbatch, Nelec, Norb, Ndim (jacobian = False)
+        """
+
+        if not jacobian:
+            assert(derivative == 1)
 
         nbatch = input.shape[0]
 
@@ -175,16 +209,30 @@ class AtomicOrbitals(nn.Module):
         # -> (Nbatch,Nelec,Nbas)
         Y = SphericalHarmonics(xyz, self.bas_l, self.bas_m)
 
-        # treat the different cases
-        # of derivative values
+        # values of AO
+        # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
             bas = R * Y
 
+        # values of first derivative
         elif derivative == 1:
-            dR = self.radial(r, xyz=xyz, derivative=1)
-            dY = SphericalHarmonics(xyz, self.bas_l, self.bas_m, derivative=1)
-            bas = dR * Y + R * dY
 
+            # return the jacobian
+            if jacobian:
+                dR = self.radial(r, xyz=xyz, derivative=1)
+                dY = SphericalHarmonics(
+                    xyz, self.bas_l, self.bas_m, derivative=1)
+                # -> (Nbatch,Nelec,Nbas)
+                bas = dR * Y + R * dY
+
+            # returm individual components
+            else:
+                dR = self.radial(r, xyz=xyz, derivative=1, jacobian=False)
+                dY = GradSphericalHarmonics(xyz, self.bas_l, self.bas_m)
+                # -> (Nbatch,Nelec,Nbas,Ndim)
+                bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
+
+        # second derivative
         elif derivative == 2:
             dR = self.radial(r, xyz=xyz, derivative=1, jacobian=False)
             dY = GradSphericalHarmonics(xyz, self.bas_l, self.bas_m)
@@ -194,14 +242,26 @@ class AtomicOrbitals(nn.Module):
 
             bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
 
-        # product with coefficients
-        # -> (Nbatch,Nelec,Nbas)
-        bas = self.norm_cst * self.bas_coeffs * bas
+        # product with coefficients and primitives norm
+        if jacobian:
+            # -> (Nbatch,Nelec,Nbas)
+            bas = self.norm_cst * self.bas_coeffs * bas
 
-        # contract the basis
-        # -> (Nbatch,Nelec,Norb)
-        ao = torch.zeros(nbatch, self.nelec, self.norb)
-        ao.index_add_(2, self.index_ctr, bas)
+            # contract the basis
+            # -> (Nbatch,Nelec,Norb)
+            ao = torch.zeros(nbatch, self.nelec, self.norb, device=self.device)
+            ao.index_add_(2, self.index_ctr, bas)
+
+        else:
+            # -> (Nbatch,Nelec,Nbas, Ndim)
+            bas = self.norm_cst.unsqueeze(-1) * \
+                self.bas_coeffs.unsqueeze(-1) * bas
+
+            # contract the basis
+            # -> (Nbatch,Nelec,Norb, Ndim)
+            ao = torch.zeros(nbatch, self.nelec, self.norb,
+                             3, device=self.device)
+            ao.index_add_(2, self.index_ctr, bas)
 
         return ao
 
@@ -213,7 +273,6 @@ if __name__ == "__main__":
     m = Molecule(atom='Li 0 0 0; H 0 0 3.015',
                  basis_type='gto', basis='sto-3g')
 
-    ao = AtomicOrbitals(m)
-
-    pos = torch.rand(20, ao.nelec*3)
+    ao = AtomicOrbitals(m, cuda=True)
+    pos = torch.rand(20, ao.nelec*3).to('cuda')
     aoval = ao.forward(pos, derivative=1)

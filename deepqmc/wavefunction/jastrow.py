@@ -9,9 +9,16 @@ class ElectronDistance(nn.Module):
         self.nelec = nelec
         self.ndim = ndim
 
+        _type_ = torch.get_default_dtype()
+        if _type_ == torch.float32:
+            self.eps = 1E-6
+        elif _type_ == torch.float64:
+            self.eps = 1E-16
+
     def forward(self, input, derivative=0):
         """compute the pairwise distance between two sets of electrons
-        Or the derivative of these elements
+        or the derivative of these elements wrt to the first electron
+        i.e. d r_ij / dx_i (as opposed to d r_ij / dx_j)
 
         Args:
             input ([type]): position of the electron Nbatch x [NelecxNdim]
@@ -37,37 +44,54 @@ class ElectronDistance(nn.Module):
 
         norm = (input_**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input_, input_.transpose(1, 2))+1E-16)**(0.5)
+                torch.bmm(input_, input_.transpose(1, 2)))
+
+        eps_ = self.eps * \
+            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+
+        diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
+
+        dist = torch.sqrt(dist - diag + eps_)
 
         if derivative == 0:
             return dist
 
         elif derivative == 1:
 
-            invr = (1./(dist+1E-16)).unsqueeze(1)
+            eps_ = self.eps * \
+                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+
+            invr = (1./(dist+eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = diff_axis - diff_axis.transpose(2, 3)
             return diff_axis * invr
 
         elif derivative == 2:
 
-            invr3 = (1./(dist**3+1E-16)).unsqueeze(1)
+            eps_ = self.eps * \
+                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+            invr3 = (1./(dist**3+eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
 
             diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
-            return diff_axis * invr3
+            return (diff_axis * invr3)
 
 
 class TwoBodyJastrowFactor(nn.Module):
 
-    def __init__(self, nup, ndown, w=1.):
+    def __init__(self, nup, ndown, w=1., cuda=False):
         super(TwoBodyJastrowFactor, self).__init__()
 
         self.nup = nup
         self.ndown = ndown
         self.nelec = nup+ndown
         self.ndim = 3
+
+        self.cuda = cuda
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
 
         self.weight = nn.Parameter(torch.tensor([w]))
         self.weight.requires_grad = True
@@ -78,24 +102,42 @@ class TwoBodyJastrowFactor(nn.Module):
         bdown = torch.cat((0.5*torch.ones(ndown, nup), 0.25 *
                            torch.ones(ndown, ndown)), dim=1)
 
-        self.static_weight = torch.cat((bup, bdown), dim=0)
+        self.static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
-    def forward(self, pos, derivative=0):
+    def _to_device(self):
+        """Export the non parameter variable to the device."""
+
+        self.device = torch.device('cuda')
+        self.to(self.device)
+        attrs = ['static_weight']
+        for at in attrs:
+            self.__dict__[at] = self.__dict__[at].to(self.device)
+
+    def forward(self, pos, derivative=0, jacobian=True):
         """Compute the Jastrow factors as :
 
         .. math::
-            J(ri,rj) = \Prod_{i,j} \exp(B_{ij}) with
-            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
+            J = \Prod_{i<j} \exp(B_{ij}) with
+            B_{ij} = \frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
         Args:
-            pos ([type]): [description]
-            derivative (int, optional): [description]. Defaults to 0.
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+            derivative (int, optional): order of the derivative (0,1,2,).
+                            Defaults to 0.
+            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+                                       the derivatives) or the individual
+                                       terms. Defaults to True.
+                                       False only for derivative=1
 
         Returns:
             [type]: [description]
         """
+        if not jacobian:
+            assert(derivative == 1)
+
         size = pos.shape
         assert size[1] == self.nelec*self.ndim
 
@@ -107,14 +149,14 @@ class TwoBodyJastrowFactor(nn.Module):
 
         elif derivative == 1:
             dr = self.edist(pos, derivative=1)
-            return self._jastrow_derivative(r, dr, jast)
+            return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
             dr = self.edist(pos, derivative=1)
             d2r = self.edist(pos, derivative=2)
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
-    def _jastrow_derivative(self, r, dr, jast):
+    def _jastrow_derivative(self, r, dr, jast, jacobian):
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -126,9 +168,13 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
+        if jacobian:
+            djast = self._get_der_jastrow_elements(r, dr).sum(1)
+            prod_val = self._prod_unique_pairs(jast)
 
-        djast = self._get_der_jastrow_elements(r, dr).sum(1)
-        prod_val = self._prod_unique_pairs(jast)
+        else:
+            djast = self._get_der_jastrow_elements(r, dr)
+            prod_val = self._prod_unique_pairs(jast).unsqueeze(-1)
 
         return (self._sum_unique_pairs(djast, axis=-1) -
                 self._sum_unique_pairs(djast, axis=-2)) * prod_val
@@ -150,11 +196,11 @@ class TwoBodyJastrowFactor(nn.Module):
         prod_val = self._prod_unique_pairs(jast)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = 0.5*(self._sum_unique_pairs(d2jast, axis=-1) +
-                         self._sum_unique_pairs(d2jast, axis=-2))
+        hess_jast = 0.5*(self._sum_unique_pairs(d2jast, axis=-1)
+                         + self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
-        djast = (self._get_der_jastrow_elements(r, dr)).sum(1)
+        djast = (self._get_der_jastrow_elements(r, dr))  # .sum(1)
         hess_jast += self._partial_derivative(djast, out_mat=hess_jast)
 
         return hess_jast * prod_val
@@ -175,15 +221,31 @@ class TwoBodyJastrowFactor(nn.Module):
         return torch.exp(self._compute_kernel(r))
 
     def _compute_kernel(self, r):
+        """ Get the jastrow kernel.
+        .. math::
+            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: matrix of the jastrow kernels
+                          Nbatch x Nelec x Nelec
+        """
         return self.static_weight * r / (1.0 + self.weight * r)
 
     def _get_der_jastrow_elements(self, r, dr):
-        """Get the elements of the derivative of the jastrow matrix
+        """Get the elements of the derivative of the jastrow kernels
+        wrt to the first electrons
+
         .. math::
 
-            out_{k,i,j} = A + B
-            A_{kij} = b \frac{dr_{ij}}{dk_i} / (1+b'r_{ij})
-            B_{kij} = - b b' r_{ij} \frac{dr_{ij}}{dk_i} / (1+b'r_{ij})^ 2
+            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
+
+            out_{k,i,j} = A1 + A2
+            A1_{kij} = w0 \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})
+            A2_{kij} = - w0 w' r_{ij} \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -204,7 +266,12 @@ class TwoBodyJastrowFactor(nn.Module):
         return (a + b)
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
-        """Get the elements of the pure 2nd derivative of the jastrow matrix
+        """Get the elements of the pure 2nd derivative of the jastrow kernels
+        wrt to the first electron
+
+        .. math ::
+
+            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -221,10 +288,11 @@ class TwoBodyJastrowFactor(nn.Module):
 
         r_ = r.unsqueeze(1)
         denom = 1. / (1.0 + self.weight * r_)
+        denom2 = denom**2
         dr_square = dr**2
         a = self.static_weight * d2r * denom
-        b = -2 * self.static_weight * self.weight * dr_square * denom**2
-        c = - self.static_weight * self.weight * r_ * d2r * denom**2
+        b = -2 * self.static_weight * self.weight * dr_square * denom2
+        c = - self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
@@ -232,6 +300,19 @@ class TwoBodyJastrowFactor(nn.Module):
         return a + b + c + d + e**2
 
     def _partial_derivative(self, djast, out_mat=None):
+        """Get the product of the mixed second deriative terms.
+
+        .. math ::
+
+            d B_{ij} / d x_i * d B_{kl} / d x_k
+
+        Args:
+            djast (torch.tensor): first derivative of the jastrow kernels
+            out_mat (torch.tensor, optional): output matrix. Defaults to None.
+
+        Returns:
+            torch.tensor:
+        """
 
         if out_mat is None:
             nbatch = djast.shape[0]
@@ -239,19 +320,20 @@ class TwoBodyJastrowFactor(nn.Module):
 
         for idx in range(self.nelec):
 
-            index_pairs = [(idx, j) for j in range(
-                idx+1, self.nelec)] + [(j, idx) for j in range(0, idx)]
+            index_pairs = [(idx, j, 1) for j in range(
+                idx+1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
 
             for p1 in range(len(index_pairs)-1):
-                i1, j1 = index_pairs[p1]
+                i1, j1, w1 = index_pairs[p1]
                 for p2 in range(p1+1, len(index_pairs)):
-                    i2, j2 = index_pairs[p2]
+                    i2, j2, w2 = index_pairs[p2]
 
-                    d1 = djast[..., i1, j1] * (-1)**(i1 > j1)
-                    d2 = djast[..., i2, j2] * (-1)**(i2 > j2)
-                    out_mat[:, idx] += (d1*d2)
+                    d1 = djast[..., i1, j1] * w1
+                    d2 = djast[..., i2, j2] * w2
 
-            return out_mat
+                    out_mat[..., idx] += (d1*d2).sum(1)
+
+        return out_mat
 
     def _prod_unique_pairs(self, mat, not_el=None):
         """Compute the product of the lower mat elements
@@ -280,9 +362,19 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.ones(self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
 
     def _sum_unique_pairs(self, mat, axis=None):
+        """Sum the unique pairs of the lower triangluar matrix
+
+        Args:
+            mat (torch.tensor): input matrix [..., N x N]
+            axis (int, optional): index of the axis to sum. Defaults to None.
+
+        Returns:
+            torch.tensor:
+        """
+
         mat_cpy = mat.clone()
-        mat_cpy[..., torch.tril(
-            torch.ones(self.nelec, self.nelec)) == 0] = 0
+        mat_cpy[..., torch.tril(torch.ones(self.nelec, self.nelec)) == 1] = 0
+
         if axis is None:
             return mat_cpy.sum()
         else:
@@ -291,8 +383,9 @@ class TwoBodyJastrowFactor(nn.Module):
 
 if __name__ == "__main__":
 
+    import torch
     from torch.autograd import grad, gradcheck, Variable
-    # torch.autograd.set_detect_anomaly(True)
+    torch.autograd.set_detect_anomaly(True)
     torch.set_default_tensor_type(torch.DoubleTensor)
 
     def hess(out, pos):
@@ -302,7 +395,7 @@ if __name__ == "__main__":
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
-        print(jacob.shape)
+
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
@@ -321,27 +414,34 @@ if __name__ == "__main__":
 
         return hess
 
-    pos = torch.rand(4, 9)
-    pos.requires_grad = True
+    torch.manual_seed(1)
+    nbatch = 5
 
-    jastrow = TwoBodyJastrowFactor(1, 2)
+    n1, n2 = 2, 2
+    n = n1+n2
+    jastrow = TwoBodyJastrowFactor(n1, n2)
+
+    pos = torch.rand(nbatch, n*3)
+    pos.requires_grad = True
 
     r = jastrow.edist(pos)
     dr = jastrow.edist(pos, derivative=1)
     dr_grad = grad(r, pos, grad_outputs=torch.ones_like(r))[0]
-    dr_gradcheck = gradcheck(jastrow.edist, pos)
+
+    r = jastrow.edist(pos)
+    d2r = jastrow.edist(pos, derivative=2)
+    d2r_grad = hess(r, pos)
+    print(2*d2r.sum(), d2r_grad.sum())
 
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)
     dval_grad = grad(val, pos, grad_outputs=torch.ones_like(val))[0]
-    dval_check = gradcheck(jastrow, pos)
-
-    d2r = jastrow.edist(pos, derivative=2)
-    d2el = jastrow._get_second_der_jastrow_elements(r, dr, d2r)
-    d2val = jastrow(pos, derivative=2)
+    print(dval)
+    print(dval_grad.view(nbatch, n, 3).sum(2))
 
     val = jastrow(pos)
     d2val_grad = hess(val, pos)
-
-    print(d2val_grad.sum())
-    print(d2val.sum())
+    d2val = jastrow(pos, derivative=2)
+    print(d2val.sum(), d2val_grad.sum())
+    print(d2val)
+    print(d2val_grad.view(nbatch, n, 3).sum(2))

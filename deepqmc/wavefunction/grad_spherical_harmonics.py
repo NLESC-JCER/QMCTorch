@@ -12,7 +12,7 @@ def GradSphericalHarmonics(xyz, l, m):
         Y array (Nbatch,Nelec,Nrbf,3) : value of each grad SH at each point
     '''
 
-    Y = torch.zeros(xyz.shape)
+    Y = torch.zeros_like(xyz)
 
     # l=0
     ind = (l == 0).nonzero().view(-1)
@@ -49,7 +49,7 @@ def _grad_spherical_harmonics_l0(xyz):
     Returns
         \nabla * Y00 = 0
     '''
-    return torch.zeros(xyz.shape)
+    return torch.zeros_like(xyz)
 
 
 def _grad_spherical_harmonics_l1(xyz, m):

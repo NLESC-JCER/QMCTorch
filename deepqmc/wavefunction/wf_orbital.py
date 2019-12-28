@@ -12,8 +12,9 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state', scf='pyscf',
-                 kinetic='jacobi', use_jastrow=True):
-        super(Orbital, self).__init__(mol.nelec, 3, kinetic)
+                 kinetic='jacobi', use_jastrow=True, cuda=False):
+
+        super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
 
         # number of atoms
         self.mol = mol
@@ -25,18 +26,19 @@ class Orbital(WaveFunction):
         self.scf_code = scf
 
         # define the atomic orbital layer
-        self.ao = AtomicOrbitals(mol)
+        self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
-
-        # initialize the MO coefficients
         self.mo.weight = self.get_mo_coeffs()
+        if self.cuda:
+            self.mo.to(self.device)
 
         # jastrow
         self.use_jastrow = use_jastrow
         if self.use_jastrow:
-            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown)
+            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
+                                                w=1., cuda=cuda)
 
         # define the SD we want
         self.configs = self.get_configs(configs, mol)
@@ -44,12 +46,12 @@ class Orbital(WaveFunction):
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(
-            self.configs, mol)
+            self.configs, mol, cuda)
 
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula
         self.kinpool = KineticPooling(
-            self.configs, mol)
+            self.configs, mol, cuda)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
@@ -57,15 +59,20 @@ class Orbital(WaveFunction):
         if self.nci > 1:
             self.fc.weight.data.fill_(0.)
             self.fc.weight.data[0][0] = 1.
-
+        if self.cuda:
+            self.fc = self.fc.to(self.device)
         self.fc.clip = False
 
         if kinetic == 'jacobi':
             self.local_energy = self.local_energy_jacobi
 
+        if self.cuda:
+            self.to(self.device)
+
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
-            self.mol.get_mo_coeffs(code=self.scf_code)).type(torch.get_default_dtype())
+            self.mol.get_mo_coeffs(code=self.scf_code)).type(
+                torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1))
 
     def update_mo_coeffs(self):
@@ -91,8 +98,8 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
             return J*self.fc(x)
-
-        return self.fc(x)
+        else:
+            return self.fc(x)
 
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
@@ -120,11 +127,18 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
 
-            J = self.jastrow(x)
-            dJ = self.jastrow(x, derivative=1) / J
-            d2J = self.jastrow(x, derivative=2) / J
+            if return_local_energy is False:
+                raise ValueError('Jacobi kinetic energy can only return local energy \
+                                  when using jastrow factors')
 
-            dJdMO = dJ.unsqueeze(-1) * self.mo(self.ao(x, derivative=1))
+            J = self.jastrow(x)
+            dJ = self.jastrow(
+                x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
+            dAO = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
+            dMO = self.mo(dAO).transpose(2, 3)
+            dJdMO = (dJ.unsqueeze(2) * dMO).sum(-1)
+
+            d2J = self.jastrow(x, derivative=2) / J
             d2JMO = d2J.unsqueeze(-1) * MO
 
         return self.fc(self.kinpool(MO, d2MO, dJdMO, d2JMO,
@@ -140,7 +154,7 @@ class Orbital(WaveFunction):
         TODO : vecorize that !!
         '''
 
-        p = torch.zeros(pos.shape[0])
+        p = torch.zeros(pos.shape[0], device=self.device)
         for ielec in range(self.nelec):
             pelec = pos[:, (ielec*self.ndim):(ielec+1)*self.ndim]
             for iatom in range(self.natom):
@@ -158,7 +172,7 @@ class Orbital(WaveFunction):
         Returns: values of Vee * psi
         '''
 
-        pot = torch.zeros(pos.shape[0])
+        pot = torch.zeros(pos.shape[0], device=self.device)
 
         for ielec1 in range(self.nelec-1):
             epos1 = pos[:, ielec1*self.ndim:(ielec1+1)*self.ndim]
@@ -227,7 +241,9 @@ class Orbital(WaveFunction):
             return self._get_singlet_state_config(mol, nocc, nvirt)
 
         else:
-            raise ValueError(configs, " not recognized as valid configuration")
+            print(configs, " not recognized as valid configuration")
+            print('Options are : ground_state or singlet(nocc,nvirt)')
+            raise ValueError()
 
     @staticmethod
     def _get_ground_state_config(mol):
@@ -295,3 +311,25 @@ class Orbital(WaveFunction):
         cup.append(new_cup)
         cdown.append(new_cdown)
         return cup, cdown
+
+
+if __name__ == "__main__":
+
+    from deepqmc.wavefunction.molecule import Molecule
+
+    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
+                   basis_type='gto', basis='sto-3g')
+
+    # define the wave function
+    wf = Orbital(mol, kinetic='jacobi',
+                 configs='singlet(1,1)',
+                 use_jastrow=True, cuda=False)
+
+    pos = torch.rand(20, wf.ao.nelec*3)
+    pos.requires_grad = True
+
+    if torch.cuda.is_available():
+        pos_gpu = pos.to('cuda')
+        wf_gpu = Orbital(mol, kinetic='jacobi',
+                         configs='singlet(1,1)',
+                         use_jastrow=True, cuda=True)

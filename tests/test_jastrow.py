@@ -33,10 +33,10 @@ def hess(out, pos):
 class TestJastrow(unittest.TestCase):
 
     def setUp(self):
-        self.nup, self.ndown = 1, 2
+        self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
         self.jastrow = TwoBodyJastrowFactor(self.nup, self.ndown)
-        self.nbatch = 4
+        self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
@@ -57,6 +57,8 @@ class TestJastrow(unittest.TestCase):
         dval_grad = grad(val, self.pos, grad_outputs=torch.ones_like(val))[0]
         gradcheck(self.jastrow, self.pos)
 
+        assert torch.allclose(dval, dval_grad.view(
+            self.nbatch, self.nelec, 3).sum(2))
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
 
     def test_hess_jastrow(self):
@@ -64,11 +66,11 @@ class TestJastrow(unittest.TestCase):
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
-        print(d2val.sum())
-        print(d2val_grad.sum())
 
         # still an issue there :(
-        # assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+        assert torch.allclose(d2val, d2val_grad.view(
+            self.nbatch, self.nelec, 3).sum(2))
+        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 
 if __name__ == "__main__":

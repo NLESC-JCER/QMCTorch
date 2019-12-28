@@ -1,6 +1,7 @@
 import torch
 from types import SimpleNamespace
 from tqdm import tqdm
+import numpy as np
 
 
 class SolverBase(object):
@@ -10,6 +11,8 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.opt = optimizer
+        self.cuda = False
+        self.device = torch.device('cpu')
 
     def resampling(self, ntherm=-1, resample=100, resample_from_last=True,
                    resample_every=1):
@@ -42,7 +45,7 @@ class SolverBase(object):
         pos.requires_grad = True
         return pos
 
-    def get_observable(self, obs_dict, pos, **kwargs):
+    def get_observable(self, obs_dict, pos, local_energy=None, **kwargs):
         '''compute all the required observable.
 
         Args :
@@ -52,14 +55,33 @@ class SolverBase(object):
         TODO : match the signature of the callables
         '''
 
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
+
         for obs in self. obs_dict.keys():
 
-            # get the method
-            func = self.wf.__getattribute__(obs)
-            data = func(pos)
-            if isinstance(data, torch.Tensor):
-                data = data.detach().numpy()
+            if obs == 'local_energy' and local_energy is not None:
+                data = local_energy.cpu().detach().numpy()
+            else:
+                # get the method
+                func = self.wf.__getattribute__(obs)
+                data = func(pos)
+                if isinstance(data, torch.Tensor):
+                    data = data.cpu().detach().numpy()
+
             self.obs_dict[obs].append(data)
+
+    def print_observable(self, cumulative_loss):
+
+        print('loss %f' % (cumulative_loss))
+        for k in self.obs_dict:
+            if k == 'local_energy':
+                print('variance : %f' %
+                      np.var(self.obs_dict['local_energy'][-1]))
+                print('energy : %f' %
+                      np.mean(self.obs_dict['local_energy'][-1]))
+            else:
+                print(k + ' : ', self.obs_dict[k][-1])
 
     def get_wf(self, x):
         '''Get the value of the wave functions at x.'''
@@ -70,18 +92,29 @@ class SolverBase(object):
         '''Get the energy of the wave function.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
+
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
+
         return self.wf.energy(pos)
 
     def variance(self, pos):
         '''Get the variance of the wave function.'''
         if pos is None:
             pos = self.sample(ntherm=-1)
+
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
+
         return self.wf.variance(pos)
 
     def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
         '''Performs a single point calculation.'''
         if pos is None:
             pos = self.sample(ntherm=ntherm, ndecor=ndecor)
+
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
 
         e, s = self.wf._energy_variance(pos)
         if prt:

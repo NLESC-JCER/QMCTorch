@@ -12,7 +12,8 @@ def SphericalHarmonics(xyz, l, m, derivative=0):
         Y array (Nbatch,Nelec,Nrbf) : value of each SH at each point
     '''
 
-    Y = torch.zeros(xyz.shape[:-1])
+    # Y = torch.zeros(xyz.shape[:-1])
+    Y = torch.zeros_like(xyz[..., 0])
 
     # l=0
     ind = (l == 0).nonzero().view(-1)
@@ -66,7 +67,8 @@ def _spherical_harmonics_l0(xyz):
         Y00 = 1/2 \sqrt(1 / \pi)
     '''
 
-    return 0.2820948 * torch.ones(xyz.shape[:-1])
+    # return 0.2820948 * torch.ones(xyz.shape[:-1])
+    return 0.2820948 * torch.ones_like(xyz[..., 0])
 
 
 def _nabla_spherical_harmonics_l0(xyz):
@@ -76,7 +78,7 @@ def _nabla_spherical_harmonics_l0(xyz):
     Returns
         \nabla * Y00 = 0
     '''
-    return torch.zeros(xyz.shape[:-1])
+    return torch.zeros_like(xyz[..., 0])
 
 
 def _lap_spherical_harmonics_l0(xyz):
@@ -86,7 +88,7 @@ def _lap_spherical_harmonics_l0(xyz):
     Returns
         \nabla^2 * Y00 = 0
     '''
-    return torch.zeros(xyz.shape[:-1])
+    return torch.zeros_like(xyz[..., 0])
 
 
 def _spherical_harmonics_l1(xyz, m):

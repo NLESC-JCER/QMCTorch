@@ -6,7 +6,7 @@ from torch.autograd import grad, Variable
 
 class WaveFunction(nn.Module):
 
-    def __init__(self, nelec, ndim, kinetic='auto'):
+    def __init__(self, nelec, ndim, kinetic='auto', cuda=False):
 
         super(WaveFunction, self).__init__()
 
@@ -14,6 +14,10 @@ class WaveFunction(nn.Module):
         self.nelec = nelec
         self.ndim_tot = self.nelec*self.ndim
         self.kinetic = kinetic
+        self.cuda = cuda
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
 
     def forward(self, x):
         ''' Compute the value of the wave function.
@@ -76,20 +80,20 @@ class WaveFunction(nn.Module):
         Returns:
             values of nabla^2 * Psi
         '''
-        #print('autograd kinetic energy')
+
         if out is None:
             out = self.forward(pos)
 
         # compute the jacobian
-        z = Variable(torch.ones(out.shape))
+        z = torch.ones_like(out)
         jacob = grad(out, pos,
                      grad_outputs=z,
                      only_inputs=True,
                      create_graph=True)[0]
 
         # compute the diagonal element of the Hessian
-        z = Variable(torch.ones(jacob.shape[0]))
-        hess = torch.zeros(jacob.shape[0])
+        z = Variable(torch.ones(jacob.shape[0])).to(self.device)
+        hess = torch.zeros(jacob.shape[0]).to(self.device)
 
         for idim in range(jacob.shape[1]):
 

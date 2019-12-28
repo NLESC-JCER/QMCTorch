@@ -26,7 +26,8 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
              configs='singlet(1,1)',
-             use_jastrow=True)
+             use_jastrow=True,
+             cuda=True)
 
 # sampler
 sampler = Metropolis(nwalkers=100, nstep=200, step_size=0.5,
@@ -35,10 +36,11 @@ sampler = Metropolis(nwalkers=100, nstep=200, step_size=0.5,
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-opt = Adam(wf.parameters(), lr=0.01)
+#opt = Adam(wf.parameters(), lr=0.01)
 
 # solver
-solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
+solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=None, cuda=True)
+solver.opt = Adam(wf.parameters(), lr=0.01)
 pos, _, _ = solver.single_point()
 
 # pos = solver.sample(ntherm=0, ndecor=10)
