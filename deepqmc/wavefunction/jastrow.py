@@ -45,9 +45,13 @@ class ElectronDistance(nn.Module):
         norm = (input_**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
                 torch.bmm(input_, input_.transpose(1, 2)))
+
         eps_ = self.eps * \
             torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-        dist = torch.sqrt(dist + eps_)
+
+        diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
+
+        dist = torch.sqrt(dist - diag + eps_)
 
         if derivative == 0:
             return dist
