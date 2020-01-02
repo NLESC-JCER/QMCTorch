@@ -146,8 +146,10 @@ class Orbital(WaveFunction):
             d2J = self.jastrow(x, derivative=2) / J
             d2JMO = d2J.unsqueeze(-1) * MO
 
-        return self.fc(self.kinpool(MO, d2MO, dJdMO, d2JMO,
-                                    return_local_energy=return_local_energy))
+            kp = self.kinpool(MO, d2MO, dJdMO, d2JMO,
+                              return_local_energy=return_local_energy)
+
+        return self.fc(kp/(self.fc.weight+1E-6))
 
     def nuclear_potential(self, pos):
         '''Compute the potential of the wf points
