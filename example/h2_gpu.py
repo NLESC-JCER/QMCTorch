@@ -36,11 +36,10 @@ sampler = Metropolis(nwalkers=100, nstep=200, step_size=0.5,
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-#opt = Adam(wf.parameters(), lr=0.01)
+opt = Adam(wf.parameters(), lr=0.01)
 
 # solver
-solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=None, cuda=True)
-solver.opt = Adam(wf.parameters(), lr=0.01)
+solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=None)
 pos, _, _ = solver.single_point()
 
 # pos = solver.sample(ntherm=0, ndecor=10)

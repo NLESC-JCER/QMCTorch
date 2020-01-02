@@ -16,6 +16,10 @@ class Orbital(WaveFunction):
 
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
 
+        # check for cuda
+        if not torch.cuda.is_available and self.wf.cuda:
+            raise ValueError('Cuda not available, use cuda=False')
+
         # number of atoms
         self.mol = mol
         self.atoms = mol.atoms
@@ -67,6 +71,7 @@ class Orbital(WaveFunction):
             self.local_energy = self.local_energy_jacobi
 
         if self.cuda:
+            self.device = torch.device('cuda')
             self.to(self.device)
 
     def get_mo_coeffs(self):
