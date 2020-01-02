@@ -6,6 +6,7 @@ from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
 from deepqmc.wavefunction.kinetic_pooling import KineticPooling
+from deepqmc.wavefunction.kinetic_pooling_ci import KineticPoolingCI
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 
@@ -57,6 +58,8 @@ class Orbital(WaveFunction):
         self.kinpool = KineticPooling(
             self.configs, mol, cuda)
 
+        self.kinpool_ci = KineticPoolingCI(
+            self.configs, mol, cuda)
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
         self.fc.weight.data.fill_(1.)
@@ -116,7 +119,7 @@ class Orbital(WaveFunction):
             + self.electronic_potential(pos) \
             + self.nuclear_repulsion()
 
-    def kinetic_energy_jacobi(self, x, return_local_energy=False, **kwargs):
+    def kinetic_energy_jacobi(self, x, **kwargs):
         '''Compute the value of the kinetic enery using
         the Jacobi formula for derivative of determinant.
 
@@ -132,10 +135,6 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
 
-            if return_local_energy is False:
-                raise ValueError('Jacobi kinetic energy can only return local energy \
-                                  when using jastrow factors')
-
             J = self.jastrow(x)
             dJ = self.jastrow(
                 x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
@@ -146,10 +145,9 @@ class Orbital(WaveFunction):
             d2J = self.jastrow(x, derivative=2) / J
             d2JMO = d2J.unsqueeze(-1) * MO
 
-            kp = self.kinpool(MO, d2MO, dJdMO, d2JMO,
-                              return_local_energy=return_local_energy)
+        K, psi = self.kinpool_ci(MO, d2MO, dJdMO, d2JMO)
 
-        return self.fc(kp/(self.fc.weight+1E-6))
+        return self.fc(K)/self.fc(psi)
 
     def nuclear_potential(self, pos):
         '''Compute the potential of the wf points
