@@ -6,10 +6,6 @@ from deepqmc.solver.torch_utils import set_torch_double_precision
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.optim.sr import StochasticReconfiguration as SR
 
-#from deepqmc.sampler.metropolis_all_elec import Metropolis
-#from deepqmc.sampler.generalized_metropolis import GeneralizedMetropolis
-from deepqmc.sampler.hamiltonian import Hamiltonian
-
 from deepqmc.wavefunction.molecule import Molecule
 from deepqmc.solver.plot_data import plot_observable
 
@@ -30,7 +26,7 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=200, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec', 'proba': 'normal'})

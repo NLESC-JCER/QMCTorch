@@ -134,7 +134,7 @@ class SolverOrbital(SolverBase):
                 loss.backward()
 
                 # closure to be able to recompute
-                # wf and its grad in SR and LM
+                # wf and its grad in SR
                 def closure():
                     self.opt.zero_grad()
                     return self.wf(lpos)
