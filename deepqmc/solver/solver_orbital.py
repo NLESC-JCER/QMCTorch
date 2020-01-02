@@ -133,8 +133,14 @@ class SolverOrbital(SolverBase):
                 self.opt.zero_grad()
                 loss.backward()
 
+                # closure to be able to recompute
+                # wf and its grad in SR and LM
+                def closure():
+                    self.opt.zero_grad()
+                    return self.wf(lpos)
+
                 # optimize
-                self.opt.step()
+                self.opt.step(closure)
 
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)

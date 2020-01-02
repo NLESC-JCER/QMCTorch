@@ -4,6 +4,7 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.solver.torch_utils import set_torch_double_precision
 from deepqmc.sampler.metropolis import Metropolis
+from deepqmc.optim.sr import StochasticReconfiguration as SR
 
 #from deepqmc.sampler.metropolis_all_elec import Metropolis
 #from deepqmc.sampler.generalized_metropolis import GeneralizedMetropolis
@@ -35,7 +36,8 @@ sampler = Metropolis(nwalkers=100, nstep=200, step_size=0.5,
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-opt = Adam(wf.parameters(), lr=0.01)
+#opt = Adam(wf.parameters(), lr=0.01)
+opt = SR(wf.parameters(), tau=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
@@ -48,7 +50,7 @@ pos, _, _ = solver.single_point()
 # optimize the wave function
 solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
 solver.observable(['local_energy'])
-solver.run(5, loss='energy')
+#solver.run(5, loss='energy')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')
