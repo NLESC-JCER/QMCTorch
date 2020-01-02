@@ -16,7 +16,7 @@ def printd(rank, *args):
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None, cuda=False):
+                 scheduler=None):
 
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
@@ -35,15 +35,8 @@ class SolverOrbital(SolverBase):
         # distributed model
         self.save_model = 'model.pth'
 
-        # check for cuda
-        if not torch.cuda.is_available and cuda:
-            raise ValueError('Cuda not available')
-
-        if cuda:
+        if self.wf.cuda:
             self.device = torch.device('cuda')
-            self.wf.to(device=self.device)
-            self.wf.device = torch.device('cuda')
-            self.wf.cuda = True
             self.sampler.cuda = True
             self.sampler.walkers.cuda = True
         else:
