@@ -6,11 +6,6 @@ from deepqmc.solver.torch_utils import (DataSet, Loss,
                                         ZeroOneClipper, OrthoReg)
 
 
-def printd(rank, *args):
-    if rank == 1:
-        print(*args)
-
-
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
