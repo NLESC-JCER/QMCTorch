@@ -1,7 +1,7 @@
 import torch
 from torch.optim import Adam
 from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital
+from deepqmc.solver.solver_orbital_horovod import SolverOrbital
 from deepqmc.solver.torch_utils import set_torch_double_precision
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.optim.sr import StochasticReconfiguration as SR
