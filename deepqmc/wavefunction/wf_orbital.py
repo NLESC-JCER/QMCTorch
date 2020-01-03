@@ -109,14 +109,14 @@ class Orbital(WaveFunction):
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
 
-        ke = self.kinetic_energy_jacobi(pos, return_local_energy=True)
+        ke = self.kinetic_energy_jacobi(pos)
 
         return ke \
             + self.nuclear_potential(pos) \
             + self.electronic_potential(pos) \
             + self.nuclear_repulsion()
 
-    def kinetic_energy_jacobi(self, x, return_local_energy=False, **kwargs):
+    def kinetic_energy_jacobi(self, x, **kwargs):
         '''Compute the value of the kinetic enery using
         the Jacobi formula for derivative of determinant.
 
@@ -132,10 +132,6 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
 
-            if return_local_energy is False:
-                raise ValueError('Jacobi kinetic energy can only return local energy \
-                                  when using jastrow factors')
-
             J = self.jastrow(x)
             dJ = self.jastrow(
                 x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
@@ -146,8 +142,9 @@ class Orbital(WaveFunction):
             d2J = self.jastrow(x, derivative=2) / J
             d2JMO = d2J.unsqueeze(-1) * MO
 
-        return self.fc(self.kinpool(MO, d2MO, dJdMO, d2JMO,
-                                    return_local_energy=return_local_energy))
+        K, psi = self.kinpool(MO, d2MO, dJdMO, d2JMO)
+
+        return self.fc(K)/self.fc(psi)
 
     def nuclear_potential(self, pos):
         '''Compute the potential of the wf points

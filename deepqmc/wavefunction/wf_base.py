@@ -57,17 +57,17 @@ class WaveFunction(nn.Module):
         '''
         raise NotImplementedError()
 
-    def kinetic_energy(self, pos, out=None):
+    def kinetic_energy(self, pos):
         '''Main switch for the kinetic energy.'''
 
         if self.kinetic == 'auto':
-            return self.kinetic_energy_autograd(pos, out)
+            return self.kinetic_energy_autograd(pos)
         elif self.kinetic == 'fd':
             return self.kinetic_energy_finite_difference(pos)
         else:
             raise ValueError('kinetic %s not recognized' % self.kinetic)
 
-    def kinetic_energy_autograd(self, pos, out=None):
+    def kinetic_energy_autograd(self, pos):
         '''Compute the second derivative of the network
         output w.r.t the value of the input.
 
@@ -81,8 +81,7 @@ class WaveFunction(nn.Module):
             values of nabla^2 * Psi
         '''
 
-        if out is None:
-            out = self.forward(pos)
+        out = self.forward(pos)
 
         # compute the jacobian
         z = torch.ones_like(out)
@@ -107,7 +106,7 @@ class WaveFunction(nn.Module):
 
             hess += tmp[:, idim]
 
-        return -0.5 * hess.view(-1, 1)
+        return -0.5 * hess.view(-1, 1) / out
 
     def kinetic_energy_finite_difference(self, pos, eps=1E-3):
         '''Compute the second derivative of the network
@@ -127,10 +126,12 @@ class WaveFunction(nn.Module):
         ndim = pos.shape[1]
         out = torch.zeros(nwalk, 1)
 
+        pos_tmp = pos.clone()
+        out = -2*self.forward(pos_tmp)
+
         for icol in range(ndim):
 
-            pos_tmp = pos.clone()
-            feps = -2*self.forward(pos_tmp)
+            feps = out.clone()
 
             pos_tmp = pos.clone()
             pos_tmp[:, icol] += eps
@@ -142,15 +143,15 @@ class WaveFunction(nn.Module):
 
             out += feps/(eps**2)
 
-        return -0.5*out.view(-1, 1)
+        return -0.5*out.view(-1, 1) / out
 
     def local_energy(self, pos):
         ''' local energy of the sampling points.'''
 
-        wf = self.forward(pos)
-        ke = self.kinetic_energy(pos, out=wf)
+        #wf = self.forward(pos)
+        ke = self.kinetic_energy(pos)
 
-        return ke/wf \
+        return ke  \
             + self.nuclear_potential(pos)  \
             + self.electronic_potential(pos) \
             + self.nuclear_repulsion()
