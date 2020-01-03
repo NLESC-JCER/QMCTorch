@@ -6,7 +6,6 @@ from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
 from deepqmc.wavefunction.kinetic_pooling import KineticPooling
-from deepqmc.wavefunction.kinetic_pooling_ci import KineticPoolingCI
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 
@@ -58,8 +57,6 @@ class Orbital(WaveFunction):
         self.kinpool = KineticPooling(
             self.configs, mol, cuda)
 
-        self.kinpool_ci = KineticPoolingCI(
-            self.configs, mol, cuda)
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
         self.fc.weight.data.fill_(1.)
@@ -112,7 +109,7 @@ class Orbital(WaveFunction):
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
 
-        ke = self.kinetic_energy_jacobi(pos, return_local_energy=True)
+        ke = self.kinetic_energy_jacobi(pos)
 
         return ke \
             + self.nuclear_potential(pos) \
@@ -145,7 +142,7 @@ class Orbital(WaveFunction):
             d2J = self.jastrow(x, derivative=2) / J
             d2JMO = d2J.unsqueeze(-1) * MO
 
-        K, psi = self.kinpool_ci(MO, d2MO, dJdMO, d2JMO)
+        K, psi = self.kinpool(MO, d2MO, dJdMO, d2JMO)
 
         return self.fc(K)/self.fc(psi)
 
