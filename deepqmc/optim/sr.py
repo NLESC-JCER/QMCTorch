@@ -4,21 +4,22 @@ from torch.optim import Optimizer
 
 class StochasticReconfiguration(Optimizer):
 
-    def __init__(self, params, tau=1E-2):
+    def __init__(self, params, wf, tau=1E-2):
         if tau < 0.0:
             raise ValueError("Invalid value of tau :{}".format(tau))
-        defaults = dict(tau=tau)
+        defaults = dict(tau=tau, wf=wf)
         super(StochasticReconfiguration, self).__init__(params, defaults)
+        self.lpos_needed = True
 
-    def step(self, closure):
+    def step(self, pos):
         """Performs a single optimization step
 
         Args:
-            closure (callable): [description]
+            pos (torch.tensor) : used as global here ...
         """
 
         grad_e = self.get_gradient_var_energy()
-        S = self.get_overlap_matrix(closure)
+        S = self.get_overlap_matrix(pos)
         tau = self.defaults['tau']
         deltap, _ = torch.solve(-0.5*tau*grad_e.view(-1, 1), S)
 
@@ -36,9 +37,10 @@ class StochasticReconfiguration(Optimizer):
                 p.data.add_(deltap[offset:offset + numel].view_as(p.data))
                 offset += numel
 
-    def get_overlap_matrix(self, closure):
+    def get_overlap_matrix(self, pos):
 
-        psi = closure()
+        self.zero_grad()
+        psi = self.defaults['wf'](pos)
 
         inp = []
         for group in self.param_groups:

@@ -26,14 +26,14 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=200, nstep=250, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-#opt = Adam(wf.parameters(), lr=0.01)
-opt = SR(wf.parameters(), tau=0.01)
+opt = Adam(wf.parameters(), lr=0.01)
+#opt = SR(wf.parameters(), wf=wf, tau=0.01)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
@@ -46,7 +46,7 @@ pos, _, _ = solver.single_point()
 # optimize the wave function
 solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
 solver.observable(['local_energy'])
-#solver.run(5, loss='energy')
+solver.run(5, loss='energy')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

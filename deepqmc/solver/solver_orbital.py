@@ -85,6 +85,9 @@ class SolverOrbital(SolverBase):
             loss : loss used ('energy','variance' or callable (for supervised)
         '''
 
+        if 'lpos_needed' not in self.opt.__dict__.keys():
+            self.opt.lpos_needed = False
+
         # sample the wave function
         pos = self.sample(ntherm=self.resample.ntherm)
 
@@ -133,14 +136,11 @@ class SolverOrbital(SolverBase):
                 self.opt.zero_grad()
                 loss.backward()
 
-                # closure to be able to recompute
-                # wf and its grad in SR
-                def closure():
-                    self.opt.zero_grad()
-                    return self.wf(lpos)
-
                 # optimize
-                self.opt.step(closure)
+                if self.opt.lpos_needed:
+                    self.opt.step(lpos)
+                else:
+                    self.opt.step()
 
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
