@@ -46,7 +46,7 @@ pos, _, _ = solver.single_point()
 # optimize the wave function
 solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
 solver.observable(['local_energy'])
-#solver.run(5, loss='energy')
+solver.run(5, loss='energy')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

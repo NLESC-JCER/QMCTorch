@@ -42,8 +42,8 @@ class SolverOrbital(SolverBase):
         else:
             self.device = torch.device('cpu')
 
-        if 'lpos_needed' not in self.opt.__dict__.keys():
-            self.opt.lpos_needed = False
+        if 'lpos_needed' not in self.opt.defaults:
+            self.opt.defaults['lpos_needed'] = False
 
         hvd.init()
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
@@ -98,6 +98,7 @@ class SolverOrbital(SolverBase):
 
         # sample the wave function
         pos = self.sample(ntherm=self.resample.ntherm)
+        pos.requires_grad = False
 
         # handle the batch size
         if batchsize is None:
@@ -109,9 +110,9 @@ class SolverOrbital(SolverBase):
 
         # create the data loader
         self.dataset = DataSet(pos)
-        self.sampler = DistributedSampler(self.dataset,
-                                          num_replicas=hvd.size(),
-                                          rank=hvd.rank())
+        self.data_sampler = DistributedSampler(self.dataset,
+                                               num_replicas=hvd.size(),
+                                               rank=hvd.rank())
         if self.cuda:
             kwargs = {'num_workers': num_threads, 'pin_memory': True}
         else:
@@ -119,7 +120,7 @@ class SolverOrbital(SolverBase):
 
         self.dataloader = DataLoader(self.dataset,
                                      batch_size=batchsize,
-                                     sampler=self.sampler,
+                                     sampler=self.data_sampler,
                                      **kwargs)
 
         # get the loss
@@ -145,6 +146,7 @@ class SolverOrbital(SolverBase):
             for data in self.dataloader:
 
                 lpos = data.to(self.device)
+                lpos.requires_grad = True
 
                 loss, eloc = self.loss(lpos)
                 if self.wf.mo.weight.requires_grad:
@@ -156,7 +158,7 @@ class SolverOrbital(SolverBase):
                 loss.backward()
 
                 # optimize
-                if self.opt.lpos_needed:
+                if 'lpos_needed' in self.opt.defaults:
                     self.opt.step(lpos)
                 else:
                     self.opt.step()
@@ -183,7 +185,7 @@ class SolverOrbital(SolverBase):
                     pos = None
                 pos = self.sample(
                     pos=pos, ntherm=self.resample.ntherm, with_tqdm=False)
-
+                pos.requires_grad = False
                 self.dataloader.dataset.data = pos
 
             if self.task == 'geo_opt':
@@ -197,7 +199,7 @@ class SolverOrbital(SolverBase):
 
     @staticmethod
     def metric_average(val, name):
-        tensor = torch.tensor(val)
+        tensor = val.clone().detach()
         avg_tensor = hvd.allreduce(tensor, name=name)
         return avg_tensor.item()
 

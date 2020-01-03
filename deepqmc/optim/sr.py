@@ -7,9 +7,8 @@ class StochasticReconfiguration(Optimizer):
     def __init__(self, params, wf, tau=1E-2):
         if tau < 0.0:
             raise ValueError("Invalid value of tau :{}".format(tau))
-        defaults = dict(tau=tau, wf=wf)
+        defaults = dict(tau=tau, wf=wf, lpos_needed=True)
         super(StochasticReconfiguration, self).__init__(params, defaults)
-        self.lpos_needed = True
 
     def step(self, pos):
         """Performs a single optimization step
