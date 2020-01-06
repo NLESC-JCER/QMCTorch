@@ -14,7 +14,7 @@ from deepqmc.solver.plot_data import plot_observable
 # ground state energy : -31.688 eV -> -1.16 hartree
 # bond dissociation energy 4.478 eV -> 0.16 hartree
 
-# set_torch_double_precision()
+set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',

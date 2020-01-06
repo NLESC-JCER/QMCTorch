@@ -1,6 +1,5 @@
 import torch
 from torch.utils.data import DataLoader
-from torch.utils.data.distributed import DistributedSampler
 import horovod.torch as hvd
 
 from deepqmc.solver.solver_base import SolverBase
@@ -115,9 +114,7 @@ class SolverOrbital(SolverBase):
 
         # create the data loader
         self.dataset = DataSet(pos)
-        self.data_sampler = DistributedSampler(self.dataset,
-                                               num_replicas=hvd.size(),
-                                               rank=hvd.rank())
+
         if self.cuda:
             kwargs = {'num_workers': num_threads, 'pin_memory': True}
         else:
@@ -240,9 +237,7 @@ class SolverOrbital(SolverBase):
 
         # create the data loader
         self.dataset = DataSet(pos)
-        self.data_sampler = DistributedSampler(self.dataset,
-                                               num_replicas=hvd.size(),
-                                               rank=hvd.rank())
+
         if self.cuda:
             kwargs = {'num_workers': num_threads, 'pin_memory': True}
         else:
