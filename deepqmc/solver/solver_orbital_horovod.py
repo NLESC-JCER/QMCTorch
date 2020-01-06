@@ -9,7 +9,7 @@ from deepqmc.solver.torch_utils import (DataSet, Loss,
 
 
 def printd(rank, *args):
-    if rank == 1:
+    if rank == 0:
         print(*args)
 
 
@@ -49,6 +49,9 @@ class SolverOrbital(SolverBase):
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(self.opt,
                                             named_parameters=self.wf.named_parameters())
+
+        self.sampler.nwalkers //= hvd.size()
+        self.sampler.walkers.nwalkers //= hvd.size()
 
     def configure(self, task='wf_opt', freeze=None):
         '''Configure the optimzier for specific tasks.'''
@@ -93,6 +96,8 @@ class SolverOrbital(SolverBase):
             loss : loss used ('energy','variance' or callable (for supervised)
         '''
 
+        self.wf.train()
+
         hvd.broadcast_parameters(self.wf.state_dict(), root_rank=0)
         torch.set_num_threads(num_threads)
 
@@ -120,7 +125,6 @@ class SolverOrbital(SolverBase):
 
         self.dataloader = DataLoader(self.dataset,
                                      batch_size=batchsize,
-                                     sampler=self.data_sampler,
                                      **kwargs)
 
         # get the loss
@@ -139,10 +143,11 @@ class SolverOrbital(SolverBase):
 
         self.get_observable(self.obs_dict, pos)
         for n in range(nepoch):
+
             printd(hvd.rank(), '----------------------------------------')
             printd(hvd.rank(), 'epoch %d' % n)
 
-            cumulative_loss = 0
+            cumulative_loss = 0.
             for data in self.dataloader:
 
                 lpos = data.to(self.device)
@@ -217,3 +222,47 @@ class SolverOrbital(SolverBase):
                                                       at[1][2]/nm2bohr))
             f.write('\n')
         f.close()
+
+    def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
+        '''Performs a single point calculation.'''
+
+        self.wf.eval()
+        num_threads = 1
+        hvd.broadcast_parameters(self.wf.state_dict(), root_rank=0)
+        torch.set_num_threads(num_threads)
+
+        # sample the wave function
+        pos = self.sample(ntherm=self.resample.ntherm)
+        pos.requires_grad = False
+
+        # handle the batch size
+        batchsize = len(pos)
+
+        # create the data loader
+        self.dataset = DataSet(pos)
+        self.data_sampler = DistributedSampler(self.dataset,
+                                               num_replicas=hvd.size(),
+                                               rank=hvd.rank())
+        if self.cuda:
+            kwargs = {'num_workers': num_threads, 'pin_memory': True}
+        else:
+            kwargs = {'num_workers': num_threads}
+
+        self.dataloader = DataLoader(self.dataset,
+                                     batch_size=batchsize,
+                                     **kwargs)
+
+        for data in self.dataloader:
+
+            lpos = data.to(self.device)
+            lpos.requires_grad = True
+            eloc = self.wf.local_energy(lpos)
+
+        eloc_all = hvd.allgather(eloc, name='local_energies')
+        e = torch.mean(eloc_all)
+        s = torch.var(eloc_all)
+
+        if prt:
+            printd(hvd.rank(), 'Energy   : ', e)
+            printd(hvd.rank(), 'Variance : ', s)
+        return pos, e, s

@@ -26,7 +26,7 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=100, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec', 'proba': 'normal'})
