@@ -1,5 +1,7 @@
 import torch
 from torch.optim import Adam
+import horovod.torch as hvd
+
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital_horovod import SolverOrbital
 from deepqmc.solver.torch_utils import set_torch_double_precision
@@ -14,7 +16,11 @@ from deepqmc.solver.plot_data import plot_observable
 # ground state energy : -31.688 eV -> -1.16 hartree
 # bond dissociation energy 4.478 eV -> 0.16 hartree
 
-# set_torch_double_precision()
+hvd.init()
+if torch.cuda.is_available():
+    torch.cuda.set_device(hvd.local_rank())
+
+set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
@@ -23,10 +29,10 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
              configs='singlet(1,1)',
-             use_jastrow=True)
+             use_jastrow=True, cuda=False)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=100, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec', 'proba': 'normal'})
