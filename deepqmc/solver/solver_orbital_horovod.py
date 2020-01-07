@@ -44,7 +44,6 @@ class SolverOrbital(SolverBase):
         if 'lpos_needed' not in self.opt.defaults:
             self.opt.defaults['lpos_needed'] = False
 
-        hvd.init()
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(self.opt,
                                             named_parameters=self.wf.named_parameters())
