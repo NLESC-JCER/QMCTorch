@@ -102,6 +102,7 @@ class Molecule(object):
 
         # size of the system
         self.natom = len(self.atoms)
+        assert self.nelec % 2 == 0, "Only systems with equal up/down electrons allowed so far"
         self.nup = math.ceil(self.nelec/2)
         self.ndown = math.floor(self.nelec/2)
 
