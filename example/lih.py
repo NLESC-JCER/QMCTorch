@@ -28,7 +28,7 @@ wf = Orbital(mol, kinetic='jacobi',
 sampler = Metropolis(nwalkers=500, nstep=1000, step_size=0.1,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+                     move={'type': 'one-elec', 'proba': 'normal'})
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.005)

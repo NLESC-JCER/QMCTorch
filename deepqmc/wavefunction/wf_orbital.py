@@ -7,6 +7,7 @@ from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
 from deepqmc.wavefunction.kinetic_pooling import KineticPooling
 from deepqmc.wavefunction.orbital_configurations import OrbitalConfigurations
+from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 
@@ -46,9 +47,10 @@ class Orbital(WaveFunction):
                                                 w=1., cuda=cuda)
 
         # define the SD we want
-        self.orb_confs = OrbitalConfigurations()
-        self.configs = self.orb_confs.get_configs(configs, mol)
+        self.orb_confs = OrbitalConfigurations(mol)
+        self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
+        print(self.configs)
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(

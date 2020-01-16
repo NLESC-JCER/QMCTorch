@@ -4,11 +4,10 @@ import numpy as np
 
 class OrbitalConfigurations(object):
 
-    def __init__(self, configs, mol):
-        self.configs = configs.lower()
+    def __init__(self, mol):
         self.mol = mol
 
-    def get_configs(self):
+    def get_configs(self, configs):
         """Get the configuratio in the CI expansion
 
         Args:
@@ -19,26 +18,38 @@ class OrbitalConfigurations(object):
             tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
             electronic confs
         """
-        if isinstance(self.configs, torch.Tensor):
-            return self.configs
 
-        elif self.configs == 'ground_state':
+        if isinstance(configs, str):
+            configs = configs.lower()
+
+        if isinstance(configs, torch.Tensor):
+            return configs
+
+        elif configs == 'ground_state':
             return self._get_ground_state_config()
 
-        elif self.configs.startswith('cas'):
-            nelec, norb = eval(self.configs.lstrip("cas"))
+        elif configs.startswith('cas('):
+            nelec, norb = eval(configs.lstrip("cas"))
             nocc, nvirt = self._get_orb_number(nelec, norb)
-            return self._get_cas_config(self.mol, nocc, nvirt)
+            return self._get_cas_config(nocc, nvirt, nelec)
 
-        elif self.configs.startswith('singlet'):
-            nelec, norb = eval(self.configs.lstrip("singlet"))
+        elif configs.startswith('single('):
+            nelec, norb = eval(configs.lstrip("single"))
             nocc, nvirt = self._get_orb_number(nelec, norb)
-            return self._get_singlet_state_config(self.mol, nocc, nvirt)
+            return self._get_single_config(nocc, nvirt)
+
+        elif configs.startswith('single_double('):
+            nelec, norb = eval(configs.lstrip("single_double"))
+            nocc, nvirt = self._get_orb_number(nelec, norb)
+            return self._get_single_double_config(nocc, nvirt)
 
         else:
             print(configs, " not recognized as valid configuration")
-            print('Options are : ground_state or singlet(nocc,nvirt)')
-            raise ValueError()
+            print('Options are : ground_state')
+            print('              single(nelec,norb)')
+            print('              single_double(nelec,norb)')
+            print('              cas(nelec,norb)')
+            raise ValueError("Config error")
 
     def _get_ground_state_config(self):
         """Return only the ground state configuration
@@ -50,11 +61,12 @@ class OrbitalConfigurations(object):
             tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
             electronic confs
         """
-        conf = (torch.LongTensor([np.array(range(self.mol.nup))]),
-                torch.LongTensor([np.array(range(self.mol.ndown))]))
-        return conf
+        _gsup = list(range(self.mol.nup))
+        _gs_down = list(range(self.mol.ndown))
 
-    def _get_singlet_state_config(self, nocc, nvirt):
+        return (torch.LongTensor(_gsup), torch.LongTensor(_gs_down))
+
+    def _get_single_config(self, nocc, nvirt):
         """Get the confs of the singlet conformations
 
         Args:
@@ -63,51 +75,95 @@ class OrbitalConfigurations(object):
             nvirt (int): number of virtual orbitals in the active space
         """
 
-        _gsup, _gs_down = list(range(self.mol.nup)), list(
-            range(self.mol.ndown))
-        cup, cdown = [_gsup], [_gs_down]
+        _gs_up = list(range(self.mol.nup))
+        _gs_down = list(range(self.mol.ndown))
+        cup, cdown = [_gs_up], [_gs_down]
 
-        for ivirt in range(self.mol.nup, self.mol.nup+nvirt, 1):
-            for iocc in range(self.mol.nup-1, self.mol.nup-1-nocc, -1):
+        for iocc in range(self.mol.nup-1, self.mol.nup-1-nocc, -1):
+            for ivirt in range(self.mol.nup, self.mol.nup+nvirt, 1):
+                _xt = self._create_excitation(_gs_up.copy(), iocc, ivirt)
+                cup, cdown = self._append_excitations(
+                    cup, cdown, _xt, _gs_down)
 
-                _xt = self._create_excitation(_gs.copy(), iocc, ivirt)
-                cup, cdown = self._append_excitations(cup, cdown, _xt, _gs)
-                cup, cdown = self._append_excitations(cup, cdown, _gs, _xt)
+                _xt = self._create_excitation(_gs_down.copy(), iocc, ivirt)
+                cup, cdown = self._append_excitations(cup, cdown, _gs_up, _xt)
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_cas_config(self, nocc, nvirt):
-        """Get the confs of the CAS
+    def _get_single_double_config(self, nocc, nvirt):
+        """Get the confs of the singlet + double
 
         Args:
-            mol (mol): molecule object
             nelec (int): number of electrons in the active space
             norb (int) : number of orbitals in the active space
         """
 
-        cup, cdown = [], []
+        _gs_up = list(range(self.mol.nup))
+        _gs_down = list(range(self.mol.ndown))
+        cup, cdown = [_gs_up], [_gs_down]
 
-        for ivirt_up in range(self.mol.nup-1, self.mol.nup+nvirt, 1):
-            for iocc_up in range(self.mol.nup-1, self.mol.nup-1-nocc, -1):
+        for iocc_up in range(self.mol.nup-1, self.mol.nup-1-nocc, -1):
+            for ivirt_up in range(self.mol.nup, self.mol.nup+nvirt, 1):
 
-                for ivirt_down in range(self.mol.ndown-1, self.mol.ndown+nvirt, 1):
-                    for iocc_up in range(self.mol.ndown-1, self.mol.ndown-1-nocc, -1):
+                for iocc_down in range(self.mol.ndown-1, self.mol.ndown-1-nocc, -1):
+                    for ivirt_down in range(self.mol.ndown, self.mol.ndown+nvirt, 1):
 
-                        _xt_up = self._create_excitation(_gs.copy(), iocc_up, ivirt_up)
+                        _xt_up = self._create_excitation(
+                            _gs_up.copy(), iocc_up, ivirt_up)
                         _xt_down = self._create_excitation(
-                            _gs.copy(), iocc_down, ivirt_down)
+                            _gs_down.copy(), iocc_down, ivirt_down)
                         cup, cdown = self._append_excitations(
                             cup, cdown, _xt_up, _xt_down)
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_orb_number(self, nelec, norb):
+    def _get_cas_config(self, nocc, nvirt, nelec):
+        """get confs of the CAS
 
+        Args:
+            nocc (int): number of occupied orbitals in the CAS
+            nvirt ([type]): number of virt orbitals in the CAS
+        """
+        from itertools import combinations, product
+
+        idx_low, idx_high = self.mol.nup-nocc, self.mol.nup+nvirt
+        orb_index_up = range(idx_low, idx_high)
+        idx_frz = list(range(idx_low))
+        print(nelec)
+        print(idx_frz)
+        _cup = [idx_frz + list(l)
+                for l in list(combinations(orb_index_up, nelec//2))]
+
+        idx_low, idx_high = self.mol.nup-nocc-1, self.mol.nup+nvirt-1
+        orb_index_down = range(idx_low, idx_high)
+        _cdown = [idx_frz + list(l)
+                  for l in list(combinations(orb_index_up, nelec//2))]
+
+        confs = list(product(_cup, _cdown))
+        cup, cdown = [], []
+
+        for c in confs:
+            cup.append(c[0])
+            cdown.append(c[1])
+
+        return (torch.LongTensor(cup), torch.LongTensor(cdown))
+
+    def _get_orb_number(self, nelec, norb):
+        """compute the number of occupied and virtual orbital
+        __ PER SPIN __
+        __ ONLY VALID For spin up/down ___
+        Args:
+            nelec (int): total number of elec in the CAS
+            norb (int): total number of orb in the CAS
+
+        Returns:
+            [int,int]: number of occpuied/virtual orb per spi
+        """
         _gsup, _gs_down = list(range(self.mol.nup)), list(
             range(self.mol.ndown))
 
         nocc = nelec // 2
-        nvirt = norb // 2 - nocc
+        nvirt = norb - nocc
         return nocc, nvirt
 
     @staticmethod
