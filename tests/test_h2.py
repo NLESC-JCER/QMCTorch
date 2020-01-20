@@ -24,7 +24,7 @@ class TestH2(unittest.TestCase):
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='auto',
-                          configs='singlet(2,2)',
+                          configs='single(2,2)',
                           use_jastrow=True)
 
         # sampler
