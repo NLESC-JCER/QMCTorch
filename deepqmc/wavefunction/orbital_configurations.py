@@ -61,10 +61,10 @@ class OrbitalConfigurations(object):
             tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
             electronic confs
         """
-        _gsup = list(range(self.mol.nup))
+        _gs_up = list(range(self.mol.nup))
         _gs_down = list(range(self.mol.ndown))
-
-        return (torch.LongTensor(_gsup), torch.LongTensor(_gs_down))
+        cup, cdown = [_gs_up], [_gs_down]
+        return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
     def _get_single_config(self, nocc, nvirt):
         """Get the confs of the singlet conformations
