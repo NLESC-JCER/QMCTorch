@@ -2,10 +2,12 @@ import torch
 from torch import nn
 import numpy as np
 
-from deepqmc.wavefunction.wf_base import WaveFunction
+
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
 from deepqmc.wavefunction.kinetic_pooling import KineticPooling
+from deepqmc.wavefunction.orbital_configurations import OrbitalConfigurations
+from deepqmc.wavefunction.wf_base import WaveFunction
 from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 
@@ -45,8 +47,10 @@ class Orbital(WaveFunction):
                                                 w=1., cuda=cuda)
 
         # define the SD we want
-        self.configs = self.get_configs(configs, mol)
+        self.orb_confs = OrbitalConfigurations(mol)
+        self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
+        print(self.configs)
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(
@@ -221,98 +225,116 @@ class Orbital(WaveFunction):
             d.append((at, xyz))
         return d
 
-    def get_configs(self, configs, mol):
-        """Get the configuratio in the CI expansion
+    # def get_configs(self, configs, mol):
+    #     """Get the configuratio in the CI expansion
 
-        Args:
-            configs (str): name of the configs we want
-            mol (mol object): molecule object
+    #     Args:
+    #         configs (str): name of the configs we want
+    #         mol (mol object): molecule object
 
-        Returns:
-            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
-            electronic confs
-        """
-        if isinstance(configs, torch.Tensor):
-            return configs
+    #     Returns:
+    #         tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
+    #         electronic confs
+    #     """
+    #     if isinstance(configs, torch.Tensor):
+    #         return configs
 
-        elif configs == 'ground_state':
-            return self._get_ground_state_config(mol)
+    #     configs = configs.lower()
 
-        elif configs.startswith('singlet'):
-            nocc, nvirt = eval(configs.lstrip("singlet"))
-            return self._get_singlet_state_config(mol, nocc, nvirt)
+    #     elif configs == 'ground_state':
+    #         return self._get_ground_state_config(mol)
 
-        else:
-            print(configs, " not recognized as valid configuration")
-            print('Options are : ground_state or singlet(nocc,nvirt)')
-            raise ValueError()
+    #     elif configs.startswith('cas'):
+    #         nelec, norb = eval(configs.lstrip("cas"))
+    #         return self._get_cas_config(mol, nelec, nvirt)
 
-    @staticmethod
-    def _get_ground_state_config(mol):
-        """Return only the ground state configuration
+    #     elif configs.startswith('singlet'):
+    #         nocc, nvirt = eval(configs.lstrip("singlet"))
+    #         return self._get_singlet_state_config(mol, nocc, nvirt)
 
-        Args:
-            mol (mol): mol object
+    #     else:
+    #         print(configs, " not recognized as valid configuration")
+    #         print('Options are : ground_state or singlet(nocc,nvirt)')
+    #         raise ValueError()
 
-        Returns:
-            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
-            electronic confs
-        """
-        conf = (torch.LongTensor([np.array(range(mol.nup))]),
-                torch.LongTensor([np.array(range(mol.ndown))]))
-        return conf
+    # @staticmethod
+    # def _get_ground_state_config(mol):
+    #     """Return only the ground state configuration
 
-    def _get_singlet_state_config(self, mol, nocc, nvirt):
-        """Get the confs of the singlet conformations
+    #     Args:
+    #         mol (mol): mol object
 
-        Args:
-            mol (mol): mol object
-            nocc (int): number of occupied orbitals in the active space
-            nvirt (int): number of virtual orbitals in the active space
-        """
+    #     Returns:
+    #         tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
+    #         electronic confs
+    #     """
+    #     conf = (torch.LongTensor([np.array(range(mol.nup))]),
+    #             torch.LongTensor([np.array(range(mol.ndown))]))
+    #     return conf
 
-        _gs = list(range(mol.nup))
-        cup, cdown = [_gs], [_gs]
+    # def _get_singlet_state_config(self, mol, nocc, nvirt):
+    #     """Get the confs of the singlet conformations
 
-        for ivirt in range(mol.nup, mol.nup+nvirt, 1):
-            for iocc in range(mol.nup-1, mol.nup-1-nocc, -1):
+    #     Args:
+    #         mol (mol): mol object
+    #         nocc (int): number of occupied orbitals in the active space
+    #         nvirt (int): number of virtual orbitals in the active space
+    #     """
 
-                _xt = self._create_excitation(_gs.copy(), iocc, ivirt)
-                cup, cdown = self._append_excitations(cup, cdown, _xt, _gs)
-                cup, cdown = self._append_excitations(cup, cdown, _gs, _xt)
+    #     _gs = list(range(mol.nup))
+    #     cup, cdown = [_gs], [_gs]
 
-        return (torch.LongTensor(cup), torch.LongTensor(cdown))
+    #     for ivirt in range(mol.nup, mol.nup+nvirt, 1):
+    #         for iocc in range(mol.nup-1, mol.nup-1-nocc, -1):
 
-    @staticmethod
-    def _create_excitation(conf, iocc, ivirt):
-        """promote an electron from iocc to ivirt
+    #             _xt = self._create_excitation(_gs.copy(), iocc, ivirt)
+    #             cup, cdown = self._append_excitations(cup, cdown, _xt, _gs)
+    #             cup, cdown = self._append_excitations(cup, cdown, _gs, _xt)
 
-        Args:
-            conf (list): index of the occupied orbitals
-            iocc (int): index of the occupied orbital
-            ivirt (int): index of the virtual orbital
+    #     return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-        Returns:
-            list: new configuration
-        """
-        conf.pop(iocc)
-        conf += [ivirt]
-        return conf
+    # def _get_cas_config(self, mol, nelec, norb):
+    #     """Get the confs of the CAS
 
-    @staticmethod
-    def _append_excitations(cup, cdown, new_cup, new_cdown):
-        """Append new excitations
+    #     Args:
+    #         mol (mol): molecule object
+    #         nelec (int): number of electrons in the active space
+    #         norb (int) : number of orbitals in the active space
+    #     """
 
-        Args:
-            cup (list): configurations of spin up
-            cdown (list): configurations of spin down
-            new_cup (list): new spin up confs
-            new_cdown (list): new spin down confs
-        """
+    #     _gs = list(range(mol.nup))
+    #     cup, cdown = [_gs], [_gs]
 
-        cup.append(new_cup)
-        cdown.append(new_cdown)
-        return cup, cdown
+    # @staticmethod
+    # def _create_excitation(conf, iocc, ivirt):
+    #     """promote an electron from iocc to ivirt
+
+    #     Args:
+    #         conf (list): index of the occupied orbitals
+    #         iocc (int): index of the occupied orbital
+    #         ivirt (int): index of the virtual orbital
+
+    #     Returns:
+    #         list: new configuration
+    #     """
+    #     conf.pop(iocc)
+    #     conf += [ivirt]
+    #     return conf
+
+    # @staticmethod
+    # def _append_excitations(cup, cdown, new_cup, new_cdown):
+    #     """Append new excitations
+
+    #     Args:
+    #         cup (list): configurations of spin up
+    #         cdown (list): configurations of spin down
+    #         new_cup (list): new spin up confs
+    #         new_cdown (list): new spin down confs
+    #     """
+
+    #     cup.append(new_cup)
+    #     cdown.append(new_cdown)
+    #     return cup, cdown
 
 
 if __name__ == "__main__":

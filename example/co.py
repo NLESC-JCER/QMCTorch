@@ -3,14 +3,14 @@ from torch.optim import Adam
 
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
-
+from deepqmc.solver.torch_utils import set_torch_double_precision
 
 from deepqmc.sampler.metropolis import Metropolis
-from deepqmc.sampler.metropolis_all_elec import Metropolis
-from deepqmc.sampler.generalized_metropolis import GeneralizedMetropolis
 from deepqmc.wavefunction.molecule import Molecule
 
 from deepqmc.solver.plot_data import plot_observable
+
+set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='C 0 0 0; O 0 0 2.173',
@@ -21,12 +21,14 @@ mol = Molecule(atom='C 0 0 0; O 0 0 2.173',
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='ground_state', use_projector=True)
+             configs='cas(4,4)',
+             use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=200, nstep=1000, step_size=0.1,
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.1,
                      nelec=wf.nelec, ndim=wf.ndim,
-                     init=mol.domain('normal'))
+                     init=mol.domain('normal'),
+                     move={'type': 'one-elec', 'proba': 'normal'})
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.005)
@@ -39,7 +41,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=scheduler)
 
 # # single point
-# pos, e, v = solver.single_point(ntherm=500, ndecor=100)
+#pos, e, v = solver.single_point(ntherm=500, ndecor=100)
 
 # #  sampling traj
 # pos = solver.sample(ntherm=0, ndecor=10)
@@ -48,10 +50,10 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['bas_exp'])
-solver.observable(['local_energy'])
-solver.run(10, loss='energy')
-plot_observable(solver.obs_dict, e0=-113.)
+# solver.configure(task='wf_opt', freeze=['bas_exp'])
+# solver.observable(['local_energy'])
+# solver.run(10, loss='energy')
+# plot_observable(solver.obs_dict, e0=-113.)
 
 
 # # optimize the geometry
