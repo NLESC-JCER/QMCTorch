@@ -17,13 +17,15 @@ mol = Molecule(atom='water.xyz', unit='angs',
                basis_type='gto', basis='sto-3g')
 
 # define the wave function
-wf = Orbital(mol, kinetic='auto',
-             configs='singlet(1,1)', use_jastrow=False)
+wf = Orbital(mol, kinetic='jacobi',
+             configs='single(2,2)',
+             use_jastrow=True)
 
 # sampler
 sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
                      nelec=wf.nelec, ndim=wf.ndim,
-                     init=mol.domain('normal'))
+                     init=mol.domain('normal'),
+                     move={'type': 'one-elec', 'proba': 'normal'})
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.005)
@@ -32,8 +34,10 @@ opt = Adam(wf.parameters(), lr=0.005)
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
 
 # solver
-solver = SolverOrbital(wf=wf, sampler=sampler,
-                       optimizer=opt, scheduler=scheduler)
+solver = SolverOrbital(wf=wf,
+                       sampler=sampler,
+                       optimizer=opt,
+                       scheduler=scheduler)
 
 
 # # single point
@@ -45,10 +49,10 @@ pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
 # plot_observable(obs, e0=-74, ax=None)
 
 # # optimize the wave function
-solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
-solver.observable(['local_energy'])
-solver.run(15, loss='energy')
-plot_observable(solver.obs_dict, e0=-76.)
+# solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
+# solver.observable(['local_energy'])
+# solver.run(15, loss='energy')
+# plot_observable(solver.obs_dict, e0=-76.)
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

@@ -21,14 +21,14 @@ mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='singlet(1,1)',
+             configs='ground_state',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=500, nstep=1000, step_size=0.1,
+sampler = Metropolis(nwalkers=5000, nstep=1000, step_size=0.05,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'),
-                     move={'type': 'one-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec-iter', 'proba': 'normal'})
 
 # optimizer
 opt = Adam(wf.parameters(), lr=0.005)
@@ -40,11 +40,11 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=scheduler)
 
-pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
+# pos, e, v = solver.single_point(ntherm=1000, ndecor=100)
 
-# pos = solver.sample(ntherm=500, ndecor=10)
-# obs = solver.sampling_traj(pos)
-# plot_observable(obs, e0=-8., ax=None)
+pos = solver.sample(ntherm=0, ndecor=10)
+obs = solver.sampling_traj(pos)
+plot_observable(obs, e0=-8., ax=None)
 
 # optimize the wave function
 # solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])

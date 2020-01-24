@@ -7,7 +7,7 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.optim.sr import StochasticReconfiguration as SR
 
 from deepqmc.wavefunction.molecule import Molecule
-from deepqmc.solver.plot_data import plot_observable
+from deepqmc.solver.plot_data import plot_observable, load_observable, save_observalbe
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -39,9 +39,11 @@ opt = Adam(wf.parameters(), lr=0.01)
 solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
 #pos, _, _ = solver.single_point()
 
-# pos = solver.sample(ntherm=0, ndecor=10)
-# obs = solver.sampling_traj(pos)
-# plot_observable(obs, e0=-1.16, ax=None)
+pos = solver.sample(ntherm=0, ndecor=10)
+obs = solver.sampling_traj(pos)
+save_observalbe('obs.pkl', obs)
+obs = load_observable('obs.pkl')
+plot_observable(obs, e0=-1.16, ax=None)
 
 # optimize the wave function
 #solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])

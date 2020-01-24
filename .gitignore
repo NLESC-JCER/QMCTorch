@@ -1,6 +1,7 @@
 *.py[cod]
 *.egg-info
 *.eggs
+*.pkl
 .ipynb_checkpoints
 *.code-workspace
 

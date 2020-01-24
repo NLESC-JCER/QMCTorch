@@ -132,7 +132,7 @@ class Metropolis(SamplerBase):
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):
-                        pos.append(self.walkers.pos.to('cpu'))
+                        pos.append(self.walkers.pos.to('cpu').clone())
                     idecor += 1
 
             if with_tqdm:

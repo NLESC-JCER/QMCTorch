@@ -129,8 +129,6 @@ class OrbitalConfigurations(object):
         idx_low, idx_high = self.mol.nup-nocc, self.mol.nup+nvirt
         orb_index_up = range(idx_low, idx_high)
         idx_frz = list(range(idx_low))
-        print(nelec)
-        print(idx_frz)
         _cup = [idx_frz + list(l)
                 for l in list(combinations(orb_index_up, nelec//2))]
 

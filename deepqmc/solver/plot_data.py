@@ -1,5 +1,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
+import pickle
 
 
 def plot_observable(obs_dict, e0=None, ax=None):
@@ -8,7 +9,9 @@ def plot_observable(obs_dict, e0=None, ax=None):
     Args:
         obs_dict : dictioanry of observable
     '''
+
     show_plot = False
+
     if ax is None:
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -42,3 +45,13 @@ def plot_observable(obs_dict, e0=None, ax=None):
 
     if show_plot:
         plt.show()
+
+
+def save_observalbe(filename, obs_dict):
+    with open(filename, 'wb') as fhandle:
+        pickle.dump(obs_dict, fhandle, protocol=pickle.HIGHEST_PROTOCOL)
+
+
+def load_observable(filename):
+    with open(filename, 'rb') as fhandle:
+        return pickle.load(fhandle)
