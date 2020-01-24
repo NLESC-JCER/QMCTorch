@@ -100,7 +100,9 @@ class OrbitalConfigurations(object):
 
         _gs_up = list(range(self.mol.nup))
         _gs_down = list(range(self.mol.ndown))
-        cup, cdown = [_gs_up], [_gs_down]
+        cup, cdown = self._get_single_config(nocc, nvirt)
+        cup = cup.tolist()
+        cdown = cdown.tolist()
 
         for iocc_up in range(self.mol.nup-1, self.mol.nup-1-nocc, -1):
             for ivirt_up in range(self.mol.nup, self.mol.nup+nvirt, 1):
