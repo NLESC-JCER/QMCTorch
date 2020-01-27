@@ -41,7 +41,7 @@ setup(
     test_suite='tests',
     install_requires=['autograd', 'cython', 'matplotlib', 'numpy',
                       'pyyaml>=5.1', 'schema', 'scipy', 'tqdm', 'torch',
-                      'basis_set_exchange', 'pyscf', 'mendeleev'],
+                      'basis_set_exchange', 'pyscf', 'mendeleev', 'pickle'],
     # 'horovod'], fails so far ...
     extras_require={
         'dev': ['prospector[with_pyroma]', 'yapf', 'isort'],
