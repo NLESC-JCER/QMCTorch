@@ -32,15 +32,23 @@ class Loss(nn.Module):
         super(Loss, self).__init__()
         self.wf = wf
         self.method = method
+        self.clip = False
 
     def forward(self, pos):
 
         local_energies = self.wf.local_energy(pos)
+
+        if self.clip:
+            thr = 5*torch.median(local_energies)
+            mask = (local_energies > thr) & (local_energies < -thr)
+        else:
+            mask = torch.ones_like(local_energies).type(torch.bool)
+
         if self.method == 'variance':
-            loss = torch.var(local_energies)
+            loss = torch.var(local_energies[mask])
 
         elif self.method == 'energy':
-            loss = torch.mean(local_energies)
+            loss = torch.mean(local_energies[mask])
 
         else:
             raise ValueError('method must be variance, energy')

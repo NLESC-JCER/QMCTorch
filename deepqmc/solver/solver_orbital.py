@@ -64,8 +64,13 @@ class SolverOrbital(SolverBase):
                             param.requires_grad = False
                     elif name.lower() == 'bas_exp':
                         self.wf.ao.bas_exp.requires_grad = False
+                    elif name.lower() == 'ao':
+                        self.wf.ao.bas_exp.requires_grad = False
+                        self.wf.ao.bas_coeffs.requires_grad = False
+                    elif name.lower() == 'jastrow':
+                        self.wf.jastrow.weight.requires_grad = False
                     else:
-                        opt_freeze = ['ci', 'mo', 'bas_exp']
+                        opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
                         raise ValueError(
                             'Valid arguments for freeze are :', opt_freeze)
 
@@ -123,6 +128,10 @@ class SolverOrbital(SolverBase):
                 loss, eloc = self.loss(lpos)
                 if self.wf.mo.weight.requires_grad:
                     loss += self.ortho_loss(self.wf.mo.weight)
+
+                if torch.isnan(loss):
+                    raise ValueError("Nans detected in the loss")
+
                 cumulative_loss += loss
 
                 # compute local gradients
