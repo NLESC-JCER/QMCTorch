@@ -108,10 +108,12 @@ class SolverBase(object):
 
         return self.wf.variance(pos)
 
-    def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
+    def single_point(self, pos=None, prt=True,
+                     with_tqdm=True, ntherm=-1, ndecor=100):
         '''Performs a single point calculation.'''
         if pos is None:
-            pos = self.sample(ntherm=ntherm, ndecor=ndecor)
+            pos = self.sample(ntherm=ntherm, ndecor=ndecor,
+                              with_tqdm=with_tqdm)
 
         if self.wf.cuda and pos.device.type == 'cpu':
             pos = pos.to(self.device)
