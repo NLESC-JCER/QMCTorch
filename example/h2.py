@@ -18,7 +18,7 @@ from deepqmc.solver.plot_data import plot_observable, load_observable, save_obse
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               basis_type='gto', basis='sto-6g', unit='bohr')
+               basis_type='sto', basis='sz', unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',

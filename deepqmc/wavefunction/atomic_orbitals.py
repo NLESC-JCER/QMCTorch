@@ -51,8 +51,7 @@ class AtomicOrbitals(nn.Module):
 
         # select the radial aprt
         radial_dict = {'sto': self._radial_slater,
-                       'gto': self._radial_gaussian,
-                       'gto_cart': self._radial_gausian_cart}
+                       'gto': self._radial_gaussian}
         self.radial = radial_dict[mol.basis_type]
 
         # get the normaliationconstants
@@ -70,10 +69,9 @@ class AtomicOrbitals(nn.Module):
             # select the normalization
             if basis_type == 'sto':
                 return self._norm_slater()
+
             elif basis_type == 'gto':
                 return self._norm_gaussian()
-            elif basis_type == 'gto_cart':
-                return self._norm_gaussian_cart()
 
     def _norm_slater(self):
         '''Normalization of the STO
@@ -106,18 +104,38 @@ class AtomicOrbitals(nn.Module):
         return torch.sqrt(B/C)*A
 
     def _radial_slater(self, R, xyz=None, derivative=0, jacobian=True):
+
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R)
 
         elif derivative > 0:
-            sum_xyz = xyz.sum(3)
+
             rn = R**(self.bas_n)
-            nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
+            nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
+
             er = torch.exp(-self.bas_exp*R)
-            nabla_er = - self.bas_exp * sum_xyz * er
+            nabla_er = -(self.bas_exp * er).unsqueeze(-1) * xyz / R.unsqueeze(-1)
 
             if derivative == 1:
-                return nabla_rn*er + rn*nabla_er
+
+                if jacobian:
+                    nabla_rn = nabla_rn.sum(3)
+                    nabla_er = nabla_er.sum(3)
+                    return nabla_rn*er + rn*nabla_er
+                else:
+                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er
+
+            elif derivative == 2:
+
+                sum_xyz2 = (xyz**2).sum(3)
+
+                lap_rn = self.bas_n * (3*R**(self.bas_n-2)
+                                       + sum_xyz2 * (self.bas_n-2) * R**(self.bas_n-4))
+
+                lap_er = self.bas_exp**2 * er * sum_xyz2 / R**2 \
+                    - 2 * self.bas_exp * er * sum_xyz2 / R**3
+
+                return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
 
     def _radial_gaussian(self, R, xyz=None, derivative=0, jacobian=True):
 
@@ -149,10 +167,6 @@ class AtomicOrbitals(nn.Module):
                     - 6 * self.bas_exp * er
 
                 return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
-
-    def _radial_gausian_cart(self, R, xyz=None, derivative=0):
-        raise NotImplementedError('Cartesian GTOs are on the to do list')
-        # return xyz**self.lmn_cart * torch.exp(-self.bas_exp*R**2)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
