@@ -114,7 +114,8 @@ class AtomicOrbitals(nn.Module):
             nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
 
             er = torch.exp(-self.bas_exp*R)
-            nabla_er = -(self.bas_exp * er).unsqueeze(-1) * xyz / R.unsqueeze(-1)
+            nabla_er = -(self.bas_exp * er).unsqueeze(-1) * \
+                xyz / R.unsqueeze(-1)
 
             if derivative == 1:
 

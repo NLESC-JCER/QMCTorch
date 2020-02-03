@@ -31,7 +31,8 @@ def plot_observable(obs_dict, e0=None, ax=None):
 
     # get the mean value
     energy = np.mean(data, 1)
-    print("Energy : %f " % np.mean(energy))
+    print("Energy   : %f " % np.mean(energy))
+    print("Variance : %f " % np.std(energy))
 
     # plot
     ax.fill_between(epoch, emin, emax, alpha=0.5, color='#4298f4')

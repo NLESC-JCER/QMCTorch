@@ -27,20 +27,22 @@ class DataSet(Dataset):
 
 class Loss(nn.Module):
 
-    def __init__(self, wf, method='variance'):
+    def __init__(self, wf, method='variance', clip=False):
 
         super(Loss, self).__init__()
         self.wf = wf
         self.method = method
-        self.clip = False
+        self.clip = clip
 
     def forward(self, pos):
 
         local_energies = self.wf.local_energy(pos)
 
         if self.clip:
-            thr = 5*torch.median(local_energies)
-            mask = (local_energies > thr) & (local_energies < -thr)
+            median = torch.median(local_energies)
+            std = torch.std(local_energies)
+            mask = (local_energies < median +
+                    5*std) & (local_energies > median-5*std)
         else:
             mask = torch.ones_like(local_energies).type(torch.bool)
 

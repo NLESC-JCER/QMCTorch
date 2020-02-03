@@ -18,7 +18,7 @@ from deepqmc.solver.plot_data import plot_observable, load_observable, save_obse
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               basis_type='sto', basis='sz', unit='bohr')
+               basis_type='sto', basis='dz', unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
@@ -26,7 +26,7 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=100, step_size=0.5,
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size=0.5,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec', 'proba': 'normal'})

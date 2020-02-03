@@ -57,7 +57,7 @@ class Metropolis(SamplerBase):
                 torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
 
         self._move_per_iter = 1
-        if self.movedict['type'] == 'all-elec-iterate':
+        if self.movedict['type'] == 'all-elec-iter':
             self.fixed_id_elec_list = range(self.nelec)
             self._move_per_iter = self.nelec
         else:
@@ -89,6 +89,9 @@ class Metropolis(SamplerBase):
         if self.cuda:
             self.walkers.cuda = True
             self.device = torch.device('cuda')
+
+        if ntherm >= self.nstep:
+            raise ValueError('Thermalisation longer than trajectory')
 
         with torch.no_grad():
 

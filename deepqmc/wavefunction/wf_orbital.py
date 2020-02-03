@@ -35,8 +35,15 @@ class Orbital(WaveFunction):
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
+        self.mo_scf = nn.Linear(mol.norb, mol.norb, bias=False)
+        self.mo_scf.weight = self.get_mo_coeffs()
+        self.mo_scf.weight.requires_grad = False
+        if self.cuda:
+            self.mo_scf.to(self.device)
+
+        # define the mo mixing layer
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
-        self.mo.weight = self.get_mo_coeffs()
+        self.mo.weight = nn.Parameter(torch.eye(mol.norb))
         if self.cuda:
             self.mo.to(self.device)
 
@@ -100,14 +107,26 @@ class Orbital(WaveFunction):
         if self.use_jastrow:
             J = self.jastrow(x)
 
+        # atomic orbital
         x = self.ao(x)
+
+        # molecular orbitals
+        x = self.mo_scf(x)
+
+        # mix the mos
         x = self.mo(x)
+
+        # pool the mos
         x = self.pool(x)
 
         if self.use_jastrow:
             return J*self.fc(x)
         else:
             return self.fc(x)
+
+    def _get_mo_vals(self, x, derivative=0):
+        '''get the values of the MOs.'''
+        return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
@@ -129,25 +148,26 @@ class Orbital(WaveFunction):
         Returns: values of \Delta \Psi
         '''
 
-        MO = self.mo(self.ao(x))
-        d2MO = self.mo(self.ao(x, derivative=2))
-        dJdMO, d2JMO = None, None
+        mo = self._get_mo_vals(x)
+        d2mo = self._get_mo_vals(x, derivative=2)
+        djast_dmo, d2jast_mo = None, None
 
         if self.use_jastrow:
 
-            J = self.jastrow(x)
-            dJ = self.jastrow(
-                x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
-            dAO = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
-            dMO = self.mo(dAO).transpose(2, 3)
-            dJdMO = (dJ.unsqueeze(2) * dMO).sum(-1)
+            jast = self.jastrow(x)
+            djast = self.jastrow(x, derivative=1, jacobian=False)
+            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
 
-            d2J = self.jastrow(x, derivative=2) / J
-            d2JMO = d2J.unsqueeze(-1) * MO
+            dao = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
+            dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
+            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
 
-        K, psi = self.kinpool(MO, d2MO, dJdMO, d2JMO)
+            d2jast = self.jastrow(x, derivative=2) / jast
+            d2jast_mo = d2jast.unsqueeze(-1) * mo
 
-        return self.fc(K)/self.fc(psi)
+        kin, psi = self.kinpool(mo, d2mo, djast_dmo, d2jast_mo)
+
+        return self.fc(kin)/self.fc(psi)
 
     def nuclear_potential(self, pos):
         '''Compute the potential of the wf points

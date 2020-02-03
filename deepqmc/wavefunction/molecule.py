@@ -23,6 +23,7 @@ class Molecule(object):
             raise ValueError("basis_type must be sto or gto")
 
         # process the atom name/pos
+        self.max_angular = 2
         self.atoms = []
         self.atom_coords = []
         self.atomic_number = []
@@ -165,7 +166,11 @@ class Molecule(object):
                                                      'coefficients': []}
 
             # secondary qn and multiplicity
-            l = self.get_l[bas_name[1]]
+            if bas_name[1] in self.get_l.keys():
+                l = self.get_l[bas_name[1]]
+            else:
+                raise ValueError('Only orbital up to l=%d (%s) are currently supported',
+                                 self.max_angular, self.get_label[self.max_angular])
 
             # store it
             if l not in atomic_data['electron_shells'][n]['angular_momentum']:
@@ -199,8 +204,12 @@ class Molecule(object):
 
                     # secondary qn and multiplicity
                     l = angular
+                    if l > self.max_angular:
+                        raise ValueError('Only orbital up to l=%d (%s) are currently supported',
+                                         self.max_angular, self.get_label[self.max_angular])
+
                     mult = self.mult_bas[self.get_label[angular]]
-                    nbas = len(shell['coefficients'][0])
+                    nbas = len(shell['coefficients'][iangular])
                     mvals = self.get_m[self.get_label[angular]]
 
                     for imult in range(mult):
@@ -342,3 +351,10 @@ class Molecule(object):
             domain['sigma'] = np.diag(np.std(self.atom_coords, 0)+0.25)
 
         return domain
+
+
+if __name__ == "__main__":
+    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
+                   basis_type='sto',
+                   basis='tz2p',
+                   unit='bohr')

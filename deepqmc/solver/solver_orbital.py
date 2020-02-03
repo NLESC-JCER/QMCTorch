@@ -14,13 +14,16 @@ class SolverOrbital(SolverBase):
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
 
-        # task
-        self.configure(task='geo_opt')
+        # init sampling
+        self.initial_sampling(ntherm=-1, ndecor=100)
 
-        # esampling
-        self.resampling(ntherm=-1, resample=100,
+        # resampling
+        self.resampling(ntherm=-1, nstep=100,
                         resample_from_last=True,
                         resample_every=1)
+
+        # task
+        self.configure(task='geo_opt')
 
         # observalbe
         self.observable(['local_energy'])
@@ -37,6 +40,7 @@ class SolverOrbital(SolverBase):
 
     def configure(self, task='wf_opt', freeze=None):
         '''Configure the optimzier for specific tasks.'''
+
         self.task = task
 
         if task == 'geo_opt':
@@ -74,7 +78,7 @@ class SolverOrbital(SolverBase):
                         raise ValueError(
                             'Valid arguments for freeze are :', opt_freeze)
 
-    def run(self, nepoch, batchsize=None, loss='variance'):
+    def run(self, nepoch, batchsize=None, loss='variance', clip_loss=False):
         '''Train the model.
 
         Arg:
@@ -87,7 +91,13 @@ class SolverOrbital(SolverBase):
             self.opt.lpos_needed = False
 
         # sample the wave function
-        pos = self.sample(ntherm=self.resample.ntherm)
+        pos = self.sample(ntherm=self.initial_sample.ntherm,
+                          ndecor=self.initial_sample.ndecor)
+
+        # resize the number of walkers
+        _nwalker_save = self.sampler.walkers.nwalkers
+        self.sampler.walkers.nwalkers = pos.shape[0]
+        self.sampler.nwalkers = pos.shape[0]
 
         # handle the batch size
         if batchsize is None:
@@ -102,7 +112,7 @@ class SolverOrbital(SolverBase):
         self.dataloader = DataLoader(self.dataset, batch_size=batchsize)
 
         # get the loss
-        self.loss = Loss(self.wf, method=loss)
+        self.loss = Loss(self.wf, method=loss, clip=clip_loss)
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
@@ -164,7 +174,6 @@ class SolverOrbital(SolverBase):
                     pos = None
                 pos = self.sample(
                     pos=pos, ntherm=self.resample.ntherm, with_tqdm=False)
-
                 self.dataloader.dataset.data = pos
 
             if self.task == 'geo_opt':
@@ -175,6 +184,8 @@ class SolverOrbital(SolverBase):
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
+        self.sampler.walkers.nwalkers = _nwalker_save
+        self.sampler.nwalkers = _nwalker_save
 
     def save_traj(self, fname):
 

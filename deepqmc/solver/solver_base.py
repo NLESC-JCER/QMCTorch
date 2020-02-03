@@ -14,14 +14,20 @@ class SolverBase(object):
         self.cuda = False
         self.device = torch.device('cpu')
 
-    def resampling(self, ntherm=-1, resample=100, resample_from_last=True,
+    def resampling(self, ntherm=-1, nstep=100, resample_from_last=True,
                    resample_every=1):
         '''Configure the resampling options.'''
         self.resample = SimpleNamespace()
         self.resample.ntherm = ntherm
-        self.resample.resample = resample
+        self.resample.resample = nstep
         self.resample.resample_from_last = resample_from_last
         self.resample.resample_every = resample_every
+
+    def initial_sampling(self, ntherm=-1, ndecor=100):
+        '''Configure the initial sampling options.'''
+        self.initial_sample = SimpleNamespace()
+        self.initial_sample.ntherm = ntherm
+        self.initial_sample.ndecor = ndecor
 
     def observable(self, obs):
         '''Create the observalbe we want to track.'''
