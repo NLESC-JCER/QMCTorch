@@ -57,6 +57,10 @@ class Metropolis(SamplerBase):
                 torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
 
         self._move_per_iter = 1
+        if self.movedict['type'] not in ['one-elec', 'all-elec', 'all-elec-iter']:
+            raise ValueError(
+                " 'type' in move should be 'one-elec','all-elec','all-elec-iter'")
+
         if self.movedict['type'] == 'all-elec-iter':
             self.fixed_id_elec_list = range(self.nelec)
             self._move_per_iter = self.nelec
