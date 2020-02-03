@@ -342,14 +342,19 @@ class Molecule(object):
 
         domain = dict()
 
-        if method == 'uniform':
+        if method == 'center':
+            domain['center'] = np.mean(self.atom_coords, 0)
+
+        elif method == 'uniform':
             domain['min'] = np.min(self.atom_coords) - 0.5
             domain['max'] = np.max(self.atom_coords) + 0.5
 
-        if method == 'normal':
+        elif method == 'normal':
             domain['mean'] = np.mean(self.atom_coords, 0)
             domain['sigma'] = np.diag(np.std(self.atom_coords, 0)+0.25)
 
+        else:
+            raise ValueError('Method to initialize the walkers not recognized')
         return domain
 
 

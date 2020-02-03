@@ -49,9 +49,8 @@ class Orbital(WaveFunction):
 
         # jastrow
         self.use_jastrow = use_jastrow
-        if self.use_jastrow:
-            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
-                                                w=1., cuda=cuda)
+        self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
+                                            w=1., cuda=cuda)
 
         # define the SD we want
         self.orb_confs = OrbitalConfigurations(mol)

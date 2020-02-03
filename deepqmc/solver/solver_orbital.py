@@ -13,6 +13,7 @@ class SolverOrbital(SolverBase):
 
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
+        self.ortho_mo = True
 
         # init sampling
         self.initial_sampling(ntherm=-1, ndecor=100)
@@ -52,6 +53,7 @@ class SolverOrbital(SolverBase):
 
         elif task == 'wf_opt':
             self.wf.ao.bas_exp.requires_grad = True
+            self.wf.ao.bas_coeffs.requires_grad = True
             for param in self.wf.mo.parameters():
                 param.requires_grad = True
             self.wf.fc.weight.requires_grad = True
@@ -66,8 +68,6 @@ class SolverOrbital(SolverBase):
                     elif name.lower() == 'mo':
                         for param in self.wf.mo.parameters():
                             param.requires_grad = False
-                    elif name.lower() == 'bas_exp':
-                        self.wf.ao.bas_exp.requires_grad = False
                     elif name.lower() == 'ao':
                         self.wf.ao.bas_exp.requires_grad = False
                         self.wf.ao.bas_coeffs.requires_grad = False
@@ -131,12 +131,15 @@ class SolverOrbital(SolverBase):
             print('epoch %d' % n)
 
             cumulative_loss = 0
+
             for data in self.dataloader:
 
-                lpos = data.to(self.device)
+                self.print_parameters()
 
+                lpos = data.to(self.device)
                 loss, eloc = self.loss(lpos)
-                if self.wf.mo.weight.requires_grad:
+
+                if self.wf.mo.weight.requires_grad and self.ortho_mo:
                     loss += self.ortho_loss(self.wf.mo.weight)
 
                 if torch.isnan(loss):
@@ -186,6 +189,14 @@ class SolverOrbital(SolverBase):
         self.sampler.nstep = _nstep_save
         self.sampler.walkers.nwalkers = _nwalker_save
         self.sampler.nwalkers = _nwalker_save
+
+    def print_parameters(self, grad=False):
+        for p in self.wf.parameters():
+            if p.requires_grad:
+                if grad:
+                    print(p.grad)
+                else:
+                    print(p)
 
     def save_traj(self, fname):
 

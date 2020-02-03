@@ -39,9 +39,8 @@ class Walkers(object):
 
         else:
 
-            if self.init_domain is None:
-                self.pos = torch.zeros((self.nwalkers, self.nelec*self.ndim),
-                                       device=self.device)
+            if 'center' in self.init_domain.keys():
+                self.pos = self._init_center()
 
             elif 'min' in self.init_domain.keys():
                 self.pos = self._init_uniform()
@@ -51,6 +50,11 @@ class Walkers(object):
 
             else:
                 raise ValueError('Init walkers not recognized')
+
+    def _init_center(self):
+        eps = 1E-6
+        pos = -eps + 2*eps*torch.rand(self.nwalkers, self.nelec*self.ndim)
+        return pos.type(torch.get_default_dtype()).to(device=self.device)
 
     def _init_uniform(self):
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)

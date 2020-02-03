@@ -16,7 +16,7 @@ class SolverPotential(SolverBase):
         self.task = "wf_opt"
 
         # esampling
-        self.resampling(ntherm=-1, resample=100,
+        self.resampling(ntherm=-1, nstep=100,
                         resample_from_last=True, resample_every=1)
 
         # observalbe
