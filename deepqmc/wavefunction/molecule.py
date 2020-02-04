@@ -30,6 +30,9 @@ class Molecule(object):
         self.nelec = 0
         self.unit = unit
 
+        if self.unit not in ['angs','bohr']:
+            raise ValueError('unit should be angs or bohr')
+
         self.process_atom_str()
         self.get_bonds()
 
@@ -291,21 +294,22 @@ class Molecule(object):
 
         if self.basis_type == 'gto':
 
-            if code.lower() not in ['pyscf']:
+            if code.lower() == 'pyscf':
+                mo = self._get_mo_pyscf()
+            else:
                 raise ValueError(
                     code + 'not currently supported for GTO orbitals')
 
+        elif self.basis_type == 'sto':
+                
             if code.lower() == 'pyscf':
                 mo = self._get_mo_pyscf()
-
-        elif self.basis_type == 'sto':
-
-            if code.lower() not in ['pyscf']:
+            elif code.lower() == 'adf':
+                mo = self._get_mo_adf()
+            else:
                 raise ValueError(
                     code + 'not currently supported for STO orbitals')
 
-            if code.lower() == 'pyscf':
-                mo = self._get_mo_pyscf()
 
         return mo
 
@@ -322,6 +326,56 @@ class Molecule(object):
         mol = gto.M(atom=self.atoms_str, basis=pyscf_basis, unit=self.unit)
         rhf = scf.RHF(mol).run()
         return self._normalize_columns(rhf.mo_coeff)
+
+    def _get_mo_adf(self):
+
+        from scm import plams
+        import shutil        
+
+        wd = ''.join(self.atoms)+'_'+self.basis
+        t21_name = wd+'.t21'
+        plams_wd = './plams_workdir'
+        t21_path = os.path.join(plams_wd,os.path.join(wd,t21_name))
+
+        if os.path.isfile(t21_name):
+
+            kf = plams.KFFile(t21_name)
+            nmo = kf.read('A','nmo_A')
+            mos = np.array(kf.read('A','Eigen-Bas_A'))
+
+        else:
+
+            plams.init()
+            plams.config.log.stdout = -1
+            plams.config.erase_workdir = True
+
+            mol = plams.Molecule()
+            for at,xyz in zip (self.atoms,self.atom_coords):
+                mol.add_atom(plams.Atom(symbol=at,coords=tuple(xyz)))
+
+            sett = plams.Settings()
+            sett.input.basis.type = self.basis.upper()
+            sett.input.basis.core = 'None'
+            sett.input.symmetry = 'nosym'
+            sett.input.XC.HartreeFock = ''
+
+            if self.unit == 'angs':
+                sett.input.units.length = 'Angstrom'
+            elif self.unit == 'bohr':
+                sett.input.units.length = 'Bohr'
+            else:
+                raise ValueError('unit should be angs or bohr')
+
+            job = plams.ADFJob(molecule=mol,settings=sett,name=wd)
+            job.run()
+
+            nmo = job.results.readkf('A', 'nmo_A')
+            mos = np.array(job.results.readkf('A', 'Eigen-Bas_A'))
+
+            shutil.copyfile(t21_path,t21_name)
+
+        mos = mos.reshape(nmo, nmo).T
+        return  self._normalize_columns(mos)
 
     def _get_atoms_str(self):
         self.atoms_str = ''
@@ -361,5 +415,7 @@ class Molecule(object):
 if __name__ == "__main__":
     mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
                    basis_type='sto',
-                   basis='tz2p',
+                   basis='sz',
                    unit='bohr')
+    mo = mol.get_mo_coeffs(code='adf')
+    print(mo)

@@ -4,6 +4,7 @@
 *.pkl
 .ipynb_checkpoints
 *.code-workspace
+*.t21
 
 build
 dist

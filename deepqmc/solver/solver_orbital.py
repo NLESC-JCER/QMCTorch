@@ -134,7 +134,7 @@ class SolverOrbital(SolverBase):
 
             for data in self.dataloader:
 
-                self.print_parameters()
+                # self.print_parameters()
 
                 lpos = data.to(self.device)
                 loss, eloc = self.loss(lpos)

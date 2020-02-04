@@ -7,7 +7,7 @@ from deepqmc.sampler.sampler_base import SamplerBase
 class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
-                 step_size=None, init={'min': -2, 'max': 2}, L=10):
+                 step_size=0.1, init={'min': -2, 'max': 2}, L=10):
         ''' HMC SAMPLER
         Args:
             f (func) : function to sample

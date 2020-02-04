@@ -184,7 +184,7 @@ class Orbital(WaveFunction):
             for iatom in range(self.natom):
                 patom = self.ao.atom_coords[iatom, :]
                 Z = self.ao.atomic_number[iatom]
-                r = torch.sqrt(((pelec-patom)**2).sum(1)) + 1E-6
+                r = torch.sqrt(((pelec-patom)**2).sum(1))  # + 1E-12
                 p += (-Z/r)
         return p.view(-1, 1)
 
@@ -202,7 +202,7 @@ class Orbital(WaveFunction):
             epos1 = pos[:, ielec1*self.ndim:(ielec1+1)*self.ndim]
             for ielec2 in range(ielec1+1, self.nelec):
                 epos2 = pos[:, ielec2*self.ndim:(ielec2+1)*self.ndim]
-                r = torch.sqrt(((epos1-epos2)**2).sum(1)) + 1E-6
+                r = torch.sqrt(((epos1-epos2)**2).sum(1))  # + 1E-12
                 pot += (1./r)
         return pot.view(-1, 1)
 
@@ -249,15 +249,37 @@ if __name__ == "__main__":
     from deepqmc.wavefunction.molecule import Molecule
 
     mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-                   basis_type='gto', basis='sto-3g')
+                   basis_type='sto', basis='sz')
+
+    # mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+    #                     basis_type='sto', basis='sz',
+    #                     unit='bohr')
 
     # define the wave function
-    wf = Orbital(mol, kinetic='jacobi',
-                 configs='singlet(1,1)',
-                 use_jastrow=True, cuda=False)
+    wf_jacobi = Orbital(mol, kinetic='jacobi',
+                        configs='cas(2,2)',
+                        use_jastrow=True,
+                        cuda=False)
 
-    pos = torch.rand(20, wf.ao.nelec*3)
+    wf_auto = Orbital(mol, kinetic='auto',
+                      configs='cas(2,2)',
+                      use_jastrow=True,
+                      cuda=False)
+
+    pos = torch.rand(20, wf_auto.ao.nelec*3)
     pos.requires_grad = True
+
+    ej = wf_jacobi.energy(pos)
+    ej.backward()
+
+    ea = wf_auto.energy(pos)
+    ea.backward()
+
+    for p1,p2 in zip(wf_auto.parameters(),wf_jacobi.parameters()):
+        if p1.requires_grad:
+            print('')
+            print(p1.grad)
+            print(p2.grad)
 
     if torch.cuda.is_available():
         pos_gpu = pos.to('cuda')
