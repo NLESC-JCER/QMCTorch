@@ -10,14 +10,15 @@ import json
 class Molecule(object):
 
     def __init__(self, atom=None,
-                 basis_type='sto',
-                 basis='sz',
+                 basis_type='gto',
+                 basis='sto-3g',
+                 scf_code='pyscf',
                  unit='bohr'):
 
         self.atoms_str = atom
         self.basis_type = basis_type.lower()
         self.basis = basis.lower()
-        self.code_mo = 'pyscf'
+        self.code_mo = scf_code
 
         if self.basis_type not in ['sto', 'gto']:
             raise ValueError("basis_type must be sto or gto")
@@ -37,10 +38,15 @@ class Molecule(object):
         self.get_bonds()
 
         # get the basis folder
-        self.basis_path = os.path.dirname(os.path.realpath(__file__))
-        self.basis_path = os.path.join(self.basis_path, 'atomicdata')
-        self.basis_path = os.path.join(self.basis_path, self.basis_type)
-        self.basis_path = os.path.join(self.basis_path, basis.upper())
+        try:
+            self.basis_path = os.environ['ADFRESOURCES']
+            self.basis_path = os.path.join(self.basis_path, basis.upper())
+        except:
+            self.basis_path = os.path.dirname(os.path.realpath(__file__))
+            self.basis_path = os.path.join(self.basis_path, 'atomicdata')
+            self.basis_path = os.path.join(self.basis_path, self.basis_type)
+            self.basis_path = os.path.join(self.basis_path, basis.upper())
+        
 
         # init the basis data
         self.nshells = []  # number of shell per atom
@@ -373,6 +379,7 @@ class Molecule(object):
             mos = np.array(job.results.readkf('A', 'Eigen-Bas_A'))
 
             shutil.copyfile(t21_path,t21_name)
+            shutil.rmtree(plams_wd)
 
         mos = mos.reshape(nmo, nmo).T
         return  self._normalize_columns(mos)
