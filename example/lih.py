@@ -16,8 +16,8 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-               basis_type='sto',
-               basis='dzp',
+               basis_type='gto',
+               basis='sto-6g',
                unit='bohr')
 
 # define the wave function
@@ -26,7 +26,7 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=1000, nstep=500, step_size=0.05,
+sampler = Metropolis(nwalkers=5000, nstep=1000, step_size=0.05,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec-iter', 'proba': 'normal'})
@@ -53,14 +53,15 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
-eloc = solver.wf.local_energy(pos)
-plt.hist(eloc.detach().numpy(), bins=50)
-plt.show()
 
-# pos = solver.sample(ntherm=0, ndecor=10)
-# obs = solver.sampling_traj(pos)
-# plot_observable(obs, e0=-8., ax=None)
+# pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
+# eloc = solver.wf.local_energy(pos)
+# plt.hist(eloc.detach().numpy(), bins=50)
+# plt.show()
+
+pos = solver.sample(ntherm=0, ndecor=10)
+obs = solver.sampling_traj(pos)
+plot_observable(obs, e0=-8., ax=None)
 
 # optimize the wave function
 # solver.configure(task='wf_opt', freeze=['ao'])
