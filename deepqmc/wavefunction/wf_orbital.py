@@ -13,7 +13,7 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 class Orbital(WaveFunction):
 
-    def __init__(self, mol, configs='ground_state', scf='pyscf',
+    def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi', use_jastrow=True, cuda=False):
 
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
@@ -27,9 +27,6 @@ class Orbital(WaveFunction):
         self.atoms = mol.atoms
         self.bonds = mol.bonds
         self.natom = mol.natom
-
-        # scf code
-        self.scf_code = scf
 
         # define the atomic orbital layer
         self.ao = AtomicOrbitals(mol, cuda)
@@ -85,7 +82,7 @@ class Orbital(WaveFunction):
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
-            self.mol.get_mo_coeffs(code=self.scf_code)).type(
+            self.mol.get_mo_coeffs()).type(
                 torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
@@ -275,7 +272,7 @@ if __name__ == "__main__":
     ea = wf_auto.energy(pos)
     ea.backward()
 
-    for p1,p2 in zip(wf_auto.parameters(),wf_jacobi.parameters()):
+    for p1, p2 in zip(wf_auto.parameters(), wf_jacobi.parameters()):
         if p1.requires_grad:
             print('')
             print(p1.grad)

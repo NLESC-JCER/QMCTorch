@@ -12,17 +12,19 @@ class Molecule(object):
     def __init__(self, atom=None,
                  basis_type='gto',
                  basis='sto-3g',
-                 scf_code='pyscf',
                  unit='bohr'):
 
         self.atoms_str = atom
-        self.basis_type = basis_type.lower()
-        self.basis = basis.lower()
-        self.code_mo = scf_code
 
+        self.basis_type = basis_type.lower()
         if self.basis_type not in ['sto', 'gto']:
             raise ValueError("basis_type must be sto or gto")
 
+        self.basis = basis.lower()
+
+        self.code_mo = {'gto' : 'pyscf',
+                        'sto' : 'adf'}[self.basis_type]
+        
         # process the atom name/pos
         self.max_angular = 2
         self.atoms = []
@@ -38,16 +40,9 @@ class Molecule(object):
         self.get_bonds()
 
         # get the basis folder
-        try:
-            self.basis_path = os.environ['ADFRESOURCES']
-            self.basis_path = os.path.join(self.basis_path, basis.upper())
-        except:
-            self.basis_path = os.path.dirname(os.path.realpath(__file__))
-            self.basis_path = os.path.join(self.basis_path, 'atomicdata')
-            self.basis_path = os.path.join(self.basis_path, self.basis_type)
-            self.basis_path = os.path.join(self.basis_path, basis.upper())
+        self.basis_path = os.environ['ADFRESOURCES']
+        self.basis_path = os.path.join(self.basis_path, basis.upper())
         
-
         # init the basis data
         self.nshells = []  # number of shell per atom
         self.index_ctr = []  # index of the contraction
@@ -223,14 +218,15 @@ class Molecule(object):
 
                     for imult in range(mult):
 
-                        self.norb += 1
+                        # self.norb += 1
+                        self.norb += nbas
 
                         # store coeffs and exps of the bas
                         self.bas_exp += shell['exponents'][iangular]
                         self.bas_coeffs += shell['coefficients'][iangular]
 
                         # index of the contraction
-                        self.index_ctr += [self.norb-1] * nbas
+                        # self.index_ctr += [self.norb-1] * nbas
 
                         # store the quantum numbers
                         self.bas_n += [n]*nbas
@@ -239,6 +235,8 @@ class Molecule(object):
 
                     # number of shells
                     self.nshells[-1] += nbas*mult
+
+        self.index_ctr = list(range(self.norb))
 
     def _process_gto(self):
 
@@ -291,30 +289,25 @@ class Molecule(object):
                     # number of shells
                     self.nshells[-1] += mult*nbas
 
-    def get_mo_coeffs(self, code='pyscf'):
-
-        if code is None:
-            code = self.code_mo
-        else:
-            self.code_mo = code
+    def get_mo_coeffs(self):
 
         if self.basis_type == 'gto':
 
-            if code.lower() == 'pyscf':
+            if self.code_mo.lower() == 'pyscf':
                 mo = self._get_mo_pyscf()
             else:
                 raise ValueError(
-                    code + 'not currently supported for GTO orbitals')
+                    self.code_mo + 'not currently supported for GTO orbitals')
 
         elif self.basis_type == 'sto':
                 
-            if code.lower() == 'pyscf':
+            if self.code_mo.lower() == 'pyscf':
                 mo = self._get_mo_pyscf()
-            elif code.lower() == 'adf':
+            elif self.code_mo.lower() == 'adf':
                 mo = self._get_mo_adf()
             else:
                 raise ValueError(
-                    code + 'not currently supported for STO orbitals')
+                    self.code_mo + 'not currently supported for STO orbitals')
 
 
         return mo
@@ -347,7 +340,7 @@ class Molecule(object):
 
             kf = plams.KFFile(t21_name)
             nmo = kf.read('A','nmo_A')
-            mos = np.array(kf.read('A','Eigen-Bas_A'))
+            bas_mos = np.array(kf.read('A','Eig-CoreSFO_A'))
 
         else:
 
@@ -376,13 +369,18 @@ class Molecule(object):
             job.run()
 
             nmo = job.results.readkf('A', 'nmo_A')
-            mos = np.array(job.results.readkf('A', 'Eigen-Bas_A'))
+            bas_mos = np.array(job.results.readkf('A', 'Eig-CoreSFO_A'))
 
             shutil.copyfile(t21_path,t21_name)
             shutil.rmtree(plams_wd)
 
-        mos = mos.reshape(nmo, nmo).T
-        return  self._normalize_columns(mos)
+        bas_mos = bas_mos.reshape(nmo, nmo).T
+        return self._normalize_columns(bas_mos)
+
+        # mos = np.zeros((self.norb,self.norb))
+        # for ibas, imo in enumerate(self.index_ctr):
+        #     mos[imo,:] += bas_mos[ibas,:]
+        # return self._normalize_columns(mos)
 
     def _get_atoms_str(self):
         self.atoms_str = ''
@@ -392,7 +390,7 @@ class Molecule(object):
             self.atoms_str += ';'
 
     def update_mo_coeffs(self):
-        return self.get_mo_coeffs(code=None)
+        return self.get_mo_coeffs()
 
     @staticmethod
     def _normalize_columns(mat):
@@ -422,7 +420,7 @@ class Molecule(object):
 if __name__ == "__main__":
     mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
                    basis_type='sto',
-                   basis='sz',
+                   basis='dzp',
                    unit='bohr')
-    mo = mol.get_mo_coeffs(code='adf')
+    mo = mol.get_mo_coeffs()
     print(mo)
