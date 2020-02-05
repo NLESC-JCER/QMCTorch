@@ -329,7 +329,9 @@ class Molecule(object):
     def _get_mo_adf(self):
 
         from scm import plams
-        import shutil        
+        import shutil       
+
+        mo_keys = ['Eigen-Bas_A','Eig-CoreSFO_A'][0] 
 
         wd = ''.join(self.atoms)+'_'+self.basis
         t21_name = wd+'.t21'
@@ -340,7 +342,7 @@ class Molecule(object):
 
             kf = plams.KFFile(t21_name)
             nmo = kf.read('A','nmo_A')
-            bas_mos = np.array(kf.read('A','Eig-CoreSFO_A'))
+            bas_mos = np.array(kf.read('A',mo_keys))
 
         else:
 
@@ -369,7 +371,7 @@ class Molecule(object):
             job.run()
 
             nmo = job.results.readkf('A', 'nmo_A')
-            bas_mos = np.array(job.results.readkf('A', 'Eig-CoreSFO_A'))
+            bas_mos = np.array(job.results.readkf('A',mo_keys))
 
             shutil.copyfile(t21_path,t21_name)
             shutil.rmtree(plams_wd)
