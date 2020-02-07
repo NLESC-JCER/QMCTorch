@@ -1,6 +1,8 @@
 from torch import optim
 from torch.optim import Adam, SGD
 
+from deepqmc.optim.sr import StochasticReconfiguration
+
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.solver.torch_utils import set_torch_double_precision
@@ -16,8 +18,8 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-               basis_type='gto',
-               basis='sto-6g',
+               basis_type='sto',
+               basis='sz',
                unit='bohr')
 
 # define the wave function
@@ -26,10 +28,10 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.02,
+sampler = Metropolis(nwalkers=100, nstep=100, step_size=0.02,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec-iter', 'proba': 'normal'})
 
 # sampler = Hamiltonian(nwalkers=500, nstep=500,
 #                       step_size=0.05, L=10,
@@ -37,14 +39,15 @@ sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.02,
 #                       init=mol.domain('normal'))
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
-           {'params': wf.ao.parameters(), 'lr': 1E-3},
-           {'params': wf.mo.parameters(), 'lr': 1E-3},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-1},
+           {'params': wf.ao.parameters(), 'lr': 1E-6},
+           {'params': wf.mo.parameters(), 'lr': 1E-2},
            {'params': wf.fc.parameters(), 'lr': 1E-1}]
 
 
-opt = Adam(lr_dict, lr=1E-3)
+#opt = Adam(lr_dict, lr=1E-3)
 #opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
+opt = StochasticReconfiguration(wf.parameters(), wf)
 
 # scheduler
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
@@ -54,7 +57,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
 
-# pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
+#pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
 # eloc = solver.wf.local_energy(pos)
 # plt.hist(eloc.detach().numpy(), bins=50)
 # plt.show()
@@ -68,10 +71,10 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 solver.configure(task='wf_opt', freeze=['ao', 'mo'])
 solver.observable(['local_energy'])
 solver.initial_sampling(ntherm=-1, ndecor=100)
-solver.resampling(nstep=25, resample_every=1000)
-solver.sampler.step_size = 1E-3
+solver.resampling(nstep=25, resample_every=None)
+solver.sampler.step_size = 0.02
 solver.ortho_mo = True
-data = solver.run(50, loss='weighted-variance', clip_loss=False)
+data = solver.run(100, loss='weighted-variance', clip_loss=False)
 plot_observable(solver.obs_dict, e0=-8.06)
 
 # # # optimize the geometry

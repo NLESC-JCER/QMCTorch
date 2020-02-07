@@ -134,31 +134,37 @@ class SolverOrbital(SolverBase):
 
             for data in self.dataloader:
 
-                # self.print_parameters()
-
                 lpos = data.to(self.device)
-                loss, eloc = self.loss(lpos)
+                if 0:  # quick fix for SR
+                    # self.print_parameters()
+                    loss, eloc = self.loss(lpos)
 
-                if self.wf.mo.weight.requires_grad and self.ortho_mo:
-                    loss += self.ortho_loss(self.wf.mo.weight)
+                    if self.wf.mo.weight.requires_grad and self.ortho_mo:
+                        loss += self.ortho_loss(self.wf.mo.weight)
 
-                if torch.isnan(loss):
-                    raise ValueError("Nans detected in the loss")
+                    if torch.isnan(loss):
+                        raise ValueError("Nans detected in the loss")
 
-                cumulative_loss += loss
+                    cumulative_loss += loss
 
-                # compute local gradients
-                self.opt.zero_grad()
-                loss.backward()
+                    # compute local gradients
+                    self.opt.zero_grad()
+                    loss.backward()
 
-                # optimize
-                if self.opt.lpos_needed:
+                    # optimize
+                    if self.opt.lpos_needed:
+                        self.opt.step(lpos)
+                    else:
+                        self.opt.step()
+
+                    if self.wf.fc.clip:
+                        self.wf.fc.apply(clipper)
+
+                else:  # only for SR
+
                     self.opt.step(lpos)
-                else:
-                    self.opt.step()
-
-                if self.wf.fc.clip:
-                    self.wf.fc.apply(clipper)
+                    eloc = self.opt.eloc
+                    cumulative_loss += torch.mean(eloc)
 
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(
@@ -170,14 +176,7 @@ class SolverOrbital(SolverBase):
             print('----------------------------------------')
 
             # resample the data
-            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
-                if self.resample.resample_from_last:
-                    pos = pos.clone().detach().to(self.device)
-                else:
-                    pos = None
-                pos = self.sample(
-                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=False)
-                self.dataloader.dataset.data = pos
+            pos = self._resample(n, nepoch, pos)
 
             if self.task == 'geo_opt':
                 self.wf.update_mo_coeffs()
@@ -189,6 +188,27 @@ class SolverOrbital(SolverBase):
         self.sampler.nstep = _nstep_save
         self.sampler.walkers.nwalkers = _nwalker_save
         self.sampler.nwalkers = _nwalker_save
+
+    def _resample(self, n, nepoch, pos):
+
+        if self.resample.resample_every is not None:
+
+            # resample the data
+            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
+
+                if self.resample.resample_from_last:
+                    pos = pos.clone().detach().to(self.device)
+                else:
+                    pos = None
+                pos = self.sample(
+                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=True)
+                self.dataloader.dataset.data = pos
+
+            # update the loss if needed
+            if self.loss.use_weight:
+                self.loss.weight['psi0'] = None
+
+        return pos
 
     def print_parameters(self, grad=False):
         for p in self.wf.parameters():
