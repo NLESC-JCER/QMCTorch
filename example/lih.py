@@ -28,15 +28,11 @@ wf = Orbital(mol, kinetic='jacobi',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=100, step_size=0.02,
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.02,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('normal'),
                      move={'type': 'all-elec-iter', 'proba': 'normal'})
 
-# sampler = Hamiltonian(nwalkers=500, nstep=500,
-#                       step_size=0.05, L=10,
-#                       nelec=wf.nelec, ndim=wf.ndim,
-#                       init=mol.domain('normal'))
 
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-1},
@@ -46,8 +42,8 @@ lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-1},
 
 
 #opt = Adam(lr_dict, lr=1E-3)
-#opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
-opt = StochasticReconfiguration(wf.parameters(), wf)
+opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
+#opt = StochasticReconfiguration(wf.parameters(), wf)
 
 # scheduler
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
@@ -57,7 +53,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
 
-#pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
+pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
 # eloc = solver.wf.local_energy(pos)
 # plt.hist(eloc.detach().numpy(), bins=50)
 # plt.show()
@@ -66,16 +62,16 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # obs = solver.sampling_traj(pos)
 # plot_observable(obs, e0=-8., ax=None)
 
-# optimize the wave function
+# # optimize the wave function
 
-solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-solver.observable(['local_energy'])
-solver.initial_sampling(ntherm=-1, ndecor=100)
-solver.resampling(nstep=25, resample_every=None)
-solver.sampler.step_size = 0.02
-solver.ortho_mo = True
-data = solver.run(100, loss='weighted-variance', clip_loss=False)
-plot_observable(solver.obs_dict, e0=-8.06)
+# solver.configure(task='wf_opt', freeze=['ao', 'mo'])
+# solver.observable(['local_energy'])
+# solver.initial_sampling(ntherm=-1, ndecor=100)
+# solver.resampling(nstep=25, resample_every=1)
+# solver.sampler.step_size = 0.02
+# solver.ortho_mo = True
+# data = solver.run(100, loss='weighted-energy', grad='manual', clip_loss=False)
+# plot_observable(solver.obs_dict, e0=-8.06)
 
 # # # optimize the geometry
 # solver.configure(task='geo_opt')

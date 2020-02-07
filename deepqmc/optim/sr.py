@@ -1,5 +1,6 @@
 import torch
 from torch.optim import Optimizer
+from tqdm import tqdm
 
 
 class StochasticReconfiguration(Optimizer):
@@ -7,9 +8,10 @@ class StochasticReconfiguration(Optimizer):
     def __init__(self, params, wf, lr=1E-2):
         if lr < 0.0:
             raise ValueError("Invalid value of tau :{}".format(tau))
-        defaults = dict(lr=lr, wf=wf, lpos_needed=True)
+        defaults = dict(lr=lr, wf=wf)
         super(StochasticReconfiguration, self).__init__(params, defaults)
         self.eloc = None
+        self.lpos_needed = True
 
     def step(self, pos):
         """Performs a single optimization step
@@ -18,7 +20,7 @@ class StochasticReconfiguration(Optimizer):
             pos (torch.tensor) : used as global here ...
         """
 
-        grad_e = self.get_gradient(pos)
+        grad_e = self._collect_grad()
         S = self.get_overlap_matrix(pos)
 
         tau = self.defaults['lr']
@@ -44,7 +46,7 @@ class StochasticReconfiguration(Optimizer):
         self.zero_grad()
         psi = self.defaults['wf'](pos)
 
-        for ibatch in range(nbatch):
+        for ibatch in tqdm(range(nbatch)):
 
             psi[ibatch].backward(retain_graph=True)
             grads = self._collect_grad() / psi[ibatch]
@@ -55,28 +57,6 @@ class StochasticReconfiguration(Optimizer):
         sum_grads /= nbatch
         S -= sum_grads.reshape(-1, 1) @ sum_grads.reshape(1, -1)
         return S
-
-    def get_gradient(self, pos):
-        ''' Get the gradient of the total energy
-        dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
-        '''
-
-        # compute local energies minus variational energies
-        self.eloc = self.defaults['wf'].local_energy(pos)
-
-        # compute wf
-        psi = self.defaults['wf'](pos)
-
-        weight = self.eloc.clone()
-        weight -= torch.mean(weight)
-        weight /= psi
-
-        # compute the gradient x local_energies
-        self.zero_grad()
-        psi.backward(weight)
-
-        # return expression
-        return 2*self._collect_grad()
 
     def _collect_grad(self, init=False):
 

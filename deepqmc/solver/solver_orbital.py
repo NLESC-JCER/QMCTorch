@@ -46,6 +46,7 @@ class SolverOrbital(SolverBase):
 
         if task == 'geo_opt':
             self.wf.ao.atom_coords.requires_grad = True
+            self.wf.ao.bas_coeffs.requires_grad = True
             self.wf.ao.bas_exp.requires_grad = False
             for param in self.wf.mo.parameters():
                 param.requires_grad = False
@@ -78,7 +79,9 @@ class SolverOrbital(SolverBase):
                         raise ValueError(
                             'Valid arguments for freeze are :', opt_freeze)
 
-    def run(self, nepoch, batchsize=None, loss='variance', clip_loss=False):
+    def run(self, nepoch, batchsize=None,
+            loss='variance', clip_loss=False,
+            grad='auto'):
         '''Train the model.
 
         Arg:
@@ -118,58 +121,40 @@ class SolverOrbital(SolverBase):
         self.ortho_loss = OrthoReg()
 
         # clipper for the fc weights
-        clipper = ZeroOneClipper()
+        self.clipper = ZeroOneClipper()
 
         cumulative_loss = []
         min_loss = 1E3
 
         # get the initial observalbe
-
         self.get_observable(self.obs_dict, pos)
+
+        # loop over the epoch
         for n in range(nepoch):
             print('----------------------------------------')
             print('epoch %d' % n)
 
             cumulative_loss = 0
 
+            # loop over the batches
             for data in self.dataloader:
 
+                # port data to device
                 lpos = data.to(self.device)
-                if 0:  # quick fix for SR
-                    # self.print_parameters()
-                    loss, eloc = self.loss(lpos)
 
-                    if self.wf.mo.weight.requires_grad and self.ortho_mo:
-                        loss += self.ortho_loss(self.wf.mo.weight)
+                # get the gradient
+                loss, eloc = self.evaluate_gradient(grad, lpos)
+                cumulative_loss += loss
 
-                    if torch.isnan(loss):
-                        raise ValueError("Nans detected in the loss")
+                # optimize the parameters
+                self.optimization_step(lpos)
 
-                    cumulative_loss += loss
-
-                    # compute local gradients
-                    self.opt.zero_grad()
-                    loss.backward()
-
-                    # optimize
-                    if self.opt.lpos_needed:
-                        self.opt.step(lpos)
-                    else:
-                        self.opt.step()
-
-                    if self.wf.fc.clip:
-                        self.wf.fc.apply(clipper)
-
-                else:  # only for SR
-
-                    self.opt.step(lpos)
-                    eloc = self.opt.eloc
-                    cumulative_loss += torch.mean(eloc)
-
+            # save the model if necessary
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(
                     n, cumulative_loss, self.save_model)
 
+            # observable
             self.get_observable(self.obs_dict, pos, local_energy=eloc)
             self.print_observable(cumulative_loss)
 
@@ -209,6 +194,76 @@ class SolverOrbital(SolverBase):
                 self.loss.weight['psi0'] = None
 
         return pos
+
+    def evaluate_gradient(self, grad, lpos):
+
+        if grad == 'auto':
+            loss, eloc = self._evaluate_grad_auto(lpos)
+
+        elif grad == 'manual':
+            loss, eloc = self._evaluate_grad_manual(lpos)
+        else:
+            raise ValueError('Gradient method should be auto or stab')
+
+        if torch.isnan(loss):
+            raise ValueError("Nans detected in the loss")
+
+        return loss, eloc
+
+    def _evaluate_grad_auto(self, lpos):
+        '''Evaluate the gradient using automatic diff
+        of the required loss.'''
+
+        # compute the loss
+        loss, eloc = self.loss(lpos)
+
+        # add mo orthogonalization if required
+        if self.wf.mo.weight.requires_grad and self.ortho_mo:
+            loss += self.ortho_loss(self.wf.mo.weight)
+
+        # compute local gradients
+        self.opt.zero_grad()
+        loss.backward()
+
+        return loss, eloc
+
+    def _evaluate_grad_manual(self, lpos):
+
+        if self.loss.method == 'energy':
+
+            ''' Get the gradient of the total energy
+            dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
+            '''
+
+            # compute local energy and wf values
+            eloc = self.wf.local_energy(lpos)
+            psi = self.wf(lpos)
+
+            # evaluate the prefactor of the grads
+            weight = eloc.clone()
+            weight -= torch.mean(eloc)
+            weight /= psi
+            weight *= 2.
+
+            # compute the gradients
+            self.opt.zero_grad()
+            psi.backward(weight)
+
+            return torch.mean(eloc), eloc
+
+        else:
+            raise ValueError('Manual gradient only for energy min')
+
+    def optimization_step(self, lpos):
+        '''make one optimization step.'''
+
+        if self.opt.lpos_needed:
+            self.opt.step(lpos)
+        else:
+            self.opt.step()
+
+        if self.wf.fc.clip:
+            self.wf.fc.apply(self.clipper)
 
     def print_parameters(self, grad=False):
         for p in self.wf.parameters():
