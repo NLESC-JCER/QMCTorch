@@ -75,7 +75,12 @@ class Loss(nn.Module):
             if self.method == 'weighted-variance':
                 mu = torch.mean(local_energies)
                 weighted_local_energies = (local_energies-mu)**2 * w
-                loss = torch.mean(weighted_local_energies[mask])
+
+                # biased variance
+                loss = torch.mean(weighted_local_energies[mask])*mask.sum()
+
+                # unbiased variance
+                # loss = weighted_local_energies[mask].sum()/(mask.sum()-1)
 
             elif self.method == 'weighted-energy':
                 weighted_local_energies = local_energies * w
