@@ -19,7 +19,7 @@ set_torch_double_precision()
 # define the molecule
 mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
                basis_type='sto',
-               basis='sz',
+               basis='dz',
                unit='bohr')
 
 # define the wave function
@@ -37,23 +37,23 @@ sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.02,
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-1},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
-           {'params': wf.mo.parameters(), 'lr': 1E-2},
+           {'params': wf.mo.parameters(), 'lr': 1E-3},
            {'params': wf.fc.parameters(), 'lr': 1E-1}]
 
 
-#opt = Adam(lr_dict, lr=1E-3)
-opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
-#opt = StochasticReconfiguration(wf.parameters(), wf)
+opt = Adam(lr_dict, lr=1E-3)
+# opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
+# opt = StochasticReconfiguration(wf.parameters(), wf)
 
 # scheduler
-scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
+scheduler = optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.85)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler,
-                       optimizer=opt, scheduler=None)
+                       optimizer=opt, scheduler=scheduler)
 
 
-pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
+# pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
 # eloc = solver.wf.local_energy(pos)
 # plt.hist(eloc.detach().numpy(), bins=50)
 # plt.show()
@@ -62,16 +62,16 @@ pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
 # obs = solver.sampling_traj(pos)
 # plot_observable(obs, e0=-8., ax=None)
 
-# # optimize the wave function
+# optimize the wave function
+solver.configure(task='wf_opt', freeze=['ao', 'mo'])
+solver.observable(['local_energy'])
+solver.initial_sampling(ntherm=-1, ndecor=100)
+solver.resampling(nstep=25, resample_every=None)
+solver.sampler.step_size = 0.02
+solver.ortho_mo = True
 
-# solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-# solver.observable(['local_energy'])
-# solver.initial_sampling(ntherm=-1, ndecor=100)
-# solver.resampling(nstep=25, resample_every=1)
-# solver.sampler.step_size = 0.02
-# solver.ortho_mo = True
-# data = solver.run(100, loss='weighted-energy', grad='manual', clip_loss=False)
-# plot_observable(solver.obs_dict, e0=-8.06)
+data = solver.run(100, loss='weighted-energy', grad='manual', clip_loss=True)
+plot_observable(solver.obs_dict, e0=-8.06)
 
 # # # optimize the geometry
 # solver.configure(task='geo_opt')

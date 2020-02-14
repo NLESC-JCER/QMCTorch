@@ -80,7 +80,8 @@ class SolverOrbital(SolverBase):
                             'Valid arguments for freeze are :', opt_freeze)
 
     def run(self, nepoch, batchsize=None,
-            loss='variance', clip_loss=False,
+            loss='variance',
+            clip_loss=False,
             grad='auto'):
         '''Train the model.
 
@@ -137,7 +138,7 @@ class SolverOrbital(SolverBase):
             cumulative_loss = 0
 
             # loop over the batches
-            for data in self.dataloader:
+            for ibatch, data in enumerate(self.dataloader):
 
                 # port data to device
                 lpos = data.to(self.device)
@@ -149,13 +150,15 @@ class SolverOrbital(SolverBase):
                 # optimize the parameters
                 self.optimization_step(lpos)
 
+                # observable
+                self.get_observable(self.obs_dict, pos,
+                                    local_energy=eloc, ibatch=ibatch)
+
             # save the model if necessary
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(
                     n, cumulative_loss, self.save_model)
 
-            # observable
-            self.get_observable(self.obs_dict, pos, local_energy=eloc)
             self.print_observable(cumulative_loss)
 
             print('----------------------------------------')
@@ -229,14 +232,14 @@ class SolverOrbital(SolverBase):
 
     def _evaluate_grad_manual(self, lpos):
 
-        if self.loss.method == 'energy':
+        if self.loss.method in ['energy', 'weighted-energy']:
 
             ''' Get the gradient of the total energy
             dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
             '''
 
             # compute local energy and wf values
-            eloc = self.wf.local_energy(lpos)
+            _, eloc = self.loss(lpos)
             psi = self.wf(lpos)
 
             # evaluate the prefactor of the grads

@@ -51,7 +51,7 @@ class SolverBase(object):
         pos.requires_grad = True
         return pos
 
-    def get_observable(self, obs_dict, pos, local_energy=None, **kwargs):
+    def get_observable(self, obs_dict, pos, local_energy=None, ibatch=None, ** kwargs):
         '''compute all the required observable.
 
         Args :
@@ -75,7 +75,12 @@ class SolverBase(object):
                 if isinstance(data, torch.Tensor):
                     data = data.cpu().detach().numpy()
 
-            self.obs_dict[obs].append(data)
+            if (ibatch is None) or (ibatch == 0):
+                self.obs_dict[obs].append(data)
+
+            else:
+                self.obs_dict[obs][-1] = np.append(
+                    self.obs_dict[obs][-1], data)
 
     def print_observable(self, cumulative_loss):
 

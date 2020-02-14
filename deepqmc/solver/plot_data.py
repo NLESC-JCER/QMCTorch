@@ -26,16 +26,19 @@ def plot_observable(obs_dict, e0=None, ax=None):
     epoch = np.arange(n)
 
     # get the variance
+    energy = np.array([np.mean(e) for e in data])
+    variance = np.array([np.var(e) for e in data])
     emax = [np.quantile(e, 0.75) for e in data]
     emin = [np.quantile(e, 0.25) for e in data]
 
     # get the mean value
-    energy = np.mean(data, 1)
     print("Energy   : %f " % np.mean(energy))
     print("Variance : %f " % np.std(energy))
 
     # plot
-    ax.fill_between(epoch, emin, emax, alpha=0.5, color='#4298f4')
+    # ax.fill_between(epoch, emin, emax, alpha=0.5, color='#4298f4')
+    ax.fill_between(epoch, energy-variance, energy +
+                    variance, alpha=0.5, color='#4298f4')
     ax.plot(epoch, energy, color='#144477')
     if e0 is not None:
         ax.axhline(e0, color='black', linestyle='--')

@@ -1,5 +1,5 @@
 import torch
-from torch.optim import Adam, SGD
+from torch.optim import Adam, SGD, lr_scheduler
 
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
@@ -34,18 +34,22 @@ sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.02,
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-1},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
-           {'params': wf.mo.parameters(), 'lr': 1E-1},
-           {'params': wf.fc.parameters(), 'lr': 1E-1}]
+           {'params': wf.mo.parameters(), 'lr': 1E-3},
+           {'params': wf.fc.parameters(), 'lr': 1E-3}]
 
 
 opt = Adam(lr_dict, lr=1E-3)
-# opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
+# opt = SGD(lr_dict, lr=1E-1)
 # opt = StochasticReconfiguration(wf.parameters(), wf)
 
+# scheduler
+scheduler = lr_scheduler.StepLR(opt, step_size=50, gamma=0.85)
+
 # solver
-solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt)
+solver = SolverOrbital(wf=wf, sampler=sampler,
+                       optimizer=opt, scheduler=None)
 #pos, _, _ = solver.single_point()
 
 # pos = solver.sample(ntherm=0, ndecor=10)
@@ -61,7 +65,9 @@ solver.initial_sampling(ntherm=-1, ndecor=100)
 solver.resampling(nstep=25, resample_every=None)
 solver.sampler.step_size = 0.02
 solver.ortho_mo = True
-data = solver.run(100, loss='energy', grad='manual', clip_loss=False)
+
+data = solver.run(500, batchsize=250, loss='weighted-energy',
+                  grad='manual', clip_loss=False)
 plot_observable(solver.obs_dict, e0=-1.1645)
 
 # # optimize the geometry
