@@ -24,14 +24,14 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='cas(2,2)',
+             configs='cas(2,4)',
              use_jastrow=True)
 
 # sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.02,
+sampler = Metropolis(nwalkers=5000, nstep=1000, step_size=0.02,
                      ndim=wf.ndim, nelec=wf.nelec,
                      init=mol.domain('normal'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec-iter', 'proba': 'normal'})
 
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
@@ -45,7 +45,7 @@ opt = Adam(lr_dict, lr=1E-3)
 # opt = StochasticReconfiguration(wf.parameters(), wf)
 
 # scheduler
-scheduler = lr_scheduler.StepLR(opt, step_size=50, gamma=0.85)
+scheduler = lr_scheduler.StepLR(opt, step_size=50, gamma=0.90)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler,
@@ -60,14 +60,19 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 # optimize the wave function
 solver.configure(task='wf_opt', freeze=['ao'])
+
 solver.observable(['local_energy'])
+
 solver.initial_sampling(ntherm=-1, ndecor=100)
-solver.resampling(nstep=25, resample_every=None)
-solver.sampler.step_size = 0.02
+
+solver.resampling(nstep=10, step_size=1E-4, resample_every=None, tqdm=False)
+
 solver.ortho_mo = True
 
-data = solver.run(500, batchsize=250, loss='weighted-energy',
-                  grad='manual', clip_loss=False)
+data = solver.run(500, batchsize=None,
+                  loss='weighted-energy',
+                  grad='manual',
+                  clip_loss=False)
 plot_observable(solver.obs_dict, e0=-1.1645)
 
 # # optimize the geometry
