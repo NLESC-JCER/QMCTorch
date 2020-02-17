@@ -22,9 +22,9 @@ class Molecule(object):
 
         self.basis = basis.lower()
 
-        self.code_mo = {'gto' : 'pyscf',
-                        'sto' : 'adf'}[self.basis_type]
-        
+        self.code_mo = {'gto': 'pyscf',
+                        'sto': 'adf'}[self.basis_type]
+
         # process the atom name/pos
         self.max_angular = 2
         self.atoms = []
@@ -33,16 +33,19 @@ class Molecule(object):
         self.nelec = 0
         self.unit = unit
 
-        if self.unit not in ['angs','bohr']:
+        if self.unit not in ['angs', 'bohr']:
             raise ValueError('unit should be angs or bohr')
 
         self.process_atom_str()
         self.get_bonds()
 
         # get the basis folder
-        self.basis_path = os.environ['ADFRESOURCES']
-        self.basis_path = os.path.join(self.basis_path, basis.upper())
-        
+        try:
+            self.basis_path = os.environ['ADFRESOURCES']
+            self.basis_path = os.path.join(self.basis_path, basis.upper())
+        except KeyError:
+            raise Warning('ADF Ressource not found for Slater type orbitals')
+
         # init the basis data
         self.nshells = []  # number of shell per atom
         self.index_ctr = []  # index of the contraction
@@ -56,7 +59,18 @@ class Molecule(object):
         self.get_label = {0: 'S', 1: 'P', 2: 'D'}
         self.get_l = {'S': 0, 'P': 1, 'D': 2}
         self.mult_bas = {'S': 1, 'P': 3, 'D': 5}
-        self.get_m = {'S': [0], 'P': [-1, 1, 0], 'D': [-2, -1, 0, 1, 2]}
+
+        # get the m value of each orb type
+        # the ordering might be different in different
+        # quantum packages
+        if self.basis_type == 'gto':
+            self.get_m = {'S': [0],
+                          'P': [-1, 1, 0],
+                          'D': [-2, -1, 0, 1, 2]}
+        else:
+            self.get_m = {'S': [0],
+                          'P': [1, -1, 0],
+                          'D': [-2, -1, 0, 1, 2]}  # D unchecked so far
 
         # for cartesian
         self.get_lmn_cart = {'S': [0, 0, 0],
@@ -300,7 +314,7 @@ class Molecule(object):
                     self.code_mo + 'not currently supported for GTO orbitals')
 
         elif self.basis_type == 'sto':
-                
+
             if self.code_mo.lower() == 'pyscf':
                 mo = self._get_mo_pyscf()
             elif self.code_mo.lower() == 'adf':
@@ -308,7 +322,6 @@ class Molecule(object):
             else:
                 raise ValueError(
                     self.code_mo + 'not currently supported for STO orbitals')
-
 
         return mo
 
@@ -329,20 +342,20 @@ class Molecule(object):
     def _get_mo_adf(self):
 
         from scm import plams
-        import shutil       
+        import shutil
 
-        mo_keys = ['Eigen-Bas_A','Eig-CoreSFO_A'][0] 
+        mo_keys = ['Eigen-Bas_A', 'Eig-CoreSFO_A'][0]
 
         wd = ''.join(self.atoms)+'_'+self.basis
         t21_name = wd+'.t21'
         plams_wd = './plams_workdir'
-        t21_path = os.path.join(plams_wd,os.path.join(wd,t21_name))
+        t21_path = os.path.join(plams_wd, os.path.join(wd, t21_name))
 
         if os.path.isfile(t21_name):
 
             kf = plams.KFFile(t21_name)
-            nmo = kf.read('A','nmo_A')
-            bas_mos = np.array(kf.read('A',mo_keys))
+            nmo = kf.read('A', 'nmo_A')
+            bas_mos = np.array(kf.read('A', mo_keys))
 
         else:
 
@@ -351,8 +364,8 @@ class Molecule(object):
             plams.config.erase_workdir = True
 
             mol = plams.Molecule()
-            for at,xyz in zip (self.atoms,self.atom_coords):
-                mol.add_atom(plams.Atom(symbol=at,coords=tuple(xyz)))
+            for at, xyz in zip(self.atoms, self.atom_coords):
+                mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
 
             sett = plams.Settings()
             sett.input.basis.type = self.basis.upper()
@@ -367,13 +380,13 @@ class Molecule(object):
             else:
                 raise ValueError('unit should be angs or bohr')
 
-            job = plams.ADFJob(molecule=mol,settings=sett,name=wd)
+            job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
             job.run()
 
             nmo = job.results.readkf('A', 'nmo_A')
-            bas_mos = np.array(job.results.readkf('A',mo_keys))
+            bas_mos = np.array(job.results.readkf('A', mo_keys))
 
-            shutil.copyfile(t21_path,t21_name)
+            shutil.copyfile(t21_path, t21_name)
             shutil.rmtree(plams_wd)
 
         bas_mos = bas_mos.reshape(nmo, nmo).T
