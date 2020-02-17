@@ -14,14 +14,21 @@ class SolverBase(object):
         self.cuda = False
         self.device = torch.device('cpu')
 
-    def resampling(self, ntherm=-1, nstep=100, resample_from_last=True,
-                   resample_every=1):
+    def resampling(self, ntherm=-1, nstep=100, step_size=None, resample_from_last=True,
+                   resample_every=1, tqdm=False):
         '''Configure the resampling options.'''
         self.resample = SimpleNamespace()
         self.resample.ntherm = ntherm
         self.resample.resample = nstep
+
+        if step_size is not None:
+            self.resample.step_size = step_size
+        else:
+            self.resample.step_size = self.sampler.step_size
+
         self.resample.resample_from_last = resample_from_last
         self.resample.resample_every = resample_every
+        self.resample.tqdm = tqdm
 
     def initial_sampling(self, ntherm=-1, ndecor=100):
         '''Configure the initial sampling options.'''

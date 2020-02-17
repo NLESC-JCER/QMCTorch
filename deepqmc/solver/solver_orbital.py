@@ -109,7 +109,10 @@ class SolverOrbital(SolverBase):
 
         # change the number of steps
         _nstep_save = self.sampler.nstep
+        _step_size_save = self.sampler.step_size
+
         self.sampler.nstep = self.resample.resample
+        self.sampler.step_size = self.resample.step_size
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -174,6 +177,7 @@ class SolverOrbital(SolverBase):
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
+        self.sampler.step_size = _step_size_save
         self.sampler.walkers.nwalkers = _nwalker_save
         self.sampler.nwalkers = _nwalker_save
 
@@ -189,7 +193,7 @@ class SolverOrbital(SolverBase):
                 else:
                     pos = None
                 pos = self.sample(
-                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=True)
+                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=self.resample.tqdm)
                 self.dataloader.dataset.data = pos
 
             # update the loss if needed
