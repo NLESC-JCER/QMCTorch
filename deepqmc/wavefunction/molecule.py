@@ -44,7 +44,7 @@ class Molecule(object):
             self.basis_path = os.environ['ADFRESOURCES']
             self.basis_path = os.path.join(self.basis_path, basis.upper())
         except KeyError:
-            raise Warning('ADF Ressource not found for Slater type orbitals')
+            print('ADF Ressource not found for Slater type orbitals')
 
         # init the basis data
         self.nshells = []  # number of shell per atom
