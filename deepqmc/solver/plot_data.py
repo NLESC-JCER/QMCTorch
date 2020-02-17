@@ -45,7 +45,14 @@ def plot_observable(obs_dict, e0=None, ax=None):
 
     ax.grid()
     ax.set_xlabel('Number of epoch')
-    ax.set_ylabel('Energy')
+    ax.set_ylabel('Energy', color='black')
+
+    ax2 = ax.twinx()
+    ax2.plot(epoch, variance, color='blue')
+    ax2.set_ylabel('variance', color='blue')
+    ax2.tick_params(axis='y', labelcolor='blue')
+
+    fig.tight_layout()
 
     if show_plot:
         plt.show()
