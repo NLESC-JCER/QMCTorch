@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import pickle
 
 
-def plot_observable(obs_dict, e0=None, ax=None):
+def plot_observable(obs_dict, e0=None, ax=None, var=False):
     '''Plot the observable selected.
 
     Args:
@@ -47,15 +47,32 @@ def plot_observable(obs_dict, e0=None, ax=None):
     ax.set_xlabel('Number of epoch')
     ax.set_ylabel('Energy', color='black')
 
-    ax2 = ax.twinx()
-    ax2.plot(epoch, variance, color='blue')
-    ax2.set_ylabel('variance', color='blue')
-    ax2.tick_params(axis='y', labelcolor='blue')
+    if var:
+        ax2 = ax.twinx()
+        ax2.plot(epoch, variance, color='blue')
+        ax2.set_ylabel('variance', color='blue')
+        ax2.tick_params(axis='y', labelcolor='blue')
 
-    fig.tight_layout()
+        fig.tight_layout()
 
     if show_plot:
         plt.show()
+
+
+def plot_block(obs_dict):
+
+    eloc = np.array(obs_dict['local_energy']).squeeze()
+    nstep, nwalkers = eloc.shape
+    block_size_max = nstep//2
+
+    evar = []
+    for size in range(1, block_size_max):
+        tmp = np.copy(eloc[:size*(nstep//size), :])
+        tmp = tmp.reshape(size, nstep//size, nwalkers).mean(axis=0)
+        evar.append(np.var(tmp))
+
+    plt.plot(np.array(evar))
+    plt.show()
 
 
 def save_observalbe(filename, obs_dict):
