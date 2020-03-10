@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from torch.distributions import MultivariateNormal
 
 
@@ -48,6 +49,9 @@ class Walkers(object):
             elif 'mean' in self.init_domain.keys():
                 self.pos = self._init_multivar()
 
+            elif 'atom_coords' in self.init_domain.keys():
+                self.pos = self._init_atomic()
+
             else:
                 raise ValueError('Init walkers not recognized')
 
@@ -70,3 +74,35 @@ class Walkers(object):
             torch.get_default_dtype())
         pos = pos.view(self.nwalkers, self.nelec*self.ndim)
         return pos.to(device=self.device)
+
+    def _init_atomic(self):
+
+        pos = torch.zeros(self.nwalkers, self.nelec*self.ndim)
+        idx_ref, nelec_tot = [], 0
+
+        nelec_placed, natom = [], 0
+        for iat, nelec in enumerate(self.init_domain['atom_nelec']):
+            idx_ref += [iat] * nelec
+            nelec_tot += nelec
+            natom += 1
+
+        for iw in range(self.nwalkers):
+
+            nelec_placed = [0]*natom
+            idx = torch.tensor(idx_ref)
+            idx = idx[torch.randperm(nelec_tot)]
+            xyz = torch.tensor(self.init_domain['atom_coords'])[idx, :]
+
+            for ielec in range(nelec_tot):
+                _idx = idx[ielec]
+                if nelec_placed[_idx] == 0:
+                    s = 1./self.init_domain['atom_num'][_idx]
+                elif nelec_placed[_idx] < 5:
+                    s = 2./(self.init_domain['atom_num'][_idx]-2)
+                else:
+                    s = 3./(self.init_domain['atom_num'][_idx]-10)
+                xyz[ielec, :] += np.random.normal(scale=s, size=(1, 3))
+                nelec_placed[_idx] += 1
+
+            pos[iw, :] = xyz.view(-1)
+        return pos

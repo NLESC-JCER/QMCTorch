@@ -30,6 +30,7 @@ class Molecule(object):
         self.atoms = []
         self.atom_coords = []
         self.atomic_number = []
+        self.atomic_nelec = []
         self.nelec = 0
         self.unit = unit
 
@@ -117,6 +118,7 @@ class Molecule(object):
             self.atom_coords.append([x*conv2bohr, y*conv2bohr, z*conv2bohr])
 
             self.atomic_number.append(element(atom_data[0]).atomic_number)
+            self.atomic_nelec.append(element(atom_data[0]).electrons)
             self.nelec += element(atom_data[0]).electrons
 
         # size of the system
@@ -426,6 +428,11 @@ class Molecule(object):
         elif method == 'normal':
             domain['mean'] = np.mean(self.atom_coords, 0)
             domain['sigma'] = np.diag(np.std(self.atom_coords, 0)+0.25)
+
+        elif method == 'atomic':
+            domain['atom_coords'] = self.atom_coords
+            domain['atom_num'] = self.atomic_number
+            domain['atom_nelec'] = self.atomic_nelec
 
         else:
             raise ValueError('Method to initialize the walkers not recognized')
