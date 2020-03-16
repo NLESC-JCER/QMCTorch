@@ -10,7 +10,8 @@ class Metropolis(SamplerBase):
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  nelec=1, ndim=1,
                  init={'min': -5, 'max': 5},
-                 move={'type': 'one-elec', 'proba': 'uniform'}, wf=None):
+                 move={'type': 'one-elec', 'proba': 'uniform'},
+                 wf=None):
         """Metropolis Hasting generator
 
         Args:
@@ -42,6 +43,7 @@ class Metropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, nelec, ndim, init, move)
+        self.wf = wf
 
         if 'type' not in self.movedict.keys():
             print('Metroplis : Set 1 electron move by default')
@@ -58,9 +60,9 @@ class Metropolis(SamplerBase):
                 torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
 
         self._move_per_iter = 1
-        if self.movedict['type'] not in ['one-elec', 'all-elec', 'all-elec-iter']:
+        if self.movedict['type'] not in ['all-elec-iter']:
             raise ValueError(
-                " 'type' in move should be 'one-elec','all-elec','all-elec-iter'")
+                " Only 1 all-elec-iter move allowed with kalos")
 
         if self.movedict['type'] == 'all-elec-iter':
             self.fixed_id_elec_list = range(self.nelec)
@@ -104,11 +106,12 @@ class Metropolis(SamplerBase):
             if ntherm < 0:
                 ntherm = self.nstep+ntherm
 
+            # init walkers
             self.walkers.initialize(pos=pos)
 
-            fx = pdf(self.walkers.pos)
+            # first calculations of a0, mo and slater matrices
+            self.init_kalos(self.walkers.pos)
 
-            fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
 
             if with_tqdm:
@@ -116,22 +119,22 @@ class Metropolis(SamplerBase):
             else:
                 rng = range(self.nstep)
 
+            nup = self.wf.mol.nup
             for istep in rng:
 
                 for id_elec in self.fixed_id_elec_list:
 
                     t0 = time()
-                    # new positions
-                    Xn = self.move(pdf, id_elec)
 
-                    # new function
-                    t0_pdf = time()
-                    fxn = pdf(Xn)
-                    fxn[fxn == 0.] = eps
-                    df = fxn/fx
+                    # new positions
+                    Xn = self.move(id_elec)
+
+                    # # new function
+                    ao_new, sup, sdown = self.update_kalos(Xn, id_elec)
+                    R = self.get_proba(sup, sdown, id_elec)
 
                     # accept the moves
-                    index = self._accept(df)
+                    index = self._accept(R**2)
 
                     # acceptance rate
                     rate += index.byte().sum().float().to('cpu') / \
@@ -139,8 +142,13 @@ class Metropolis(SamplerBase):
 
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
-                    fx[index] = fxn[index]
-                    fx[fx == 0] = eps
+                    self.ao[index, :, :] = ao_new[index, :, :]
+
+                    if id_elec < nup:
+                        self.isup[index, :, id_elec] /= R[index].unsqueeze(-1)
+                    else:
+                        self.isdown[index, :, id_elec -
+                                    nup] /= R[index].unsqueeze(-1)
 
                 if (istep >= ntherm):
                     if (idecor % ndecor == 0):
@@ -152,7 +160,56 @@ class Metropolis(SamplerBase):
 
         return torch.cat(pos)
 
-    def move(self, pdf, id_elec):
+    def init_kalos(self, pos):
+
+        if self.wf is None:
+            raise ValueError('Kalos needs a wf')
+
+        if self.wf.configs_method != 'ground_state':
+            raise ValueError('Kalos only ofr Ground state only')
+
+        self.ao = self.wf.ao(self.walkers.pos)
+        self.sup, self.sdown = self.get_slater_matrix(self.ao)
+        self.isup = torch.inverse(self.sup)
+        self.isdown = torch.inverse(self.sdown)
+
+    def get_proba(self, sup, sdown, id_elec):
+
+        nup = self.wf.mol.nup
+        if id_elec < nup:
+            R = torch.bmm(sup[:, id_elec, :].unsqueeze(
+                1), self.isup[:, :, id_elec].unsqueeze(-1)).squeeze()
+
+        else:
+
+            R = torch.bmm(sdown[:, id_elec-nup, :].unsqueeze(
+                1), self.isdown[:, :, id_elec-nup].unsqueeze(-1)).squeeze()
+
+        return R
+
+    def update_kalos(self, pos_new, id_elec):
+        t0 = time()
+        ao_new = self.wf.ao.update(self.ao, pos_new, id_elec)
+        print('udpate ', time()-t0)
+        #ao = self.wf.ao(pos_new)
+        #sup, sdown = self.get_slater_matrix(ao_new)
+        #ao_new = self.ao.clone()
+
+        # print('udpate ', time()-t0)
+
+        return self.ao, self.sup, self.sdown
+
+    def get_slater_matrix(self, ao):
+
+        mo = self.wf.mo(self.wf.mo_scf(ao))
+        slater_mat = self.wf.pool(mo, return_matrix=True)
+
+        sup = slater_mat[0][0]
+        sdown = slater_mat[1][0]
+
+        return sup, sdown
+
+    def move(self, id_elec):
         """Move electron one at a time in a vectorized way.
 
         Args:
@@ -196,8 +253,7 @@ class Metropolis(SamplerBase):
             torch.tensor: random array
         """
         if self.movedict['proba'] == 'uniform':
-            d = torch.rand((self.nwalkers, num_elec, self.ndim),
-                           device=self.device).view(self.nwalkers, num_elec*self.ndim)
+            d = torch.rand((self.nwalkers, self.ndim), device=self.device)
             return self.step_size * (2. * d - 1.)
 
         elif self.movedict['proba'] == 'normal':
@@ -215,10 +271,17 @@ class Metropolis(SamplerBase):
             t0rch.tensor: the indx of the accepted moves
         """
 
-        P[P > 1] = 1.0
         tau = torch.rand_like(P)
-        index = (P-tau >= 0).reshape(-1)
+        index = (P >= tau).reshape(-1)
         return index.type(torch.bool)
+
+    def update_ao(self, ao, pos, idelec):
+        ao_new = ao.clone()
+        ids, ide = (idelec)*3, (idelec+1)*3
+
+        ao_new[:, idelec, :] = self.wf.ao(
+            pos[:, ids:ide], one_elec=True).squeeze(1)
+        return ao_new
 
 
 if __name__ == "__main__":

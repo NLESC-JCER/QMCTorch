@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import numpy as np
-
+from time import time
 
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
@@ -51,6 +51,7 @@ class Orbital(WaveFunction):
 
         # define the SD we want
         self.orb_confs = OrbitalConfigurations(mol)
+        self.configs_method = configs
         self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
 
@@ -90,7 +91,7 @@ class Orbital(WaveFunction):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
-    def forward(self, x):
+    def forward(self, x, ao=None):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -104,7 +105,11 @@ class Orbital(WaveFunction):
             J = self.jastrow(x)
 
         # atomic orbital
-        x = self.ao(x)
+        if ao is None:
+            x = self.ao(x)
+
+        else:
+            x = ao
 
         # molecular orbitals
         x = self.mo_scf(x)
@@ -117,6 +122,7 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
             return J*self.fc(x)
+
         else:
             return self.fc(x)
 
@@ -143,6 +149,8 @@ class Orbital(WaveFunction):
 
         Returns: values of \Delta \Psi
         '''
+
+        print('Computing energy for %d points' % len(x))
 
         mo = self._get_mo_vals(x)
         d2mo = self._get_mo_vals(x, derivative=2)
@@ -230,6 +238,9 @@ class Orbital(WaveFunction):
                 c2 = self.ao.atom_coords[iat2, :].detach().numpy()
                 d.append((at1, at2, np.sum(np.sqrt(((c1-c2)**2)))))
         return d
+
+    def variational_parameters(self):
+        '''return variational parameters'''
 
     def geometry(self, pos):
         '''Return geometries.'''

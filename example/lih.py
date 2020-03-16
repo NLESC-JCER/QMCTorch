@@ -19,12 +19,12 @@ set_torch_double_precision()
 # define the molecule
 mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
                basis_type='sto',
-               basis='dz',
+               basis='sz',
                unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='cas(2,4)',
+             configs='ground_state',
              use_jastrow=True)
 
 # sampler
@@ -35,10 +35,10 @@ sampler = Metropolis(nwalkers=100, nstep=2000, step_size=0.05,
 
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-1},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
-           {'params': wf.mo.parameters(), 'lr': 1E-3},
-           {'params': wf.fc.parameters(), 'lr': 1E-3}]
+           {'params': wf.mo.parameters(), 'lr': 1E-6},
+           {'params': wf.fc.parameters(), 'lr': 1E-6}]
 
 
 opt = Adam(lr_dict, lr=1E-3)
@@ -63,11 +63,12 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # plot_observable(obs, e0=-8., ax=None)
 
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['ao'])
+solver.configure(task='wf_opt', freeze=['ao', 'mo'])
 solver.observable(['local_energy'])
 
 solver.initial_sampling(ntherm=1000, ndecor=100)
-solver.resampling(nstep=25, step_size=0.001, resample_every=None, tqdm=False)
+solver.resampling(nstep=25, step_size=0.001,
+                  resample_every=None, tqdm=False)
 
 solver.ortho_mo = True
 

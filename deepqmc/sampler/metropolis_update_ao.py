@@ -10,7 +10,8 @@ class Metropolis(SamplerBase):
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  nelec=1, ndim=1,
                  init={'min': -5, 'max': 5},
-                 move={'type': 'one-elec', 'proba': 'uniform'}, wf=None):
+                 move={'type': 'one-elec', 'proba': 'uniform'},
+                 wf=None):
         """Metropolis Hasting generator
 
         Args:
@@ -42,6 +43,7 @@ class Metropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, nelec, ndim, init, move)
+        self.wf = wf
 
         if 'type' not in self.movedict.keys():
             print('Metroplis : Set 1 electron move by default')
@@ -58,9 +60,9 @@ class Metropolis(SamplerBase):
                 torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
 
         self._move_per_iter = 1
-        if self.movedict['type'] not in ['one-elec', 'all-elec', 'all-elec-iter']:
+        if self.movedict['type'] not in ['all-elec-iter']:
             raise ValueError(
-                " 'type' in move should be 'one-elec','all-elec','all-elec-iter'")
+                " Only 1 all-elec-iter move allowed with kalos")
 
         if self.movedict['type'] == 'all-elec-iter':
             self.fixed_id_elec_list = range(self.nelec)
@@ -104,11 +106,15 @@ class Metropolis(SamplerBase):
             if ntherm < 0:
                 ntherm = self.nstep+ntherm
 
+            # init walkers
             self.walkers.initialize(pos=pos)
 
-            fx = pdf(self.walkers.pos)
+            # first calculations of a0
+            self.ao = self.wf.ao(self.walkers.pos)
 
+            fx = self.wf(self.walkers.pos, ao=self.ao)**2
             fx[fx == 0] = eps
+
             pos, rate, idecor = [], 0, 0
 
             if with_tqdm:
@@ -121,16 +127,17 @@ class Metropolis(SamplerBase):
                 for id_elec in self.fixed_id_elec_list:
 
                     t0 = time()
+
                     # new positions
-                    Xn = self.move(pdf, id_elec)
+                    Xn = self.move(id_elec)
 
                     # new function
-                    t0_pdf = time()
-                    fxn = pdf(Xn)
+                    ao_new = self.wf.ao.update(self.ao, Xn, id_elec)
+                    fxn = self.wf(Xn, ao=ao_new)**2
                     fxn[fxn == 0.] = eps
-                    df = fxn/fx
 
                     # accept the moves
+                    df = fxn/fx
                     index = self._accept(df)
 
                     # acceptance rate
@@ -139,6 +146,7 @@ class Metropolis(SamplerBase):
 
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
+                    self.ao[index, :, :] = ao_new[index, :, :]
                     fx[index] = fxn[index]
                     fx[fx == 0] = eps
 
@@ -152,7 +160,7 @@ class Metropolis(SamplerBase):
 
         return torch.cat(pos)
 
-    def move(self, pdf, id_elec):
+    def move(self, id_elec):
         """Move electron one at a time in a vectorized way.
 
         Args:
@@ -196,8 +204,7 @@ class Metropolis(SamplerBase):
             torch.tensor: random array
         """
         if self.movedict['proba'] == 'uniform':
-            d = torch.rand((self.nwalkers, num_elec, self.ndim),
-                           device=self.device).view(self.nwalkers, num_elec*self.ndim)
+            d = torch.rand((self.nwalkers, self.ndim), device=self.device)
             return self.step_size * (2. * d - 1.)
 
         elif self.movedict['proba'] == 'normal':
@@ -219,6 +226,14 @@ class Metropolis(SamplerBase):
         tau = torch.rand_like(P)
         index = (P-tau >= 0).reshape(-1)
         return index.type(torch.bool)
+
+    def update_ao(self, ao, pos, idelec):
+        ao_new = ao.clone()
+        ids, ide = (idelec)*3, (idelec+1)*3
+
+        ao_new[:, idelec, :] = self.wf.ao(
+            pos[:, ids:ide], one_elec=True).squeeze(1)
+        return ao_new
 
 
 if __name__ == "__main__":

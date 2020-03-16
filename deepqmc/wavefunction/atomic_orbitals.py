@@ -5,6 +5,8 @@ import numpy as np
 from deepqmc.wavefunction.spherical_harmonics import SphericalHarmonics
 from deepqmc.wavefunction.grad_spherical_harmonics import GradSphericalHarmonics
 
+from time import time
+
 
 class AtomicOrbitals(nn.Module):
 
@@ -179,7 +181,7 @@ class AtomicOrbitals(nn.Module):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, input, derivative=0, jacobian=True):
+    def forward(self, input, derivative=0, jacobian=True, one_elec=False):
         """Computes the values of the atomic orbitals (or their derivatives)
         for the electrons positions in input.
 
@@ -201,33 +203,48 @@ class AtomicOrbitals(nn.Module):
         if not jacobian:
             assert(derivative == 1)
 
+        if one_elec:
+            nelec_save = self.nelec
+            self.nelec = 1
+
         nbatch = input.shape[0]
 
         # get the pos of the bas
+        t0 = time()
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
+        # t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
+        # print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         r = torch.sqrt((xyz**2).sum(3))
+        # print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         R = self.radial(r)
+        # print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         Y = SphericalHarmonics(xyz, self.bas_l, self.bas_m)
+        # print('SH : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
+            # t0 = time()
             bas = R * Y
+            # print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
@@ -259,13 +276,16 @@ class AtomicOrbitals(nn.Module):
 
         # product with coefficients and primitives norm
         if jacobian:
+
             # -> (Nbatch,Nelec,Nbas)
+            # t0 = time()
             bas = self.norm_cst * self.bas_coeffs * bas
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
             ao = torch.zeros(nbatch, self.nelec, self.norb, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
+            # print('Contraction : ', time()-t0)
 
         else:
             # -> (Nbatch,Nelec,Nbas, Ndim)
@@ -278,16 +298,34 @@ class AtomicOrbitals(nn.Module):
                              3, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
 
+        if one_elec:
+            self.nelec = nelec_save
+
         return ao
+
+    def update(self, ao, pos, idelec):
+        ao_new = ao.clone()
+        ids, ide = (idelec)*3, (idelec+1)*3
+        ao_new[:, idelec, :] = self.forward(
+            pos[:, ids:ide], one_elec=True).squeeze(1)
+        return ao_new
 
 
 if __name__ == "__main__":
 
     from deepqmc.wavefunction.molecule import Molecule
+    from time import time
+    m = Molecule(atom='C 0 0 0; O 0 0 3.015',
+                 basis_type='gto', basis='sto-6g')
 
-    m = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-                 basis_type='gto', basis='sto-3g')
+    ao = AtomicOrbitals(m, cuda=False)
 
-    ao = AtomicOrbitals(m, cuda=True)
-    pos = torch.rand(20, ao.nelec*3).to('cuda')
-    aoval = ao.forward(pos, derivative=1)
+    pos = torch.rand(10, ao.nelec*3)
+
+    t0 = time()
+    aoval = ao(pos)
+    print('Total calculation : ', time()-t0)
+
+    t0 = time()
+    aoval = ao(pos[:, :3], one_elec=True)
+    print('1elec, calculation : ', time()-t0)

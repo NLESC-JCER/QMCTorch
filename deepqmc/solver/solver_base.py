@@ -13,6 +13,8 @@ class SolverBase(object):
         self.opt = optimizer
         self.cuda = False
         self.device = torch.device('cpu')
+        self.task = None
+        self.obs_dict = {}
 
     def resampling(self, ntherm=-1, nstep=100, step_size=None, resample_from_last=True,
                    resample_every=1, tqdm=False):
@@ -38,6 +40,8 @@ class SolverBase(object):
 
     def observable(self, obs):
         '''Create the observalbe we want to track.'''
+
+        # reset the dict
         self.obs_dict = {}
 
         for k in obs:
@@ -49,6 +53,11 @@ class SolverBase(object):
         if self.task == 'geo_opt' and 'geometry' not in self.obs_dict:
             self.obs_dict['geometry'] = []
 
+        for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+            if p.requires_grad:
+                self.obs_dict[key] = []
+                self.obs_dict[key+'.grad'] = []
+
     def sample(self, ntherm=-1, ndecor=100, with_tqdm=True, pos=None):
         ''' sample the wave function.'''
 
@@ -58,7 +67,7 @@ class SolverBase(object):
         pos.requires_grad = True
         return pos
 
-    def get_observable(self, obs_dict, pos, local_energy=None, ibatch=None, ** kwargs):
+    def get_observable(self, obs_dict, pos, local_energy=None, ibatch=None, **kwargs):
         '''compute all the required observable.
 
         Args :
@@ -71,23 +80,36 @@ class SolverBase(object):
         if self.wf.cuda and pos.device.type == 'cpu':
             pos = pos.to(self.device)
 
-        for obs in self. obs_dict.keys():
+        for obs in self.obs_dict.keys():
 
+            # store local energy
             if obs == 'local_energy' and local_energy is not None:
                 data = local_energy.cpu().detach().numpy()
-            else:
-                # get the method
+
+                if (ibatch is None) or (ibatch == 0):
+                    self.obs_dict[obs].append(data)
+                else:
+                    self.obs_dict[obs][-1] = np.append(
+                        self.obs_dict[obs][-1], data)
+
+            # store variational parameter
+            elif obs in self.wf.state_dict():
+                layer, param = obs.split('.')
+                p = self.wf.__getattr__(layer).__getattr__(param)
+                self.obs_dict[obs].append(p.data.clone().numpy())
+
+                if p.grad is not None:
+                    self.obs_dict[obs+'.grad'].append(p.grad.clone().numpy())
+                else:
+                    self.obs_dict[obs+'.grad'].append(torch.zeros_like(p.data))
+
+            # store any other defined method
+            elif hasattr(self.wf, obs):
                 func = self.wf.__getattribute__(obs)
                 data = func(pos)
                 if isinstance(data, torch.Tensor):
                     data = data.cpu().detach().numpy()
-
-            if (ibatch is None) or (ibatch == 0):
                 self.obs_dict[obs].append(data)
-
-            else:
-                self.obs_dict[obs][-1] = np.append(
-                    self.obs_dict[obs][-1], data)
 
     def print_observable(self, cumulative_loss):
 
@@ -128,19 +150,23 @@ class SolverBase(object):
 
     def single_point(self, pos=None, prt=True,
                      with_tqdm=True, ntherm=-1, ndecor=100):
-        '''Performs a single point calculation.'''
-        if pos is None:
-            pos = self.sample(ntherm=ntherm, ndecor=ndecor,
-                              with_tqdm=with_tqdm)
 
-        if self.wf.cuda and pos.device.type == 'cpu':
-            pos = pos.to(self.device)
+        with torch.no_grad():
 
-        e, s = self.wf._energy_variance(pos)
-        if prt:
-            print('Energy   : ', e)
-            print('Variance : ', s)
-        return pos, e, s
+            '''Performs a single point calculation.'''
+            if pos is None:
+                pos = self.sample(ntherm=ntherm, ndecor=ndecor,
+                                  with_tqdm=with_tqdm)
+
+            if self.wf.cuda and pos.device.type == 'cpu':
+                pos = pos.to(self.device)
+
+            e, s = self.wf._energy_variance(pos)
+            if prt:
+                print('Energy   : ', e.detach().item(),
+                      ' +/- ', torch.sqrt(s).detach().item())
+                # print('Variance : ', s)
+            return pos, e, s
 
     def save_checkpoint(self, epoch, loss, filename):
         torch.save({
@@ -150,6 +176,12 @@ class SolverBase(object):
             'loss': loss
         }, filename)
         return loss
+
+    def _append_observable(self, key, data):
+        '''append a new data point to observable key.'''
+        if key not in self.obs_dict.keys():
+            self.obs_dict[key] = []
+        self.obs_dict[key].append(data)
 
     def sampling_traj(self, pos):
         ndim = pos.shape[-1]

@@ -46,8 +46,10 @@ class SolverOrbital(SolverBase):
 
         if task == 'geo_opt':
             self.wf.ao.atom_coords.requires_grad = True
-            self.wf.ao.bas_coeffs.requires_grad = True
+
+            self.wf.ao.bas_coeffs.requires_grad = False
             self.wf.ao.bas_exp.requires_grad = False
+            self.wf.jastrow.weight.requires_grad = False
             for param in self.wf.mo.parameters():
                 param.requires_grad = False
             self.wf.fc.weight.requires_grad = False
@@ -58,6 +60,8 @@ class SolverOrbital(SolverBase):
             for param in self.wf.mo.parameters():
                 param.requires_grad = True
             self.wf.fc.weight.requires_grad = True
+            self.wf.jastrow.weight.requires_grad = True
+
             self.wf.ao.atom_coords.requires_grad = False
 
             if freeze is not None:
@@ -164,6 +168,8 @@ class SolverOrbital(SolverBase):
 
             self.print_observable(cumulative_loss)
 
+            print(self.wf.jastrow.weight)
+
             print('----------------------------------------')
 
             # resample the data
@@ -243,7 +249,7 @@ class SolverOrbital(SolverBase):
             '''
 
             # compute local energy and wf values
-            _, eloc = self.loss(lpos)
+            _, eloc = self.loss(lpos, no_grad=True)
             psi = self.wf(lpos)
 
             # evaluate the prefactor of the grads

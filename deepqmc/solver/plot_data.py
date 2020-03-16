@@ -1,5 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
+from matplotlib import cm
+
 import pickle
 
 
@@ -60,18 +62,41 @@ def plot_observable(obs_dict, e0=None, ax=None, var=False):
         plt.show()
 
 
-def plot_walkers_traj(obs):
+def plot_walkers_traj(obs, traj_index='all'):
 
     eloc = obs['local_energy']
     eloc = np.array(eloc).squeeze(-1)
+
     nstep, nwalkers = eloc.shape
 
     celoc = np.cumsum(eloc, axis=0).T
     celoc /= np.arange(1, nstep+1)
 
-    plt.plot(eloc, 'o', alpha=1/nwalkers, c='grey')
-    plt.plot(celoc.T)
+    var_decor = np.sqrt(np.var(np.mean(celoc, axis=1)))
+    print(var_decor)
+    var = np.sqrt(np.var(celoc, axis=1) / (nstep-1))
+    print(var)
+
+    Tc = (var_decor / var)**2
+
+    if traj_index is not None:
+        plt.subplot(1, 2, 1)
+
+        if traj_index == 'all':
+
+            plt.plot(eloc, 'o', alpha=1/nwalkers, c='grey')
+            cmap = cm.hot(np.linspace(0, 1, nwalkers))
+            for i in range(nwalkers):
+                plt.plot(celoc.T[:, i], color=cmap[i])
+        else:
+            plt.plot(eloc[traj_index, :], 'o', alpha=1/nwalkers, c='grey')
+            plt.plot(celoc.T[traj_index, :])
+        plt.subplot(1, 2, 2)
+        plt.hist(Tc)
+
     plt.show()
+
+    return Tc
 
 
 def plot_block(obs_dict):
@@ -88,40 +113,6 @@ def plot_block(obs_dict):
         evar.append(np.sqrt(np.var(tmp, axis=0) / (nblock-1)))
 
     plt.plot(np.array(evar))
-    plt.show()
-
-
-def plot_block_baby(obs_dict):
-
-    m = np.array(obs_dict['local_energy'])
-    K = m.shape[0]
-    Keq = 50
-    Keff = K - Keq
-    nstepx = Keff//2
-    err = []
-
-    for i in range(1, nstepx):
-        nblock = Keff//i
-        iter_ = 0
-        mcum = 0.
-        mcm2 = 0.
-        for j in range(1, nblock):
-            msum = 0.
-            for l in range(1, i+1):
-                iter_ = iter_ + 1
-                msum = msum+m[iter_+Keq].flatten()[0]
-
-            msum = msum/i
-            mcum += msum
-            mcm2 += msum*msum
-
-        mcum = (mcum/nblock)
-        mcm2 = (mcm2/nblock)
-
-        err.append(np.sqrt((mcm2-mcum**2)/(nblock-1)))
-
-    np.savetxt('block.dat', np.array(err))
-    plt.plot(np.array(err))
     plt.show()
 
 

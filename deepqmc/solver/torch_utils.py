@@ -38,57 +38,63 @@ class Loss(nn.Module):
         if self.use_weight:
             self.weight = {'psi': None, 'psi0': None}
 
-    def forward(self, pos):
+    def forward(self, pos, no_grad=False):
 
-        local_energies = self.wf.local_energy(pos)
+        _grad = torch.enable_grad()
+        if no_grad:
+            _grad = torch.no_grad()
 
-        if self.clip:
-            median = torch.median(local_energies)
-            std = torch.std(local_energies)
-            mask = (local_energies < median +
-                    5*std) & (local_energies > median-5*std)
-        else:
-            mask = torch.ones_like(local_energies).type(torch.bool)
+        with _grad:
 
-        if not self.use_weight:
+            local_energies = self.wf.local_energy(pos)
 
-            if self.method == 'variance':
-                loss = torch.var(local_energies[mask])
+            if self.clip:
+                median = torch.median(local_energies)
+                std = torch.std(local_energies)
+                mask = (local_energies < median +
+                        5*std) & (local_energies > median-5*std)
+            else:
+                mask = torch.ones_like(local_energies).type(torch.bool)
 
-            elif self.method == 'energy':
-                loss = torch.mean(local_energies[mask])
+            if not self.use_weight:
+
+                if self.method == 'variance':
+                    loss = torch.var(local_energies[mask])
+
+                elif self.method == 'energy':
+                    loss = torch.mean(local_energies[mask])
+
+                else:
+                    raise ValueError(
+                        'method must be variance, energy, weighted-variance or weighted_energy')
 
             else:
-                raise ValueError(
-                    'method must be variance, energy, weighted-variance or weighted_energy')
 
-        else:
+                self.weight['psi'] = self.wf(pos)
 
-            self.weight['psi'] = self.wf(pos)
+                if self.weight['psi0'] is None:
+                    self.weight['psi0'] = self.weight['psi'].detach().clone()
 
-            if self.weight['psi0'] is None:
-                self.weight['psi0'] = self.weight['psi'].detach().clone()
+                w = (self.weight['psi']/self.weight['psi0'])**2
+                w /= w.sum()
 
-            w = (self.weight['psi']/self.weight['psi0'])**2
-            w /= w.sum()
+                if self.method == 'weighted-variance':
+                    mu = torch.mean(local_energies)
+                    weighted_local_energies = (local_energies-mu)**2 * w
 
-            if self.method == 'weighted-variance':
-                mu = torch.mean(local_energies)
-                weighted_local_energies = (local_energies-mu)**2 * w
+                    # biased variance
+                    loss = torch.mean(weighted_local_energies[mask])*mask.sum()
 
-                # biased variance
-                loss = torch.mean(weighted_local_energies[mask])*mask.sum()
+                    # unbiased variance
+                    # loss = weighted_local_energies[mask].sum()/(mask.sum()-1)
 
-                # unbiased variance
-                # loss = weighted_local_energies[mask].sum()/(mask.sum()-1)
+                elif self.method == 'weighted-energy':
+                    weighted_local_energies = local_energies * w
+                    loss = torch.mean(weighted_local_energies[mask])
 
-            elif self.method == 'weighted-energy':
-                weighted_local_energies = local_energies * w
-                loss = torch.mean(weighted_local_energies[mask])
-
-            else:
-                raise ValueError(
-                    'method must be variance, energy, weighted-variance or weighted_energy')
+                else:
+                    raise ValueError(
+                        'method must be variance, energy, weighted-variance or weighted_energy')
 
         return loss, local_energies
 

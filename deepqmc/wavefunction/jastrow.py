@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from time import time
 
 
 class ElectronDistance(nn.Module):
@@ -41,16 +42,11 @@ class ElectronDistance(nn.Module):
         '''
 
         input_ = input.view(-1, self.nelec, self.ndim)
-
-        norm = (input_**2).sum(-1).unsqueeze(-1)
-        dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input_, input_.transpose(1, 2)))
+        dist = self._get_distance_quadratic(input_)
 
         eps_ = self.eps * \
             torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-
         diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
-
         dist = torch.sqrt(dist - diag + eps_)
 
         if derivative == 0:
@@ -76,6 +72,22 @@ class ElectronDistance(nn.Module):
 
             diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
             return (diff_axis * invr3)
+
+    def _get_distance_quadratic(self, input):
+
+        norm = (input**2).sum(-1).unsqueeze(-1)
+        dist = (norm + norm.transpose(1, 2) - 2.0 *
+                torch.bmm(input, input.transpose(1, 2)))
+        return dist
+
+    def _get_distance_diff(self, input):
+        nbatch = input.shape[0]
+        in1 = input.unsqueeze(1).expand(
+            nbatch, self.nelec, self.nelec, self.ndim)
+        in2 = input.unsqueeze(2).expand(
+            nbatch, self.nelec, self.nelec, self.ndim)
+        dist = torch.pow(in1-in2, 2).sum(3)
+        return dist
 
 
 class TwoBodyJastrowFactor(nn.Module):
@@ -140,11 +152,11 @@ class TwoBodyJastrowFactor(nn.Module):
 
         size = pos.shape
         assert size[1] == self.nelec*self.ndim
-
         r = self.edist(pos)
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
+
             return self._prod_unique_pairs(jast)
 
         elif derivative == 1:
