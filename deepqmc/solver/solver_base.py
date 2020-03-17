@@ -149,11 +149,17 @@ class SolverBase(object):
         return self.wf.variance(pos)
 
     def single_point(self, pos=None, prt=True,
-                     with_tqdm=True, ntherm=-1, ndecor=100):
+                     with_tqdm=True, ntherm=-1, ndecor=100,
+                     no_grad=True):
+        '''Performs a single point calculation.'''
 
-        with torch.no_grad():
+        # check if we have to compute and store the grads
+        _grad = torch.enable_grad()
+        if no_grad and self.wf.kinetic != 'auto':
+            _grad = torch.no_grad()
 
-            '''Performs a single point calculation.'''
+        with _grad:
+
             if pos is None:
                 pos = self.sample(ntherm=ntherm, ndecor=ndecor,
                                   with_tqdm=with_tqdm)
@@ -166,7 +172,8 @@ class SolverBase(object):
                 print('Energy   : ', e.detach().item(),
                       ' +/- ', torch.sqrt(s).detach().item())
                 # print('Variance : ', s)
-            return pos, e, s
+
+        return pos, e, s
 
     def save_checkpoint(self, epoch, loss, filename):
         torch.save({
