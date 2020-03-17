@@ -111,16 +111,18 @@ class SolverBase(object):
                     data = data.cpu().detach().numpy()
                 self.obs_dict[obs].append(data)
 
-    def print_observable(self, cumulative_loss):
+    def print_observable(self, cumulative_loss, verbose=False):
 
         print('loss %f' % (cumulative_loss))
+
         for k in self.obs_dict:
+
             if k == 'local_energy':
-                print('variance : %f' %
-                      np.var(self.obs_dict['local_energy'][-1]))
-                print('energy : %f' %
-                      np.mean(self.obs_dict['local_energy'][-1]))
-            else:
+                e = np.mean(self.obs_dict['local_energy'][-1])
+                err = np.std(self.obs_dict['local_energy'][-1])
+                print('energy : %f +/- %f' % (e, err))
+
+            elif verbose:
                 print(k + ' : ', self.obs_dict[k][-1])
 
     def get_wf(self, x):

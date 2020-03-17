@@ -10,7 +10,7 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.optim.sr import StochasticReconfiguration
 
 from deepqmc.wavefunction.molecule import Molecule
-from deepqmc.solver.plot_data import plot_observable, load_observable, save_observalbe, plot_block_baby
+from deepqmc.solver.plot_data import plot_observable, load_observable, save_observalbe
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -20,12 +20,12 @@ from deepqmc.solver.plot_data import plot_observable, load_observable, save_obse
 set_torch_double_precision()
 
 eloc = []
-for i in range(20):
+for i in range(50):
 
     # define the molecule
     mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                    basis_type='sto',
-                   basis='dz',
+                   basis='dzp',
                    unit='bohr')
 
     # define the wave function
@@ -36,10 +36,10 @@ for i in range(20):
     wf.jastrow.weight.data[0] = 0.5
 
     # sampler
-    sampler = Metropolis(nwalkers=1, nstep=1000, step_size=0.5,
+    sampler = Metropolis(nwalkers=250, nstep=1500, step_size=0.2,
                          ndim=wf.ndim, nelec=wf.nelec,
-                         init=mol.domain('normal'),
-                         move={'type': 'all-elec-iter', 'proba': 'normal'})
+                         init=mol.domain('atomic'),
+                         move={'type': 'all-elec', 'proba': 'normal'})
 
     # optimizer
     lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
@@ -58,12 +58,20 @@ for i in range(20):
     solver = SolverOrbital(wf=wf, sampler=sampler,
                            optimizer=opt, scheduler=None)
 
-    pos, e, v = solver.single_point(ntherm=400, ndecor=1)
+    pos, e, v = solver.single_point(ntherm=1000, ndecor=100)
     eloc.append(e.detach().numpy())
 
 eloc = np.array(eloc)
 var = np.var(eloc)
 
+
+plt.plot(eloc)
+
+plt.hist(eloc)
+plt.show()
+
+plt.hist(var)
+plt.show()
 
 # plot_block_baby(obs)
 # eloc = obs['local_energy']

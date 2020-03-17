@@ -5,12 +5,19 @@ from matplotlib import cm
 import pickle
 
 
-def plot_observable(obs_dict, e0=None, ax=None, var=False):
+def plot_observable(obs_dict, e0=None, ax=None, var=False, obs='energy'):
     '''Plot the observable selected.
 
     Args:
         obs_dict : dictioanry of observable
     '''
+    if obs == 'energy':
+        self.plot_energy(obs_dict, e0, ax, var)
+    else:
+        self.plot_data(obs_dict, obs, ax)
+
+
+def plot_energy(obs_dict, e0=None, ax=None, var=False):
 
     show_plot = False
 
@@ -60,6 +67,29 @@ def plot_observable(obs_dict, e0=None, ax=None, var=False):
 
     if show_plot:
         plt.show()
+
+    return energy, variance
+
+
+def plot_data(obs_dict,  obs, ax=None):
+
+    if ax is None:
+        fig = plt.figure()
+        ax = fig.add_subplot(111)
+        show_plot = True
+
+    data = np.array(obs_dict[obs]).flatten()
+    epoch = np.arange(len(data))
+    ax.plot(epoch, data, color='#144477')
+
+    if obs+'.grad' in obs_dict:
+        grad = data = np.array(obs_dict[obs+'.grad']).flatten()
+        ax2 = ax.twinx()
+        ax2.plot(epoch, data, color='blue')
+        ax2.set_ylabel('gradient', color='blue')
+        ax2.tick_params(axis='y', labelcolor='blue')
+
+    plt.show()
 
 
 def plot_walkers_traj(obs, traj_index='all'):

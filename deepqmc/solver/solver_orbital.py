@@ -104,8 +104,9 @@ class SolverOrbital(SolverBase):
 
         # resize the number of walkers
         _nwalker_save = self.sampler.walkers.nwalkers
-        self.sampler.walkers.nwalkers = pos.shape[0]
-        self.sampler.nwalkers = pos.shape[0]
+        if self.resample.resample_from_last:
+            self.sampler.walkers.nwalkers = pos.shape[0]
+            self.sampler.nwalkers = pos.shape[0]
 
         # handle the batch size
         if batchsize is None:
@@ -168,8 +169,6 @@ class SolverOrbital(SolverBase):
 
             self.print_observable(cumulative_loss)
 
-            print(self.wf.jastrow.weight)
-
             print('----------------------------------------')
 
             # resample the data
@@ -202,7 +201,7 @@ class SolverOrbital(SolverBase):
                     pos=pos, ntherm=self.resample.ntherm, with_tqdm=self.resample.tqdm)
                 self.dataloader.dataset.data = pos
 
-            # update the loss if needed
+            # update the weight of the loss if needed
             if self.loss.use_weight:
                 self.loss.weight['psi0'] = None
 
@@ -251,12 +250,14 @@ class SolverOrbital(SolverBase):
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=True)
             psi = self.wf(lpos)
+            norm = 1./len(psi)
 
             # evaluate the prefactor of the grads
             weight = eloc.clone()
             weight -= torch.mean(eloc)
             weight /= psi
             weight *= 2.
+            weight *= norm
 
             # compute the gradients
             self.opt.zero_grad()
