@@ -416,7 +416,7 @@ class Molecule(object):
             # correct unit
             if self.unit == 'angs':
                 sett.input.units.length = 'Angstrom'
-            else self.unit == 'bohr':
+            elif self.unit == 'bohr':
                 sett.input.units.length = 'Bohr'
 
             # run the ADF job

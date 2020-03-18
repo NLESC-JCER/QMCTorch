@@ -44,7 +44,6 @@ class Orbital(WaveFunction):
         # number of atoms
         self.mol = mol
         self.atoms = mol.atoms
-        self.bonds = mol.bonds
         self.natom = mol.natom
 
         # define the atomic orbital layer

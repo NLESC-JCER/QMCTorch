@@ -16,80 +16,17 @@ The three main ingredients of any calculations are :
 * a sampler able to generate sampling points of the wave function
 * an optimizer (as those provided by `pytorch`)
 
-## Harmonic Oscillator in 1D
-
-The script below illustrates how to optimize the wave function of the one-dimensional harmonic oscillator `DeepQMC`.
-
-```python
-import torch
-import torch.optim as optim
-
-from deepqmc.sampler.metropolis import  Metropolis
-from deepqmc.wavefunction.wf_potential import Potential
-from deepqmc.solver.solver_potential import SolverPotential
-from deepqmc.solver.plot_potential import plot_results_1d, plotter1d
-
-# analytic solution of the problem
-def sol_func(pos):
-    return torch.exp(-0.5*pos**2)
-
-# box
-domain, ncenter = {'xmin':-5.,'xmax':5.}, 5
-
-# potential function
-def pot_func(pos):
-    '''Potential function desired.'''
-    return  0.5*pos**2
-
-# wavefunction
-wf = Potential(pot_func,domain,ncenter,nelec=1)
-
-#sampler
-sampler = Metropolis(nwalkers=250, nstep=1000,
-                     step_size = 1., nelec = wf.nelec,
-                     ndim = wf.ndim, domain = {'min':-5,'max':5})
-
-# optimizer
-opt = optim.Adam(wf.parameters(),lr=0.01)
-
-# define solver
-solver = SolverPotential(wf=wf,sampler=sampler,optimizer=opt)
-
-# train the wave function
-plotter = plotter1d(wf,domain,50,sol=sol_func)
-solver.run(100, loss = 'variance', plot = plotter )
-
-
-# plot the final wave function
-plot_results_1d(solver,domain,50,sol_func,e0=0.5)
-```
-
-<!-- The `pot_func` function defines the potential for which we want to optimize the wave function. It is here given by a simple quadratic function.
-
-After defining the domain in `domain` and the number of basis function in `ncenter`, we instantiate the `Potential` wave function class. This class defines a very simple neural network that, given a position computes the value of the wave function at that point. This neural network is composed of a layer of radial basis functions followed by a fully connected layer to sum them up.
-
-
-We then instantiate the sampler, here a simple `Metroplis` scheme. The sampler is used to sample the wave function and hence generate a bach of sampling points. These points are used as input of the neural network the compute the values of wave function at those points. We finally select the `Adam` optimizer to optimize the wave function paramters.
-
-We then define a `SolverPotential` instance that ties all the elements together and train the model to optimize the wave function paramters. We here use the variance of the sampling point energies as a loss and run 100 epochs. Many more parameters are accessible in the training routines.
-
-After the optimization, the following result is obtained: -->
-
-After otpimization the following trajectory can easily be generated :
+The wave function is encoded in the simple multilayer neural network depicted below:
 
 <p align="center">
-<img src="./pics/ho1d.gif" title="Optimization of the wave function">
+<img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
 </p>
 
-The same procedure can be done on different potentials. The figure below shows the performace of the method on the harmonic oscillator and the morse potential.
+Starting from the positions of the walkers, the `AtomicOrbital` layer computes the value of each atomic orbital for each electrons. The second layer is a linear transformation that computes the molecular orbital as linear combination of AOs. Then the `SlaterPooling` finally computes the value of the Slater determinant and the last layer create the CI expansion. A `Jastrow` layer also computes the Jastrow factor that is multiplied with the CI expansion. 
 
-<p align="center">
-<img src="./pics/rbf1d_summary.png" title="Results of the optimization">
-</p>
+## Wave function optmization of H2
 
-## Dihydrogen molecule
-
-`DeepQMC` also allows optimizing the wave function and the geometry of molecular systems through the use of dedicated classes. For example the small script below allows to compute the energy of a H2 molecule using a few lines.
+As an illustrative example let's optimize the wave function of H2 using the following script :
 
 ```python
 import sys
@@ -101,50 +38,93 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
 from deepqmc.solver.plot_data import plot_observable
 
+from deepqmc.solver.torch_utils import set_torch_double_precision
+set_torch_double_precision()
+
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.37; H 0 0 0.37', basis_type='sto', basis='sz')
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+               basis_type='sto',
+               basis='dzp',
+               unit='bohr')
 
 # define the wave function
-wf = Orbital(mol)
+wf = Orbital(mol, configs='cas(2,2)')
 
 #sampler
-sampler = Metropolis(nwalkers=1000, nstep=1000, step_size = 0.5,
-                     ndim = wf.ndim, nelec = wf.nelec, move = 'one')
+sampler = Metropolis(nwalkers=500, nstep=2000, step_size=0.2,
+                     ndim=wf.ndim, nelec=wf.nelec,
+                     init=mol.domain('atomic'),
+                     move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-opt = Adam(wf.parameters(),lr=0.01)
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 3E-3},
+           {'params': wf.ao.parameters(), 'lr': 1E-6},
+           {'params': wf.mo.parameters(), 'lr': 1E-3},
+           {'params': wf.fc.parameters(), 'lr': 3E-3}]
+opt = Adam(lr_dict)
+
+# scheduler
+scheduler = lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # solver
-solver = SolverOrbital(wf=wf,sampler=sampler,optimizer=opt)
+solver = SolverOrbital(wf=wf, sampler=sampler,
+                       optimizer=opt, scheduler=None)
 
-# optimize the geometry
-solver.configure(task='geo_opt')
-solver.run(100,loss='energy')
+# optimize jatrow and CI only (freeze ao and mo)
+solver.configure(task='wf_opt', freeze=['ao', 'mo'])
+
+# initial sampling
+solver.initial_sampling(ntherm=1000, ndecor=100)
+
+# resampling
+solver.resampling(nstep=20)
+
+# run the optimization
+data = solver.run(250, loss='energy')
 
 # plot the data
-plot_observable(solver.obs_dict,e0=-1.16)
+e, v = plot_energy(solver.obs_dict, e0=-1.1645, var=True)
 ```
 
-The main difference compared to the harmonic oscillator case is the definition of the molecule via the `Molecule` class and the definition of the wave function that is now given by the `Orbital` class. The `Molecule` object specifies the geometry of the system and the type of orbitals required. So far only `sto` and `gto` are supported. The `Orbital` class defines a neural network encoding the wave fuction ansatz. The network takes as input the positions of the electrons in the system and compute the corresponding value of the wave function using the architecture depicted below:
+The `Molecule` class allows to easily define molecular structure and the basis set used to describe its electronic structure Gaussian (`gto`) and Slater (`sto`) atomic orbitals are supported. The `Orbital` class defines the neural network that encodes the wave function ansatz. The sampler is here set to a simple `Metroplois` using 500 walkers each performing 2000 steps. The `Adam` optimizer is chosen with a simple linear scheduler. All these objects are assembled in the `SolverOrbital` that is then configured and run for 250 epoch. The result of this optimization is depicted below :
 
 <p align="center">
-<img src="./pics/mol_nn.png" title="Neural network used for molecular systems">
+<img src="./pics/h2_dzp.png" title="Wave function Ooptimization of a H2 molecule">
 </p>
 
-Starting from the positions of the electrons in the system, we have define an `AtomicOrbital` layer that evaluates the values of all the atomic orbitals at all the electron positions. This is in spirit similar to the RBF layer used in the `Potential` wave function used in the previous example. The `AtomicOrbital` layer has several variational paramters: atomic positions, basis function exponents and coefficients. These parameters can be optimized during the training.
+As seen here both the energy and the variance of the wave function decreases during the optimization
 
-The network then computes the values of the molecular orbitals from those of the atomic orbitals. This achieved by a simple linear layer whose transformation matrix is given by the molecular orbital coefficients. These coefficients are also variational parameters of the layer and can therefore be optimized.
+## Geometry optimization of a water molecule
 
-We then have defined a `SlaterPooling` layer that computes the values of all the required Slater determinants. The `SlaterPooling` operation is achieved by masking the molecular orbitals contained in the determinant, and by then taking the determinant of this submatrix. We have implemented `BatchDeterminant` layer to accelerate this operation.
+`DeepQMC` can also be used to perform geometry optimization as the atomic coordinate are variational parameters of the `AtomicOrbital` layer. For example the following example optimize a water molecule :
 
-Finally a fully connected layer sums up all the determinants. The weight of this last layer are the CI coefficients that can as well be optimized.
+```python
 
-In parallel we also have defined a `JastrowFactor` layer that computes the e-e distance and the value of the Jastrow factor. There again the parameters of the layer can be  optimized during the training of the wave function.
+mol = Molecule(atom='water.xyz', unit='angs',
+               basis_type='sto', basis='dz')
 
-The script presented above configures then the solver to run a geometry optimization on the model using the energy of the sampling points as a loss.
+# define the wave function
+wf = Orbital(mol,configs='ground_state')
 
-The figure below shows the evolution of the system's eneergy during the geometry optimization of the molecule.
+# sampler
+sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.2,
+                     nelec=wf.nelec, ndim=wf.ndim,
+                     init=mol.domain('atomic'),
+                     move={'type': 'all-elec', 'proba': 'normal'})
+
+# optimizer
+opt = Adam(wf.parameters(), lr=0.005)
+
+# solver
+solver = SolverOrbital(wf=wf, sampler=sampler,optimizer=opt)
+solver.configure(task='geo_opt')
+solver.observable(['local_energy','atomic_distances'])
+solver.run(50,loss='energy')
+solver.save_traj('h2o_traj.xyz')
+```
+
+Note that comfiguring the solver to perform a geometry optimization is done in one single line. The results of this optimization is shown below :
 
 <p align="center">
-<img src="./pics/h2_go_opt.png" title="Geometry optimization of a H2 molecule">
+<img src="./pics/h2o.png" title="Wave function Ooptimization of a H2 molecule">
 </p>
