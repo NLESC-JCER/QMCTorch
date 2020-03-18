@@ -112,8 +112,7 @@ class SolverBase(object):
                 self.obs_dict[obs].append(data)
 
     def print_observable(self, cumulative_loss, verbose=False):
-
-        print('loss %f' % (cumulative_loss))
+        '''Print observalbe to screen.'''
 
         for k in self.obs_dict:
 
@@ -128,6 +127,7 @@ class SolverBase(object):
 
             elif verbose:
                 print(k + ' : ', self.obs_dict[k][-1])
+                print('loss %f' % (cumulative_loss))
 
     def get_wf(self, x):
         '''Get the value of the wave functions at x.'''

@@ -9,7 +9,8 @@ def plot_observable(obs_dict, e0=None, ax=None, var=False, obs='energy'):
     '''Plot the observable selected.
 
     Args:
-        obs_dict : dictioanry of observable
+        obs_dict : dictionary of observable
+        e0 
     '''
     if obs == 'energy':
         self.plot_energy(obs_dict, e0, ax, var)
