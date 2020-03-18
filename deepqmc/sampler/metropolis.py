@@ -157,6 +157,7 @@ class Metropolis(SamplerBase):
 
         Args:
             pdf (callable): function to sample
+            id_elec (int): index f the electron to move 
 
         Returns:
             torch.tensor: new positions of the walkers
