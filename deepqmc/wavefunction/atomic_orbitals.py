@@ -11,11 +11,14 @@ from time import time
 class AtomicOrbitals(nn.Module):
 
     def __init__(self, mol, cuda=False):
-        '''Radial Basis Function Layer in N dimension
+        """Atomic Orbital Layer
 
-        Args:
-            mol: the molecule
-        '''
+        Arguments:
+            mol {Molecule} -- Molecule instance
+
+        Keyword Arguments:
+            cuda {bool} -- use cuda (default: {False})
+        """
 
         super(AtomicOrbitals, self).__init__()
 
@@ -65,10 +68,17 @@ class AtomicOrbitals(nn.Module):
             self._to_device()
 
     def get_norm(self, basis_type):
+        """Compute the normalization factor of the atomic orbitals.
+
+        Arguments:
+            basis_type {str]} -- basis type 'sto' or 'gto'
+
+        Returns:
+            torch.tensor -- normalization factor
+        """
 
         with torch.no_grad():
 
-            # select the normalization
             if basis_type == 'sto':
                 return self._norm_slater()
 
@@ -76,22 +86,27 @@ class AtomicOrbitals(nn.Module):
                 return self._norm_gaussian()
 
     def _norm_slater(self):
-        '''Normalization of the STO
-        taken from :
-        www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
+        """ Normalization of STOs
+        [1] www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
+        [2] C Filippi, Multiconf wave functions for QMC of first row diatomic molecules, 
+            JCP 105, 213 1996
+        [3] Monte Carlo Methods in Ab Inition Quantum Chemistry, B.L. Hammond
 
-        C Filippi
-        Multiconf wave functions for QMC of first row diatomic molecules
-        JCP 105, 213 1996
-
-        '''
+        Returns:
+            torch.tensor -- normalization factor
+        """
         nfact = torch.tensor([np.math.factorial(2*n)
                               for n in self.bas_n], dtype=torch.get_default_dtype())
         return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
 
     def _norm_gaussian(self):
-        '''Computational Quantum Chemistry: An interactive Intrduction to
-            basis set theory eq: 1.14 page 23.'''
+        """ Normlization of GTOs.
+        [1] Computational Quantum Chemistry: An interactive Intrduction to basis set theory 
+            eq : 1.14 page 23.'''
+
+        Returns:
+            torch.tensor -- normalization factor
+        """
 
         from scipy.special import factorial2 as f2
 
@@ -106,6 +121,19 @@ class AtomicOrbitals(nn.Module):
         return torch.sqrt(B/C)*A
 
     def _radial_slater(self, R, xyz=None, derivative=0, jacobian=True):
+        """Compute the radial part of STOs (or its derivative).
+
+        Arguments:
+            R {torch.tensor} -- distance between each electron and each atom
+
+        Keyword Arguments:
+            xyz {torch.tensor} -- positions of the electrons (needed for derivative) (default: {None})
+            derivative {int} -- degree of the derivative (default: {0})
+            jacobian {bool} -- return the jacobian, i.e the sum of the gradients (default: {True})
+
+        Returns:
+            torch.tensor -- values of each orbital radial part at each position
+        """
 
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R)
@@ -141,7 +169,19 @@ class AtomicOrbitals(nn.Module):
                 return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
 
     def _radial_gaussian(self, R, xyz=None, derivative=0, jacobian=True):
+        """Compute the radial part of GTOs (or its derivative).
 
+        Arguments:
+            R {torch.tensor} -- distance between each electron and each atom
+
+        Keyword Arguments:
+            xyz {torch.tensor} -- positions of the electrons (needed for derivative) (default: {None})
+            derivative {int} -- degree of the derivative (default: {0})
+            jacobian {bool} -- return the jacobian, i.e the sum of the gradients (default: {True})
+
+        Returns:
+            torch.tensor -- values of each orbital radial part at each position
+        """
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
 
@@ -194,6 +234,9 @@ class AtomicOrbitals(nn.Module):
                                        the derivatives) or the individual
                                        terms. Defaults to True.
                                        False only for derivative=1
+
+            one_elec (bool, optional): if only one electron is in input
+
         Returns:
             torch.tensor: Value of the AO (or their derivatives)
                           size : Nbatch, Nelec, Norb (jacobian = True)
@@ -210,41 +253,31 @@ class AtomicOrbitals(nn.Module):
         nbatch = input.shape[0]
 
         # get the pos of the bas
-        t0 = time()
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
-        # t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
         # print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
         r = torch.sqrt((xyz**2).sum(3))
-        # print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
         R = self.radial(r)
-        # print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
         Y = SphericalHarmonics(xyz, self.bas_l, self.bas_m)
-        # print('SH : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
-            # t0 = time()
             bas = R * Y
-            # print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
@@ -278,14 +311,12 @@ class AtomicOrbitals(nn.Module):
         if jacobian:
 
             # -> (Nbatch,Nelec,Nbas)
-            # t0 = time()
             bas = self.norm_cst * self.bas_coeffs * bas
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
             ao = torch.zeros(nbatch, self.nelec, self.norb, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
-            # print('Contraction : ', time()-t0)
 
         else:
             # -> (Nbatch,Nelec,Nbas, Ndim)
@@ -304,6 +335,16 @@ class AtomicOrbitals(nn.Module):
         return ao
 
     def update(self, ao, pos, idelec):
+        """Update the AO matrix if only the idelec electron has been moved.
+
+        Arguments:
+            ao {torch.tensor} -- input ao matrix
+            pos {torch.tensor} -- position of the electron that has moved
+            idelec {int} -- index of the electron that has moved
+
+        Returns:
+            torch.tensor -- new ao matrix
+        """
         ao_new = ao.clone()
         ids, ide = (idelec)*3, (idelec+1)*3
         ao_new[:, idelec, :] = self.forward(
