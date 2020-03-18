@@ -66,7 +66,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 if 0:
     pos, e, v = solver.single_point(ntherm=1000, ndecor=100)
-    # pos = solver.sample(ntherm=0, ndecor=0)
+    # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
     # Tc = plot_walkers_traj(obs)
     # plot_block(obs)

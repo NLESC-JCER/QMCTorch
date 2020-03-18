@@ -118,9 +118,13 @@ class SolverBase(object):
         for k in self.obs_dict:
 
             if k == 'local_energy':
-                e = np.mean(self.obs_dict['local_energy'][-1])
-                err = np.std(self.obs_dict['local_energy'][-1])
-                print('energy : %f +/- %f' % (e, err))
+
+                eloc = self.obs_dict['local_energy'][-1]
+                e = np.mean(eloc)
+                v = np.var(eloc)
+                err = np.sqrt(v/len(eloc))
+                print('energy   : %f +/- %f' % (e, err))
+                print('variance : %f' % np.sqrt(v))
 
             elif verbose:
                 print(k + ' : ', self.obs_dict[k][-1])
@@ -169,11 +173,12 @@ class SolverBase(object):
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 
-            e, s = self.wf._energy_variance(pos)
+            e, s, err = self.wf._energy_variance_error(pos)
+
             if prt:
                 print('Energy   : ', e.detach().item(),
-                      ' +/- ', torch.sqrt(s).detach().item())
-                # print('Variance : ', s)
+                      ' +/- ', err.detach().item())
+                print('Variance : ', torch.sqrt(s).detach().item())
 
         return pos, e, s
 
