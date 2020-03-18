@@ -5,6 +5,8 @@ import numpy as np
 from deepqmc.wavefunction.spherical_harmonics import SphericalHarmonics
 from deepqmc.wavefunction.grad_spherical_harmonics import GradSphericalHarmonics
 
+from time import time
+
 
 class AtomicOrbitals(nn.Module):
 
@@ -51,8 +53,7 @@ class AtomicOrbitals(nn.Module):
 
         # select the radial aprt
         radial_dict = {'sto': self._radial_slater,
-                       'gto': self._radial_gaussian,
-                       'gto_cart': self._radial_gausian_cart}
+                       'gto': self._radial_gaussian}
         self.radial = radial_dict[mol.basis_type]
 
         # get the normaliationconstants
@@ -70,10 +71,9 @@ class AtomicOrbitals(nn.Module):
             # select the normalization
             if basis_type == 'sto':
                 return self._norm_slater()
+
             elif basis_type == 'gto':
                 return self._norm_gaussian()
-            elif basis_type == 'gto_cart':
-                return self._norm_gaussian_cart()
 
     def _norm_slater(self):
         '''Normalization of the STO
@@ -106,18 +106,39 @@ class AtomicOrbitals(nn.Module):
         return torch.sqrt(B/C)*A
 
     def _radial_slater(self, R, xyz=None, derivative=0, jacobian=True):
+
         if derivative == 0:
             return R**self.bas_n * torch.exp(-self.bas_exp*R)
 
         elif derivative > 0:
-            sum_xyz = xyz.sum(3)
+
             rn = R**(self.bas_n)
-            nabla_rn = self.bas_n * sum_xyz * R**(self.bas_n-2)
+            nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
+
             er = torch.exp(-self.bas_exp*R)
-            nabla_er = - self.bas_exp * sum_xyz * er
+            nabla_er = -(self.bas_exp * er).unsqueeze(-1) * \
+                xyz / R.unsqueeze(-1)
 
             if derivative == 1:
-                return nabla_rn*er + rn*nabla_er
+
+                if jacobian:
+                    nabla_rn = nabla_rn.sum(3)
+                    nabla_er = nabla_er.sum(3)
+                    return nabla_rn*er + rn*nabla_er
+                else:
+                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er
+
+            elif derivative == 2:
+
+                sum_xyz2 = (xyz**2).sum(3)
+
+                lap_rn = self.bas_n * (3*R**(self.bas_n-2)
+                                       + sum_xyz2 * (self.bas_n-2) * R**(self.bas_n-4))
+
+                lap_er = self.bas_exp**2 * er * sum_xyz2 / R**2 \
+                    - 2 * self.bas_exp * er * sum_xyz2 / R**3
+
+                return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
 
     def _radial_gaussian(self, R, xyz=None, derivative=0, jacobian=True):
 
@@ -150,10 +171,6 @@ class AtomicOrbitals(nn.Module):
 
                 return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
 
-    def _radial_gausian_cart(self, R, xyz=None, derivative=0):
-        raise NotImplementedError('Cartesian GTOs are on the to do list')
-        # return xyz**self.lmn_cart * torch.exp(-self.bas_exp*R**2)
-
     def _to_device(self):
         """Export the non parameter variable to the device."""
 
@@ -164,7 +181,7 @@ class AtomicOrbitals(nn.Module):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, input, derivative=0, jacobian=True):
+    def forward(self, input, derivative=0, jacobian=True, one_elec=False):
         """Computes the values of the atomic orbitals (or their derivatives)
         for the electrons positions in input.
 
@@ -186,33 +203,48 @@ class AtomicOrbitals(nn.Module):
         if not jacobian:
             assert(derivative == 1)
 
+        if one_elec:
+            nelec_save = self.nelec
+            self.nelec = 1
+
         nbatch = input.shape[0]
 
         # get the pos of the bas
+        t0 = time()
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
+        # t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
+        # print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         r = torch.sqrt((xyz**2).sum(3))
+        # print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         R = self.radial(r)
+        # print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         Y = SphericalHarmonics(xyz, self.bas_l, self.bas_m)
+        # print('SH : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
+            # t0 = time()
             bas = R * Y
+            # print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
@@ -244,13 +276,16 @@ class AtomicOrbitals(nn.Module):
 
         # product with coefficients and primitives norm
         if jacobian:
+
             # -> (Nbatch,Nelec,Nbas)
+            # t0 = time()
             bas = self.norm_cst * self.bas_coeffs * bas
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
             ao = torch.zeros(nbatch, self.nelec, self.norb, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
+            # print('Contraction : ', time()-t0)
 
         else:
             # -> (Nbatch,Nelec,Nbas, Ndim)
@@ -263,16 +298,34 @@ class AtomicOrbitals(nn.Module):
                              3, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
 
+        if one_elec:
+            self.nelec = nelec_save
+
         return ao
+
+    def update(self, ao, pos, idelec):
+        ao_new = ao.clone()
+        ids, ide = (idelec)*3, (idelec+1)*3
+        ao_new[:, idelec, :] = self.forward(
+            pos[:, ids:ide], one_elec=True).squeeze(1)
+        return ao_new
 
 
 if __name__ == "__main__":
 
     from deepqmc.wavefunction.molecule import Molecule
+    from time import time
+    m = Molecule(atom='C 0 0 0; O 0 0 3.015',
+                 basis_type='gto', basis='sto-6g')
 
-    m = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-                 basis_type='gto', basis='sto-3g')
+    ao = AtomicOrbitals(m, cuda=False)
 
-    ao = AtomicOrbitals(m, cuda=True)
-    pos = torch.rand(20, ao.nelec*3).to('cuda')
-    aoval = ao.forward(pos, derivative=1)
+    pos = torch.rand(10, ao.nelec*3)
+
+    t0 = time()
+    aoval = ao(pos)
+    print('Total calculation : ', time()-t0)
+
+    t0 = time()
+    aoval = ao(pos[:, :3], one_elec=True)
+    print('1elec, calculation : ', time()-t0)

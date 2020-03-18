@@ -87,3 +87,6 @@ class TestH2(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    # t = TestH2()
+    # t.setUp()
+    # t.test_single_point()

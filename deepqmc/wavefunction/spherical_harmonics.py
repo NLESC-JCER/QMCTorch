@@ -67,7 +67,6 @@ def _spherical_harmonics_l0(xyz):
         Y00 = 1/2 \sqrt(1 / \pi)
     '''
 
-    # return 0.2820948 * torch.ones(xyz.shape[:-1])
     return 0.2820948 * torch.ones_like(xyz[..., 0])
 
 

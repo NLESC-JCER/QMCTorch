@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import numpy as np
-
+from time import time
 
 from deepqmc.wavefunction.atomic_orbitals import AtomicOrbitals
 from deepqmc.wavefunction.slater_pooling import SlaterPooling
@@ -13,7 +13,7 @@ from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
 
 class Orbital(WaveFunction):
 
-    def __init__(self, mol, configs='ground_state', scf='pyscf',
+    def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi', use_jastrow=True, cuda=False):
 
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
@@ -28,26 +28,30 @@ class Orbital(WaveFunction):
         self.bonds = mol.bonds
         self.natom = mol.natom
 
-        # scf code
-        self.scf_code = scf
-
         # define the atomic orbital layer
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
+        self.mo_scf = nn.Linear(mol.norb, mol.norb, bias=False)
+        self.mo_scf.weight = self.get_mo_coeffs()
+        self.mo_scf.weight.requires_grad = False
+        if self.cuda:
+            self.mo_scf.to(self.device)
+
+        # define the mo mixing layer
         self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
-        self.mo.weight = self.get_mo_coeffs()
+        self.mo.weight = nn.Parameter(torch.eye(mol.norb))
         if self.cuda:
             self.mo.to(self.device)
 
         # jastrow
         self.use_jastrow = use_jastrow
-        if self.use_jastrow:
-            self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
-                                                w=1., cuda=cuda)
+        self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
+                                            w=1., cuda=cuda)
 
         # define the SD we want
         self.orb_confs = OrbitalConfigurations(mol)
+        self.configs_method = configs
         self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
 
@@ -79,7 +83,7 @@ class Orbital(WaveFunction):
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(
-            self.mol.get_mo_coeffs(code=self.scf_code)).type(
+            self.mol.get_mo_coeffs()).type(
                 torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
@@ -87,7 +91,7 @@ class Orbital(WaveFunction):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
-    def forward(self, x):
+    def forward(self, x, ao=None):
         ''' Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -100,14 +104,31 @@ class Orbital(WaveFunction):
         if self.use_jastrow:
             J = self.jastrow(x)
 
-        x = self.ao(x)
+        # atomic orbital
+        if ao is None:
+            x = self.ao(x)
+
+        else:
+            x = ao
+
+        # molecular orbitals
+        x = self.mo_scf(x)
+
+        # mix the mos
         x = self.mo(x)
+
+        # pool the mos
         x = self.pool(x)
 
         if self.use_jastrow:
             return J*self.fc(x)
+
         else:
             return self.fc(x)
+
+    def _get_mo_vals(self, x, derivative=0):
+        '''get the values of the MOs.'''
+        return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
     def local_energy_jacobi(self, pos):
         ''' local energy of the sampling points.'''
@@ -129,25 +150,28 @@ class Orbital(WaveFunction):
         Returns: values of \Delta \Psi
         '''
 
-        MO = self.mo(self.ao(x))
-        d2MO = self.mo(self.ao(x, derivative=2))
-        dJdMO, d2JMO = None, None
+        print('Computing energy for %d points' % len(x))
+
+        mo = self._get_mo_vals(x)
+        d2mo = self._get_mo_vals(x, derivative=2)
+        djast_dmo, d2jast_mo = None, None
 
         if self.use_jastrow:
 
-            J = self.jastrow(x)
-            dJ = self.jastrow(
-                x, derivative=1, jacobian=False).transpose(1, 2) / J.unsqueeze(-1)
-            dAO = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
-            dMO = self.mo(dAO).transpose(2, 3)
-            dJdMO = (dJ.unsqueeze(2) * dMO).sum(-1)
+            jast = self.jastrow(x)
+            djast = self.jastrow(x, derivative=1, jacobian=False)
+            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
 
-            d2J = self.jastrow(x, derivative=2) / J
-            d2JMO = d2J.unsqueeze(-1) * MO
+            dao = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
+            dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
+            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
 
-        K, psi = self.kinpool(MO, d2MO, dJdMO, d2JMO)
+            d2jast = self.jastrow(x, derivative=2) / jast
+            d2jast_mo = d2jast.unsqueeze(-1) * mo
 
-        return self.fc(K)/self.fc(psi)
+        kin, psi = self.kinpool(mo, d2mo, djast_dmo, d2jast_mo)
+
+        return self.fc(kin)/self.fc(psi)
 
     def nuclear_potential(self, pos):
         '''Compute the potential of the wf points
@@ -165,7 +189,7 @@ class Orbital(WaveFunction):
             for iatom in range(self.natom):
                 patom = self.ao.atom_coords[iatom, :]
                 Z = self.ao.atomic_number[iatom]
-                r = torch.sqrt(((pelec-patom)**2).sum(1)) + 1E-6
+                r = torch.sqrt(((pelec-patom)**2).sum(1))  # + 1E-12
                 p += (-Z/r)
         return p.view(-1, 1)
 
@@ -183,7 +207,7 @@ class Orbital(WaveFunction):
             epos1 = pos[:, ielec1*self.ndim:(ielec1+1)*self.ndim]
             for ielec2 in range(ielec1+1, self.nelec):
                 epos2 = pos[:, ielec2*self.ndim:(ielec2+1)*self.ndim]
-                r = torch.sqrt(((epos1-epos2)**2).sum(1)) + 1E-6
+                r = torch.sqrt(((epos1-epos2)**2).sum(1))  # + 1E-12
                 pot += (1./r)
         return pot.view(-1, 1)
 
@@ -215,6 +239,9 @@ class Orbital(WaveFunction):
                 d.append((at1, at2, np.sum(np.sqrt(((c1-c2)**2)))))
         return d
 
+    def variational_parameters(self):
+        '''return variational parameters'''
+
     def geometry(self, pos):
         '''Return geometries.'''
         d = []
@@ -230,15 +257,37 @@ if __name__ == "__main__":
     from deepqmc.wavefunction.molecule import Molecule
 
     mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-                   basis_type='gto', basis='sto-3g')
+                   basis_type='sto', basis='sz')
+
+    # mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+    #                     basis_type='sto', basis='sz',
+    #                     unit='bohr')
 
     # define the wave function
-    wf = Orbital(mol, kinetic='jacobi',
-                 configs='singlet(1,1)',
-                 use_jastrow=True, cuda=False)
+    wf_jacobi = Orbital(mol, kinetic='jacobi',
+                        configs='cas(2,2)',
+                        use_jastrow=True,
+                        cuda=False)
 
-    pos = torch.rand(20, wf.ao.nelec*3)
+    wf_auto = Orbital(mol, kinetic='auto',
+                      configs='cas(2,2)',
+                      use_jastrow=True,
+                      cuda=False)
+
+    pos = torch.rand(20, wf_auto.ao.nelec*3)
     pos.requires_grad = True
+
+    ej = wf_jacobi.energy(pos)
+    ej.backward()
+
+    ea = wf_auto.energy(pos)
+    ea.backward()
+
+    for p1, p2 in zip(wf_auto.parameters(), wf_jacobi.parameters()):
+        if p1.requires_grad:
+            print('')
+            print(p1.grad)
+            print(p2.grad)
 
     if torch.cuda.is_available():
         pos_gpu = pos.to('cuda')

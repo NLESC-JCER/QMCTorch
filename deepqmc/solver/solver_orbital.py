@@ -13,14 +13,18 @@ class SolverOrbital(SolverBase):
 
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
+        self.ortho_mo = True
+
+        # init sampling
+        self.initial_sampling(ntherm=-1, ndecor=100)
+
+        # resampling
+        self.resampling(ntherm=-1, nstep=100,
+                        resample_from_last=True,
+                        resample_every=1)
 
         # task
         self.configure(task='geo_opt')
-
-        # esampling
-        self.resampling(ntherm=-1, resample=100,
-                        resample_from_last=True,
-                        resample_every=1)
 
         # observalbe
         self.observable(['local_energy'])
@@ -37,20 +41,27 @@ class SolverOrbital(SolverBase):
 
     def configure(self, task='wf_opt', freeze=None):
         '''Configure the optimzier for specific tasks.'''
+
         self.task = task
 
         if task == 'geo_opt':
             self.wf.ao.atom_coords.requires_grad = True
+
+            self.wf.ao.bas_coeffs.requires_grad = False
             self.wf.ao.bas_exp.requires_grad = False
+            self.wf.jastrow.weight.requires_grad = False
             for param in self.wf.mo.parameters():
                 param.requires_grad = False
             self.wf.fc.weight.requires_grad = False
 
         elif task == 'wf_opt':
             self.wf.ao.bas_exp.requires_grad = True
+            self.wf.ao.bas_coeffs.requires_grad = True
             for param in self.wf.mo.parameters():
                 param.requires_grad = True
             self.wf.fc.weight.requires_grad = True
+            self.wf.jastrow.weight.requires_grad = True
+
             self.wf.ao.atom_coords.requires_grad = False
 
             if freeze is not None:
@@ -62,8 +73,6 @@ class SolverOrbital(SolverBase):
                     elif name.lower() == 'mo':
                         for param in self.wf.mo.parameters():
                             param.requires_grad = False
-                    elif name.lower() == 'bas_exp':
-                        self.wf.ao.bas_exp.requires_grad = False
                     elif name.lower() == 'ao':
                         self.wf.ao.bas_exp.requires_grad = False
                         self.wf.ao.bas_coeffs.requires_grad = False
@@ -74,7 +83,10 @@ class SolverOrbital(SolverBase):
                         raise ValueError(
                             'Valid arguments for freeze are :', opt_freeze)
 
-    def run(self, nepoch, batchsize=None, loss='variance'):
+    def run(self, nepoch, batchsize=None,
+            loss='variance',
+            clip_loss=False,
+            grad='auto'):
         '''Train the model.
 
         Arg:
@@ -87,7 +99,14 @@ class SolverOrbital(SolverBase):
             self.opt.lpos_needed = False
 
         # sample the wave function
-        pos = self.sample(ntherm=self.resample.ntherm)
+        pos = self.sample(ntherm=self.initial_sample.ntherm,
+                          ndecor=self.initial_sample.ndecor)
+
+        # resize the number of walkers
+        _nwalker_save = self.sampler.walkers.nwalkers
+        if self.resample.resample_from_last:
+            self.sampler.walkers.nwalkers = pos.shape[0]
+            self.sampler.nwalkers = pos.shape[0]
 
         # handle the batch size
         if batchsize is None:
@@ -95,77 +114,65 @@ class SolverOrbital(SolverBase):
 
         # change the number of steps
         _nstep_save = self.sampler.nstep
+        _step_size_save = self.sampler.step_size
+
         self.sampler.nstep = self.resample.resample
+        self.sampler.step_size = self.resample.step_size
 
         # create the data loader
         self.dataset = DataSet(pos)
         self.dataloader = DataLoader(self.dataset, batch_size=batchsize)
 
         # get the loss
-        self.loss = Loss(self.wf, method=loss)
+        self.loss = Loss(self.wf, method=loss, clip=clip_loss)
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
 
         # clipper for the fc weights
-        clipper = ZeroOneClipper()
+        self.clipper = ZeroOneClipper()
 
         cumulative_loss = []
         min_loss = 1E3
 
         # get the initial observalbe
-
         self.get_observable(self.obs_dict, pos)
+
+        # loop over the epoch
         for n in range(nepoch):
             print('----------------------------------------')
             print('epoch %d' % n)
 
             cumulative_loss = 0
-            for data in self.dataloader:
 
+            # loop over the batches
+            for ibatch, data in enumerate(self.dataloader):
+
+                # port data to device
                 lpos = data.to(self.device)
 
-                loss, eloc = self.loss(lpos)
-                if self.wf.mo.weight.requires_grad:
-                    loss += self.ortho_loss(self.wf.mo.weight)
-
-                if torch.isnan(loss):
-                    raise ValueError("Nans detected in the loss")
-
+                # get the gradient
+                loss, eloc = self.evaluate_gradient(grad, lpos)
                 cumulative_loss += loss
 
-                # compute local gradients
-                self.opt.zero_grad()
-                loss.backward()
+                # optimize the parameters
+                self.optimization_step(lpos)
 
-                # optimize
-                if self.opt.lpos_needed:
-                    self.opt.step(lpos)
-                else:
-                    self.opt.step()
+                # observable
+                self.get_observable(self.obs_dict, pos,
+                                    local_energy=eloc, ibatch=ibatch)
 
-                if self.wf.fc.clip:
-                    self.wf.fc.apply(clipper)
-
+            # save the model if necessary
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(
                     n, cumulative_loss, self.save_model)
 
-            self.get_observable(self.obs_dict, pos, local_energy=eloc)
             self.print_observable(cumulative_loss)
 
             print('----------------------------------------')
 
             # resample the data
-            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
-                if self.resample.resample_from_last:
-                    pos = pos.clone().detach().to(self.device)
-                else:
-                    pos = None
-                pos = self.sample(
-                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=False)
-
-                self.dataloader.dataset.data = pos
+            pos = self._resample(n, nepoch, pos)
 
             if self.task == 'geo_opt':
                 self.wf.update_mo_coeffs()
@@ -175,6 +182,110 @@ class SolverOrbital(SolverBase):
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
+        self.sampler.step_size = _step_size_save
+        self.sampler.walkers.nwalkers = _nwalker_save
+        self.sampler.nwalkers = _nwalker_save
+
+    def _resample(self, n, nepoch, pos):
+
+        if self.resample.resample_every is not None:
+
+            # resample the data
+            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
+
+                if self.resample.resample_from_last:
+                    pos = pos.clone().detach().to(self.device)
+                else:
+                    pos = None
+                pos = self.sample(
+                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=self.resample.tqdm)
+                self.dataloader.dataset.data = pos
+
+            # update the weight of the loss if needed
+            if self.loss.use_weight:
+                self.loss.weight['psi0'] = None
+
+        return pos
+
+    def evaluate_gradient(self, grad, lpos):
+
+        if grad == 'auto':
+            loss, eloc = self._evaluate_grad_auto(lpos)
+
+        elif grad == 'manual':
+            loss, eloc = self._evaluate_grad_manual(lpos)
+        else:
+            raise ValueError('Gradient method should be auto or stab')
+
+        if torch.isnan(loss):
+            raise ValueError("Nans detected in the loss")
+
+        return loss, eloc
+
+    def _evaluate_grad_auto(self, lpos):
+        '''Evaluate the gradient using automatic diff
+        of the required loss.'''
+
+        # compute the loss
+        loss, eloc = self.loss(lpos)
+
+        # add mo orthogonalization if required
+        if self.wf.mo.weight.requires_grad and self.ortho_mo:
+            loss += self.ortho_loss(self.wf.mo.weight)
+
+        # compute local gradients
+        self.opt.zero_grad()
+        loss.backward()
+
+        return loss, eloc
+
+    def _evaluate_grad_manual(self, lpos):
+
+        if self.loss.method in ['energy', 'weighted-energy']:
+
+            ''' Get the gradient of the total energy
+            dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
+            '''
+
+            # compute local energy and wf values
+            _, eloc = self.loss(lpos, no_grad=True)
+            psi = self.wf(lpos)
+            norm = 1./len(psi)
+
+            # evaluate the prefactor of the grads
+            weight = eloc.clone()
+            weight -= torch.mean(eloc)
+            weight /= psi
+            weight *= 2.
+            weight *= norm
+
+            # compute the gradients
+            self.opt.zero_grad()
+            psi.backward(weight)
+
+            return torch.mean(eloc), eloc
+
+        else:
+            raise ValueError('Manual gradient only for energy min')
+
+    def optimization_step(self, lpos):
+        '''make one optimization step.'''
+
+        if self.opt.lpos_needed:
+            self.opt.step(lpos)
+        else:
+            self.opt.step()
+
+        if self.wf.fc.clip:
+            self.wf.fc.apply(self.clipper)
+
+    def print_parameters(self, grad=False):
+        for p in self.wf.parameters():
+            if p.requires_grad:
+                if grad:
+                    print(p.grad)
+                else:
+                    print(p)
 
     def save_traj(self, fname):
 
