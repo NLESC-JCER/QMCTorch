@@ -12,10 +12,10 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.optim.sr import StochasticReconfiguration
 
 from deepqmc.wavefunction.molecule import Molecule
-from deepqmc.solver.plot_data import (plot_observable, load_observable,
-                                      save_observalbe, plot_block,
-                                      plot_walkers_traj,
-                                      plot_energy, plot_data)
+from deepqmc.utils.plot_data import (plot_observable, load_observable,
+                                     save_observalbe, plot_block,
+                                     plot_walkers_traj,
+                                     plot_energy, plot_data)
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69

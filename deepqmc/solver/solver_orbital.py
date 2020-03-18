@@ -2,14 +2,22 @@ import torch
 from torch.utils.data import DataLoader
 
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.solver.torch_utils import (DataSet, Loss,
-                                        ZeroOneClipper, OrthoReg)
+from deepqmc.utils.torch_utils import (DataSet, Loss,
+                                       ZeroOneClipper, OrthoReg)
 
 
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None):
+        """Serial solver
+
+        Keyword Arguments:
+            wf {WaveFunction} -- WaveFuntion object (default: {None})
+            sampler {SamplerBase} -- Samppler (default: {None})
+            optimizer {torch.optim} -- Optimizer (default: {None})
+            scheduler (torch.schedul) -- Scheduler (default: {None})
+        """
 
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
@@ -40,7 +48,15 @@ class SolverOrbital(SolverBase):
             self.device = torch.device('cpu')
 
     def configure(self, task='wf_opt', freeze=None):
-        '''Configure the optimzier for specific tasks.'''
+        """Configure the solver
+
+        Keyword Arguments:
+            task {str} -- task to perform (geo_opt, wf_opt) (default: {'wf_opt'})
+            freeze {list} -- parameters to freeze (ao, mo, jastrow, ci) (default: {None})
+
+        Raises:
+            ValueError: if freeze does not good is
+        """
 
         self.task = task
 
@@ -83,17 +99,20 @@ class SolverOrbital(SolverBase):
                         raise ValueError(
                             'Valid arguments for freeze are :', opt_freeze)
 
-    def run(self, nepoch, batchsize=None,
-            loss='variance',
-            clip_loss=False,
-            grad='auto'):
-        '''Train the model.
+    def run(self, nepoch, batchsize=None, loss='variance',
+            clip_loss=False, grad='auto'):
+        """Run the optimization
 
-        Arg:
-            nepoch : number of epoch
-            batchsize : size of the minibatch, if None take all points at once
-            loss : loss used ('energy','variance' or callable (for supervised)
-        '''
+        Arguments:
+            nepoch {int} -- number of epoch
+
+        Keyword Arguments:
+            batchsize {int} -- batchsize. If None all the points at once (default: {None})
+            loss {str} -- loss to be used  (default: {'variance'})
+                          (energy, variance, weighted-energy, weighted-variance)
+            clip_loss {bool} -- Remove points above/below 5 sigma of the mean (default: {False})
+            grad {str} -- Method to compute the gradient (auto, manual) (default: {'auto'})
+        """
 
         if 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
@@ -187,6 +206,16 @@ class SolverOrbital(SolverBase):
         self.sampler.nwalkers = _nwalker_save
 
     def _resample(self, n, nepoch, pos):
+        """Resample
+
+        Arguments:
+            n {int} -- current epoch value 
+            nepoch {int} -- total number of epoch 
+            pos {torch.tensor} -- positions of the walkers
+
+        Returns:
+            {torch.tensor} -- new positions of the walkers
+        """
 
         if self.resample.resample_every is not None:
 
@@ -208,7 +237,16 @@ class SolverOrbital(SolverBase):
         return pos
 
     def evaluate_gradient(self, grad, lpos):
+        """Evaluate the gradient
 
+        Arguments:
+            grad {str} -- method of the gradient (auto, manual)
+            lpos {torch.tensor} -- positions of the walkers
+
+
+        Returns:
+            tuple -- (loss, local energy)
+        """
         if grad == 'auto':
             loss, eloc = self._evaluate_grad_auto(lpos)
 
@@ -223,8 +261,14 @@ class SolverOrbital(SolverBase):
         return loss, eloc
 
     def _evaluate_grad_auto(self, lpos):
-        '''Evaluate the gradient using automatic diff
-        of the required loss.'''
+        """Evaluate the gradient using automatic diff of the required loss.
+
+        Arguments:
+            lpos {torch.tensor} -- positions of the walkers
+
+        Returns:
+            tuple -- (loss, local energy)
+        """
 
         # compute the loss
         loss, eloc = self.loss(lpos)
@@ -240,6 +284,14 @@ class SolverOrbital(SolverBase):
         return loss, eloc
 
     def _evaluate_grad_manual(self, lpos):
+        """Evaluate the gradient using a low variance method
+
+        Arguments:
+            lpos {torch.tensor} -- positions of the walkers
+
+        Returns:
+            tuple -- (loss, local energy)
+        """
 
         if self.loss.method in ['energy', 'weighted-energy']:
 
@@ -269,7 +321,11 @@ class SolverOrbital(SolverBase):
             raise ValueError('Manual gradient only for energy min')
 
     def optimization_step(self, lpos):
-        '''make one optimization step.'''
+        """Performs one optimization step
+
+        Arguments:
+            lpos {torch.tensor} -- positions of the walkers
+        """
 
         if self.opt.lpos_needed:
             self.opt.step(lpos)
@@ -280,6 +336,11 @@ class SolverOrbital(SolverBase):
             self.wf.fc.apply(self.clipper)
 
     def print_parameters(self, grad=False):
+        """print the parameters to screen
+
+        Keyword Arguments:
+            grad {bool} -- also print their gradients (default: {False})
+        """
         for p in self.wf.parameters():
             if p.requires_grad:
                 if grad:
@@ -288,7 +349,11 @@ class SolverOrbital(SolverBase):
                     print(p)
 
     def save_traj(self, fname):
+        """Save trajectory of geo_opt
 
+        Arguments:
+            fname {str} -- file name
+        """
         f = open(fname, 'w')
         xyz = self.obs_dict['geometry']
         natom = len(xyz[0])

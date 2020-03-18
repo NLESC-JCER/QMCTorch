@@ -3,8 +3,8 @@ from torch.utils.data import DataLoader
 import horovod.torch as hvd
 
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.solver.torch_utils import (DataSet, Loss,
-                                        ZeroOneClipper, OrthoReg)
+from deepqmc.utils.torch_utils import (DataSet, Loss,
+                                       ZeroOneClipper, OrthoReg)
 
 
 def printd(rank, *args):
@@ -16,6 +16,14 @@ class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None):
+        """Horovod distributed solver
+
+        Keyword Arguments:
+            wf {WaveFunction} -- WaveFuntion object (default: {None})
+            sampler {SamplerBase} -- Samppler (default: {None})
+            optimizer {torch.optim} -- Optimizer (default: {None})
+            scheduler (torch.schedul) -- Scheduler (default: {None})
+        """
 
         SolverBase.__init__(self, wf, sampler, optimizer)
         self.scheduler = scheduler
@@ -52,7 +60,15 @@ class SolverOrbital(SolverBase):
         self.sampler.walkers.nwalkers //= hvd.size()
 
     def configure(self, task='wf_opt', freeze=None):
-        '''Configure the optimzier for specific tasks.'''
+        """Configure the solver
+
+        Keyword Arguments:
+            task {str} -- task to perform (geo_opt, wf_opt) (default: {'wf_opt'})
+            freeze {list} -- parameters to freeze (ao, mo, jastrow, ci) (default: {None})
+
+        Raises:
+            ValueError: if freeze does not good is
+        """
         self.task = task
 
         if task == 'geo_opt':
