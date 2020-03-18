@@ -105,8 +105,8 @@ class Molecule(object):
             atoms {list} -- atoms and xyz position
         """
 
-       # loop over all atoms
-       for a in atoms:
+        # loop over all atoms
+        for a in atoms:
             atom_data = a.split()
             self.atoms.append(atom_data[0])
             x, y, z = float(atom_data[1]), float(
@@ -129,7 +129,7 @@ class Molecule(object):
 
     def _process_xyz_file(self):
         """Process a xyz file containing the data
-        
+
         Returns:
             list -- atoms and xyz position
         """
@@ -153,7 +153,7 @@ class Molecule(object):
 
     def process_sto_basis(self):
         """Get the properties of all orbital in the molecule.
-        
+
         Raises:
             ValueError: if orbitals larger than D are used.
         """
@@ -195,7 +195,7 @@ class Molecule(object):
                         self.bas_coeffs += shell['coefficients'][iangular]
 
                         # index of the contraction
-                        # adf does not contract but maybe other 
+                        # adf does not contract but maybe other
                         # self.index_ctr += [self.norb-1] * nbas
 
                         # store the quantum numbers
@@ -320,7 +320,7 @@ class Molecule(object):
 
     def get_mo_coeffs(self):
         """Compute the molecular orbital of the molecule
-        
+
         Returns:
             np.ndarray -- molecular orbital matrix
         """
@@ -346,7 +346,7 @@ class Molecule(object):
 
     def _get_mo_pyscf(self):
         """Get the molecular orbital using pyscf.
-        
+
         Returns:
             np.ndarray -- molecular orbital matrix
         """
@@ -368,10 +368,10 @@ class Molecule(object):
 
     def _get_mo_adf(self):
         """Get the molecular orbital using ADF/PLAMS.
-        
+
         Raises:
             ValueError: [description]
-        
+
         Returns:
             np.ndarray -- molecular orbital matrix
         """
@@ -446,10 +446,10 @@ class Molecule(object):
     @staticmethod
     def _normalize_columns(mat):
         """Normalize a matrix column-wise.
-        
+
         Arguments:
             mat {np.ndarray} -- the matrix to be normalized
-        
+
         Returns:
             np.ndarray -- normalized matrix
         """
@@ -458,16 +458,16 @@ class Molecule(object):
 
     def domain(self, method):
         """Define the walker initialization method
-        
+
         Arguments:
             method str -- 'center'  : all electron at the center of the molecule
                           'uniform' : all electrons in a box covering the molecule
                           'normal   : all electrons in a shpere covering the molecule 
                           'atomic'  : electrons around atoms
-         
+
         Raises:
             ValueError: if method is not supported
-        
+
         Returns:
             dict -- data required to initialize the walkers
         """
