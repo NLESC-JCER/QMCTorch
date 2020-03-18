@@ -14,10 +14,16 @@ def bproj(M, P):
 
 class KineticPooling(nn.Module):
 
-    """Computes the kinetic energy of each configuration
-       using the trace trick."""
-
     def __init__(self, configs, mol, cuda=False):
+        """Layer that computes the kinetic energy using the jacobi formula (trace trick)
+
+        Arguments:
+            configs {list} -- configuration of the slater determinant
+            mol {[type]} -- Instance of a Molecule object
+
+        Keyword Arguments:
+            cuda {bool} -- use cuda (default: {False})
+        """
         super(KineticPooling, self).__init__()
 
         self.configs = configs
@@ -35,7 +41,7 @@ class KineticPooling(nn.Module):
             self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, MO, d2MO, dJdMO=None, d2JMO=None):
-        ''' Compute the kinetic energy using the trace trick
+        """ Compute the kinetic energy using the trace trick
         for a product of spin up/down determinant
         .. math::
 
@@ -55,7 +61,7 @@ class KineticPooling(nn.Module):
                                   local energy instead of kinetic energy
         Return:
             K : T Psi (Nbatch, Ndet)
-        '''
+        """
 
         # shortcut up/down matrices
         Aup, Adown = self.orb_proj.split_orbitals(MO)

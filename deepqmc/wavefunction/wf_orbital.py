@@ -15,6 +15,25 @@ class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi', use_jastrow=True, cuda=False):
+        """Network to compute a wave function
+
+        Arguments:
+            mol {Molecule} -- Instance of a molecule object
+
+        Keyword Arguments:
+            configs {str} -- configuration in the active space (default: {'ground_state'})
+                            'ground state',
+                            'cas(nelec,norb)'
+                            'single(nelec,norb)'
+                            'single_double(nelec,norb)'
+
+            kinetic {str} -- method to compute the kinetic energy (jacobi, auto, fd) (default: {'jacobi'})
+            use_jastrow {bool} -- use a jastrow factor (default: {True})
+            cuda {bool} -- use cuda (default: {False})
+
+        Raises:
+            ValueError: if cuda requested and not available
+        """
 
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
 
@@ -82,24 +101,36 @@ class Orbital(WaveFunction):
             self.to(self.device)
 
     def get_mo_coeffs(self):
+        """get the molecular orbital coefficient
+
+        Returns:
+            nn.Parameters -- MO matrix as a parameter
+        """
         mo_coeff = torch.tensor(
             self.mol.get_mo_coeffs()).type(
                 torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
+        """Update the MO matrix for example in a geo opt run."""
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
     def forward(self, x, ao=None):
-        ''' Compute the value of the wave function.
-        for a multiple conformation of the electrons
+        """Compute the value of the wave function for a multiple conformation of the electrons
 
-        Args:
-            x: position of the electrons
+        Arguments:
+            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
 
-        Returns: values of psi
-        '''
+        Keyword Arguments:
+            ao {torch.tensor} -- AO matrix [nbatch, nelec,nao] 
+                                if present used as input of the MO.
+                                usefull when updating the waeve function after a 1 elec move
+                                 (default: {None})
+
+        Returns:
+            torch.tensor -- value of the wave function for the configurations
+        """
 
         if self.use_jastrow:
             J = self.jastrow(x)
@@ -127,11 +158,29 @@ class Orbital(WaveFunction):
             return self.fc(x)
 
     def _get_mo_vals(self, x, derivative=0):
-        '''get the values of the MOs.'''
+        """Get the values of MOs
+
+        Arguments:
+            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
+
+        Keyword Arguments:
+            derivative {int} -- order of the derivative (default: {0})
+
+        Returns:
+            torch.tensor -- MO matrix [nbatch, nelec, nmo]
+        """
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
     def local_energy_jacobi(self, pos):
-        ''' local energy of the sampling points.'''
+        """Computes the local energy using the jacobi formula (trace trick)
+        for the kinetic energy
+
+        Arguments:
+            pos {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
+
+        Returns:
+            torch.tensor -- value of the local energy [nbatch]
+        """
 
         ke = self.kinetic_energy_jacobi(pos)
 
@@ -141,16 +190,15 @@ class Orbital(WaveFunction):
             + self.nuclear_repulsion()
 
     def kinetic_energy_jacobi(self, x, **kwargs):
-        '''Compute the value of the kinetic enery using
+        """Compute the value of the kinetic enery using
         the Jacobi formula for derivative of determinant.
 
-        Args:
-            x: position of the electrons
+        Arguments:
+            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
 
-        Returns: values of \Delta \Psi
-        '''
-
-        print('Computing energy for %d points' % len(x))
+        Returns:
+            torch.tensor -- value of the kinetic energy [nbatch]
+        """
 
         mo = self._get_mo_vals(x)
         d2mo = self._get_mo_vals(x, derivative=2)
@@ -174,14 +222,16 @@ class Orbital(WaveFunction):
         return self.fc(kin)/self.fc(psi)
 
     def nuclear_potential(self, pos):
-        '''Compute the potential of the wf points
-        Args:
-            pos: position of the electron
+        """Computes the electron-nuclear term
 
-        Returns: values of V * psi
+        Arguments:
+            pos {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
 
-        TODO : vecorize that !!
-        '''
+        Returns:
+            torch.tensor -- value of the electron-nuclear term [nbatch]
+
+        TODO : vectorize that !!
+        """
 
         p = torch.zeros(pos.shape[0], device=self.device)
         for ielec in range(self.nelec):
@@ -194,12 +244,16 @@ class Orbital(WaveFunction):
         return p.view(-1, 1)
 
     def electronic_potential(self, pos):
-        '''Compute the potential of the wf points
-        Args:
-            pos: position of the electron
+        """Computes the electron-electron term
 
-        Returns: values of Vee * psi
-        '''
+        Arguments:
+            pos {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
+
+        Returns:
+            torch.tensor -- value of the el-el repulsion [nbatch]
+
+        TODO : vectorize that !!
+        """
 
         pot = torch.zeros(pos.shape[0], device=self.device)
 
@@ -212,9 +266,13 @@ class Orbital(WaveFunction):
         return pot.view(-1, 1)
 
     def nuclear_repulsion(self):
-        '''Compute the nuclear repulsion term
-        Returns: values of Vnn
-        '''
+        """Computes the nuclear-nuclear repulsion term
+
+        Returns:
+            torch.tensor -- value of the nuclear repulsion 
+
+        TODO : vectorize that !!
+        """
 
         vnn = 0.
         for at1 in range(self.natom-1):
@@ -227,23 +285,15 @@ class Orbital(WaveFunction):
                 vnn += Z0*Z1/rnn
         return vnn
 
-    def atomic_distances(self, pos):
-        '''Return atomic distances.'''
-        d = []
-        for iat1 in range(self.natom-1):
-            at1 = self.atoms[iat1]
-            c1 = self.ao.atom_coords[iat1, :].detach().numpy()
-            for iat2 in range(iat1+1, self.natom):
-                at2 = self.atoms[iat2]
-                c2 = self.ao.atom_coords[iat2, :].detach().numpy()
-                d.append((at1, at2, np.sum(np.sqrt(((c1-c2)**2)))))
-        return d
-
-    def variational_parameters(self):
-        '''return variational parameters'''
-
     def geometry(self, pos):
-        '''Return geometries.'''
+        """Return the current geometry of the molecule
+
+        Arguments:
+            pos {[type]} -- dummy argument
+
+        Returns:
+            list -- atomic types and positions
+        """
         d = []
         for iat in range(self.natom):
             at = self.atoms[iat]

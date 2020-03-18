@@ -2,97 +2,23 @@ import torch
 from torch import nn
 from time import time
 
-
-class ElectronDistance(nn.Module):
-
-    def __init__(self, nelec, ndim):
-        super(ElectronDistance, self).__init__()
-        self.nelec = nelec
-        self.ndim = ndim
-
-        _type_ = torch.get_default_dtype()
-        if _type_ == torch.float32:
-            self.eps = 1E-6
-        elif _type_ == torch.float64:
-            self.eps = 1E-16
-
-    def forward(self, input, derivative=0):
-        """compute the pairwise distance between two sets of electrons
-        or the derivative of these elements wrt to the first electron
-        i.e. d r_ij / dx_i (as opposed to d r_ij / dx_j)
-
-        Args:
-            input ([type]): position of the electron Nbatch x [NelecxNdim]
-            derivative (int, optional): degre of the derivative.
-                                        Defaults to 0.
-
-        Returns:
-            torch.tensor: distance (or derivative) matrix
-                          Nbatch x Nelec x Nelec if derivative = 0
-                          Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
-
-        """
-        '''compute the pairwise distance between two sets of electrons.
-        Args:
-            input1 (Nbatch,Nelec1*Ndim) : position of the electrons
-            input2 (Nbatch,Nelec2*Ndim) : position of the electrons
-                                          if None -> input1
-        Returns:
-            mat (Nbatch,Nelec1,Nelec2) : pairwise distance between electrons
-        '''
-
-        input_ = input.view(-1, self.nelec, self.ndim)
-        dist = self._get_distance_quadratic(input_)
-
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-        diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
-        dist = torch.sqrt(dist - diag + eps_)
-
-        if derivative == 0:
-            return dist
-
-        elif derivative == 1:
-
-            eps_ = self.eps * \
-                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-
-            invr = (1./(dist+eps_)).unsqueeze(1)
-            diff_axis = input_.transpose(1, 2).unsqueeze(3)
-            diff_axis = diff_axis - diff_axis.transpose(2, 3)
-            return diff_axis * invr
-
-        elif derivative == 2:
-
-            eps_ = self.eps * \
-                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-            invr3 = (1./(dist**3+eps_)).unsqueeze(1)
-            diff_axis = input_.transpose(1, 2).unsqueeze(3)
-            diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
-
-            diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
-            return (diff_axis * invr3)
-
-    def _get_distance_quadratic(self, input):
-
-        norm = (input**2).sum(-1).unsqueeze(-1)
-        dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input, input.transpose(1, 2)))
-        return dist
-
-    def _get_distance_diff(self, input):
-        nbatch = input.shape[0]
-        in1 = input.unsqueeze(1).expand(
-            nbatch, self.nelec, self.nelec, self.ndim)
-        in2 = input.unsqueeze(2).expand(
-            nbatch, self.nelec, self.nelec, self.ndim)
-        dist = torch.pow(in1-in2, 2).sum(3)
-        return dist
+from deepqmc.wavefunction.electron_distance import ElectronDistance
 
 
 class TwoBodyJastrowFactor(nn.Module):
 
     def __init__(self, nup, ndown, w=1., cuda=False):
+        """Layer to compute the Jatrow factor
+
+        Arguments:
+            nup {int} -- number of spin up electrons
+            ndown {int} -- number of spin down electrons
+
+        Keyword Arguments:
+            w {float} -- value of the variational parameter (default: {1.})
+            cuda {bool} -- use cuda (default: {False})
+        """
+
         super(TwoBodyJastrowFactor, self).__init__()
 
         self.nup = nup
@@ -145,7 +71,7 @@ class TwoBodyJastrowFactor(nn.Module):
                                        False only for derivative=1
 
         Returns:
-            [type]: [description]
+            torch.tensor: value of the jastrow parameter for all confs
         """
         if not jacobian:
             assert(derivative == 1)
