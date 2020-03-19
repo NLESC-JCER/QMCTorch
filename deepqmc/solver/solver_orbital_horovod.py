@@ -3,8 +3,7 @@ from torch.utils.data import DataLoader
 import horovod.torch as hvd
 
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.solver.torch_utils import (DataSet, Loss,
-                                        ZeroOneClipper, OrthoReg)
+from deepqmc.utils.torch_utils import (DataSet, Loss, OrthoReg)
 
 
 def printd(rank, *args):
@@ -16,33 +15,16 @@ class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None):
+        """Horovod distributed solver
+
+        Keyword Arguments:
+            wf {WaveFunction} -- WaveFuntion object (default: {None})
+            sampler {SamplerBase} -- Samppler (default: {None})
+            optimizer {torch.optim} -- Optimizer (default: {None})
+            scheduler (torch.schedul) -- Scheduler (default: {None})
+        """
 
         SolverBase.__init__(self, wf, sampler, optimizer)
-        self.scheduler = scheduler
-
-        # task
-        self.configure(task='geo_opt')
-
-        # esampling
-        self.resampling(ntherm=-1, resample=100,
-                        resample_from_last=True,
-                        resample_every=1)
-
-        # observalbe
-        self.observable(['local_energy'])
-
-        # distributed model
-        self.save_model = 'model.pth'
-
-        if self.wf.cuda:
-            self.device = torch.device('cuda')
-            self.sampler.cuda = True
-            self.sampler.walkers.cuda = True
-        else:
-            self.device = torch.device('cpu')
-
-        if 'lpos_needed' not in self.opt.defaults:
-            self.opt.defaults['lpos_needed'] = False
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(self.opt,
@@ -50,40 +32,6 @@ class SolverOrbital(SolverBase):
 
         self.sampler.nwalkers //= hvd.size()
         self.sampler.walkers.nwalkers //= hvd.size()
-
-    def configure(self, task='wf_opt', freeze=None):
-        '''Configure the optimzier for specific tasks.'''
-        self.task = task
-
-        if task == 'geo_opt':
-            self.wf.ao.atom_coords.requires_grad = True
-            self.wf.ao.bas_exp.requires_grad = False
-            for param in self.wf.mo.parameters():
-                param.requires_grad = False
-            self.wf.fc.weight.requires_grad = False
-
-        elif task == 'wf_opt':
-            self.wf.ao.bas_exp.requires_grad = True
-            for param in self.wf.mo.parameters():
-                param.requires_grad = True
-            self.wf.fc.weight.requires_grad = True
-            self.wf.ao.atom_coords.requires_grad = False
-
-            if freeze is not None:
-                if not isinstance(freeze, list):
-                    freeze = [freeze]
-                for name in freeze:
-                    if name.lower() == 'ci':
-                        self.wf.fc.weight.requires_grad = False
-                    elif name.lower() == 'mo':
-                        for param in self.wf.mo.parameters():
-                            param.requires_grad = False
-                    elif name.lower() == 'bas_exp':
-                        self.wf.ao.bas_exp.requires_grad = False
-                    else:
-                        opt_freeze = ['ci', 'mo', 'bas_exp']
-                        raise ValueError(
-                            'Valid arguments for freeze are :', opt_freeze)
 
     def run(self, nepoch, batchsize=None, loss='variance', num_threads=1):
         '''Train the model.
@@ -93,6 +41,9 @@ class SolverOrbital(SolverBase):
             batchsize : size of the minibatch, if None take all points at once
             loss : loss used ('energy','variance' or callable (for supervised)
         '''
+
+        if 'lpos_needed' not in self.opt.defaults:
+            self.opt.defaults['lpos_needed'] = False
 
         self.wf.train()
 
@@ -128,9 +79,6 @@ class SolverOrbital(SolverBase):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
-
-        # clipper for the fc weights
-        clipper = ZeroOneClipper()
 
         cumulative_loss = []
         min_loss = 1E3
@@ -198,29 +146,18 @@ class SolverOrbital(SolverBase):
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
 
-    @staticmethod
-    def metric_average(val, name):
-        tensor = val.clone().detach()
-        avg_tensor = hvd.allreduce(tensor, name=name)
-        return avg_tensor.item()
-
-    def save_traj(self, fname):
-
-        f = open(fname, 'w')
-        xyz = self.obs_dict['geometry']
-        natom = len(xyz[0])
-        nm2bohr = 1.88973
-        for snap in xyz:
-            f.write('%d \n\n' % natom)
-            for at in snap:
-                f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0], at[1][0]/nm2bohr,
-                                                      at[1][1]/nm2bohr,
-                                                      at[1][2]/nm2bohr))
-            f.write('\n')
-        f.close()
-
     def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
-        '''Performs a single point calculation.'''
+        """Performs a single point calculation
+
+        Keyword Arguments:
+            pos {torch.tensor} -- positions of the walkers If none, sample (default: {None})
+            prt {bool} -- print energy/variance values (default: {True})
+            ntherm {int} -- number of MC steps to thermalize (default: {-1})
+            ndecor {int} -- number of MC step to decorelate  (default: {100})
+
+        Returns:
+            tuple -- (position, energy, variance)
+        """
 
         self.wf.eval()
         num_threads = 1
@@ -260,3 +197,18 @@ class SolverOrbital(SolverBase):
             printd(hvd.rank(), 'Energy   : ', e)
             printd(hvd.rank(), 'Variance : ', s)
         return pos, e, s
+
+    @staticmethod
+    def metric_average(val, name):
+        """Average a give quantity over all processes
+
+        Arguments:
+            val {torch.tensor} -- data to average
+            name {str} -- name of the data
+
+        Returns:
+            torch.tensor -- Averaged quantity
+        """
+        tensor = val.clone().detach()
+        avg_tensor = hvd.allreduce(tensor, name=name)
+        return avg_tensor.item()

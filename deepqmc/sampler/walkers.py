@@ -6,6 +6,15 @@ from torch.distributions import MultivariateNormal
 class Walkers(object):
 
     def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
+        """Walkers of the MC sampling
+
+        Keyword Arguments:
+            nwalkers {int} -- number of walkers (default: {100})
+            nelec {int} -- number of electrons (default: {1})
+            ndim {int} -- number of dimension for each electron (default: {1})
+            init {dict} -- method and data to initialize the walkers (default: {None})
+                           see Molecule.domain()
+        """
 
         self.nwalkers = nwalkers
         self.ndim = ndim
@@ -56,17 +65,32 @@ class Walkers(object):
                 raise ValueError('Init walkers not recognized')
 
     def _init_center(self):
+        """Initialize the walkers at the center of the molecule
+
+        Returns:
+            torch.tensor -- positions of the walkers
+        """
         eps = 1E-6
         pos = -eps + 2*eps*torch.rand(self.nwalkers, self.nelec*self.ndim)
         return pos.type(torch.get_default_dtype()).to(device=self.device)
 
     def _init_uniform(self):
+        """Initialize the walkers in a box covering the molecule
+
+        Returns:
+            torch.tensor -- positions of the walkers
+        """
         pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
         pos *= (self.init_domain['max'] - self.init_domain['min'])
         pos += self.init_domain['min']
         return pos.type(torch.get_default_dtype()).to(device=self.device)
 
     def _init_multivar(self):
+        """Initialize the walkers in a sphere covering the molecule
+
+        Returns:
+            torch.tensor -- positions of the walkers
+        """
         multi = MultivariateNormal(
             torch.tensor(self.init_domain['mean']),
             torch.tensor(self.init_domain['sigma']))
@@ -76,7 +100,11 @@ class Walkers(object):
         return pos.to(device=self.device)
 
     def _init_atomic(self):
+        """Initialize the walkers around the atoms
 
+        Returns:
+            torch.tensor -- positions of the walkers
+        """
         pos = torch.zeros(self.nwalkers, self.nelec*self.ndim)
         idx_ref, nelec_tot = [], 0
 

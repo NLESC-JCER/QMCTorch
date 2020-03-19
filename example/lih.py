@@ -11,7 +11,7 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.sampler.hamiltonian import Hamiltonian
 from deepqmc.wavefunction.molecule import Molecule
 
-from deepqmc.solver.plot_data import plot_observable
+from deepqmc.solver.plot_data import plot_energy
 import matplotlib.pyplot as plt
 
 set_torch_double_precision()
@@ -60,7 +60,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 # pos = solver.sample(ntherm=0, ndecor=10)
 # obs = solver.sampling_traj(pos)
-# plot_observable(obs, e0=-8., ax=None)
+# plot_energy(obs, e0=-8.)
 
 # optimize the wave function
 solver.configure(task='wf_opt', freeze=['ao', 'mo'])
@@ -78,7 +78,7 @@ data = solver.run(200,
                   grad='manual',
                   clip_loss=True)
 
-plot_observable(solver.obs_dict, e0=-8.06)
+plot_energy(solver.obs_dict, e0=-8.06)
 
 # # # optimize the geometry
 # solver.configure(task='geo_opt')
@@ -87,4 +87,4 @@ plot_observable(solver.obs_dict, e0=-8.06)
 # solver.save_traj('h2o_traj.xyz')
 
 # # plot the data
-# plot_observable(solver.obs_dict)
+# plot_energy(solver.obs_dict)

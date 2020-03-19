@@ -10,7 +10,7 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.sampler.generalized_metropolis import GeneralizedMetropolis
 from deepqmc.wavefunction.molecule import Molecule
 
-from deepqmc.solver.plot_data import plot_observable
+from deepqmc.solver.plot_data import plot_energy
 
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
@@ -46,13 +46,13 @@ pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
 # # sampling traj
 # pos = solver.sample(ntherm=500, ndecor=10)
 # obs = solver.sampling_traj(pos)
-# plot_observable(obs, e0=-74, ax=None)
+# plot_energy(obs, e0=-74, ax=None)
 
 # # optimize the wave function
 # solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
 # solver.observable(['local_energy'])
 # solver.run(15, loss='energy')
-# plot_observable(solver.obs_dict, e0=-76.)
+# plot_energy(solver.obs_dict, e0=-76.)
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')
@@ -61,4 +61,4 @@ pos, e, v = solver.single_point(ntherm=1500, ndecor=100)
 # solver.save_traj('h2o_traj.xyz')
 
 # # plot the data
-# plot_observable(solver.obs_dict)
+# plot_energy(solver.obs_dict)
