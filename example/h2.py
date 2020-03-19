@@ -12,7 +12,7 @@ from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.optim.sr import StochasticReconfiguration
 
 from deepqmc.wavefunction.molecule import Molecule
-from deepqmc.utils.plot_data import (plot_observable, load_observable,
+from deepqmc.utils.plot_data import (load_observable,
                                      save_observalbe, plot_block,
                                      plot_walkers_traj,
                                      plot_energy, plot_data)
@@ -73,7 +73,7 @@ if 0:
 
     # save_observalbe('obs.pkl', obs)
     # obs = load_observable('obs.pkl')
-    # plot_observable(obs, e0=-1.1645, ax=None, var=True)
+    # plot_energy(obs, e0=-1.1645, show_variance=True)
 
 
 # optimize the wave function
@@ -93,7 +93,7 @@ if 1:
                       clip_loss=True)
 
     save_observalbe('h2.pkl', solver.obs_dict)
-    e, v = plot_energy(solver.obs_dict, e0=-1.1645, var=True)
+    e, v = plot_energy(solver.obs_dict, e0=-1.1645, show_variance=True)
     plot_data(solver.obs_dict, obs='jastrow.weight')
 
 # # optimize the geometry

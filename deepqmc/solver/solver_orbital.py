@@ -2,8 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.utils.torch_utils import (DataSet, Loss,
-                                       ZeroOneClipper, OrthoReg)
+from deepqmc.utils.torch_utils import (DataSet, Loss, OrthoReg)
 
 
 class SolverOrbital(SolverBase):
@@ -69,9 +68,6 @@ class SolverOrbital(SolverBase):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
-
-        # clipper for the fc weights
-        self.clipper = ZeroOneClipper()
 
         cumulative_loss = []
         min_loss = 1E3

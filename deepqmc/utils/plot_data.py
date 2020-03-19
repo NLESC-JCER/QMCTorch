@@ -1,37 +1,24 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib import cm
-
 import pickle
 
 
-def plot_observable(obs_dict, e0=None, ax=None, var=False, obs='energy'):
-    '''Plot the observable selected.
+def plot_energy(obs_dict, e0=None, show_variance=False):
+    """Plot the evolutionof the energy along the trajectory
 
-    Args:
-        obs_dict : dictionary of observable
-        e0 
-    '''
-    if obs == 'energy':
-        self.plot_energy(obs_dict, e0, ax, var)
-    else:
-        self.plot_data(obs_dict, obs, ax)
+    Arguments:
+        obs_dict {dict} -- dictionary pf observable
 
+    Keyword Arguments:
+        e0 {float} -- optimal value of the enrgy (default: {None})
+        show_variance {bool} -- plot the variance (default: {False})
 
-def plot_energy(obs_dict, e0=None, ax=None, var=False):
+    Returns:
+        tuple -- (energy, variance)
+    """
 
-    show_plot = False
-
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        show_plot = True
-
-    if isinstance(obs_dict, dict):
-        data = obs_dict['local_energy']
-    else:
-        data = np.hstack(np.squeeze(np.array(obs_dict)))
-
+    data = obs_dict['local_energy']
     n = len(data)
     epoch = np.arange(n)
 
@@ -47,7 +34,6 @@ def plot_energy(obs_dict, e0=None, ax=None, var=False):
     print("Variance : %f " % np.std(energy))
 
     # plot
-    # ax.fill_between(epoch, emin, emax, alpha=0.5, color='#4298f4')
     ax.fill_between(epoch, energy-variance, energy +
                     variance, alpha=0.5, color='#4298f4')
     ax.plot(epoch, energy, color='#144477')
@@ -63,21 +49,24 @@ def plot_energy(obs_dict, e0=None, ax=None, var=False):
         ax2.plot(epoch, variance, color='blue')
         ax2.set_ylabel('variance', color='blue')
         ax2.tick_params(axis='y', labelcolor='blue')
-
         fig.tight_layout()
 
-    if show_plot:
-        plt.show()
+    plt.show()
 
     return energy, variance
 
 
-def plot_data(obs_dict,  obs, ax=None):
+def plot_data(obs_dict,  obs):
+    """Plot the evolution a given data
 
-    if ax is None:
-        fig = plt.figure()
-        ax = fig.add_subplot(111)
-        show_plot = True
+    Arguments:
+        obs_dict {dict} -- dictionary of observable
+        obs {str} -- name (key) of the desired observable
+    """
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+    show_plot = True
 
     data = np.array(obs_dict[obs]).flatten()
     epoch = np.arange(len(data))
@@ -94,6 +83,17 @@ def plot_data(obs_dict,  obs, ax=None):
 
 
 def plot_walkers_traj(obs, traj_index='all'):
+    """Plot the trajectory of all the individual walkers
+
+    Arguments:
+        obs_dict {dict} -- dictionary of observable
+
+    Keyword Arguments:
+        traj_index {str} -- all or index of a given walker (default: {'all'})
+
+    Returns:
+        float -- decorelation time
+    """
 
     eloc = obs['local_energy']
     eloc = np.array(eloc).squeeze(-1)
@@ -131,6 +131,11 @@ def plot_walkers_traj(obs, traj_index='all'):
 
 
 def plot_block(obs_dict):
+    """Plot the blocking thingy
+
+    Arguments:
+        obs_dict {dict} -- dictionary of observable
+    """
 
     eloc = np.array(obs_dict['local_energy']).squeeze(-1)
     nstep, nwalkers = eloc.shape
@@ -148,10 +153,24 @@ def plot_block(obs_dict):
 
 
 def save_observalbe(filename, obs_dict):
+    """save the dictionary to file
+
+    Arguments:
+        filename {str} -- name of the file
+        obs_dict {dict} -- dictionary of observable    
+    """
     with open(filename, 'wb') as fhandle:
         pickle.dump(obs_dict, fhandle, protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_observable(filename):
+    """load the dictionary to variable
+
+    Arguments:
+        filename {str} -- name of the file
+
+    Returns:
+        dict -- dictionary of observable
+    """
     with open(filename, 'rb') as fhandle:
         return pickle.load(fhandle)

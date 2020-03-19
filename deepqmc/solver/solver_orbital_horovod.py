@@ -3,8 +3,7 @@ from torch.utils.data import DataLoader
 import horovod.torch as hvd
 
 from deepqmc.solver.solver_base import SolverBase
-from deepqmc.utils.torch_utils import (DataSet, Loss,
-                                       ZeroOneClipper, OrthoReg)
+from deepqmc.utils.torch_utils import (DataSet, Loss, OrthoReg)
 
 
 def printd(rank, *args):
@@ -80,9 +79,6 @@ class SolverOrbital(SolverBase):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
-
-        # clipper for the fc weights
-        clipper = ZeroOneClipper()
 
         cumulative_loss = []
         min_loss = 1E3
@@ -204,6 +200,15 @@ class SolverOrbital(SolverBase):
 
     @staticmethod
     def metric_average(val, name):
+        """Average a give quantity over all processes
+
+        Arguments:
+            val {torch.tensor} -- data to average
+            name {str} -- name of the data
+
+        Returns:
+            torch.tensor -- Averaged quantity
+        """
         tensor = val.clone().detach()
         avg_tensor = hvd.allreduce(tensor, name=name)
         return avg_tensor.item()

@@ -4,11 +4,13 @@ from torch.utils.data import Dataset
 
 
 def set_torch_double_precision():
+    """Set the default precision to double for all torch tensors."""
     torch.set_default_dtype = torch.float64
     torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 def set_torch_single_precision():
+    """Set the default precision to single for all torch tensors."""
     torch.set_default_dtype = torch.float32
     torch.set_default_tensor_type(torch.FloatTensor)
 
@@ -16,18 +18,46 @@ def set_torch_single_precision():
 class DataSet(Dataset):
 
     def __init__(self, data):
+        """Creates a torch data set
+
+        Arguments:
+            data {torch.tensor} -- data
+        """
         self.data = data
 
     def __len__(self):
+        """get the number of data points
+
+        Returns:
+            int -- number of data points
+        """
         return self.data.shape[0]
 
     def __getitem__(self, index):
+        """returns a given data point
+
+        Arguments:
+            index {int} -- index of the point
+
+        Returns:
+            torch.tensor -- data of that point
+        """
         return self.data[index, :]
 
 
 class Loss(nn.Module):
 
     def __init__(self, wf, method='variance', clip=False):
+        """Defines the loss to use during the optimization
+
+        Arguments:
+            wf {WaveFunction} -- wave function object used
+
+        Keyword Arguments:
+            method {str} -- method to use  (default: {'variance'})
+                            (energy, variance, weighted-energy, weighted-variance)
+            clip {bool} -- clip the values that are +/- % sigma away from the mean (default: {False})
+        """
 
         super(Loss, self).__init__()
         self.wf = wf
@@ -39,15 +69,29 @@ class Loss(nn.Module):
             self.weight = {'psi': None, 'psi0': None}
 
     def forward(self, pos, no_grad=False):
+        """Computes the loss
 
+        Arguments:
+            pos {torch.tensor} -- positions of the walkers in that batch
+
+        Keyword Arguments:
+            no_grad {bool} -- computes the gradient of the loss (default: {False})
+
+        Returns:
+            torch.tensor, torch.tensor -- value of the loss, local energies
+        """
+
+        # check if grads are requested
         _grad = torch.enable_grad()
         if no_grad:
             _grad = torch.no_grad()
 
         with _grad:
 
+            # compute local eneergies
             local_energies = self.wf.local_energy(pos)
 
+            # mask the energies if necessary
             if self.clip:
                 median = torch.median(local_energies)
                 std = torch.std(local_energies)
@@ -56,6 +100,7 @@ class Loss(nn.Module):
             else:
                 mask = torch.ones_like(local_energies).type(torch.bool)
 
+            # un weighted values
             if not self.use_weight:
 
                 if self.method == 'variance':
@@ -68,8 +113,10 @@ class Loss(nn.Module):
                     raise ValueError(
                         'method must be variance, energy, weighted-variance or weighted_energy')
 
+            # use weights
             else:
 
+                # computes the weights
                 self.weight['psi'] = self.wf(pos)
 
                 if self.weight['psi0'] is None:
@@ -103,25 +150,14 @@ class OrthoReg(nn.Module):
     '''add a penalty to make matrice orthgonal.'''
 
     def __init__(self, alpha=0.1):
+        """Add a penalty loss to keep the MO orthogonalized
+
+        Keyword Arguments:
+            alpha {float} -- strength of the penaly (default: {0.1})
+        """
         super(OrthoReg, self).__init__()
         self.alpha = alpha
 
     def forward(self, W):
-        ''' Return the loss : |W x W^T - I|.'''
+        """Return the loss : |W x W^T - I|."""
         return self.alpha * torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))
-
-
-class UnitNormClipper(object):
-
-    def __call__(self, module):
-        if hasattr(module, 'weight'):
-            w = module.weight.data
-            w.div_(torch.norm(w).expand_as(w))
-
-
-class ZeroOneClipper(object):
-
-    def __call__(self, module):
-        if hasattr(module, 'weight'):
-            w = module.weight.data
-            w.sub_(torch.min(w)).div_(torch.norm(w).expand_as(w))
