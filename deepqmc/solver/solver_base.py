@@ -6,7 +6,7 @@ import numpy as np
 
 class SolverBase(object):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None):
         """Base class for the solvers
 
         Keyword Arguments:
@@ -17,10 +17,40 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.opt = optimizer
+        self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device('cpu')
         self.task = None
         self.obs_dict = {}
+
+        # penalty to orthogonalize the MO
+        # see torch_utils.py
+        self.ortho_mo = False
+
+        # default task optimize the wave function
+        self.configure(task='wf_opt')
+
+        # init sampling
+        self.initial_sampling(ntherm=-1, ndecor=100)
+
+        # resampling
+        self.resampling(ntherm=-1, nstep=100,
+                        resample_from_last=True,
+                        resample_every=1)
+
+        # observalbe
+        self.observable(['local_energy'])
+
+        # distributed model
+        self.save_model = 'model.pth'
+
+        # handles GPU availability
+        if self.wf.cuda:
+            self.device = torch.device('cuda')
+            self.sampler.cuda = True
+            self.sampler.walkers.cuda = True
+        else:
+            self.device = torch.device('cpu')
 
     def resampling(self, ntherm=-1, nstep=100, step_size=None,
                    resample_from_last=True,
@@ -48,6 +78,58 @@ class SolverBase(object):
         self.resample.resample_from_last = resample_from_last
         self.resample.resample_every = resample_every
         self.resample.tqdm = tqdm
+
+    def configure(self, task='wf_opt', freeze=None):
+        """Configure the solver
+
+        Keyword Arguments:
+            task {str} -- task to perform (geo_opt, wf_opt) (default: {'wf_opt'})
+            freeze {list} -- parameters to freeze (ao, mo, jastrow, ci) (default: {None})
+
+        Raises:
+            ValueError: if freeze does not good is
+        """
+
+        self.task = task
+
+        if task == 'geo_opt':
+            self.wf.ao.atom_coords.requires_grad = True
+
+            self.wf.ao.bas_coeffs.requires_grad = False
+            self.wf.ao.bas_exp.requires_grad = False
+            self.wf.jastrow.weight.requires_grad = False
+            for param in self.wf.mo.parameters():
+                param.requires_grad = False
+            self.wf.fc.weight.requires_grad = False
+
+        elif task == 'wf_opt':
+            self.wf.ao.bas_exp.requires_grad = True
+            self.wf.ao.bas_coeffs.requires_grad = True
+            for param in self.wf.mo.parameters():
+                param.requires_grad = True
+            self.wf.fc.weight.requires_grad = True
+            self.wf.jastrow.weight.requires_grad = True
+
+            self.wf.ao.atom_coords.requires_grad = False
+
+            if freeze is not None:
+                if not isinstance(freeze, list):
+                    freeze = [freeze]
+                for name in freeze:
+                    if name.lower() == 'ci':
+                        self.wf.fc.weight.requires_grad = False
+                    elif name.lower() == 'mo':
+                        for param in self.wf.mo.parameters():
+                            param.requires_grad = False
+                    elif name.lower() == 'ao':
+                        self.wf.ao.bas_exp.requires_grad = False
+                        self.wf.ao.bas_coeffs.requires_grad = False
+                    elif name.lower() == 'jastrow':
+                        self.wf.jastrow.weight.requires_grad = False
+                    else:
+                        opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
+                        raise ValueError(
+                            'Valid arguments for freeze are :', opt_freeze)
 
     def initial_sampling(self, ntherm=-1, ndecor=100):
         """Configure the initial sampling
@@ -103,6 +185,37 @@ class SolverBase(object):
             self.wf.pdf, ntherm=ntherm, ndecor=ndecor,
             with_tqdm=with_tqdm, pos=pos)
         pos.requires_grad = True
+        return pos
+
+    def _resample(self, n, nepoch, pos):
+        """Resample
+
+        Arguments:
+            n {int} -- current epoch value 
+            nepoch {int} -- total number of epoch 
+            pos {torch.tensor} -- positions of the walkers
+
+        Returns:
+            {torch.tensor} -- new positions of the walkers
+        """
+
+        if self.resample.resample_every is not None:
+
+            # resample the data
+            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
+
+                if self.resample.resample_from_last:
+                    pos = pos.clone().detach().to(self.device)
+                else:
+                    pos = None
+                pos = self.sample(
+                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=self.resample.tqdm)
+                self.dataloader.dataset.data = pos
+
+            # update the weight of the loss if needed
+            if self.loss.use_weight:
+                self.loss.weight['psi0'] = None
+
         return pos
 
     def get_observable(self, obs_dict, pos, local_energy=None, ibatch=None, **kwargs):
@@ -298,6 +411,53 @@ class SolverBase(object):
         for ip in tqdm(p):
             el.append(self.wf.local_energy(ip).detach().numpy())
         return {'local_energy': el, 'pos': p}
+
+    def print_parameters(self, grad=False):
+        """print the parameters to screen
+
+        Keyword Arguments:
+            grad {bool} -- also print their gradients (default: {False})
+        """
+        for p in self.wf.parameters():
+            if p.requires_grad:
+                if grad:
+                    print(p.grad)
+                else:
+                    print(p)
+
+    def optimization_step(self, lpos):
+        """Performs one optimization step
+
+        Arguments:
+            lpos {torch.tensor} -- positions of the walkers
+        """
+
+        if self.opt.lpos_needed:
+            self.opt.step(lpos)
+        else:
+            self.opt.step()
+
+        if self.wf.fc.clip:
+            self.wf.fc.apply(self.clipper)
+
+    def save_traj(self, fname):
+        """Save trajectory of geo_opt
+
+        Arguments:
+            fname {str} -- file name
+        """
+        f = open(fname, 'w')
+        xyz = self.obs_dict['geometry']
+        natom = len(xyz[0])
+        nm2bohr = 1.88973
+        for snap in xyz:
+            f.write('%d \n\n' % natom)
+            for at in snap:
+                f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0], at[1][0]/nm2bohr,
+                                                      at[1][1]/nm2bohr,
+                                                      at[1][2]/nm2bohr))
+            f.write('\n')
+        f.close()
 
     def run(self, nepoch, batchsize=None, loss='variance'):
         """Run the optimization 

@@ -20,84 +20,6 @@ class SolverOrbital(SolverBase):
         """
 
         SolverBase.__init__(self, wf, sampler, optimizer)
-        self.scheduler = scheduler
-        self.ortho_mo = True
-
-        # init sampling
-        self.initial_sampling(ntherm=-1, ndecor=100)
-
-        # resampling
-        self.resampling(ntherm=-1, nstep=100,
-                        resample_from_last=True,
-                        resample_every=1)
-
-        # task
-        self.configure(task='geo_opt')
-
-        # observalbe
-        self.observable(['local_energy'])
-
-        # distributed model
-        self.save_model = 'model.pth'
-
-        if self.wf.cuda:
-            self.device = torch.device('cuda')
-            self.sampler.cuda = True
-            self.sampler.walkers.cuda = True
-        else:
-            self.device = torch.device('cpu')
-
-    def configure(self, task='wf_opt', freeze=None):
-        """Configure the solver
-
-        Keyword Arguments:
-            task {str} -- task to perform (geo_opt, wf_opt) (default: {'wf_opt'})
-            freeze {list} -- parameters to freeze (ao, mo, jastrow, ci) (default: {None})
-
-        Raises:
-            ValueError: if freeze does not good is
-        """
-
-        self.task = task
-
-        if task == 'geo_opt':
-            self.wf.ao.atom_coords.requires_grad = True
-
-            self.wf.ao.bas_coeffs.requires_grad = False
-            self.wf.ao.bas_exp.requires_grad = False
-            self.wf.jastrow.weight.requires_grad = False
-            for param in self.wf.mo.parameters():
-                param.requires_grad = False
-            self.wf.fc.weight.requires_grad = False
-
-        elif task == 'wf_opt':
-            self.wf.ao.bas_exp.requires_grad = True
-            self.wf.ao.bas_coeffs.requires_grad = True
-            for param in self.wf.mo.parameters():
-                param.requires_grad = True
-            self.wf.fc.weight.requires_grad = True
-            self.wf.jastrow.weight.requires_grad = True
-
-            self.wf.ao.atom_coords.requires_grad = False
-
-            if freeze is not None:
-                if not isinstance(freeze, list):
-                    freeze = [freeze]
-                for name in freeze:
-                    if name.lower() == 'ci':
-                        self.wf.fc.weight.requires_grad = False
-                    elif name.lower() == 'mo':
-                        for param in self.wf.mo.parameters():
-                            param.requires_grad = False
-                    elif name.lower() == 'ao':
-                        self.wf.ao.bas_exp.requires_grad = False
-                        self.wf.ao.bas_coeffs.requires_grad = False
-                    elif name.lower() == 'jastrow':
-                        self.wf.jastrow.weight.requires_grad = False
-                    else:
-                        opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
-                        raise ValueError(
-                            'Valid arguments for freeze are :', opt_freeze)
 
     def run(self, nepoch, batchsize=None, loss='variance',
             clip_loss=False, grad='auto'):
@@ -205,37 +127,6 @@ class SolverOrbital(SolverBase):
         self.sampler.walkers.nwalkers = _nwalker_save
         self.sampler.nwalkers = _nwalker_save
 
-    def _resample(self, n, nepoch, pos):
-        """Resample
-
-        Arguments:
-            n {int} -- current epoch value 
-            nepoch {int} -- total number of epoch 
-            pos {torch.tensor} -- positions of the walkers
-
-        Returns:
-            {torch.tensor} -- new positions of the walkers
-        """
-
-        if self.resample.resample_every is not None:
-
-            # resample the data
-            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
-
-                if self.resample.resample_from_last:
-                    pos = pos.clone().detach().to(self.device)
-                else:
-                    pos = None
-                pos = self.sample(
-                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=self.resample.tqdm)
-                self.dataloader.dataset.data = pos
-
-            # update the weight of the loss if needed
-            if self.loss.use_weight:
-                self.loss.weight['psi0'] = None
-
-        return pos
-
     def evaluate_gradient(self, grad, lpos):
         """Evaluate the gradient
 
@@ -319,50 +210,3 @@ class SolverOrbital(SolverBase):
 
         else:
             raise ValueError('Manual gradient only for energy min')
-
-    def optimization_step(self, lpos):
-        """Performs one optimization step
-
-        Arguments:
-            lpos {torch.tensor} -- positions of the walkers
-        """
-
-        if self.opt.lpos_needed:
-            self.opt.step(lpos)
-        else:
-            self.opt.step()
-
-        if self.wf.fc.clip:
-            self.wf.fc.apply(self.clipper)
-
-    def print_parameters(self, grad=False):
-        """print the parameters to screen
-
-        Keyword Arguments:
-            grad {bool} -- also print their gradients (default: {False})
-        """
-        for p in self.wf.parameters():
-            if p.requires_grad:
-                if grad:
-                    print(p.grad)
-                else:
-                    print(p)
-
-    def save_traj(self, fname):
-        """Save trajectory of geo_opt
-
-        Arguments:
-            fname {str} -- file name
-        """
-        f = open(fname, 'w')
-        xyz = self.obs_dict['geometry']
-        natom = len(xyz[0])
-        nm2bohr = 1.88973
-        for snap in xyz:
-            f.write('%d \n\n' % natom)
-            for at in snap:
-                f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0], at[1][0]/nm2bohr,
-                                                      at[1][1]/nm2bohr,
-                                                      at[1][2]/nm2bohr))
-            f.write('\n')
-        f.close()
