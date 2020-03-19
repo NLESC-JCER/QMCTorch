@@ -5,6 +5,7 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 
 from deepqmc.sampler.metropolis import Metropolis
+from deepqmc.sampler.hamiltonian import Hamiltonian
 from deepqmc.wavefunction.molecule import Molecule
 
 import unittest
@@ -33,6 +34,10 @@ class TestH2(unittest.TestCase):
                                   init=self.mol.domain('normal'),
                                   move={'type': 'all-elec', 'proba': 'normal'})
 
+        self.hmc_sampler = Hamiltonian(nwalkers=100, nstep=200, step_size=0.1,
+                                       ndim=self.wf.ndim, nelec=self.wf.nelec,
+                                       init=self.mol.domain('normal'))
+
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
@@ -50,6 +55,23 @@ class TestH2(unittest.TestCase):
 
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
         self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
+        self.solver.sampler = self.sampler
+
+        # sample and compute observables
+        _, e, v = self.solver.single_point()
+
+        print('Energy   :', e)
+        print('Variance :', v)
+
+        # assert(e>self.ground_state_energy and e<-1.)
+        assert(e > 2*self.ground_state_energy and e < 0.)
+        assert(v > 0 and v < 5.)
+
+    def test_single_point_hmc(self):
+
+        self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
+        self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
+        self.solver.sampler = self.hmc_sampler
 
         # sample and compute observables
         _, e, v = self.solver.single_point()
@@ -86,7 +108,7 @@ class TestH2(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestH2()
-    # t.setUp()
-    # t.test_single_point()
+    # unittest.main()
+    t = TestH2()
+    t.setUp()
+    t.test_single_point_hmc()
