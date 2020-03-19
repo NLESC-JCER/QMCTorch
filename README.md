@@ -126,5 +126,5 @@ solver.save_traj('h2o_traj.xyz')
 Note that comfiguring the solver to perform a geometry optimization is done in one single line. The results of this optimization is shown below :
 
 <p align="center">
-<img src="./pics/h2o.png" title="Wave function Ooptimization of a H2 molecule">
+<img src="./pics/h2o.gif" title="Wave function Ooptimization of a H2 molecule">
 </p>
