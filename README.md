@@ -36,7 +36,7 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.sampler.metropolis import Metropolis
 from deepqmc.wavefunction.molecule import Molecule
-from deepqmc.solver.plot_data import plot_observable
+from deepqmc.solver.plot_data import plot_energy
 
 from deepqmc.solver.torch_utils import set_torch_double_precision
 set_torch_double_precision()
@@ -83,7 +83,7 @@ solver.resampling(nstep=20)
 data = solver.run(250, loss='energy')
 
 # plot the data
-e, v = plot_energy(solver.obs_dict, e0=-1.1645, var=True)
+e, v = plot_energy(solver.obs_dict, e0=-1.1645, show_variance=True)
 ```
 
 The `Molecule` class allows to easily define molecular structure and the basis set used to describe its electronic structure Gaussian (`gto`) and Slater (`sto`) atomic orbitals are supported. The `Orbital` class defines the neural network that encodes the wave function ansatz. The sampler is here set to a simple `Metroplois` using 500 walkers each performing 2000 steps. The `Adam` optimizer is chosen with a simple linear scheduler. All these objects are assembled in the `SolverOrbital` that is then configured and run for 250 epoch. The result of this optimization is depicted below :
