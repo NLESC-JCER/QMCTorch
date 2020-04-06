@@ -392,6 +392,7 @@ class Molecule(object):
             kf = plams.KFFile(t21_name)
             nmo = kf.read('A', 'nmo_A')
             bas_mos = np.array(kf.read('A', mo_keys))
+            e = kf.read('Total Energy', 'Total energy')
 
         # perform the calculations
         else:
@@ -419,6 +420,9 @@ class Molecule(object):
             elif self.unit == 'bohr':
                 sett.input.units.length = 'Bohr'
 
+            # total energy
+            sett.input.totalenergy = True
+
             # run the ADF job
             job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
             job.run()
@@ -426,10 +430,14 @@ class Molecule(object):
             # read the data from the t21 file
             nmo = job.results.readkf('A', 'nmo_A')
             bas_mos = np.array(job.results.readkf('A', mo_keys))
+            e = job.results.readkf('Total Energy', 'Total energy')
 
             # make a copy of the t21 file
             shutil.copyfile(t21_path, t21_name)
             shutil.rmtree(plams_wd)
+
+        # print energy
+        print('== SCF Energy : ', e)
 
         # reshape/normalize and return MOs
         bas_mos = bas_mos.reshape(nmo, nmo).T
