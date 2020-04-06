@@ -239,8 +239,18 @@ class Orbital(WaveFunction):
                 patom = self.ao.atom_coords[iatom, :]
                 Z = self.ao.atomic_number[iatom]
                 r = torch.sqrt(((pelec-patom)**2).sum(1))  # + 1E-12
-                p += (-Z/r)
+                p += self._bfk_pp(Z,r) 
         return p.view(-1, 1)
+
+    @staticmethod
+    def _bfk_pp(Z,r):
+        assert Z==1
+        alpha, beta, gamma, delta = 4.47692410, 2.97636451, -4.32112340, 3.01841596
+        pot = -Z/r \
+            + Z/r * torch.exp(-alpha*r**2) \
+            + alpha * r * torch.exp(-beta*r**2) + \
+            gamma * torch.exp(-delta*r**2)
+        return pot
 
     def electronic_potential(self, pos):
         """Computes the electron-electron term
