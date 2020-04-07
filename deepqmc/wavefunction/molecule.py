@@ -6,93 +6,38 @@ from pyscf import gto, scf
 import basis_set_exchange as bse
 import json
 
+from deepqmc.wavefunction.calculator.adf import CalculatorADF
 
 class Molecule(object):
 
-    def __init__(self, atom, basis_type, basis, unit='bohr'):
+    def __init__(self, atom, calculator=CalculatorADF, 
+                 scf='hf', basis='dzp', unit='bohr'):
 
         self.atoms_str = atom
-
-        self.basis_type = basis_type.lower()
-        if self.basis_type not in ['sto', 'gto']:
-            raise ValueError("basis_type must be sto or gto")
-
-        self.basis = basis.lower()
-        self.code_mo = {'gto': 'pyscf',
-                        'sto': 'adf'}[self.basis_type]
-
-        # process the atom name/pos
+        self.unit = unit 
         self.max_angular = 2
+        
         self.atoms = []
         self.atom_coords = []
         self.atomic_number = []
         self.atomic_nelec = []
         self.nelec = 0
-        self.unit = unit
-
+        
         if self.unit not in ['angs', 'bohr']:
             raise ValueError('unit should be angs or bohr')
 
         self.process_atom_str()
 
-        # get the basis folder
-        try:
-            self.basis_path = os.environ['ADFRESOURCES']
-            self.basis_path = os.path.join(self.basis_path, basis.upper())
-        except KeyError:
-            print('ADF Ressource not found for Slater type orbitals')
+        self.calculator = calculator(self.atoms, 
+                                     self.atom_coords, 
+                                     basis, scf, self.units)
 
-        # init the basis data
-        self.nshells = []  # number of shell per atom
-        self.index_ctr = []  # index of the contraction
-        self.bas_exp = []
-        self.bas_coeffs = []
-        self.bas_n = []
-        self.bas_l = []
-        self.bas_m = []
-
-        # utilities dict for extracting data
-        self.get_label = {0: 'S', 1: 'P', 2: 'D'}
-        self.get_l = {'S': 0, 'P': 1, 'D': 2}
-        self.mult_bas = {'S': 1, 'P': 3, 'D': 5}
-
-        # get the m value of each orb type
-        self.get_m = self.set_orbital_ordering()
-
-        # for cartesian (used ?)
-        self.get_lmn_cart = {'S': [0, 0, 0],
-                             'P': [[1, 0, 0],
-                                   [0, 1, 0],
-                                   [0, 0, 1]],
-                             'D': [[2, 0, 0],
-                                   [0, 2, 0],
-                                   [0, 0, 2],
-                                   [1, 1, 0],
-                                   [1, 0, 1],
-                                   [0, 1, 1]]}
-
-        # read/process basis info
-        self.process_basis()
-
-    def set_orbital_ordering(self):
-        '''get the m values of the orbital for each code.'''
-
-        if self.code_mo == 'pyscf':
-            dict_m_val = {'S': [0],
-                          'P': [-1, 1, 0],
-                          'D': [-2, -1, 0, 1, 2]}
-
-        elif self.code_mo == 'adf':
-            dict_m_val = {'S': [0],
-                          'P': [1, -1, 0],
-                          'D': [-2, -1, 0, 1, 2]}
-        return dict_m_val
 
     def process_atom_str(self):
         '''Process the input file.'''
 
         if os.path.isfile(self.atoms_str):
-            atoms = self._process_xyz_file()
+            atoms = self.read_xyz_file()
         else:
             atoms = self.atoms_str.split(';')
 
@@ -127,7 +72,7 @@ class Molecule(object):
         self.nup = math.ceil(self.nelec/2)
         self.ndown = math.floor(self.nelec/2)
 
-    def _process_xyz_file(self):
+    def read_xyz_file(self):
         """Process a xyz file containing the data
 
         Returns:
@@ -193,10 +138,6 @@ class Molecule(object):
                         # store coeffs and exps of the bas
                         self.bas_exp += shell['exponents'][iangular]
                         self.bas_coeffs += shell['coefficients'][iangular]
-
-                        # index of the contraction
-                        # adf does not contract but maybe other
-                        # self.index_ctr += [self.norb-1] * nbas
 
                         # store the quantum numbers
                         self.bas_n += [n]*nbas
@@ -366,82 +307,7 @@ class Molecule(object):
         # normalize the MO and return them
         return self._normalize_columns(rhf.mo_coeff)
 
-    def _get_mo_adf(self):
-        """Get the molecular orbital using ADF/PLAMS.
 
-        Raises:
-            ValueError: [description]
-
-        Returns:
-            np.ndarray -- molecular orbital matrix
-        """
-
-        from scm import plams
-        import shutil
-
-        mo_keys = ['Eigen-Bas_A', 'Eig-CoreSFO_A'][0]
-
-        wd = ''.join(self.atoms)+'_'+self.basis
-        t21_name = wd+'.t21'
-        plams_wd = './plams_workdir'
-        t21_path = os.path.join(plams_wd, os.path.join(wd, t21_name))
-
-        # if the target t21 already exists reads it
-        if os.path.isfile(t21_name):
-
-            kf = plams.KFFile(t21_name)
-            nmo = kf.read('A', 'nmo_A')
-            bas_mos = np.array(kf.read('A', mo_keys))
-            e = kf.read('Total Energy', 'Total energy')
-
-        # perform the calculations
-        else:
-
-            # init PLAMS
-            plams.init()
-            plams.config.log.stdout = -1
-            plams.config.erase_workdir = True
-
-            # create the molecule
-            mol = plams.Molecule()
-            for at, xyz in zip(self.atoms, self.atom_coords):
-                mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
-
-            # settings in PLAMS
-            sett = plams.Settings()
-            sett.input.basis.type = self.basis.upper()
-            sett.input.basis.core = 'None'
-            sett.input.symmetry = 'nosym'
-            sett.input.XC.HartreeFock = ''
-
-            # correct unit
-            if self.unit == 'angs':
-                sett.input.units.length = 'Angstrom'
-            elif self.unit == 'bohr':
-                sett.input.units.length = 'Bohr'
-
-            # total energy
-            sett.input.totalenergy = True
-
-            # run the ADF job
-            job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
-            job.run()
-
-            # read the data from the t21 file
-            nmo = job.results.readkf('A', 'nmo_A')
-            bas_mos = np.array(job.results.readkf('A', mo_keys))
-            e = job.results.readkf('Total Energy', 'Total energy')
-
-            # make a copy of the t21 file
-            shutil.copyfile(t21_path, t21_name)
-            shutil.rmtree(plams_wd)
-
-        # print energy
-        print('== SCF Energy : ', e)
-
-        # reshape/normalize and return MOs
-        bas_mos = bas_mos.reshape(nmo, nmo).T
-        return self._normalize_columns(bas_mos)
 
     def _get_atoms_str(self):
         """Refresh the atom string.  Necessary when atom positions have changed. """
@@ -450,19 +316,6 @@ class Molecule(object):
             self.atoms_str += self.atoms[iA] + ' '
             self.atoms_str += ' '.join(str(xi) for xi in self.atom_coords[iA])
             self.atoms_str += ';'
-
-    @staticmethod
-    def _normalize_columns(mat):
-        """Normalize a matrix column-wise.
-
-        Arguments:
-            mat {np.ndarray} -- the matrix to be normalized
-
-        Returns:
-            np.ndarray -- normalized matrix
-        """
-        norm = np.sqrt((mat**2).sum(0))
-        return mat / norm
 
     def domain(self, method):
         """Define the walker initialization method
