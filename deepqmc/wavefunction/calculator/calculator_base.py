@@ -1,10 +1,12 @@
 from types import SimpleNamespace
+import numpy as np 
 
 class CalculatorBase(object):
     def __init__(self, atoms, atom_coords, basis, scf, units):
 
         self.atoms = atoms
-        self.basis = basis
+        self.atom_coords = atom_coords
+        self.basis_name = basis
         self.scf = scf 
         self.units = units
         self.out_file = None
@@ -12,7 +14,7 @@ class CalculatorBase(object):
 
     @staticmethod
     def init_basis():
-        basis = SimpleNameSpace()
+        basis = SimpleNamespace()
         basis.spherical_harmonics_type = None
         basis.nshells = []
         basis.index_ctr = []

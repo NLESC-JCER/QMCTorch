@@ -1,6 +1,6 @@
 import numpy as np 
 import os
-import shutils
+import shutil
 from scm import plams
 import json
 from deepqmc.wavefunction.calculator.calculator_base import CalculatorBase
@@ -9,7 +9,7 @@ class CalculatorADF(CalculatorBase):
 
     def __init__(self, atoms, atom_coords, basis, scf, units):
 
-        CalculatorBase.__init__(atoms, atom_coords, basis, scf, units)
+        CalculatorBase.__init__(self,atoms, atom_coords, basis, scf, units)
         
         self.basis.spherical_harmonics_type = 'cartesian'
 
@@ -29,7 +29,7 @@ class CalculatorADF(CalculatorBase):
             np.ndarray -- molecular orbital matrix
         """
 
-        wd = ''.join(self.atoms)+'_'+self.basis
+        wd = ''.join(self.atoms)+'_'+self.basis_name
         t21_name = wd+'.t21'
         plams_wd = './plams_workdir'
         t21_path = os.path.join(plams_wd, os.path.join(wd, t21_name))
@@ -54,15 +54,15 @@ class CalculatorADF(CalculatorBase):
 
             # settings in PLAMS
             sett = plams.Settings()
-            sett.input.basis.type = self.basis.upper()
+            sett.input.basis.type = self.basis_name.upper()
             sett.input.basis.core = 'None'
             sett.input.symmetry = 'nosym'
             sett.input.XC.HartreeFock = ''
 
             # correct unit
-            if self.unit == 'angs':
+            if self.units == 'angs':
                 sett.input.units.length = 'Angstrom'
-            elif self.unit == 'bohr':
+            elif self.units == 'bohr':
                 sett.input.units.length = 'Bohr'
 
             # total energy
@@ -72,9 +72,7 @@ class CalculatorADF(CalculatorBase):
             job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
             job.run()
 
-            # read the data from the t21 file
-            nmo = job.results.readkf('A', 'nmo_A')
-            bas_mos = np.array(job.results.readkf('A', mo_keys))
+            # read the energy from the t21 file
             e = job.results.readkf('Total Energy', 'Total energy')
 
             # make a copy of the t21 file
@@ -93,7 +91,7 @@ class CalculatorADF(CalculatorBase):
         self.basis.nao  = kf.read('Basis','naos')
         self.basis.nmo = kf.read('A', 'nmo_A')
 
-        nbpr = np.array(kf.read('Basis','nbptr')) 
+        nbptr = np.array(kf.read('Basis','nbptr')) 
         self.basis.nshells = np.array([nbptr[i]-nbptr[i-1] for i in range(1,len(nbptr))])
 
         self.basis.kx = np.array(kf.read('Basis', 'kx'))
@@ -103,12 +101,10 @@ class CalculatorADF(CalculatorBase):
         self.basis.n = np.array(kf.read('Basis', 'kr'))
 
         self.basis.exp = np.array(kf.read('Basis', 'alf'))
-        self.basis.coeff = np.ones_as(self.basis_exp)
+        self.basis.coeff = np.ones_like(self.basis.exp)
         self.basis.norm = np.array(kf.read('Basis', 'bnorm'))
 
         self.basis.index_ctr = np.arange(self.basis.nao)
-
-        kf.close()
 
     def get_mos(self):
         """Get the MO coefficient expressed in the BAS."""
@@ -119,7 +115,6 @@ class CalculatorADF(CalculatorBase):
         self.mos = np.array(kf.read('A', 'Eigen-Bas_A'))
         self.mos = self.mos.reshape(nao, nmo).T
         self.mos = self.normalize_columns(self.mos)
-        kf.close()
 
 
     def parse_basis(self):
