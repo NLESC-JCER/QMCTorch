@@ -128,7 +128,9 @@ class Molecule(object):
 
 
 if __name__ == "__main__":
+    from deepqmc.wavefunction.calculator.pyscf import CalculatorPySCF
     mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
+                   calculator=CalculatorPySCF,
                    basis='dzp',
                    unit='bohr')
     

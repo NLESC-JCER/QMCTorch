@@ -11,7 +11,7 @@ class CalculatorPySCF(CalculatorBase):
 
     def __init__(self, atoms, atom_coords, basis, scf, units):
 
-        CalculatorBase.__init__(atoms, atom_coords, basis, scf, units)
+        CalculatorBase.__init__(self, atoms, atom_coords, basis, scf, units)
         self.basis.spherical_harmonics_type = 'spherical'
         self.run()
         self.get_basis()
@@ -20,12 +20,12 @@ class CalculatorPySCF(CalculatorBase):
     def run(self):
         """Run the scf calculation using PySCF."""
 
-        h5name = ''.join(self.atoms)+'_' + self.basis + '.hdf5'
+        h5name = ''.join(self.atoms)+'_' + self.basis_name + '.hdf5'
         if os.path.isfile(h5name):
 
             print('Reusing previous calculation from ', h5name)
-            h5 = h5py.File(h5name',r')
-            e = h5['TotalEnergy'].data
+            h5 = h5py.File(h5name,'r')
+            e = h5['TotalEnergy'][()]
 
         else:
 
@@ -33,10 +33,12 @@ class CalculatorPySCF(CalculatorBase):
             atom_str = self.get_atoms_str()
 
             # pyscf calculation
-            mol = gto.M(atom=atom_str, basis=self.basis, unit=self.unit)
+            mol = gto.M(atom=atom_str, basis=self.basis_name, unit=self.units)
             rhf = scf.RHF(mol).run()
 
             self.save_data(mol, rhf, h5name)
+
+        self.out_file = h5name
 
     def save_data(self, mol, rhf ,file_name):
         """Save the data to HDF5
@@ -48,10 +50,10 @@ class CalculatorPySCF(CalculatorBase):
         """
 
         
-        mval{0:[0], 1:[-1,1,0], 2:[-2,-1,-,1,2]}
-        kx = {0:[0], 1:[1,0,0]}, 2:[2,1,1,0,0,0]
-        ky = {0:[0], 1:[0,1,0]}, 2:[0,1,0,2,1,0]
-        kz = {0:[0], 1:[0,0,1]}, 2:[0,0,1,0,1,2]
+        mval = {0:[0], 1:[-1,1,0], 2:[-2,-1,0,1,2]}
+        kx = {0:[0], 1:[1,0,0], 2:[2,1,1,0,0,0]}
+        ky = {0:[0], 1:[0,1,0], 2:[0,1,0,2,1,0]}
+        kz = {0:[0], 1:[0,0,1], 2:[0,0,1,0,1,2]}
 
         h5 = h5py.File(file_name,'w')
         h5['TotalEnergy'] = rhf.e_tot
@@ -61,25 +63,25 @@ class CalculatorPySCF(CalculatorBase):
 
         nshells = []
         for iat in range(mol.natm):
-            nshells.append(mol.atom_nshells[iat])
+            nshells.append(mol.atom_nshells(iat))
 
         bas_coeff, bas_exp = [], []
         index_ctr = []
-        bas_n =, bas_l, bas_m = [], [], []
+        bas_n, bas_l, bas_m = [], [], []
         bas_kx, bas_ky, bas_kz = [], [], []
-        bas_label = self.get_bas_label(mol)
+        bas_n = self.get_bas_n(mol)
 
         iao = 0
         for ibas in range(mol.nbas):
 
             # number of contracted gaussian in that bas
-            nctr = mol.nctr(ibas)
+            nctr = mol.bas_nctr(ibas)
 
             # number of ao from that bas
             mult = mol.bas_len_cart(ibas)
 
             # quantum numbers
-            n = bas_label[ibas]
+            n = bas_n[ibas]
             l = mol.bas_angular(ibas)
             
             # get qn per bas
@@ -107,58 +109,59 @@ class CalculatorPySCF(CalculatorBase):
         for expnt, l in zip(bas_exp, bas_l):
             bas_norm.append(mol.gto_norm(l,expnt))
 
-        h5['nshells'] = nshells
-        h5['index_ctr'] = index_ctr
+        h5.create_dataset('nshells', data=nshells)
+        h5.create_dataset('index_ctr', data=index_ctr)
+        
+        h5.create_dataset('bas_coeff',data=bas_coeff)
+        h5.create_dataset('bas_exp',data=bas_exp)
+        h5.create_dataset('bas_norm',data=bas_norm)
+        
+        
+        h5.create_dataset('bas_n',data=bas_n)
+        h5.create_dataset('bas_l',data=bas_l)
 
-        h5['bas_coeff'] = bas_coeff
-        h5['bas_exp'] = bas_exp
-        h5['bas_norm'] = bas_norm
+        h5.create_dataset('bas_kx',data=bas_kx)
+        h5.create_dataset('bas_ky',data=bas_ky)
+        h5.create_dataset('bas_kz',data=bas_kz)
 
-        h5['bas_n'] = bas_n
-        h5['bas_l'] = bas_l
-
-        h5['bas_kx'] = bas_kx
-        h5['bas_ky'] = bas_ky
-        h5['bas_kz'] = bas_kz
-
-        h5['nmo'] = rhf.nmo
-        h5['mos'] = rhf.mo_coeff
-        h5['cart2sph'] = mol.cart2sph_coeff()
+        h5['nmo'] = rhf.mo_energy.shape[0]
+        h5.create_dataset('mos',data=rhf.mo_coeff)
+        h5.create_dataset('cart2sph', data=mol.cart2sph_coeff())
 
         h5.close()
 
     def get_basis(self):
         """Get the basis information needed to compute the AO values."""
         
-        h5 = h5py.File(self.out_file)
+        h5 = h5py.File(self.out_file,'r')
     
-        self.basis.nao  = h5['nao']
-        self.basis.nmo = h5['nmo']
+        self.basis.nao  = h5['nao'][()]
+        self.basis.nmo = h5['nmo'][()]
 
-        self.basis.nshells = h5['nshells']
+        self.basis.nshells = h5['nshells'][()]
 
-        self.basis.kx = h5['bas_kx']
-        self.basis.ky = h5['bas_ky']
-        self.basis.kz = h5['bas_kz']
+        self.basis.kx = h5['bas_kx'][()]
+        self.basis.ky = h5['bas_ky'][()]
+        self.basis.kz = h5['bas_kz'][()]
 
-        self.basis.n = h5['bas_n']
+        self.basis.n = h5['bas_n'][()]
 
-        self.basis.exp = h5['bas_exp']
-        self.basis.coeff = h5['bas_coeff']
-        self.basis.coeff = h5['bas_norm']
+        self.basis.exp = h5['bas_exp'][()]
+        self.basis.coeff = h5['bas_coeff'][()]
+        self.basis.coeff = h5['bas_norm'][()]
 
-        self.basis.index_ctr = h5['index_ctr']
+        self.basis.index_ctr = h5['index_ctr'][()]
 
         h5.close()
 
     def get_mos(self):
         """Get the MO coefficient expressed in the BAS."""
 
-        h5 = h5py.File(self.out_file)
+        h5 = h5py.File(self.out_file,'r')
         
-        nao  = h5['nao']
-        nao  = h5['nmo']
-        self.mos = h5['mos']
+        nao  = h5['nao'][()]
+        nao  = h5['nmo'][()]
+        self.mos = h5['mos'][()]
         self.mos = self.normalize_columns(self.mos)
 
         self.cart2sph = h5['cart2sph']
@@ -167,7 +170,7 @@ class CalculatorPySCF(CalculatorBase):
     def get_atoms_str(self):
         """Refresh the atom string.  Necessary when atom positions have changed. """
         atoms_str = ''
-        natoms = len(self.atoms)
+        natom = len(self.atoms)
 
         for iA in range(natom):
             atoms_str += self.atoms[iA] + ' '
@@ -176,15 +179,17 @@ class CalculatorPySCF(CalculatorBase):
         return atoms_str
 
     @staticmethod
-    def get_bas_label(mol):
+    def get_bas_n(mol):
 
+        label2int = {'s':1,'p':2,'d':3}
         labels = [l[:3] for l in mol.cart_labels(fmt=False)]
         unique_labels = []
         for l in labels:
             if l not in unique_labels:
                 unique_labels.append(l)
-        return unique_labels
-
+        nlabel = [l[2][1] for l in unique_labels]
+        n = [label2int[nl] for nl in nlabel]
+        return n
 
     def parse_basis(self):
         """Get the properties of all the orbitals in the molecule."""
