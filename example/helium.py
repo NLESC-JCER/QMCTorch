@@ -17,7 +17,7 @@ from deepqmc.utils.plot_data import (load_observable,
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
+mol = Molecule(atom='He 0 0 0',
                basis_type='sto',
                basis='dzp',
                unit='bohr')
@@ -26,13 +26,12 @@ mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
 wf = Orbital(mol, kinetic='jacobi',
              configs='cas(2,2)',
              use_jastrow=True)
-             
 wf.jastrow.weight.data[0] = 1. 
 
 # sampler
 sampler = Metropolis(nwalkers=500, nstep=2000, step_size=0.05,
                      nelec=wf.nelec, ndim=wf.ndim,
-                     init=mol.domain('atomic'),
+                     init=mol.domain('normal'),
                      move={'type': 'all-elec', 'proba': 'normal'},wf=wf)
 
 

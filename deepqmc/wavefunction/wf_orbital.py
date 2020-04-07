@@ -239,7 +239,8 @@ class Orbital(WaveFunction):
                 patom = self.ao.atom_coords[iatom, :]
                 Z = self.ao.atomic_number[iatom]
                 r = torch.sqrt(((pelec-patom)**2).sum(1))  # + 1E-12
-                p += self._bfk_pp(Z,r) 
+                p += -Z/r
+                #p += self._bfk_pp(Z,r) 
         return p.view(-1, 1)
 
     @staticmethod

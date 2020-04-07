@@ -18,6 +18,9 @@ def plot_energy(obs_dict, e0=None, show_variance=False):
         tuple -- (energy, variance)
     """
 
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
     data = obs_dict['local_energy']
     n = len(data)
     epoch = np.arange(n)
@@ -44,7 +47,7 @@ def plot_energy(obs_dict, e0=None, show_variance=False):
     ax.set_xlabel('Number of epoch')
     ax.set_ylabel('Energy', color='black')
 
-    if var:
+    if show_variance:
         ax2 = ax.twinx()
         ax2.plot(epoch, variance, color='blue')
         ax2.set_ylabel('variance', color='blue')
