@@ -25,14 +25,14 @@ class AtomicOrbitals(nn.Module):
 
         super(AtomicOrbitals, self).__init__()
         dtype = torch.get_default_dtype()
-
+        
         # wavefunction data
         self.nelec = mol.nelec
         self.norb = mol.basis.nao
         self.ndim = 3
 
         # make the atomic position optmizable
-        self.atom_coords = nn.Parameter(torch.tensor(mol.basis.atom_coords_internal))
+        self.atom_coords = nn.Parameter(torch.tensor(mol.basis.atom_coords_internal).type(dtype))
         self.atom_coords.requires_grad = True
         self.natoms = len(self.atom_coords)
         self.atomic_number = mol.atomic_number
@@ -48,7 +48,7 @@ class AtomicOrbitals(nn.Module):
 
         # get the coeffs of the bas
         self.bas_coeffs = torch.tensor(mol.basis.bas_coeffs).type(dtype)
-
+        
         # get the exponents of the bas
         self.bas_exp = nn.Parameter(torch.tensor(mol.basis.bas_exp).type(dtype))
         self.bas_exp.requires_grad = True
@@ -74,7 +74,7 @@ class AtomicOrbitals(nn.Module):
             self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
         else:
             with torch.no_grad:
-                self.norm_cst = atomic_orbital_norm(mol.basis)
+                self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
 
         self.cuda = cuda
         self.device = torch.device('cpu')
@@ -125,6 +125,7 @@ class AtomicOrbitals(nn.Module):
         # get the pos of the bas
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
+        
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
@@ -138,13 +139,12 @@ class AtomicOrbitals(nn.Module):
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
-        print(r.shape)
         R = self.radial(r, self.bas_n, self.bas_exp)
-
+        
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
         Y = self.harmonics(xyz)
-
+        
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
@@ -234,7 +234,6 @@ if __name__ == "__main__":
 
     t0 = time()
     aoval = ao(pos)
-    print(aoval.shape)
     print('Total calculation : ', time()-t0)
 
     t0 = time()

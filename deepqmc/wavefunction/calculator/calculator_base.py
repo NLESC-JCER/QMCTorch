@@ -15,7 +15,6 @@ class CalculatorBase(object):
     @staticmethod
     def init_basis():
         basis = SimpleNamespace()
-        basis.spherical_harmonics_type = None
         basis.nshells = []
         basis.index_ctr = []
         basis.bas_exp, basis.bas_coeffs = [], []

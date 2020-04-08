@@ -138,7 +138,7 @@ class CalculatorADF(CalculatorBase):
         self.basis.bas_norm = np.array(self.basis.bas_norm)
 
         self.basis.index_ctr = np.arange(self.basis.nao)
-        self.basis.atom_coords_internal = np.array(kf.read('Geometry','xyz'))
+        self.basis.atom_coords_internal = np.array(kf.read('Geometry','xyz')).reshape(-1,3)
 
         return self.basis 
 
