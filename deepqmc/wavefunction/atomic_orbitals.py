@@ -3,7 +3,7 @@ from torch import nn
 import numpy as np
 
 from deepqmc.wavefunction.radial_functions import radial_gaussian, radial_slater
-from deepqmc.wavefunction import norm_orbital
+from deepqmc.wavefunction.norm_orbital import atomic_orbital_norm
 from deepqmc.wavefunction.spherical_harmonics import Harmonics
 
 
@@ -64,22 +64,17 @@ class AtomicOrbitals(nn.Module):
             self.harmonics = Harmonics(mol.basis.harmonics_type, bas_kx=mol.basis.bas_kx, 
                                        bas_ky=mol.basis.bas_ky, bas_kz=mol.basis.bas_kz)
         
-
         # select the radial apart
         radial_dict = {'sto': radial_slater,
                        'gto': radial_gaussian}
         self.radial = radial_dict[mol.basis.radial_type]
 
-        # # get the normalisation constants
-        # norm_dict = {('sto','sph') : norm_orbital.norm_slater_spherial,
-        #              ('gto','sph') : norm_orbital.norm_gaussian_spherical,
-        #              ('sto','cart') : norm_orbital.norm_slater_cartesian,
-        #              ('gto','cart') : norm_orbital.norm_gaussian_cartesian}
-
-        # with torch.no_grad:
-        #     self.norm_cst = norm_dict[(mol.basis.radial_type, mol.basis.harmonics_type)](self.bas_n, self.bas_exp)
-
-        self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
+        # get the normalisation constants
+        if hasattr(mol.basis,'bas_norm'):
+            self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
+        else:
+            with torch.no_grad:
+                self.norm_cst = atomic_orbital_norm(mol.basis)
 
         self.cuda = cuda
         self.device = torch.device('cpu')
@@ -227,7 +222,6 @@ class AtomicOrbitals(nn.Module):
             pos[:, ids:ide], one_elec=True).squeeze(1)
         return ao_new
 
-
 if __name__ == "__main__":
 
     from deepqmc.wavefunction.molecule import Molecule
@@ -235,7 +229,6 @@ if __name__ == "__main__":
     m = Molecule(atom='C 0 0 0; O 0 0 3.015', basis='dzp')
 
     ao = AtomicOrbitals(m, cuda=False)
-
     pos = torch.rand(10, ao.nelec*3)
 
     t0 = time()

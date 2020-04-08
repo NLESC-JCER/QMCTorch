@@ -1,5 +1,30 @@
 import torch
 
+def atomic_orbital_norm(basis):
+    """Comptues the norm of a given function
+    
+    Arguments:
+        basis {namespace} -- basis namespace
+    """
+
+    # spherical 
+    if basis.harmonics_type == 'sph':
+
+        if basis.radial_type == 'sto':
+            return norm_slater_spherial(basis.bas_n, basis.bas_exp)
+
+        elif basis.radial_type == 'gto':
+            return norm_gaussian_spherical(basis.bas_n, basis.bas_exp)
+
+    # cartesian
+    elif basis.harmonics_type == 'cart':
+
+        if basis.radial_type == 'sto':
+            return norm_slater_cartesian(basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_n, basis.bas_exp)
+
+        if basis.radial_type == 'gto':
+            return norm_gaussian_cartesian(basis.bas_kx, basis.bas_ky, basis.kz, basis.bas_exp)
+
 def norm_slater_spherial(bas_n, bas_exp):
     """ Normalization of STOs
     [1] www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
@@ -36,8 +61,43 @@ def norm_gaussian_spherical(bas_n, bas_exp):
     return torch.sqrt(B/C)*A
 
 
-def norm_slater_cartesian(bas_n, bas_exp):
-    raise NotImplementedError('TO DO')
+def norm_slater_cartesian(a, b, c, n, exp):
+    """normaliation of cartesian slater
+    Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 
-def norm_gaussian_cartesian(bas_n, bas_exp):
-    raise NotImplementedError('TO DO')
+    Arguments:
+        a {[type]} -- exponent of x
+        b {[type]} --  exponent of y
+        c {[type]} --  exponent of z
+        n {[type]} --  exponent of r
+        exp {[type]} -- coefficient of the expo
+    """
+    from scipy.special import factorial2 as f2
+
+    l = a + b + c + n + 1.
+    lfact = torch.tensor([np.math.fact(2*i) for i in l]).type(torch.get_default_dtype())
+    prefact = 4*np.pi*lfact/((2*exp)**(2*l+1))
+    num = torch.tensor(f2(2*a.int()-1)*f2(2*b.int()-1)*f2(2*c.int()-1)).type(torch.get_default_dtype())
+    denom = torch.tensor(f2((2*a+2*b+2*c+1).int())).type(torch.get_default_dtype())
+
+    return prefact * num / denom
+
+
+def norm_gaussian_cartesian(a, b, c, exp):
+    """normaliation of cartesian gaussian
+    Monte Carlo Methods in Ab Initio Quantum Chemistry page 280
+
+    Arguments:
+        a {[type]} -- exponent of x
+        b {[type]} --  exponent of y
+        c {[type]} --  exponent of z
+        exp {[type]} -- coefficient of the expo
+    """
+
+    from scipy.special import factorial2 as f2
+
+    pref = (2*exp/np.pi)**(0.75)
+    x = (4*exp)**(a/2) / torch.sqrt(torch.tensor(f2((2*a-1).int()))).type(torch.get_default_dtype())
+    y = (4*exp)**(b/2) / torch.sqrt(torch.tensor(f2((2*ab-1).int()))).type(torch.get_default_dtype())
+    z = (4*exp)**(c/2) / torch.sqrt(torch.tensor(f2((2*c-1).int()))).type(torch.get_default_dtype())
+    return pref * x * y * z 
