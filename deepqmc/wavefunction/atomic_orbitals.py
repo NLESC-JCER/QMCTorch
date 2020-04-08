@@ -32,7 +32,7 @@ class AtomicOrbitals(nn.Module):
         self.ndim = 3
 
         # make the atomic position optmizable
-        self.atom_coords = nn.Parameter(torch.tensor(mol.atom_coords))
+        self.atom_coords = nn.Parameter(torch.tensor(mol.basis.atom_coords_internal))
         self.atom_coords.requires_grad = True
         self.natoms = len(self.atom_coords)
         self.atomic_number = mol.atomic_number
@@ -138,6 +138,7 @@ class AtomicOrbitals(nn.Module):
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
+        print(r.shape)
         R = self.radial(r, self.bas_n, self.bas_exp)
 
         # compute by the spherical harmonics
@@ -226,7 +227,7 @@ if __name__ == "__main__":
 
     from deepqmc.wavefunction.molecule import Molecule
     from time import time
-    m = Molecule(atom='C 0 0 0; O 0 0 3.015', basis='dzp')
+    m = Molecule(atom='H 0 0 0; H 0 0 3.015', basis='dz')
 
     ao = AtomicOrbitals(m, cuda=False)
     pos = torch.rand(10, ao.nelec*3)

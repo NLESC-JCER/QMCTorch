@@ -151,11 +151,12 @@ class CalculatorPySCF(CalculatorBase):
         self.basis.coeff = h5['bas_norm'][()]
 
         self.basis.index_ctr = h5['index_ctr'][()]
-
+        self.basis.atom_coords_internal = self.atom_coords
+        
         h5.close()
         return self.basis
 
-    def get_mos(self):
+    def get_mo_coeffs(self):
         """Get the MO coefficient expressed in the BAS."""
 
         h5 = h5py.File(self.out_file,'r')

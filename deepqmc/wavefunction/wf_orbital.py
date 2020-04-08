@@ -50,15 +50,15 @@ class Orbital(WaveFunction):
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
-        self.mo_scf = nn.Linear(mol.norb, mol.norb, bias=False)
+        self.mo_scf = nn.Linear(mol.basis.nmo, mol.basis.nao, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
         self.mo_scf.weight.requires_grad = False
         if self.cuda:
             self.mo_scf.to(self.device)
 
         # define the mo mixing layer
-        self.mo = nn.Linear(mol.norb, mol.norb, bias=False)
-        self.mo.weight = nn.Parameter(torch.eye(mol.norb))
+        self.mo = nn.Linear(mol.basis.nmo, mol.basis.nmo, bias=False)
+        self.mo.weight = nn.Parameter(torch.eye(mol.basis.nmo))
         if self.cuda:
             self.mo.to(self.device)
 
@@ -106,7 +106,7 @@ class Orbital(WaveFunction):
             nn.Parameters -- MO matrix as a parameter
         """
         mo_coeff = torch.tensor(
-            self.mol.get_mo_coeffs()).type(
+            self.mol.calculator.get_mo_coeffs()).type(
                 torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
@@ -240,18 +240,7 @@ class Orbital(WaveFunction):
                 Z = self.ao.atomic_number[iatom]
                 r = torch.sqrt(((pelec-patom)**2).sum(1))  # + 1E-12
                 p += -Z/r
-                #p += self._bfk_pp(Z,r) 
         return p.view(-1, 1)
-
-    @staticmethod
-    def _bfk_pp(Z,r):
-        assert Z==1
-        alpha, beta, gamma, delta = 4.47692410, 2.97636451, -4.32112340, 3.01841596
-        pot = -Z/r \
-            + Z/r * torch.exp(-alpha*r**2) \
-            + alpha * r * torch.exp(-beta*r**2) + \
-            gamma * torch.exp(-delta*r**2)
-        return pot
 
     def electronic_potential(self, pos):
         """Computes the electron-electron term
@@ -316,12 +305,7 @@ if __name__ == "__main__":
 
     from deepqmc.wavefunction.molecule import Molecule
 
-    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-                   basis_type='sto', basis='sz')
-
-    # mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-    #                     basis_type='sto', basis='sz',
-    #                     unit='bohr')
+    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', basis='sz')
 
     # define the wave function
     wf_jacobi = Orbital(mol, kinetic='jacobi',

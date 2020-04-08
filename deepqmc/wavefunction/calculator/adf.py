@@ -11,7 +11,6 @@ class CalculatorADF(CalculatorBase):
 
         CalculatorBase.__init__(self,atoms, atom_coords, basis, scf, units)
         self.run()
-        
 
     def run(self):
         """Run the calculation
@@ -88,23 +87,62 @@ class CalculatorADF(CalculatorBase):
         self.basis.nao  = kf.read('Basis','naos')
         self.basis.nmo = kf.read('A', 'nmo_A')
 
-        nbptr = np.array(kf.read('Basis','nbptr')) 
-        self.basis.nshells = np.array([nbptr[i]-nbptr[i-1] for i in range(1,len(nbptr))])
+        # number of bas per atom type
+        nbptr = kf.read('Basis','nbptr')
 
-        self.basis.bas_kx = np.array(kf.read('Basis', 'kx'))
-        self.basis.bas_ky = np.array(kf.read('Basis', 'ky'))
-        self.basis.bas_kz = np.array(kf.read('Basis', 'kz'))
+        # number of atom per atom typ
+        nqptr = kf.read('Geometry','nqptr')
+        atom_type = kf.read('Geometry','atomtype').split()
 
-        self.basis.bas_n = np.array(kf.read('Basis', 'kr'))
+        # number of bas per atom type
+        nshells = np.array([nbptr[i]-nbptr[i-1] for i in range(1,len(nbptr))])
 
-        self.basis.bas_exp = np.array(kf.read('Basis', 'alf'))
+        # kx/ky/kz/kr exponent per atom type
+        bas_kx = np.array(kf.read('Basis', 'kx'))
+        bas_ky = np.array(kf.read('Basis', 'ky'))
+        bas_kz = np.array(kf.read('Basis', 'kz'))
+        bas_n = np.array(kf.read('Basis', 'kr'))
+
+        # bas exp/coeff/norm per atom type
+        bas_exp = np.array(kf.read('Basis', 'alf'))
+        bas_norm = np.array(kf.read('Basis', 'bnorm'))
+
+        self.basis.nshells = []
+        self.basis.bas_kx, self.basis.bas_ky, self.basis.bas_kz = [], [], []
+        self.basis.bas_n = []
+        self.basis.bas_exp, self.basis.bas_norm = [], []
+        
+        for iat, at in enumerate(atom_type):
+            
+            number_copy = nqptr[iat+1]-nqptr[iat]
+            idx_bos = list(range(nbptr[iat]-1,nbptr[iat+1]-1))
+            
+            self.basis.nshells += [nshells[iat]]*number_copy
+
+            self.basis.bas_kx += list(bas_kx[idx_bos])*number_copy
+            self.basis.bas_ky += list(bas_ky[idx_bos])*number_copy
+            self.basis.bas_kz += list(bas_kz[idx_bos])*number_copy
+            self.basis.bas_n += list(bas_n[idx_bos])*number_copy
+                  
+            self.basis.bas_exp += list(bas_exp[idx_bos])*number_copy
+            self.basis.bas_norm += list(bas_norm[idx_bos])*number_copy
+
+        self.basis.nshells = np.array(self.basis.nshells)
+        self.basis.bas_kx = np.array(self.basis.bas_kx)
+        self.basis.bas_ky = np.array(self.basis.bas_ky)
+        self.basis.bas_kz = np.array(self.basis.bas_kz)
+
+        self.basis.bas_n = np.array(self.basis.bas_n)
+        self.basis.bas_exp = np.array(self.basis.bas_exp)
         self.basis.bas_coeffs = np.ones_like(self.basis.bas_exp)
-        self.basis.bas_norm = np.array(kf.read('Basis', 'bnorm'))
+        self.basis.bas_norm = np.array(self.basis.bas_norm)
 
         self.basis.index_ctr = np.arange(self.basis.nao)
+        self.basis.atom_coords_internal = np.array(kf.read('Geometry','xyz'))
+
         return self.basis 
 
-    def get_mos(self):
+    def get_mo_coeffs(self):
         """Get the MO coefficient expressed in the BAS."""
 
         kf = plams.KFFile(self.out_file)

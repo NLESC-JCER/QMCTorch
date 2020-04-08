@@ -28,6 +28,9 @@ class CalculatorBase(object):
     def get_basis(self):
         raise NotImplementedError('Implement a get_basis method in your calculator.')
 
+    def get_mo_coeffs(self):
+        raise NotImplementedError('Implement a get_mo_coeffs method in your calculator.')
+
     @staticmethod
     def normalize_columns(mat):
         """Normalize a matrix column-wise.
