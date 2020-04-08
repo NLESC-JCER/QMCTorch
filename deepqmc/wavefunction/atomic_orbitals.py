@@ -2,8 +2,11 @@ import torch
 from torch import nn
 import numpy as np
 
-from deepqmc.wavefunction.spherical_harmonics import SphericalHarmonics
-from deepqmc.wavefunction.grad_spherical_harmonics import GradSphericalHarmonics
+from deepqmc.wavefunction.radial_functions import radial_gaussian, radial_slater
+from deepqmc.wavefunction import norm_orbital
+from deepqmc.wavefunction.spherical_harmonics import Harmonics
+
+
 
 from time import time
 
@@ -21,10 +24,11 @@ class AtomicOrbitals(nn.Module):
         """
 
         super(AtomicOrbitals, self).__init__()
+        dtype = torch.get_default_dtype()
 
         # wavefunction data
         self.nelec = mol.nelec
-        self.norb = mol.norb
+        self.norb = mol.basis.nao
         self.ndim = 3
 
         # make the atomic position optmizable
@@ -33,190 +37,61 @@ class AtomicOrbitals(nn.Module):
         self.natoms = len(self.atom_coords)
         self.atomic_number = mol.atomic_number
 
-        # define the BAS positions
-        self.nshells = torch.tensor(mol.nshells)
+        # define the BAS positions.
+        self.nshells = torch.tensor(mol.basis.nshells)
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
         self.nbas = len(self.bas_coords)
 
         # index for the contractions
-        self.index_ctr = torch.tensor(mol.index_ctr)
+        self.index_ctr = torch.tensor(mol.basis.index_ctr)
 
         # get the coeffs of the bas
-        self.bas_coeffs = torch.tensor(mol.bas_coeffs)
+        self.bas_coeffs = torch.tensor(mol.basis.bas_coeffs).type(dtype)
 
         # get the exponents of the bas
-        self.bas_exp = nn.Parameter(torch.tensor(mol.bas_exp))
+        self.bas_exp = nn.Parameter(torch.tensor(mol.basis.bas_exp).type(dtype))
         self.bas_exp.requires_grad = True
 
         # get the quantum number
-        self.bas_n = torch.tensor(mol.bas_n).type(torch.get_default_dtype())
-        self.bas_l = torch.tensor(mol.bas_l)
-        self.bas_m = torch.tensor(mol.bas_m)
+        self.bas_n = torch.tensor(mol.basis.bas_n).type(dtype)
 
-        # select the radial aprt
-        radial_dict = {'sto': self._radial_slater,
-                       'gto': self._radial_gaussian}
-        self.radial = radial_dict[mol.basis_type]
+        # harmonics generator
+        if mol.basis.harmonics_type == 'sph':
+            self.harmonics = Harmonics(mol.basis.harmonics_type, bas_l = mol.basis.bas_l, bas_m = mol.basis.bas_m)
 
-        # get the normaliationconstants
-        self.norm_cst = self.get_norm(mol.basis_type)
+        elif mol.basis.harmonics_type == 'cart':
+            self.harmonics = Harmonics(mol.basis.harmonics_type, bas_kx=mol.basis.bas_kx, 
+                                       bas_ky=mol.basis.bas_ky, bas_kz=mol.basis.bas_kz)
+        
+
+        # select the radial apart
+        radial_dict = {'sto': radial_slater,
+                       'gto': radial_gaussian}
+        self.radial = radial_dict[mol.basis.radial_type]
+
+        # # get the normalisation constants
+        # norm_dict = {('sto','sph') : norm_orbital.norm_slater_spherial,
+        #              ('gto','sph') : norm_orbital.norm_gaussian_spherical,
+        #              ('sto','cart') : norm_orbital.norm_slater_cartesian,
+        #              ('gto','cart') : norm_orbital.norm_gaussian_cartesian}
+
+        # with torch.no_grad:
+        #     self.norm_cst = norm_dict[(mol.basis.radial_type, mol.basis.harmonics_type)](self.bas_n, self.bas_exp)
+
+        self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
 
         self.cuda = cuda
         self.device = torch.device('cpu')
         if self.cuda:
             self._to_device()
 
-    def get_norm(self, basis_type):
-        """Compute the normalization factor of the atomic orbitals.
-
-        Arguments:
-            basis_type {str]} -- basis type 'sto' or 'gto'
-
-        Returns:
-            torch.tensor -- normalization factor
-        """
-
-        with torch.no_grad():
-
-            if basis_type == 'sto':
-                return self._norm_slater()
-
-            elif basis_type == 'gto':
-                return self._norm_gaussian()
-
-    def _norm_slater(self):
-        """ Normalization of STOs
-        [1] www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital.html
-        [2] C Filippi, Multiconf wave functions for QMC of first row diatomic molecules, 
-            JCP 105, 213 1996
-        [3] Monte Carlo Methods in Ab Inition Quantum Chemistry, B.L. Hammond
-
-        Returns:
-            torch.tensor -- normalization factor
-        """
-        nfact = torch.tensor([np.math.factorial(2*n)
-                              for n in self.bas_n], dtype=torch.get_default_dtype())
-        return (2*self.bas_exp)**self.bas_n * torch.sqrt(2*self.bas_exp / nfact)
-
-    def _norm_gaussian(self):
-        """ Normlization of GTOs.
-        [1] Computational Quantum Chemistry: An interactive Intrduction to basis set theory 
-            eq : 1.14 page 23.'''
-
-        Returns:
-            torch.tensor -- normalization factor
-        """
-
-        from scipy.special import factorial2 as f2
-
-        bas_n = self.bas_n+1.
-        exp1 = 0.25*(2.*bas_n+1.)
-
-        A = self.bas_exp**exp1
-        B = 2**(2.*bas_n+3./2)
-        C = torch.tensor(f2(2*bas_n.int()-1)*np.pi **
-                         0.5).type(torch.get_default_dtype())
-
-        return torch.sqrt(B/C)*A
-
-    def _radial_slater(self, R, xyz=None, derivative=0, jacobian=True):
-        """Compute the radial part of STOs (or its derivative).
-
-        Arguments:
-            R {torch.tensor} -- distance between each electron and each atom
-
-        Keyword Arguments:
-            xyz {torch.tensor} -- positions of the electrons (needed for derivative) (default: {None})
-            derivative {int} -- degree of the derivative (default: {0})
-            jacobian {bool} -- return the jacobian, i.e the sum of the gradients (default: {True})
-
-        Returns:
-            torch.tensor -- values of each orbital radial part at each position
-        """
-
-        if derivative == 0:
-            return R**self.bas_n * torch.exp(-self.bas_exp*R)
-
-        elif derivative > 0:
-
-            rn = R**(self.bas_n)
-            nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
-
-            er = torch.exp(-self.bas_exp*R)
-            nabla_er = -(self.bas_exp * er).unsqueeze(-1) * \
-                xyz / R.unsqueeze(-1)
-
-            if derivative == 1:
-
-                if jacobian:
-                    nabla_rn = nabla_rn.sum(3)
-                    nabla_er = nabla_er.sum(3)
-                    return nabla_rn*er + rn*nabla_er
-                else:
-                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er
-
-            elif derivative == 2:
-
-                sum_xyz2 = (xyz**2).sum(3)
-
-                lap_rn = self.bas_n * (3*R**(self.bas_n-2)
-                                       + sum_xyz2 * (self.bas_n-2) * R**(self.bas_n-4))
-
-                lap_er = self.bas_exp**2 * er * sum_xyz2 / R**2 \
-                    - 2 * self.bas_exp * er * sum_xyz2 / R**3
-
-                return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
-
-    def _radial_gaussian(self, R, xyz=None, derivative=0, jacobian=True):
-        """Compute the radial part of GTOs (or its derivative).
-
-        Arguments:
-            R {torch.tensor} -- distance between each electron and each atom
-
-        Keyword Arguments:
-            xyz {torch.tensor} -- positions of the electrons (needed for derivative) (default: {None})
-            derivative {int} -- degree of the derivative (default: {0})
-            jacobian {bool} -- return the jacobian, i.e the sum of the gradients (default: {True})
-
-        Returns:
-            torch.tensor -- values of each orbital radial part at each position
-        """
-        if derivative == 0:
-            return R**self.bas_n * torch.exp(-self.bas_exp*R**2)
-
-        elif derivative > 0:
-
-            rn = R**(self.bas_n)
-            nabla_rn = (self.bas_n * R**(self.bas_n-2)).unsqueeze(-1) * xyz
-
-            er = torch.exp(-self.bas_exp*R**2)
-            nabla_er = -2*(self.bas_exp * er).unsqueeze(-1) * xyz
-
-            if derivative == 1:
-                if jacobian:
-                    nabla_rn = nabla_rn.sum(3)
-                    nabla_er = nabla_er.sum(3)
-                    return nabla_rn*er + rn*nabla_er
-                else:
-                    return nabla_rn*er.unsqueeze(-1) + rn.unsqueeze(-1)*nabla_er
-
-            elif derivative == 2:
-
-                lap_rn = self.bas_n * (3*R**(self.bas_n-2)
-                                       + (xyz**2).sum(3) * (self.bas_n-2) * R**(self.bas_n-4))
-
-                lap_er = 4 * self.bas_exp**2 * (xyz**2).sum(3) * er \
-                    - 6 * self.bas_exp * er
-
-                return lap_rn*er + 2*(nabla_rn*nabla_er).sum(3) + rn*lap_er
-
     def _to_device(self):
         """Export the non parameter variable to the device."""
 
         self.device = torch.device('cuda')
         self.to(self.device)
-        attrs = ['bas_n', 'bas_l', 'bas_m', 'bas_coeffs',
+        attrs = ['bas_n', 'bas_coeffs',
                  'nshells', 'norm_cst', 'index_ctr']
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
@@ -268,11 +143,11 @@ class AtomicOrbitals(nn.Module):
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
-        R = self.radial(r)
+        R = self.radial(r, self.bas_n, self.bas_exp)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
-        Y = SphericalHarmonics(xyz, self.bas_l, self.bas_m)
+        Y = self.harmonics(xyz)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
@@ -284,26 +159,27 @@ class AtomicOrbitals(nn.Module):
 
             # return the jacobian
             if jacobian:
-                dR = self.radial(r, xyz=xyz, derivative=1)
-                dY = SphericalHarmonics(
-                    xyz, self.bas_l, self.bas_m, derivative=1)
+                dR = self.radial(r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1)
+                dY = self.harmonics(xyz, derivative=1)
                 # -> (Nbatch,Nelec,Nbas)
                 bas = dR * Y + R * dY
 
             # returm individual components
             else:
-                dR = self.radial(r, xyz=xyz, derivative=1, jacobian=False)
-                dY = GradSphericalHarmonics(xyz, self.bas_l, self.bas_m)
+                dR = self.radial(r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1, jacobian=False)
+                dY = Harmonics(xyz,  derivative=1, jacobian=False)
                 # -> (Nbatch,Nelec,Nbas,Ndim)
                 bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
 
         # second derivative
         elif derivative == 2:
-            dR = self.radial(r, xyz=xyz, derivative=1, jacobian=False)
-            dY = GradSphericalHarmonics(xyz, self.bas_l, self.bas_m)
+            
+            dR = self.radial(r, self.bas_n, self.bas_exp, 
+                            xyz=xyz, derivative=1, jacobian=False)
+            dY = self.harmonics(xyz, derivative=1, jacobian=False)
 
-            d2R = self.radial(r, xyz=xyz, derivative=2)
-            d2Y = SphericalHarmonics(xyz, self.bas_l, self.bas_m, derivative=2)
+            d2R = self.radial(r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2)
+            d2Y = self.harmonics(xyz, derivative=2)
 
             bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
 
@@ -356,8 +232,7 @@ if __name__ == "__main__":
 
     from deepqmc.wavefunction.molecule import Molecule
     from time import time
-    m = Molecule(atom='C 0 0 0; O 0 0 3.015',
-                 basis_type='gto', basis='sto-6g')
+    m = Molecule(atom='C 0 0 0; O 0 0 3.015', basis='dzp')
 
     ao = AtomicOrbitals(m, cuda=False)
 

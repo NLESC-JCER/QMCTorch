@@ -10,14 +10,8 @@ class CalculatorADF(CalculatorBase):
     def __init__(self, atoms, atom_coords, basis, scf, units):
 
         CalculatorBase.__init__(self,atoms, atom_coords, basis, scf, units)
-        
-        self.basis.spherical_harmonics_type = 'cartesian'
-
         self.run()
         
-        self.get_basis()
-        
-        self.get_mos()
 
     def run(self):
         """Run the calculation
@@ -87,24 +81,28 @@ class CalculatorADF(CalculatorBase):
         """Get the basis information needed to compute the AO values."""
         
         kf = plams.KFFile(self.out_file)
-        
+
+        self.basis.radial_type = 'sto'
+        self.basis.harmonics_type = 'cart'
+
         self.basis.nao  = kf.read('Basis','naos')
         self.basis.nmo = kf.read('A', 'nmo_A')
 
         nbptr = np.array(kf.read('Basis','nbptr')) 
         self.basis.nshells = np.array([nbptr[i]-nbptr[i-1] for i in range(1,len(nbptr))])
 
-        self.basis.kx = np.array(kf.read('Basis', 'kx'))
-        self.basis.ky = np.array(kf.read('Basis', 'ky'))
-        self.basis.kz = np.array(kf.read('Basis', 'kz'))
+        self.basis.bas_kx = np.array(kf.read('Basis', 'kx'))
+        self.basis.bas_ky = np.array(kf.read('Basis', 'ky'))
+        self.basis.bas_kz = np.array(kf.read('Basis', 'kz'))
 
-        self.basis.n = np.array(kf.read('Basis', 'kr'))
+        self.basis.bas_n = np.array(kf.read('Basis', 'kr'))
 
-        self.basis.exp = np.array(kf.read('Basis', 'alf'))
-        self.basis.coeff = np.ones_like(self.basis.exp)
-        self.basis.norm = np.array(kf.read('Basis', 'bnorm'))
+        self.basis.bas_exp = np.array(kf.read('Basis', 'alf'))
+        self.basis.bas_coeffs = np.ones_like(self.basis.bas_exp)
+        self.basis.bas_norm = np.array(kf.read('Basis', 'bnorm'))
 
         self.basis.index_ctr = np.arange(self.basis.nao)
+        return self.basis 
 
     def get_mos(self):
         """Get the MO coefficient expressed in the BAS."""
@@ -115,6 +113,7 @@ class CalculatorADF(CalculatorBase):
         self.mos = np.array(kf.read('A', 'Eigen-Bas_A'))
         self.mos = self.mos.reshape(nao, nmo).T
         self.mos = self.normalize_columns(self.mos)
+        return self.mos
 
 
     def parse_basis(self):

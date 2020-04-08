@@ -5,10 +5,11 @@ from mendeleev import element
 
 
 from deepqmc.wavefunction.calculator.adf import CalculatorADF
+from deepqmc.wavefunction.calculator.pyscf import CalculatorPySCF
 
 class Molecule(object):
 
-    def __init__(self, atom, calculator=CalculatorADF, 
+    def __init__(self, atom, calculator='adf', 
                  scf='hf', basis='dzp', unit='bohr'):
 
         self.atoms_str = atom
@@ -25,11 +26,12 @@ class Molecule(object):
             raise ValueError('unit should be angs or bohr')
 
         self.process_atom_str()
-
-        self.calculator = calculator(self.atoms, 
-                                     self.atom_coords, 
-                                     basis, scf, 
-                                     self.unit)
+        calc = {'adf':CalculatorADF, 'pyscf':CalculatorPySCF }
+        self.calculator = calc[calculator](self.atoms, 
+                                             self.atom_coords, 
+                                             basis, scf, 
+                                             self.unit)
+        self.basis = self.calculator.get_basis()
 
     def process_atom_str(self):
         '''Process the input file.'''
@@ -85,9 +87,6 @@ class Molecule(object):
         self.atoms_str += atoms[-1]
         return atoms
 
-
-
-
     def domain(self, method):
         """Define the walker initialization method
 
@@ -128,10 +127,8 @@ class Molecule(object):
 
 
 if __name__ == "__main__":
-    from deepqmc.wavefunction.calculator.pyscf import CalculatorPySCF
-    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-                   calculator=CalculatorPySCF,
-                   basis='dzp',
-                   unit='bohr')
+    
+    mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', calculator='adf',
+                   basis='dzp', unit='bohr')
     
     

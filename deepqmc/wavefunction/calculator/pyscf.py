@@ -14,8 +14,6 @@ class CalculatorPySCF(CalculatorBase):
         CalculatorBase.__init__(self, atoms, atom_coords, basis, scf, units)
         self.basis.spherical_harmonics_type = 'spherical'
         self.run()
-        self.get_basis()
-        self.get_mos()
 
     def run(self):
         """Run the scf calculation using PySCF."""
@@ -60,7 +58,6 @@ class CalculatorPySCF(CalculatorBase):
         h5['nbas'] = mol.nbas # number of unique ao (e.g. px,py,px -> p)
         h5['nao'] = mol.nao # total number of ao
         
-
         nshells = []
         for iat in range(mol.natm):
             nshells.append(mol.atom_nshells(iat))
@@ -134,7 +131,10 @@ class CalculatorPySCF(CalculatorBase):
         """Get the basis information needed to compute the AO values."""
         
         h5 = h5py.File(self.out_file,'r')
-    
+
+        self.basis.radial_type = 'gto'
+        self.basis.harmonics_type = 'cart'
+
         self.basis.nao  = h5['nao'][()]
         self.basis.nmo = h5['nmo'][()]
 
@@ -153,6 +153,7 @@ class CalculatorPySCF(CalculatorBase):
         self.basis.index_ctr = h5['index_ctr'][()]
 
         h5.close()
+        return self.basis
 
     def get_mos(self):
         """Get the MO coefficient expressed in the BAS."""
@@ -163,7 +164,6 @@ class CalculatorPySCF(CalculatorBase):
         nao  = h5['nmo'][()]
         self.mos = h5['mos'][()]
         self.mos = self.normalize_columns(self.mos)
-
         self.cart2sph = h5['cart2sph']
         h5.close()
     
