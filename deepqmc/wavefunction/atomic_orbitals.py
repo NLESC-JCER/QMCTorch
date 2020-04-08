@@ -163,7 +163,7 @@ class AtomicOrbitals(nn.Module):
             # returm individual components
             else:
                 dR = self.radial(r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1, jacobian=False)
-                dY = Harmonics(xyz,  derivative=1, jacobian=False)
+                dY = self.harmonics(xyz,  derivative=1, jacobian=False)
                 # -> (Nbatch,Nelec,Nbas,Ndim)
                 bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
 

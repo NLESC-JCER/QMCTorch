@@ -7,9 +7,6 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
 from deepqmc.utils.torch_utils import set_torch_double_precision
 from deepqmc.sampler.metropolis import Metropolis
-#from deepqmc.sampler.metropolis_update_ao import Metropolis
-#from deepqmc.sampler.metropolis_kalos import Metropolis
-#from deepqmc.optim.sr import StochasticReconfiguration
 
 from deepqmc.wavefunction.molecule import Molecule
 from deepqmc.utils.plot_data import (load_observable,
@@ -27,7 +24,6 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               basis_type='sto',
                basis='dz',
                unit='bohr')
 

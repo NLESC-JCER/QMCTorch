@@ -71,7 +71,7 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
         if jacobian :
             return dx + dy + dz
         else:
-            return torch.stack((dx,dy,dz),dim-1)
+            return torch.stack((dx,dy,dz),dim=-1)
 
     elif derivative == 2:
         d2x = kx*(kx-1)*xyz[...,0]**(kx-2)  *  xyz[...,1]**ky * xyz[...,2]**kz
