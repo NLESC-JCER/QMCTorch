@@ -233,6 +233,7 @@ if __name__ == "__main__":
 
     t0 = time()
     aoval = ao(pos)
+    print(aoval.shape)
     print('Total calculation : ', time()-t0)
 
     t0 = time()

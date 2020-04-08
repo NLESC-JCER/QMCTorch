@@ -166,6 +166,8 @@ class CalculatorPySCF(CalculatorBase):
         self.mos = self.normalize_columns(self.mos)
         self.cart2sph = h5['cart2sph']
         h5.close()
+
+        return self.normalize_columns(self.cart2sph @ self.mos)
     
     def get_atoms_str(self):
         """Refresh the atom string.  Necessary when atom positions have changed. """
