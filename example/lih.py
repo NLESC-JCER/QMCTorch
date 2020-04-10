@@ -17,10 +17,7 @@ from deepqmc.utils.plot_data import (load_observable,
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-               basis_type='sto',
-               basis='dzp',
-               unit='bohr')
+mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', basis='dzp', unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',

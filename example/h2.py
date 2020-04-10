@@ -24,7 +24,7 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               basis='dz',
+               basis='dzp',
                unit='bohr')
 
 

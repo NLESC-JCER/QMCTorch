@@ -149,7 +149,7 @@ class CalculatorADF(CalculatorBase):
         nao  = kf.read('Basis','naos')
         nmo = kf.read('A', 'nmo_A')
         self.mos = np.array(kf.read('A', 'Eigen-Bas_A'))
-        self.mos = self.mos.reshape(nao, nmo).T
+        self.mos = self.mos.reshape(nmo, nao).T
         self.mos = self.normalize_columns(self.mos)
         return self.mos
 

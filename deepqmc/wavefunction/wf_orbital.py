@@ -50,7 +50,7 @@ class Orbital(WaveFunction):
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
-        self.mo_scf = nn.Linear(mol.basis.nmo, mol.basis.nao, bias=False)
+        self.mo_scf = nn.Linear(mol.basis.nao, mol.basis.nmo, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
         self.mo_scf.weight.requires_grad = False
         if self.cuda:
@@ -108,6 +108,7 @@ class Orbital(WaveFunction):
         mo_coeff = torch.tensor(
             self.mol.calculator.get_mo_coeffs()).type(
                 torch.get_default_dtype())
+        #return nn.Parameter(mo_coeff)
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
@@ -141,7 +142,7 @@ class Orbital(WaveFunction):
         else:
             x = ao
 
-        # molecular orbitals
+        # molecular orbitals        
         x = self.mo_scf(x)
 
         # mix the mos
