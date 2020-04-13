@@ -56,7 +56,8 @@ class CalculatorPySCF(CalculatorBase):
         h5 = h5py.File(file_name,'w')
         h5['TotalEnergy'] = rhf.e_tot
         h5['nbas'] = mol.nbas # number of unique ao (e.g. px,py,px -> p)
-        h5['nao'] = mol.nao # total number of ao
+        #h5['nao'] = mol.nao # total number of ao # wrong if there are d orbitals as counts only 5 d orbs (sph)
+        h5['nao'] = len(mol.cart_labels())
         
         nshells = [0]*mol.natm
         

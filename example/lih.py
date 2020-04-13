@@ -17,14 +17,19 @@ from deepqmc.utils.plot_data import (load_observable,
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', basis='dzp', unit='bohr')
+mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', 
+             calculator='pyscf',
+              basis='dzp', 
+              unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='cas(2,2)',
+             configs='ground_state',
              use_jastrow=True)
              
 wf.jastrow.weight.data[0] = 1. 
+
+
 
 # sampler
 sampler = Metropolis(nwalkers=500, nstep=2000, step_size=0.05,
