@@ -39,10 +39,6 @@ class TestAOvalues(unittest.TestCase):
         aovals = self.wf.ao(self.pos).detach().numpy()
         aovals_ref = self.m.eval_gto(
             'GTOval_cart', self.pos.detach().numpy()[:, :3])
-
-        plt.plot(aovals[:, 0, self.iorb], c='red')
-        plt.plot(aovals_ref[:, self.iorb], c='blue')
-        plt.show()
         
         assert np.allclose(aovals[:, 0, self.iorb], aovals_ref[:, self.iorb])
 
@@ -74,3 +70,4 @@ if __name__ == "__main__":
     t = TestAOvalues()
     t.setUp()
     t.test_ao()
+    t.test_ao_deriv()

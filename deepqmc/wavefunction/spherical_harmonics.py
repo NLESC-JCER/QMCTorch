@@ -63,10 +63,19 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
     if derivative == 0:
         return xyz[...,0]**kx  *  xyz[...,1]**ky * xyz[...,2]**kz
 
-    elif derivative == 1:        
-        dx = kx*xyz[...,0]**(kx-1)  *  xyz[...,1]**ky * xyz[...,2]**kz
-        dy = xyz[...,0]**kx  *  ky * xyz[...,1]**(ky-1) * xyz[...,2]**kz
-        dz = xyz[...,0]**kx  *  xyz[...,1]**ky * kz * xyz[...,2]**(kz-1)
+    elif derivative == 1:       
+        
+        kxm1 = kx-1
+        kxm1[kxm1<0] = 0
+        dx = kx*xyz[...,0]**(kxm1)  *  xyz[...,1]**ky * xyz[...,2]**kz
+
+        kym1 = ky-1
+        kym1[kym1<0] = 0
+        dy = xyz[...,0]**kx  *  ky * xyz[...,1]**(kym1) * xyz[...,2]**kz
+
+        kzm1 = kz-1
+        kzm1[kzm1<0] = 0
+        dz = xyz[...,0]**kx  *  xyz[...,1]**ky * kz * xyz[...,2]**(kzm1)
 
         if jacobian :
             return dx + dy + dz
@@ -74,9 +83,19 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
             return torch.stack((dx,dy,dz),dim=-1)
 
     elif derivative == 2:
-        d2x = kx*(kx-1)*xyz[...,0]**(kx-2)  *  xyz[...,1]**ky * xyz[...,2]**kz
-        d2y = xyz[...,0]**kx  *  ky*(ky-1) * xyz[...,1]**(ky-2) * xyz[...,2]**kz
-        d2z = xyz[...,0]**kx  *  xyz[...,1]**ky * kz*(kz-1)* xyz[...,2]**(kz-2)
+
+        kxm2 = kx-2
+        kxm2[kxm2<0] = 0
+        d2x = kx*(kx-1)*xyz[...,0]**(kxm2)  *  xyz[...,1]**ky * xyz[...,2]**kz
+
+        kym2 = ky-2
+        kym2[kym2<0] = 0
+        d2y = xyz[...,0]**kx  *  ky*(ky-1) * xyz[...,1]**(kym2) * xyz[...,2]**kz
+        
+        kzm2 = kz-2
+        kzm2[kzm2<0] = 0
+        d2z = xyz[...,0]**kx  *  xyz[...,1]**ky * kz*(kz-1)* xyz[...,2]**(kzm2)
+
         return d2x + d2y + d2z
 
 

@@ -157,6 +157,7 @@ class AtomicOrbitals(nn.Module):
             if jacobian:
                 dR = self.radial(r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1)
                 dY = self.harmonics(xyz, derivative=1)
+
                 # -> (Nbatch,Nelec,Nbas)
                 bas = dR * Y + R * dY
 
