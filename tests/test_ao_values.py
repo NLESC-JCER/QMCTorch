@@ -37,7 +37,7 @@ class TestAOvalues(unittest.TestCase):
         aovals = self.wf.ao(self.pos).detach().numpy()
         aovals_ref = self.m.eval_gto(
             'GTOval_cart', self.pos.detach().numpy()[:, :3])
-
+            
         assert np.allclose(aovals[:, 0, self.iorb], aovals_ref[:, self.iorb])
 
     def test_ao_deriv(self):
