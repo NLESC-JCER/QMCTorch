@@ -4,6 +4,8 @@ from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.wavefunction.molecule import Molecule
 from pyscf import gto
 
+import matplotlib.pyplot as plt
+
 import numpy as np
 import unittest
 
@@ -15,7 +17,7 @@ class TestAOvalues(unittest.TestCase):
         # define the molecule
         at = 'H 0 0 0; H 0 0 1'
         self.mol = Molecule(atom=at,
-                            basis_type='gto',
+                            calculator='pyscf',
                             basis='sto-3g',
                             unit='bohr')
 
@@ -38,6 +40,10 @@ class TestAOvalues(unittest.TestCase):
         aovals_ref = self.m.eval_gto(
             'GTOval_cart', self.pos.detach().numpy()[:, :3])
 
+        plt.plot(aovals[:, 0, self.iorb],c='red')
+        plt.plot(aovals_ref[:, self.iorb],c='blue')
+        plt.show()
+        
         assert np.allclose(aovals[:, 0, self.iorb], aovals_ref[:, self.iorb])
 
     def test_ao_deriv(self):
@@ -64,4 +70,7 @@ class TestAOvalues(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    #unittest.main()
+    t = TestAOvalues()
+    t.setUp()
+    t.test_ao()

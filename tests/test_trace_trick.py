@@ -231,7 +231,7 @@ class TestTrace(unittest.TestCase):
 
         atom_str = 'C 0 0 -0.69; O 0 0 0.69'
         self.m = gto.M(atom=atom_str, basis='sto-3g', unit='bohr')
-        self.mol = Molecule(atom=atom_str, basis_type='gto',
+        self.mol = Molecule(atom=atom_str, calculator='pyscf',
                             basis='sto-3g', unit='bohr')
 
         # define the wave function

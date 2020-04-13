@@ -21,7 +21,7 @@ class TestH2(unittest.TestCase):
 
         # molecule
         self.mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', unit='bohr',
-                            basis_type='gto', basis='sto-3g')
+                            calculator='pyscf', basis='sto-3g')
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='auto',
@@ -111,4 +111,5 @@ if __name__ == "__main__":
     # unittest.main()
     t = TestH2()
     t.setUp()
-    t.test_single_point_hmc()
+    t.test_single_point()
+    #t.test_single_point_hmc()
