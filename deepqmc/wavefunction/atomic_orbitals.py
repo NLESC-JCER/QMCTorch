@@ -56,7 +56,7 @@ class AtomicOrbitals(nn.Module):
 
         # harmonics generator
         if mol.basis.harmonics_type == 'sph':
-            self.bas_n = torch.tensor(mol.basis.bas_kr).type(dtype)
+            self.bas_n = torch.tensor(mol.basis.bas_n).type(dtype)
             self.harmonics = Harmonics(mol.basis.harmonics_type, bas_l = mol.basis.bas_l, bas_m = mol.basis.bas_m)
 
         elif mol.basis.harmonics_type == 'cart':
@@ -70,11 +70,11 @@ class AtomicOrbitals(nn.Module):
         self.radial = radial_dict[mol.basis.radial_type]
 
         # get the normalisation constants
-        if hasattr(mol.basis,'bas_norm'):
-            self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
-        else:
-            with torch.no_grad:
-                self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
+        # if hasattr(mol.basis,'bas_norm'):
+        #     self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
+        # else:
+        with torch.no_grad():
+            self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
 
         self.cuda = cuda
         self.device = torch.device('cpu')

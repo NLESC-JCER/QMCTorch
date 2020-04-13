@@ -1,5 +1,5 @@
 import torch
-
+import numpy as np 
 def atomic_orbital_norm(basis):
     """Comptues the norm of a given function
     
@@ -23,7 +23,7 @@ def atomic_orbital_norm(basis):
             return norm_slater_cartesian(basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_n, basis.bas_exp)
 
         if basis.radial_type == 'gto':
-            return norm_gaussian_cartesian(basis.bas_kx, basis.bas_ky, basis.kz, basis.bas_exp)
+            return norm_gaussian_cartesian(basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_exp)
 
 def norm_slater_spherial(bas_n, bas_exp):
     """ Normalization of STOs
@@ -96,8 +96,8 @@ def norm_gaussian_cartesian(a, b, c, exp):
 
     from scipy.special import factorial2 as f2
 
-    pref = (2*exp/np.pi)**(0.75)
-    x = (4*exp)**(a/2) / torch.sqrt(torch.tensor(f2((2*a-1).int()))).type(torch.get_default_dtype())
-    y = (4*exp)**(b/2) / torch.sqrt(torch.tensor(f2((2*ab-1).int()))).type(torch.get_default_dtype())
-    z = (4*exp)**(c/2) / torch.sqrt(torch.tensor(f2((2*c-1).int()))).type(torch.get_default_dtype())
+    pref = torch.tensor((2*exp/np.pi)**(0.75))
+    x = (4*exp)**(a/2) / torch.sqrt(torch.tensor(f2((2*a-1).astype('int')))).type(torch.get_default_dtype())
+    y = (4*exp)**(b/2) / torch.sqrt(torch.tensor(f2((2*b-1).astype('int')))).type(torch.get_default_dtype())
+    z = (4*exp)**(c/2) / torch.sqrt(torch.tensor(f2((2*c-1).astype('int')))).type(torch.get_default_dtype())
     return pref * x * y * z 
