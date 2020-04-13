@@ -12,7 +12,7 @@ class CalculatorPySCF(CalculatorBase):
     def __init__(self, atoms, atom_coords, basis, scf, units):
 
         CalculatorBase.__init__(self, atoms, atom_coords, basis, scf, units)
-        self.basis.spherical_harmonics_type = 'spherical'
+        self.basis.harmonics_type = 'cartesian'
         self.run()
 
     def run(self):
@@ -58,27 +58,27 @@ class CalculatorPySCF(CalculatorBase):
         h5['nbas'] = mol.nbas # number of unique ao (e.g. px,py,px -> p)
         h5['nao'] = mol.nao # total number of ao
         
-        nshells = []
-        for iat in range(mol.natm):
-            nshells.append(mol.atom_nshells(iat))
-
+        nshells = [0]*mol.natm
+        
         bas_coeff, bas_exp = [], []
         index_ctr = []
         bas_n, bas_l, bas_m = [], [], []
         bas_kx, bas_ky, bas_kz = [], [], []
-        bas_n = self.get_bas_n(mol)
+        bas_n = []
+        bas_n_ori = self.get_bas_n(mol)
 
         iao = 0
         for ibas in range(mol.nbas):
 
             # number of contracted gaussian in that bas
-            nctr = mol.bas_nctr(ibas)
-
+            # nctr = mol.bas_nctr(ibas)
+            nctr = mol.bas_nprim(ibas)
+            
             # number of ao from that bas
             mult = mol.bas_len_cart(ibas)
 
             # quantum numbers
-            n = bas_n[ibas]
+            n = bas_n_ori[ibas]
             l = mol.bas_angular(ibas)
             
             # get qn per bas
@@ -88,6 +88,9 @@ class CalculatorPySCF(CalculatorBase):
             # coeffs/exp
             bas_coeff += mol.bas_ctr_coeff(ibas).flatten().tolist() * mult
             bas_exp += mol.bas_exp(ibas).flatten().tolist() * mult
+
+            # number of shell per atoms
+            nshells[mol.bas_atom(ibas)] += nctr * mult 
 
             for m in range(mult):
                 index_ctr += [iao] * nctr
@@ -106,6 +109,8 @@ class CalculatorPySCF(CalculatorBase):
         for expnt, l in zip(bas_exp, bas_l):
             bas_norm.append(mol.gto_norm(l,expnt))
 
+        bas_kr = np.array(bas_n) - np.array(bas_l) - 1
+
         h5.create_dataset('nshells', data=nshells)
         h5.create_dataset('index_ctr', data=index_ctr)
         
@@ -116,6 +121,7 @@ class CalculatorPySCF(CalculatorBase):
         
         h5.create_dataset('bas_n',data=bas_n)
         h5.create_dataset('bas_l',data=bas_l)
+        h5.create_dataset('bas_kr', data=bas_kr)
 
         h5.create_dataset('bas_kx',data=bas_kx)
         h5.create_dataset('bas_ky',data=bas_ky)
@@ -135,25 +141,30 @@ class CalculatorPySCF(CalculatorBase):
         self.basis.radial_type = 'gto'
         self.basis.harmonics_type = 'cart'
 
-        self.basis.nao  = h5['nao'][()]
-        self.basis.nmo = h5['nmo'][()]
+        self.basis.nao  = int(h5['nao'][()])
+        self.basis.nmo = int(h5['nmo'][()])
 
         self.basis.nshells = h5['nshells'][()]
 
-        self.basis.kx = h5['bas_kx'][()]
-        self.basis.ky = h5['bas_ky'][()]
-        self.basis.kz = h5['bas_kz'][()]
+        self.basis.bas_kr = h5['bas_kr'][()]
+        self.basis.bas_kx = h5['bas_kx'][()]
+        self.basis.bas_ky = h5['bas_ky'][()]
+        self.basis.bas_kz = h5['bas_kz'][()]
 
-        self.basis.n = h5['bas_n'][()]
+        self.basis.bas_n = h5['bas_n'][()]
+        self.basis.bas_l = h5['bas_l'][()]
 
-        self.basis.exp = h5['bas_exp'][()]
-        self.basis.coeff = h5['bas_coeff'][()]
-        self.basis.coeff = h5['bas_norm'][()]
+        self.basis.bas_exp = h5['bas_exp'][()]
+        self.basis.bas_coeffs = h5['bas_coeff'][()]
+        self.basis.bas_norm = h5['bas_norm'][()]
 
         self.basis.index_ctr = h5['index_ctr'][()]
         self.basis.atom_coords_internal = self.atom_coords
         
         h5.close()
+
+        self.check_basis(self.basis)
+
         return self.basis
 
     def get_mo_coeffs(self):
@@ -163,12 +174,12 @@ class CalculatorPySCF(CalculatorBase):
         
         nao  = h5['nao'][()]
         nao  = h5['nmo'][()]
-        self.mos = h5['mos'][()]
-        self.mos = self.normalize_columns(self.mos)
-        self.cart2sph = h5['cart2sph']
+        mos = h5['mos'][()]
+        cart2sph = h5['cart2sph']
+        bas_mos = cart2sph @ mos
         h5.close()
 
-        return self.normalize_columns(self.cart2sph @ self.mos)
+        return self.normalize_columns(bas_mos)
     
     def get_atoms_str(self):
         """Refresh the atom string.  Necessary when atom positions have changed. """

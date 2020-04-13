@@ -53,14 +53,14 @@ class AtomicOrbitals(nn.Module):
         self.bas_exp = nn.Parameter(torch.tensor(mol.basis.bas_exp).type(dtype))
         self.bas_exp.requires_grad = True
 
-        # get the quantum number
-        self.bas_n = torch.tensor(mol.basis.bas_n).type(dtype)
 
         # harmonics generator
         if mol.basis.harmonics_type == 'sph':
+            self.bas_n = torch.tensor(mol.basis.bas_kr).type(dtype)
             self.harmonics = Harmonics(mol.basis.harmonics_type, bas_l = mol.basis.bas_l, bas_m = mol.basis.bas_m)
 
         elif mol.basis.harmonics_type == 'cart':
+            self.bas_n = torch.tensor(mol.basis.bas_kr).type(dtype)
             self.harmonics = Harmonics(mol.basis.harmonics_type, bas_kx=mol.basis.bas_kx, 
                                        bas_ky=mol.basis.bas_ky, bas_kz=mol.basis.bas_kz)
         

@@ -101,7 +101,7 @@ class CalculatorADF(CalculatorBase):
         bas_kx = np.array(kf.read('Basis', 'kx'))
         bas_ky = np.array(kf.read('Basis', 'ky'))
         bas_kz = np.array(kf.read('Basis', 'kz'))
-        bas_n = np.array(kf.read('Basis', 'kr'))
+        bas_kr = np.array(kf.read('Basis', 'kr'))
 
         # bas exp/coeff/norm per atom type
         bas_exp = np.array(kf.read('Basis', 'alf'))
@@ -109,7 +109,7 @@ class CalculatorADF(CalculatorBase):
 
         self.basis.nshells = []
         self.basis.bas_kx, self.basis.bas_ky, self.basis.bas_kz = [], [], []
-        self.basis.bas_n = []
+        self.basis.bas_kr = []
         self.basis.bas_exp, self.basis.bas_norm = [], []
         
         for iat, at in enumerate(atom_type):
@@ -122,7 +122,7 @@ class CalculatorADF(CalculatorBase):
             self.basis.bas_kx += list(bas_kx[idx_bos])*number_copy
             self.basis.bas_ky += list(bas_ky[idx_bos])*number_copy
             self.basis.bas_kz += list(bas_kz[idx_bos])*number_copy
-            self.basis.bas_n += list(bas_n[idx_bos])*number_copy
+            self.basis.bas_kr += list(bas_kr[idx_bos])*number_copy
                   
             self.basis.bas_exp += list(bas_exp[idx_bos])*number_copy
             self.basis.bas_norm += list(bas_norm[idx_bos])*number_copy
@@ -132,13 +132,15 @@ class CalculatorADF(CalculatorBase):
         self.basis.bas_ky = np.array(self.basis.bas_ky)
         self.basis.bas_kz = np.array(self.basis.bas_kz)
 
-        self.basis.bas_n = np.array(self.basis.bas_n)
+        self.basis.bas_kr = np.array(self.basis.bas_kr)
         self.basis.bas_exp = np.array(self.basis.bas_exp)
         self.basis.bas_coeffs = np.ones_like(self.basis.bas_exp)
         self.basis.bas_norm = np.array(self.basis.bas_norm)
 
         self.basis.index_ctr = np.arange(self.basis.nao)
         self.basis.atom_coords_internal = np.array(kf.read('Geometry','xyz')).reshape(-1,3)
+
+        self.check_basis(self.basis)
 
         return self.basis 
 

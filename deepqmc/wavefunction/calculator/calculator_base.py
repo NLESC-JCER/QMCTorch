@@ -18,7 +18,7 @@ class CalculatorBase(object):
         basis.nshells = []
         basis.index_ctr = []
         basis.bas_exp, basis.bas_coeffs = [], []
-        basis.bas_n, basis.bas_l, basis.bas_m = [], [], []
+        basis.bas_n, basis.bas_l = [], []
         return basis
 
     def run(self):
@@ -29,6 +29,22 @@ class CalculatorBase(object):
 
     def get_mo_coeffs(self):
         raise NotImplementedError('Implement a get_mo_coeffs method in your calculator.')
+
+    @staticmethod
+    def check_basis(basis):
+        
+        names = ['bas_coeffs', 'bas_exp', 'bas_norm',
+                 'atom_coords_internal','nao','nmo',
+                 'index_ctr']
+
+        if basis.harmonics_type == 'cart':
+            names += ['bas_kx', 'bas_ky', 'bas_kz', 'bas_kr']
+
+        elif basis.harmonics_type == 'sph':
+            names += ['bas_n', 'bas_l', 'bas_m']
+
+        for n in names:
+            assert(hasattr(basis, n))
 
     @staticmethod
     def normalize_columns(mat):

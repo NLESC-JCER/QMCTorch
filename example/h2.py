@@ -24,9 +24,9 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               basis='dzp',
-               unit='bohr')
-
+              calculator='pyscf',
+              basis='dzp',
+              unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
