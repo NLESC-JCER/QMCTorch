@@ -39,12 +39,23 @@ class SolverOrbital(SolverBase):
                           (default: {'auto'})
         """
 
+        self.evaluate_gradient = {
+            'auto': self._evaluate_grad_auto,
+            'manual': self._evaluate_grad_manual}[grad]
+
         if 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
 
         # sample the wave function
         pos = self.sample(ntherm=self.initial_sample.ntherm,
                           ndecor=self.initial_sample.ndecor)
+
+        # get the loss
+        self.loss = Loss(self.wf, method=loss, clip=clip_loss)
+        self.loss.use_weight = (self.resample.resample_every > 1)
+
+        # orthogonalization penalty for the MO coeffs
+        self.ortho_loss = OrthoReg()
 
         # resize the number of walkers
         _nwalker_save = self.sampler.walkers.nwalkers
@@ -68,12 +79,6 @@ class SolverOrbital(SolverBase):
         self.dataloader = DataLoader(
             self.dataset, batch_size=batchsize)
 
-        # get the loss
-        self.loss = Loss(self.wf, method=loss, clip=clip_loss)
-
-        # orthogonalization penalty for the MO coeffs
-        self.ortho_loss = OrthoReg()
-
         cumulative_loss = []
         min_loss = 1E3
 
@@ -94,7 +99,7 @@ class SolverOrbital(SolverBase):
                 lpos = data.to(self.device)
 
                 # get the gradient
-                loss, eloc = self.evaluate_gradient(grad, lpos)
+                loss, eloc = self.evaluate_gradient(lpos)
                 cumulative_loss += loss
 
                 # optimize the parameters
@@ -127,30 +132,6 @@ class SolverOrbital(SolverBase):
         self.sampler.step_size = _step_size_save
         self.sampler.walkers.nwalkers = _nwalker_save
         self.sampler.nwalkers = _nwalker_save
-
-    def evaluate_gradient(self, grad, lpos):
-        """Evaluate the gradient
-
-        Arguments:
-            grad {str} -- method of the gradient (auto, manual)
-            lpos {torch.tensor} -- positions of the walkers
-
-
-        Returns:
-            tuple -- (loss, local energy)
-        """
-        if grad == 'auto':
-            loss, eloc = self._evaluate_grad_auto(lpos)
-
-        elif grad == 'manual':
-            loss, eloc = self._evaluate_grad_manual(lpos)
-        else:
-            raise ValueError('Gradient method should be auto or stab')
-
-        if torch.isnan(loss):
-            raise ValueError("Nans detected in the loss")
-
-        return loss, eloc
 
     def _evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.
@@ -210,4 +191,5 @@ class SolverOrbital(SolverBase):
             return torch.mean(eloc), eloc
 
         else:
-            raise ValueError('Manual gradient only for energy min')
+            raise ValueError(
+                'Manual gradient only for energy minimization')

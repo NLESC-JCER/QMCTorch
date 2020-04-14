@@ -47,7 +47,12 @@ class DataSet(Dataset):
 
 class Loss(nn.Module):
 
-    def __init__(self, wf, method='variance', clip=False):
+    def __init__(
+            self,
+            wf,
+            method='variance',
+            clip=False,
+            no_weight=False):
         """Defines the loss to use during the optimization
 
         Arguments:
@@ -62,15 +67,18 @@ class Loss(nn.Module):
         """
 
         super(Loss, self).__init__()
+
         self.wf = wf
         self.method = method
         self.clip = clip
+        self.use_weight = True
 
-        self.use_weight = 'weighted' in self.method
-        if self.use_weight:
-            self.weight = {'psi': None, 'psi0': None}
+        self.loss_fn = {'energy': torch.mean,
+                        'variance': torch.var}[method]
 
-    def forward(self, pos, no_grad=False):
+        self.weight = {'psi': None, 'psi0': None}
+
+    def forward(self, pos, no_grad=False, deactivate_weight=False):
         """Computes the loss
 
         Arguments:
@@ -85,74 +93,79 @@ class Loss(nn.Module):
         """
 
         # check if grads are requested
-        _grad = torch.enable_grad()
-        if no_grad:
-            _grad = torch.no_grad()
-
-        with _grad:
+        with self.get_grad_mode(no_grad):
 
             # compute local eneergies
             local_energies = self.wf.local_energy(pos)
 
             # mask the energies if necessary
-            if self.clip:
-                median = torch.median(local_energies)
-                std = torch.std(local_energies)
-                mask = (local_energies < median +
-                        5 * std) & (local_energies > median - 5 * std)
-            else:
-                mask = torch.ones_like(
-                    local_energies).type(torch.bool)
+            mask = self.get_clipping_mask(local_energies)
 
-            # un weighted values
-            if not self.use_weight:
+            # sampling_weight
+            local_use_weight = self.use_weight * \
+                (not deactivate_weight)
+            weight = self.get_sampling_weights(local_use_weight)
 
-                if self.method == 'variance':
-                    loss = torch.var(local_energies[mask])
-
-                elif self.method == 'energy':
-                    loss = torch.mean(local_energies[mask])
-
-                else:
-                    raise ValueError(
-                        'method must be variance, energy, \
-                         weighted-variance or weighted_energy')
-
-            # use weights
-            else:
-
-                # computes the weights
-                self.weight['psi'] = self.wf(pos)
-
-                if self.weight['psi0'] is None:
-                    self.weight['psi0'] = self.weight['psi'].detach(
-                    ).clone()
-
-                w = (self.weight['psi'] / self.weight['psi0'])**2
-                w /= w.sum()
-
-                if self.method == 'weighted-variance':
-                    mu = torch.mean(local_energies)
-                    weighted_local_energies = (
-                        local_energies - mu)**2 * w
-
-                    # biased variance
-                    loss = torch.mean(
-                        weighted_local_energies[mask]) * mask.sum()
-
-                    # unbiased variance
-                    # loss = weighted_local_energies[mask].sum()/(mask.sum()-1)
-
-                elif self.method == 'weighted-energy':
-                    weighted_local_energies = local_energies * w
-                    loss = torch.mean(weighted_local_energies[mask])
-
-                else:
-                    raise ValueError(
-                        'method must be variance, energy, \
-                        weighted-variance or weighted_energy')
+            # compute the loss
+            loss = self.loss_fn((weight * local_energies)[mask])
 
         return loss, local_energies
+
+    @staticmethod
+    def get_grad_mode(no_grad):
+        """Returns enable_grad or no_grad
+
+        Arguments:
+            no_grad {bool} -- [description]
+        """
+
+        return torch.no_grad() if no_grad else torch.enable_grad()
+
+    def get_clipping_mask(self, local_energies, Nstd=5):
+        """computes the clipping mask
+
+        Arguments:
+            local_energies {torch.tensor} -- values of the local energies
+            Nstd {int} -- Excludes values +/- Nstd x std the mean of the eloc
+        """
+        if self.clip:
+            median = torch.median(local_energies)
+            std = torch.std(local_energies)
+            emax = median + Nstd * std
+            emin = median - Nstd * std
+            mask = (
+                local_energies < emax) & (
+                local_energies > emin)
+        else:
+            mask = torch.ones_like(
+                local_energies).type(torch.bool)
+
+        return mask
+
+    def get_sampling_weights(self, use_weight):
+        """Get the weight needed when resampling is not
+            done at every step
+        """
+        if use_weight:
+
+            # computes the weights
+            self.weight['psi'] = self.wf(pos)
+
+            # if we just resampled store psi and all w=1
+            if self.weight['psi0'] is None:
+                self.weight['psi0'] = self.weight['psi'].detach(
+                ).clone()
+                w = torch.ones_like(self.weight['psi'])
+
+            # otherwise compute ration of psi
+            else:
+                w = (self.weight['psi'] / self.weight['psi0'])**2
+                w /= w.sum()  # should we multiply by the number of elements ?
+
+            return w
+
+        else:
+            return 1.
 
 
 class OrthoReg(nn.Module):

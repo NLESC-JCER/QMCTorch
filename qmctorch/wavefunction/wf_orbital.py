@@ -85,13 +85,11 @@ class Orbital(WaveFunction):
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
-        self.fc.weight.data.fill_(1.)
-        if self.nci > 1:
-            self.fc.weight.data.fill_(0.)
-            self.fc.weight.data[0][0] = 1.
+        self.fc.weight.data.fill_(0.)
+        self.fc.weight.data[0][0] = 1.
+
         if self.cuda:
             self.fc = self.fc.to(self.device)
-        self.fc.clip = False
 
         if kinetic == 'jacobi':
             self.local_energy = self.local_energy_jacobi
@@ -213,12 +211,8 @@ class Orbital(WaveFunction):
             djast = self.jastrow(x, derivative=1, jacobian=False)
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
 
-            dao = self.ao(
-                x,
-                derivative=1,
-                jacobian=False).transpose(
-                2,
-                3)
+            dao = self.ao(x, derivative=1,
+                          jacobian=False).transpose(2, 3)
             dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
             djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
 

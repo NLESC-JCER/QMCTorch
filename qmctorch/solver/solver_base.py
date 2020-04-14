@@ -460,9 +460,6 @@ class SolverBase(object):
         else:
             self.opt.step()
 
-        if self.wf.fc.clip:
-            self.wf.fc.apply(self.clipper)
-
     def save_traj(self, fname):
         """Save trajectory of geo_opt
 
