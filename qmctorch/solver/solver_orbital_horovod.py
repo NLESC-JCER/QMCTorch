@@ -1,13 +1,14 @@
 import torch
 from torch.utils.data import DataLoader
 import warnings
-try:
-    import horovod.torch as hvd
-except ImportError:
-    warnings.warn("Horovod not found")
 
 from .solver_base import SolverBase
 from qmctorch.utils import (DataSet, Loss, OrthoReg)
+
+try:
+    import horovod.torch as hvd
+except ImportError:
+    pass
 
 
 def printd(rank, *args):

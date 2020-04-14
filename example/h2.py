@@ -6,7 +6,6 @@ from qmctorch.sampler import Metropolis
 
 from qmctorch.utils import set_torch_double_precision
 
-
 from qmctorch.utils import (save_observalbe,
                             plot_energy, plot_data)
 
@@ -60,7 +59,7 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 1:
+if 0:
     pos, e, v = solver.single_point(ntherm=1000, ndecor=100)
     # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
@@ -73,17 +72,17 @@ if 1:
 
 
 # optimize the wave function
-if 0:
+if 1:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
     solver.initial_sampling(ntherm=1000, ndecor=100)
 
-    solver.resampling(nstep=20, ntherm=-1, step_size=0.2,
+    solver.resampling(nstep=25, ntherm=-1, step_size=0.2,
                       resample_from_last=True,
-                      resample_every=1, tqdm=True)
+                      resample_every=1, tqdm=False)
 
     solver.ortho_mo = False
-    data = solver.run(50, batchsize=None,
+    data = solver.run(250, batchsize=None,
                       loss='energy',
                       grad='manual',
                       clip_loss=False)

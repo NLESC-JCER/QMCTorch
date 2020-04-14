@@ -11,13 +11,13 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
-               calculator='pyscf',
+               calculator='adf',
                basis='dzp',
                unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='ground_state',
+             configs='cas(2,2)',
              use_jastrow=True)
 
 wf.jastrow.weight.data[0] = 1.
@@ -38,10 +38,10 @@ sampler = Metropolis(
 
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
            {'params': wf.mo.parameters(), 'lr': 1E-3},
-           {'params': wf.fc.parameters(), 'lr': 1E-3}]
+           {'params': wf.fc.parameters(), 'lr': 1E-2}]
 
 
 opt = optim.Adam(lr_dict, lr=1E-3)
@@ -55,7 +55,7 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=50, gamma=0.85)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 1:
+if 0:
     pos, e, v = solver.single_point(ntherm=-1, ndecor=100)
     # eloc = solver.wf.local_energy(pos)
     # plt.hist(eloc.detach().numpy(), bins=50)
@@ -65,7 +65,7 @@ if 1:
     # obs = solver.sampling_traj(pos)
     # plot_energy(obs, e0=-8.)
 
-if 0:
+if 1:
 
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
@@ -77,7 +77,7 @@ if 0:
 
     solver.ortho_mo = False
 
-    data = solver.run(50, batchsize=None,
+    data = solver.run(100, batchsize=None,
                       loss='energy',
                       grad='manual',
                       clip_loss=True)
