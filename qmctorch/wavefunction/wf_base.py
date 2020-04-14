@@ -62,8 +62,10 @@ class WaveFunction(nn.Module):
 
         if self.kinetic == 'auto':
             return self.kinetic_energy_autograd(pos)
+
         elif self.kinetic == 'fd':
             return self.kinetic_energy_finite_difference(pos)
+
         else:
             raise ValueError(
                 'kinetic %s not recognized' %
