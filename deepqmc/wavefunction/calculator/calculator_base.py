@@ -33,7 +33,7 @@ class CalculatorBase(object):
     @staticmethod
     def check_basis(basis):
         
-        names = ['bas_coeffs', 'bas_exp', 'bas_norm',
+        names = ['bas_coeffs', 'bas_exp',
                  'atom_coords_internal','nao','nmo',
                  'index_ctr']
 

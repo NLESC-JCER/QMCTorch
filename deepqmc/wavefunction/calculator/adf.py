@@ -1,9 +1,14 @@
 import numpy as np 
 import os
 import shutil
-from scm import plams
 import json
+import warnings
 from deepqmc.wavefunction.calculator.calculator_base import CalculatorBase
+
+try:
+    from scm import plams
+except ModuleNotFoundError:
+    warnings.warn('scm python module not found')
 
 class CalculatorADF(CalculatorBase):
 

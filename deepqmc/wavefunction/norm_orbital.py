@@ -20,7 +20,7 @@ def atomic_orbital_norm(basis):
     elif basis.harmonics_type == 'cart':
 
         if basis.radial_type == 'sto':
-            return norm_slater_cartesian(basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_n, basis.bas_exp)
+            return norm_slater_cartesian(basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_kr, basis.bas_exp)
 
         if basis.radial_type == 'gto':
             return norm_gaussian_cartesian(basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_exp)
@@ -75,12 +75,12 @@ def norm_slater_cartesian(a, b, c, n, exp):
     from scipy.special import factorial2 as f2
 
     l = a + b + c + n + 1.
-    lfact = torch.tensor([np.math.fact(2*i) for i in l]).type(torch.get_default_dtype())
+    lfact = torch.tensor([np.math.factorial(2*i) for i in l]).type(torch.get_default_dtype())
     prefact = 4*np.pi*lfact/((2*exp)**(2*l+1))
-    num = torch.tensor(f2(2*a.int()-1)*f2(2*b.int()-1)*f2(2*c.int()-1)).type(torch.get_default_dtype())
-    denom = torch.tensor(f2((2*a+2*b+2*c+1).int())).type(torch.get_default_dtype())
+    num = torch.tensor(f2(2*a.astype('int')-1)*f2(2*b.astype('int')-1)*f2(2*c.astype('int')-1)).type(torch.get_default_dtype())
+    denom = torch.tensor(f2((2*a+2*b+2*c+1).astype('int'))).type(torch.get_default_dtype())
 
-    return prefact * num / denom
+    return  torch.sqrt(1. / (prefact * num / denom) )
 
 
 def norm_gaussian_cartesian(a, b, c, exp):

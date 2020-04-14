@@ -117,7 +117,7 @@ class CalculatorPySCF(CalculatorBase):
         
         h5.create_dataset('bas_coeff',data=bas_coeff)
         h5.create_dataset('bas_exp',data=bas_exp)
-        h5.create_dataset('bas_norm',data=bas_norm)
+        #h5.create_dataset('bas_norm',data=bas_norm)
         
         
         h5.create_dataset('bas_n',data=bas_n)
