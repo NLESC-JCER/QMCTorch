@@ -20,8 +20,11 @@ class TestH2(unittest.TestCase):
         self.opt_sigma = 1.24
 
         # molecule
-        self.mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', unit='bohr',
-                            calculator='pyscf', basis='sto-3g')
+        self.mol = Molecule(
+            atom='H 0 0 -0.69; H 0 0 0.69',
+            unit='bohr',
+            calculator='pyscf',
+            basis='sto-3g')
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='auto',
@@ -29,14 +32,24 @@ class TestH2(unittest.TestCase):
                           use_jastrow=True)
 
         # sampler
-        self.sampler = Metropolis(nwalkers=1000, nstep=2000, step_size=0.5,
-                                  ndim=self.wf.ndim, nelec=self.wf.nelec,
-                                  init=self.mol.domain('normal'),
-                                  move={'type': 'all-elec', 'proba': 'normal'})
+        self.sampler = Metropolis(
+            nwalkers=1000,
+            nstep=2000,
+            step_size=0.5,
+            ndim=self.wf.ndim,
+            nelec=self.wf.nelec,
+            init=self.mol.domain('normal'),
+            move={
+                'type': 'all-elec',
+                'proba': 'normal'})
 
-        self.hmc_sampler = Hamiltonian(nwalkers=100, nstep=200, step_size=0.1,
-                                       ndim=self.wf.ndim, nelec=self.wf.nelec,
-                                       init=self.mol.domain('normal'))
+        self.hmc_sampler = Hamiltonian(
+            nwalkers=100,
+            nstep=200,
+            step_size=0.1,
+            ndim=self.wf.ndim,
+            nelec=self.wf.nelec,
+            init=self.mol.domain('normal'))
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
@@ -64,7 +77,7 @@ class TestH2(unittest.TestCase):
         print('Variance :', v)
 
         # assert(e>self.ground_state_energy and e<-1.)
-        assert(e > 2*self.ground_state_energy and e < 0.)
+        assert(e > 2 * self.ground_state_energy and e < 0.)
         assert(v > 0 and v < 5.)
 
     def test_single_point_hmc(self):
@@ -80,7 +93,7 @@ class TestH2(unittest.TestCase):
         print('Variance :', v)
 
         # assert(e>self.ground_state_energy and e<-1.)
-        assert(e > 2*self.ground_state_energy and e < 0.)
+        assert(e > 2 * self.ground_state_energy and e < 0.)
         assert(v > 0 and v < 5.)
 
     def test_geo_opt(self):
@@ -103,7 +116,7 @@ class TestH2(unittest.TestCase):
         v = v.data.numpy()
 
         # it might be too much to assert with the ground state energy
-        assert(e > 2*self.ground_state_energy and e < 0.)
+        assert(e > 2 * self.ground_state_energy and e < 0.)
         assert(v > 0 and v < 2.)
 
 
@@ -112,4 +125,4 @@ if __name__ == "__main__":
     t = TestH2()
     t.setUp()
     t.test_single_point()
-    #t.test_single_point_hmc()
+    # t.test_single_point_hmc()

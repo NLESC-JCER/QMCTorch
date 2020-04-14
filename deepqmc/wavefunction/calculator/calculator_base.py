@@ -1,5 +1,6 @@
 from types import SimpleNamespace
-import numpy as np 
+import numpy as np
+
 
 class CalculatorBase(object):
     def __init__(self, atoms, atom_coords, basis, scf, units):
@@ -7,7 +8,7 @@ class CalculatorBase(object):
         self.atoms = atoms
         self.atom_coords = atom_coords
         self.basis_name = basis
-        self.scf = scf 
+        self.scf = scf
         self.units = units
         self.out_file = None
         self.basis = self.init_basis()
@@ -22,19 +23,22 @@ class CalculatorBase(object):
         return basis
 
     def run(self):
-        raise NotImplementedError('Implement a run method in your calculator.')
+        raise NotImplementedError(
+            'Implement a run method in your calculator.')
 
     def get_basis(self):
-        raise NotImplementedError('Implement a get_basis method in your calculator.')
+        raise NotImplementedError(
+            'Implement a get_basis method in your calculator.')
 
     def get_mo_coeffs(self):
-        raise NotImplementedError('Implement a get_mo_coeffs method in your calculator.')
+        raise NotImplementedError(
+            'Implement a get_mo_coeffs method in your calculator.')
 
     @staticmethod
     def check_basis(basis):
-        
+
         names = ['bas_coeffs', 'bas_exp',
-                 'atom_coords_internal','nao','nmo',
+                 'atom_coords_internal', 'nao', 'nmo',
                  'index_ctr']
 
         if basis.harmonics_type == 'cart':

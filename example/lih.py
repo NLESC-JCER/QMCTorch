@@ -17,25 +17,31 @@ from deepqmc.utils.plot_data import (load_observable,
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(atom='Li 0 0 0; H 0 0 3.015', 
-             calculator='pyscf',
-              basis='dzp', 
-              unit='bohr')
+mol = Molecule(atom='Li 0 0 0; H 0 0 3.015',
+               calculator='pyscf',
+               basis='dzp',
+               unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
              configs='ground_state',
              use_jastrow=True)
-             
-wf.jastrow.weight.data[0] = 1. 
 
+wf.jastrow.weight.data[0] = 1.
 
 
 # sampler
-sampler = Metropolis(nwalkers=500, nstep=2000, step_size=0.05,
-                     nelec=wf.nelec, ndim=wf.ndim,
-                     init=mol.domain('atomic'),
-                     move={'type': 'all-elec', 'proba': 'normal'},wf=wf)
+sampler = Metropolis(
+    nwalkers=500,
+    nstep=2000,
+    step_size=0.05,
+    nelec=wf.nelec,
+    ndim=wf.ndim,
+    init=mol.domain('atomic'),
+    move={
+        'type': 'all-elec',
+        'proba': 'normal'},
+    wf=wf)
 
 
 # optimizer
@@ -73,20 +79,20 @@ if 0:
 
     solver.initial_sampling(ntherm=1000, ndecor=100)
     solver.resampling(nstep=25, step_size=0.2,
-                    resample_from_last=True,
-                    resample_every=1, tqdm=False)
+                      resample_from_last=True,
+                      resample_every=1, tqdm=False)
 
     solver.ortho_mo = False
 
     data = solver.run(50, batchsize=None,
-                    loss='energy',
-                    grad='manual',
-                    clip_loss=True)
+                      loss='energy',
+                      grad='manual',
+                      clip_loss=True)
 
     save_observalbe('lih.pkl', solver.obs_dict)
     e, v = plot_energy(solver.obs_dict, e0=-8.06, show_variance=True)
     plot_data(solver.obs_dict, obs='jastrow.weight')
-    
+
 
 # # # optimize the geometry
 # solver.configure(task='geo_opt')

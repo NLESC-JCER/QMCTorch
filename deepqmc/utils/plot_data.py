@@ -37,7 +37,7 @@ def plot_energy(obs_dict, e0=None, show_variance=False):
     print("Variance : %f " % np.std(energy))
 
     # plot
-    ax.fill_between(epoch, energy-variance, energy +
+    ax.fill_between(epoch, energy - variance, energy +
                     variance, alpha=0.5, color='#4298f4')
     ax.plot(epoch, energy, color='#144477')
     if e0 is not None:
@@ -59,7 +59,7 @@ def plot_energy(obs_dict, e0=None, show_variance=False):
     return energy, variance
 
 
-def plot_data(obs_dict,  obs):
+def plot_data(obs_dict, obs):
     """Plot the evolution a given data
 
     Arguments:
@@ -75,8 +75,8 @@ def plot_data(obs_dict,  obs):
     epoch = np.arange(len(data))
     ax.plot(epoch, data, color='#144477')
 
-    if obs+'.grad' in obs_dict:
-        grad = data = np.array(obs_dict[obs+'.grad']).flatten()
+    if obs + '.grad' in obs_dict:
+        grad = data = np.array(obs_dict[obs + '.grad']).flatten()
         ax2 = ax.twinx()
         ax2.plot(epoch, data, color='blue')
         ax2.set_ylabel('gradient', color='blue')
@@ -104,11 +104,11 @@ def plot_walkers_traj(obs, traj_index='all'):
     nstep, nwalkers = eloc.shape
 
     celoc = np.cumsum(eloc, axis=0).T
-    celoc /= np.arange(1, nstep+1)
+    celoc /= np.arange(1, nstep + 1)
 
     var_decor = np.sqrt(np.var(np.mean(celoc, axis=1)))
     print(var_decor)
-    var = np.sqrt(np.var(celoc, axis=1) / (nstep-1))
+    var = np.sqrt(np.var(celoc, axis=1) / (nstep - 1))
     print(var)
 
     Tc = (var_decor / var)**2
@@ -118,12 +118,13 @@ def plot_walkers_traj(obs, traj_index='all'):
 
         if traj_index == 'all':
 
-            plt.plot(eloc, 'o', alpha=1/nwalkers, c='grey')
+            plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
             cmap = cm.hot(np.linspace(0, 1, nwalkers))
             for i in range(nwalkers):
                 plt.plot(celoc.T[:, i], color=cmap[i])
         else:
-            plt.plot(eloc[traj_index, :], 'o', alpha=1/nwalkers, c='grey')
+            plt.plot(eloc[traj_index, :], 'o',
+                     alpha=1 / nwalkers, c='grey')
             plt.plot(celoc.T[traj_index, :])
         plt.subplot(1, 2, 2)
         plt.hist(Tc)
@@ -142,14 +143,14 @@ def plot_block(obs_dict):
 
     eloc = np.array(obs_dict['local_energy']).squeeze(-1)
     nstep, nwalkers = eloc.shape
-    max_block_size = nstep//2
+    max_block_size = nstep // 2
 
     evar = []
     for size in range(1, max_block_size):
-        nblock = nstep//size
-        tmp = np.copy(eloc[:size*nblock, :])
+        nblock = nstep // size
+        tmp = np.copy(eloc[:size * nblock, :])
         tmp = tmp.reshape(nblock, size, nwalkers).mean(axis=1)
-        evar.append(np.sqrt(np.var(tmp, axis=0) / (nblock-1)))
+        evar.append(np.sqrt(np.var(tmp, axis=0) / (nblock - 1)))
 
     plt.plot(np.array(evar))
     plt.show()
@@ -160,10 +161,13 @@ def save_observalbe(filename, obs_dict):
 
     Arguments:
         filename {str} -- name of the file
-        obs_dict {dict} -- dictionary of observable    
+        obs_dict {dict} -- dictionary of observable
     """
     with open(filename, 'wb') as fhandle:
-        pickle.dump(obs_dict, fhandle, protocol=pickle.HIGHEST_PROTOCOL)
+        pickle.dump(
+            obs_dict,
+            fhandle,
+            protocol=pickle.HIGHEST_PROTOCOL)
 
 
 def load_observable(filename):

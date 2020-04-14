@@ -199,7 +199,7 @@ class OrbitalTest(Orbital):
 
         out = self.mo(self.ao(pos))
         out = out[:, :4, :4]
-        out = torch.det(out[:, :2, :2])*torch.det(out[:, 2:, :2])
+        out = torch.det(out[:, :2, :2]) * torch.det(out[:, 2:, :2])
         out = out.view(-1)
 
         # compute the jacobian
@@ -236,7 +236,7 @@ class TestTrace(unittest.TestCase):
 
         # define the wave function
         self.wf = OrbitalTest(self.mol)
-        self.x = 2*torch.rand(5, 3*self.mol.nelec)-1.
+        self.x = 2 * torch.rand(5, 3 * self.mol.nelec) - 1.
         self.x.requires_grad = True
 
     def test_ao_der(self):
@@ -267,11 +267,11 @@ class TestTrace(unittest.TestCase):
         d2AO = self.wf.ao(self.x, derivative=2)
 
         jac_auto = self.wf.test_grad_autograd(self.x)
-        jac_trace = btrace(iAO@dAO[:, :4, :4])*torch.det(AO)
+        jac_trace = btrace(iAO@dAO[:, :4, :4]) * torch.det(AO)
         assert(torch.allclose(jac_auto.sum(), jac_trace.sum()))
 
         hess_auto = self.wf.test_hess_autograd(self.x)
-        hess_trace = btrace(iAO@d2AO[:, :4, :4])*torch.det(AO)
+        hess_trace = btrace(iAO@d2AO[:, :4, :4]) * torch.det(AO)
         assert(torch.allclose(hess_auto.sum(), hess_trace.sum()))
 
     def test_kinetic(self):

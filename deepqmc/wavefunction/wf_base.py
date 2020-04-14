@@ -12,7 +12,7 @@ class WaveFunction(nn.Module):
 
         self.ndim = ndim
         self.nelec = nelec
-        self.ndim_tot = self.nelec*self.ndim
+        self.ndim_tot = self.nelec * self.ndim
         self.kinetic = kinetic
         self.cuda = cuda
         self.device = torch.device('cpu')
@@ -65,7 +65,9 @@ class WaveFunction(nn.Module):
         elif self.kinetic == 'fd':
             return self.kinetic_energy_finite_difference(pos)
         else:
-            raise ValueError('kinetic %s not recognized' % self.kinetic)
+            raise ValueError(
+                'kinetic %s not recognized' %
+                self.kinetic)
 
     def kinetic_energy_autograd(self, pos):
         '''Compute the second derivative of the network
@@ -127,7 +129,7 @@ class WaveFunction(nn.Module):
         out = torch.zeros(nwalk, 1)
 
         pos_tmp = pos.clone()
-        out = -2*self.forward(pos_tmp)
+        out = -2 * self.forward(pos_tmp)
 
         for icol in range(ndim):
 
@@ -141,9 +143,9 @@ class WaveFunction(nn.Module):
             pos_tmp[:, icol] -= eps
             feps += self.forward(pos_tmp)
 
-            out += feps/(eps**2)
+            out += feps / (eps**2)
 
-        return -0.5*out.view(-1, 1) / out
+        return -0.5 * out.view(-1, 1) / out
 
     def local_energy(self, pos):
         ''' local energy of the sampling points.'''
@@ -168,7 +170,7 @@ class WaveFunction(nn.Module):
         '''Compute the statistical uncertainty.
         Assuming the samples are uncorrelated.'''
         Npts = eloc.shape[0]
-        return torch.sqrt(eloc.var()/Npts)
+        return torch.sqrt(eloc.var() / Npts)
 
     def _energy_variance(self, pos):
         '''Return energy and variance.'''

@@ -1,4 +1,4 @@
-import numpy as np 
+import numpy as np
 import os
 import shutil
 import json
@@ -10,11 +10,13 @@ try:
 except ModuleNotFoundError:
     warnings.warn('scm python module not found')
 
+
 class CalculatorADF(CalculatorBase):
 
     def __init__(self, atoms, atom_coords, basis, scf, units):
 
-        CalculatorBase.__init__(self,atoms, atom_coords, basis, scf, units)
+        CalculatorBase.__init__(
+            self, atoms, atom_coords, basis, scf, units)
         self.run()
 
     def run(self):
@@ -27,8 +29,8 @@ class CalculatorADF(CalculatorBase):
             np.ndarray -- molecular orbital matrix
         """
 
-        wd = ''.join(self.atoms)+'_'+self.basis_name
-        t21_name = wd+'.t21'
+        wd = ''.join(self.atoms) + '_' + self.basis_name
+        t21_name = wd + '.t21'
         plams_wd = './plams_workdir'
         t21_path = os.path.join(plams_wd, os.path.join(wd, t21_name))
 
@@ -83,24 +85,25 @@ class CalculatorADF(CalculatorBase):
 
     def get_basis(self):
         """Get the basis information needed to compute the AO values."""
-        
+
         kf = plams.KFFile(self.out_file)
 
         self.basis.radial_type = 'sto'
         self.basis.harmonics_type = 'cart'
 
-        self.basis.nao  = kf.read('Basis','naos')
+        self.basis.nao = kf.read('Basis', 'naos')
         self.basis.nmo = kf.read('A', 'nmo_A')
 
         # number of bas per atom type
-        nbptr = kf.read('Basis','nbptr')
+        nbptr = kf.read('Basis', 'nbptr')
 
         # number of atom per atom typ
-        nqptr = kf.read('Geometry','nqptr')
-        atom_type = kf.read('Geometry','atomtype').split()
+        nqptr = kf.read('Geometry', 'nqptr')
+        atom_type = kf.read('Geometry', 'atomtype').split()
 
         # number of bas per atom type
-        nshells = np.array([nbptr[i]-nbptr[i-1] for i in range(1,len(nbptr))])
+        nshells = np.array([nbptr[i] - nbptr[i - 1]
+                            for i in range(1, len(nbptr))])
 
         # kx/ky/kz/kr exponent per atom type
         bas_kx = np.array(kf.read('Basis', 'kx'))
@@ -116,21 +119,22 @@ class CalculatorADF(CalculatorBase):
         self.basis.bas_kx, self.basis.bas_ky, self.basis.bas_kz = [], [], []
         self.basis.bas_kr = []
         self.basis.bas_exp, self.basis.bas_norm = [], []
-        
-        for iat, at in enumerate(atom_type):
-            
-            number_copy = nqptr[iat+1]-nqptr[iat]
-            idx_bos = list(range(nbptr[iat]-1,nbptr[iat+1]-1))
-            
-            self.basis.nshells += [nshells[iat]]*number_copy
 
-            self.basis.bas_kx += list(bas_kx[idx_bos])*number_copy
-            self.basis.bas_ky += list(bas_ky[idx_bos])*number_copy
-            self.basis.bas_kz += list(bas_kz[idx_bos])*number_copy
-            self.basis.bas_kr += list(bas_kr[idx_bos])*number_copy
-                  
-            self.basis.bas_exp += list(bas_exp[idx_bos])*number_copy
-            self.basis.bas_norm += list(bas_norm[idx_bos])*number_copy
+        for iat, at in enumerate(atom_type):
+
+            number_copy = nqptr[iat + 1] - nqptr[iat]
+            idx_bos = list(range(nbptr[iat] - 1, nbptr[iat + 1] - 1))
+
+            self.basis.nshells += [nshells[iat]] * number_copy
+
+            self.basis.bas_kx += list(bas_kx[idx_bos]) * number_copy
+            self.basis.bas_ky += list(bas_ky[idx_bos]) * number_copy
+            self.basis.bas_kz += list(bas_kz[idx_bos]) * number_copy
+            self.basis.bas_kr += list(bas_kr[idx_bos]) * number_copy
+
+            self.basis.bas_exp += list(bas_exp[idx_bos]) * number_copy
+            self.basis.bas_norm += list(
+                bas_norm[idx_bos]) * number_copy
 
         self.basis.nshells = np.array(self.basis.nshells)
         self.basis.bas_kx = np.array(self.basis.bas_kx)
@@ -143,26 +147,25 @@ class CalculatorADF(CalculatorBase):
         self.basis.bas_norm = np.array(self.basis.bas_norm)
 
         self.basis.index_ctr = np.arange(self.basis.nao)
-        self.basis.atom_coords_internal = np.array(kf.read('Geometry','xyz')).reshape(-1,3)
+        self.basis.atom_coords_internal = np.array(
+            kf.read('Geometry', 'xyz')).reshape(-1, 3)
 
         self.check_basis(self.basis)
 
-        return self.basis 
+        return self.basis
 
     def get_mo_coeffs(self):
         """Get the MO coefficient expressed in the BAS."""
 
         kf = plams.KFFile(self.out_file)
-        nao  = kf.read('Basis','naos')
+        nao = kf.read('Basis', 'naos')
         nmo = kf.read('A', 'nmo_A')
         self.mos = np.array(kf.read('A', 'Eigen-Bas_A'))
         self.mos = self.mos.reshape(nmo, nao).T
         self.mos = self.normalize_columns(self.mos)
         return self.mos
 
-
     def parse_basis(self):
-
         """Get the properties of all orbital in the molecule.
 
         Raises:
@@ -184,7 +187,8 @@ class CalculatorADF(CalculatorBase):
                 n = ishell
 
                 # loop over the angular momentum
-                for iangular, angular in enumerate(shell['angular_momentum']):
+                for iangular, angular in enumerate(
+                        shell['angular_momentum']):
 
                     # secondary qn and multiplicity
                     l = angular
@@ -206,12 +210,12 @@ class CalculatorADF(CalculatorBase):
                         self.bas_coeffs += shell['coefficients'][iangular]
 
                         # store the quantum numbers
-                        self.bas_n += [n]*nbas
-                        self.bas_l += [l]*nbas
-                        self.bas_m += [mvals[imult]]*nbas
+                        self.bas_n += [n] * nbas
+                        self.bas_l += [l] * nbas
+                        self.bas_m += [mvals[imult]] * nbas
 
                     # number of shells
-                    self.nshells[-1] += nbas*mult
+                    self.nshells[-1] += nbas * mult
 
         self.index_ctr = list(range(self.norb))
 
@@ -236,7 +240,9 @@ class CalculatorADF(CalculatorBase):
             data = f.readlines()
 
         # loop over all the basis
-        for ibas in range(data.index('BASIS\n')+1, data.index('END\n')):
+        for ibas in range(
+                data.index('BASIS\n') + 1,
+                data.index('END\n')):
 
             # split the data
             bas = data[ibas].split()
@@ -248,12 +254,11 @@ class CalculatorADF(CalculatorBase):
             zeta = float(bas[1])
 
             # get the primary quantum number
-            n = int(bas_name[0])-1
+            n = int(bas_name[0]) - 1
 
             if n not in atomic_data['electron_shells']:
-                atomic_data['electron_shells'][n] = {'angular_momentum': [],
-                                                     'exponents': [],
-                                                     'coefficients': []}
+                atomic_data['electron_shells'][n] = {
+                    'angular_momentum': [], 'exponents': [], 'coefficients': []}
 
             # secondary qn and multiplicity
             if bas_name[1] in self.get_l.keys():
@@ -264,11 +269,16 @@ class CalculatorADF(CalculatorBase):
 
             # store it
             if l not in atomic_data['electron_shells'][n]['angular_momentum']:
-                atomic_data['electron_shells'][n]['angular_momentum'].append(l)
-                atomic_data['electron_shells'][n]['coefficients'].append([])
-                atomic_data['electron_shells'][n]['exponents'].append([])
+                atomic_data['electron_shells'][n]['angular_momentum'].append(
+                    l)
+                atomic_data['electron_shells'][n]['coefficients'].append([
+                ])
+                atomic_data['electron_shells'][n]['exponents'].append([
+                ])
 
-            atomic_data['electron_shells'][n]['coefficients'][-1].append(1.)
-            atomic_data['electron_shells'][n]['exponents'][-1].append(zeta)
+            atomic_data['electron_shells'][n]['coefficients'][-1].append(
+                1.)
+            atomic_data['electron_shells'][n]['exponents'][-1].append(
+                zeta)
 
         return atomic_data

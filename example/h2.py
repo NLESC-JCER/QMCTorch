@@ -21,12 +21,11 @@ from deepqmc.utils.plot_data import (load_observable,
 
 set_torch_double_precision()
 
-
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-              calculator='adf',
-              basis='dzp',
-              unit='bohr')
+               calculator='adf',
+               basis='dzp',
+               unit='bohr')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
@@ -36,10 +35,17 @@ wf = Orbital(mol, kinetic='jacobi',
 wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(nwalkers=500, nstep=2000, step_size=0.2,
-                     ndim=wf.ndim, nelec=wf.nelec,
-                     init=mol.domain('atomic'),
-                     move={'type': 'all-elec', 'proba': 'normal'}, wf=wf)
+sampler = Metropolis(
+    nwalkers=500,
+    nstep=2000,
+    step_size=0.2,
+    ndim=wf.ndim,
+    nelec=wf.nelec,
+    init=mol.domain('atomic'),
+    move={
+        'type': 'all-elec',
+        'proba': 'normal'},
+    wf=wf)
 # wf=wf)
 
 # optimizer
@@ -89,7 +95,8 @@ if 0:
                       clip_loss=False)
 
     save_observalbe('h2.pkl', solver.obs_dict)
-    e, v = plot_energy(solver.obs_dict, e0=-1.1645, show_variance=True)
+    e, v = plot_energy(solver.obs_dict, e0=-
+                       1.1645, show_variance=True)
     plot_data(solver.obs_dict, obs='jastrow.weight')
 
 # # optimize the geometry

@@ -14,7 +14,7 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='C 0 0 0; O 0 0 2.173',
-               basis_type='gto',
+               calculator='pyscf',
                basis='sto-3g',
                unit='bohr')
 

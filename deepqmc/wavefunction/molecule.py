@@ -7,30 +7,28 @@ from mendeleev import element
 from deepqmc.wavefunction.calculator.adf import CalculatorADF
 from deepqmc.wavefunction.calculator.pyscf import CalculatorPySCF
 
+
 class Molecule(object):
 
-    def __init__(self, atom, calculator='adf', 
+    def __init__(self, atom, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr'):
 
         self.atoms_str = atom
-        self.unit = unit 
+        self.unit = unit
         self.max_angular = 2
-        
         self.atoms = []
         self.atom_coords = []
         self.atomic_number = []
         self.atomic_nelec = []
         self.nelec = 0
-        
+
         if self.unit not in ['angs', 'bohr']:
             raise ValueError('unit should be angs or bohr')
 
         self.process_atom_str()
-        calc = {'adf':CalculatorADF, 'pyscf':CalculatorPySCF }
-        self.calculator = calc[calculator](self.atoms, 
-                                             self.atom_coords, 
-                                             basis, scf, 
-                                             self.unit)
+        calc = {'adf': CalculatorADF, 'pyscf': CalculatorPySCF}
+        self.calculator = calc[calculator](
+            self.atoms, self.atom_coords, basis, scf, self.unit)
         self.basis = self.calculator.get_basis()
 
     def process_atom_str(self):
@@ -60,17 +58,19 @@ class Molecule(object):
             conv2bohr = 1
             if self.unit == 'angs':
                 conv2bohr = 1.88973
-            self.atom_coords.append([x*conv2bohr, y*conv2bohr, z*conv2bohr])
+            self.atom_coords.append(
+                [x * conv2bohr, y * conv2bohr, z * conv2bohr])
 
-            self.atomic_number.append(element(atom_data[0]).atomic_number)
+            self.atomic_number.append(
+                element(atom_data[0]).atomic_number)
             self.atomic_nelec.append(element(atom_data[0]).electrons)
             self.nelec += element(atom_data[0]).electrons
 
         # size of the system
         self.natom = len(self.atoms)
         assert self.nelec % 2 == 0, "Only systems with equal up/down electrons allowed so far"
-        self.nup = math.ceil(self.nelec/2)
-        self.ndown = math.floor(self.nelec/2)
+        self.nup = math.ceil(self.nelec / 2)
+        self.ndown = math.floor(self.nelec / 2)
 
     def read_xyz_file(self):
         """Process a xyz file containing the data
@@ -93,7 +93,7 @@ class Molecule(object):
         Arguments:
             method str -- 'center'  : all electron at the center of the molecule
                           'uniform' : all electrons in a box covering the molecule
-                          'normal   : all electrons in a shpere covering the molecule 
+                          'normal   : all electrons in a shpere covering the molecule
                           'atomic'  : electrons around atoms
 
         Raises:
@@ -113,7 +113,8 @@ class Molecule(object):
 
         elif method == 'normal':
             domain['mean'] = np.mean(self.atom_coords, 0)
-            domain['sigma'] = np.diag(np.std(self.atom_coords, 0)+0.25)
+            domain['sigma'] = np.diag(
+                np.std(self.atom_coords, 0) + 0.25)
 
         elif method == 'atomic':
             domain['atom_coords'] = self.atom_coords
@@ -121,14 +122,16 @@ class Molecule(object):
             domain['atom_nelec'] = self.atomic_nelec
 
         else:
-            raise ValueError('Method to initialize the walkers not recognized')
+            raise ValueError(
+                'Method to initialize the walkers not recognized')
 
         return domain
 
 
 if __name__ == "__main__":
-    
-    mol = Molecule(atom='H 0 0 -3.015; O 0 0 0; H 0 0 3.015', calculator='adf',
-                   basis='dzp', unit='bohr')
-    
-    
+
+    mol = Molecule(
+        atom='H 0 0 -3.015; O 0 0 0; H 0 0 3.015',
+        calculator='adf',
+        basis='dzp',
+        unit='bohr')

@@ -50,7 +50,8 @@ class Orbital(WaveFunction):
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
-        self.mo_scf = nn.Linear(mol.basis.nao, mol.basis.nmo, bias=False)
+        self.mo_scf = nn.Linear(
+            mol.basis.nao, mol.basis.nmo, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
         self.mo_scf.weight.requires_grad = False
         if self.cuda:
@@ -108,7 +109,7 @@ class Orbital(WaveFunction):
         mo_coeff = torch.tensor(
             self.mol.calculator.get_mo_coeffs()).type(
                 torch.get_default_dtype())
-        #return nn.Parameter(mo_coeff)
+        # return nn.Parameter(mo_coeff)
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
@@ -123,7 +124,7 @@ class Orbital(WaveFunction):
             x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
 
         Keyword Arguments:
-            ao {torch.tensor} -- AO matrix [nbatch, nelec,nao] 
+            ao {torch.tensor} -- AO matrix [nbatch, nelec,nao]
                                 if present used as input of the MO.
                                 usefull when updating the waeve function after a 1 elec move
                                  (default: {None})
@@ -142,7 +143,7 @@ class Orbital(WaveFunction):
         else:
             x = ao
 
-        # molecular orbitals        
+        # molecular orbitals
         x = self.mo_scf(x)
 
         # mix the mos
@@ -152,7 +153,7 @@ class Orbital(WaveFunction):
         x = self.pool(x)
 
         if self.use_jastrow:
-            return J*self.fc(x)
+            return J * self.fc(x)
 
         else:
             return self.fc(x)
@@ -210,7 +211,12 @@ class Orbital(WaveFunction):
             djast = self.jastrow(x, derivative=1, jacobian=False)
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
 
-            dao = self.ao(x, derivative=1, jacobian=False).transpose(2, 3)
+            dao = self.ao(
+                x,
+                derivative=1,
+                jacobian=False).transpose(
+                2,
+                3)
             dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
             djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
 
@@ -219,7 +225,7 @@ class Orbital(WaveFunction):
 
         kin, psi = self.kinpool(mo, d2mo, djast_dmo, d2jast_mo)
 
-        return self.fc(kin)/self.fc(psi)
+        return self.fc(kin) / self.fc(psi)
 
     def nuclear_potential(self, pos):
         """Computes the electron-nuclear term
@@ -235,12 +241,12 @@ class Orbital(WaveFunction):
 
         p = torch.zeros(pos.shape[0], device=self.device)
         for ielec in range(self.nelec):
-            pelec = pos[:, (ielec*self.ndim):(ielec+1)*self.ndim]
+            pelec = pos[:, (ielec * self.ndim):(ielec + 1) * self.ndim]
             for iatom in range(self.natom):
                 patom = self.ao.atom_coords[iatom, :]
                 Z = self.ao.atomic_number[iatom]
-                r = torch.sqrt(((pelec-patom)**2).sum(1))  # + 1E-12
-                p += -Z/r
+                r = torch.sqrt(((pelec - patom)**2).sum(1))  # + 1E-12
+                p += -Z / r
         return p.view(-1, 1)
 
     def electronic_potential(self, pos):
@@ -257,32 +263,34 @@ class Orbital(WaveFunction):
 
         pot = torch.zeros(pos.shape[0], device=self.device)
 
-        for ielec1 in range(self.nelec-1):
-            epos1 = pos[:, ielec1*self.ndim:(ielec1+1)*self.ndim]
-            for ielec2 in range(ielec1+1, self.nelec):
-                epos2 = pos[:, ielec2*self.ndim:(ielec2+1)*self.ndim]
-                r = torch.sqrt(((epos1-epos2)**2).sum(1))  # + 1E-12
-                pot += (1./r)
+        for ielec1 in range(self.nelec - 1):
+            epos1 = pos[:, ielec1 *
+                        self.ndim:(ielec1 + 1) * self.ndim]
+            for ielec2 in range(ielec1 + 1, self.nelec):
+                epos2 = pos[:, ielec2 *
+                            self.ndim:(ielec2 + 1) * self.ndim]
+                r = torch.sqrt(((epos1 - epos2)**2).sum(1))  # + 1E-12
+                pot += (1. / r)
         return pot.view(-1, 1)
 
     def nuclear_repulsion(self):
         """Computes the nuclear-nuclear repulsion term
 
         Returns:
-            torch.tensor -- value of the nuclear repulsion 
+            torch.tensor -- value of the nuclear repulsion
 
         TODO : vectorize that !!
         """
 
         vnn = 0.
-        for at1 in range(self.natom-1):
+        for at1 in range(self.natom - 1):
             c0 = self.ao.atom_coords[at1, :]
             Z0 = self.ao.atomic_number[at1]
-            for at2 in range(at1+1, self.natom):
+            for at2 in range(at1 + 1, self.natom):
                 c1 = self.ao.atom_coords[at2, :]
                 Z1 = self.ao.atomic_number[at2]
-                rnn = torch.sqrt(((c0-c1)**2).sum())
-                vnn += Z0*Z1/rnn
+                rnn = torch.sqrt(((c0 - c1)**2).sum())
+                vnn += Z0 * Z1 / rnn
         return vnn
 
     def geometry(self, pos):
@@ -297,7 +305,8 @@ class Orbital(WaveFunction):
         d = []
         for iat in range(self.natom):
             at = self.atoms[iat]
-            xyz = self.ao.atom_coords[iat, :].detach().numpy().tolist()
+            xyz = self.ao.atom_coords[iat,
+                                      :].detach().numpy().tolist()
             d.append((at, xyz))
         return d
 
@@ -319,7 +328,7 @@ if __name__ == "__main__":
                       use_jastrow=True,
                       cuda=False)
 
-    pos = torch.rand(20, wf_auto.ao.nelec*3)
+    pos = torch.rand(20, wf_auto.ao.nelec * 3)
     pos.requires_grad = True
 
     ej = wf_jacobi.energy(pos)

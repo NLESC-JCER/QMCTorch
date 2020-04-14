@@ -6,7 +6,8 @@ import numpy as np
 
 class SolverBase(object):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None):
+    def __init__(self, wf=None, sampler=None,
+                 optimizer=None, scheduler=None):
         """Base class for the solvers
 
         Keyword Arguments:
@@ -147,7 +148,7 @@ class SolverBase(object):
         """define the observalbe we want to track
 
         Arguments:
-            obs {list} -- list of str defining the observalbe. 
+            obs {list} -- list of str defining the observalbe.
                           Each str must correspond to a WaveFuncion method
         """
 
@@ -163,10 +164,11 @@ class SolverBase(object):
         if self.task == 'geo_opt' and 'geometry' not in self.obs_dict:
             self.obs_dict['geometry'] = []
 
-        for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+        for key, p in zip(self.wf.state_dict().keys(),
+                          self.wf.parameters()):
             if p.requires_grad:
                 self.obs_dict[key] = []
-                self.obs_dict[key+'.grad'] = []
+                self.obs_dict[key + '.grad'] = []
 
     def sample(self, ntherm=-1, ndecor=100, with_tqdm=True, pos=None):
         """Perform a sampling
@@ -191,8 +193,8 @@ class SolverBase(object):
         """Resample
 
         Arguments:
-            n {int} -- current epoch value 
-            nepoch {int} -- total number of epoch 
+            n {int} -- current epoch value
+            nepoch {int} -- total number of epoch
             pos {torch.tensor} -- positions of the walkers
 
         Returns:
@@ -202,14 +204,17 @@ class SolverBase(object):
         if self.resample.resample_every is not None:
 
             # resample the data
-            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
+            if (n % self.resample.resample_every == 0) or (
+                    n == nepoch - 1):
 
                 if self.resample.resample_from_last:
                     pos = pos.clone().detach().to(self.device)
                 else:
                     pos = None
                 pos = self.sample(
-                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=self.resample.tqdm)
+                    pos=pos,
+                    ntherm=self.resample.ntherm,
+                    with_tqdm=self.resample.tqdm)
                 self.dataloader.dataset.data = pos
 
             # update the weight of the loss if needed
@@ -218,7 +223,13 @@ class SolverBase(object):
 
         return pos
 
-    def get_observable(self, obs_dict, pos, local_energy=None, ibatch=None, **kwargs):
+    def get_observable(
+            self,
+            obs_dict,
+            pos,
+            local_energy=None,
+            ibatch=None,
+            **kwargs):
         """store observale in the dictionary
 
         Arguments:
@@ -252,9 +263,11 @@ class SolverBase(object):
                 self.obs_dict[obs].append(p.data.clone().numpy())
 
                 if p.grad is not None:
-                    self.obs_dict[obs+'.grad'].append(p.grad.clone().numpy())
+                    self.obs_dict[obs +
+                                  '.grad'].append(p.grad.clone().numpy())
                 else:
-                    self.obs_dict[obs+'.grad'].append(torch.zeros_like(p.data))
+                    self.obs_dict[obs +
+                                  '.grad'].append(torch.zeros_like(p.data))
 
             # store any other defined method
             elif hasattr(self.wf, obs):
@@ -281,7 +294,7 @@ class SolverBase(object):
                 eloc = self.obs_dict['local_energy'][-1]
                 e = np.mean(eloc)
                 v = np.var(eloc)
-                err = np.sqrt(v/len(eloc))
+                err = np.sqrt(v / len(eloc))
                 print('energy   : %f +/- %f' % (e, err))
                 print('variance : %f' % np.sqrt(v))
 
@@ -371,7 +384,7 @@ class SolverBase(object):
         Arguments:
             epoch {int} -- epoch number
             loss {float} -- current loss
-            filename {str} -- name of the check point file 
+            filename {str} -- name of the check point file
 
         Returns:
             float -- loss
@@ -453,20 +466,26 @@ class SolverBase(object):
         for snap in xyz:
             f.write('%d \n\n' % natom)
             for at in snap:
-                f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0], at[1][0]/nm2bohr,
-                                                      at[1][1]/nm2bohr,
-                                                      at[1][2]/nm2bohr))
+                f.write(
+                    '%s % 7.5f % 7.5f %7.5f\n' %
+                    (at[0],
+                     at[1][0] /
+                        nm2bohr,
+                        at[1][1] /
+                        nm2bohr,
+                        at[1][2] /
+                        nm2bohr))
             f.write('\n')
         f.close()
 
     def run(self, nepoch, batchsize=None, loss='variance'):
-        """Run the optimization 
+        """Run the optimization
 
         Arguments:
             nepoch {int} -- number of epoch to run for
 
         Keyword Arguments:
-            batchsize {int} -- size of the batch. If None, entire sampling points are used 
+            batchsize {int} -- size of the batch. If None, entire sampling points are used
                                (default: {None})
             loss {str} -- method to compute the loss (default: {'variance'})
 

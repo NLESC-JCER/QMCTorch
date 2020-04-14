@@ -53,7 +53,9 @@ class SlaterPooling(nn.Module):
         if return_matrix:
             return mo_up, mo_down
         else:
-            return (torch.det(mo_up) * torch.det(mo_down)).transpose(0, 1)
+            return (
+                torch.det(mo_up) *
+                torch.det(mo_down)).transpose(0, 1)
 
 
 if __name__ == "__main__":
@@ -64,4 +66,4 @@ if __name__ == "__main__":
     det.backward(torch.ones(10))
 
     det_true = torch.tensor([torch.det(xi).item() for xi in x])
-    print(det-det_true)
+    print(det - det_true)
