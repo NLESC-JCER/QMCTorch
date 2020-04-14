@@ -61,7 +61,8 @@ class SolverOrbital(SolverBase):
 
         # create the data loader
         self.dataset = DataSet(pos)
-        self.dataloader = DataLoader(self.dataset, batch_size=batchsize)
+        self.dataloader = DataLoader(
+            self.dataset, batch_size=batchsize)
 
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
@@ -189,7 +190,7 @@ class SolverOrbital(SolverBase):
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=True)
             psi = self.wf(lpos)
-            norm = 1./len(psi)
+            norm = 1. / len(psi)
 
             # evaluate the prefactor of the grads
             weight = eloc.clone()

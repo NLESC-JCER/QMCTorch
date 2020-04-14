@@ -23,7 +23,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.nup = nup
         self.ndown = ndown
-        self.nelec = nup+ndown
+        self.nelec = nup + ndown
         self.ndim = 3
 
         self.cuda = cuda
@@ -34,13 +34,15 @@ class TwoBodyJastrowFactor(nn.Module):
         self.weight = nn.Parameter(torch.tensor([w]))
         self.weight.requires_grad = True
 
-        bup = torch.cat((0.25*torch.ones(nup, nup), 0.5 *
+        bup = torch.cat((0.25 * torch.ones(nup, nup), 0.5 *
                          torch.ones(nup, ndown)), dim=1)
 
-        bdown = torch.cat((0.5*torch.ones(ndown, nup), 0.25 *
+        bdown = torch.cat((0.5 * torch.ones(ndown, nup), 0.25 *
                            torch.ones(ndown, ndown)), dim=1)
 
-        self.static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
+        self.static_weight = torch.cat(
+            (bup, bdown), dim=0).to(
+            self.device)
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
@@ -77,7 +79,7 @@ class TwoBodyJastrowFactor(nn.Module):
             assert(derivative == 1)
 
         size = pos.shape
-        assert size[1] == self.nelec*self.ndim
+        assert size[1] == self.nelec * self.ndim
         r = self.edist(pos)
         jast = self._get_jastrow_elements(r)
 
@@ -134,12 +136,13 @@ class TwoBodyJastrowFactor(nn.Module):
         prod_val = self._prod_unique_pairs(jast)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = 0.5*(self._sum_unique_pairs(d2jast, axis=-1)
-                         + self._sum_unique_pairs(d2jast, axis=-2))
+        hess_jast = 0.5 * (self._sum_unique_pairs(d2jast, axis=-1)
+                           + self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr))  # .sum(1)
-        hess_jast += self._partial_derivative(djast, out_mat=hess_jast)
+        hess_jast += self._partial_derivative(
+            djast, out_mat=hess_jast)
 
         return hess_jast * prod_val
 
@@ -259,17 +262,17 @@ class TwoBodyJastrowFactor(nn.Module):
         for idx in range(self.nelec):
 
             index_pairs = [(idx, j, 1) for j in range(
-                idx+1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
+                idx + 1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
 
-            for p1 in range(len(index_pairs)-1):
+            for p1 in range(len(index_pairs) - 1):
                 i1, j1, w1 = index_pairs[p1]
-                for p2 in range(p1+1, len(index_pairs)):
+                for p2 in range(p1 + 1, len(index_pairs)):
                     i2, j2, w2 = index_pairs[p2]
 
                     d1 = djast[..., i1, j1] * w1
                     d2 = djast[..., i2, j2] * w2
 
-                    out_mat[..., idx] += (d1*d2).sum(1)
+                    out_mat[..., idx] += (d1 * d2).sum(1)
 
         return out_mat
 
@@ -296,8 +299,8 @@ class TwoBodyJastrowFactor(nn.Module):
                 i, j = _el
                 mat_cpy[..., i, j] = 1
 
-        return mat_cpy[..., torch.tril(
-            torch.ones(self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
+        return mat_cpy[..., torch.tril(torch.ones(
+            self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
 
     def _sum_unique_pairs(self, mat, axis=None):
         """Sum the unique pairs of the lower triangluar matrix
@@ -311,7 +314,8 @@ class TwoBodyJastrowFactor(nn.Module):
         """
 
         mat_cpy = mat.clone()
-        mat_cpy[..., torch.tril(torch.ones(self.nelec, self.nelec)) == 1] = 0
+        mat_cpy[..., torch.tril(torch.ones(
+            self.nelec, self.nelec)) == 1] = 0
 
         if axis is None:
             return mat_cpy.sum()
@@ -356,10 +360,10 @@ if __name__ == "__main__":
     nbatch = 5
 
     n1, n2 = 2, 2
-    n = n1+n2
+    n = n1 + n2
     jastrow = TwoBodyJastrowFactor(n1, n2)
 
-    pos = torch.rand(nbatch, n*3)
+    pos = torch.rand(nbatch, n * 3)
     pos.requires_grad = True
 
     r = jastrow.edist(pos)
@@ -369,7 +373,7 @@ if __name__ == "__main__":
     r = jastrow.edist(pos)
     d2r = jastrow.edist(pos, derivative=2)
     d2r_grad = hess(r, pos)
-    print(2*d2r.sum(), d2r_grad.sum())
+    print(2 * d2r.sum(), d2r_grad.sum())
 
     val = jastrow(pos)
     dval = jastrow(pos, derivative=1)

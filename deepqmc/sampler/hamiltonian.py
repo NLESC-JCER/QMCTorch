@@ -46,14 +46,15 @@ class Hamiltonian(SamplerBase):
     def log_func(func):
         return lambda x: -torch.log(func(x))
 
-    def generate(self, pdf, ntherm=10, ndecor=10, with_tqdm=True, pos=None):
+    def generate(self, pdf, ntherm=10, ndecor=10,
+                 with_tqdm=True, pos=None):
         '''perform a HMC sampling of the pdf
         Returns:
             X (list) : positions of the walkers
         '''
 
         if ntherm < 0:
-            ntherm = self.nstep+ntherm
+            ntherm = self.nstep + ntherm
 
         self.walkers.initialize(pos=pos)
         self.walkers.pos = self.walkers.pos.clone()
@@ -85,7 +86,7 @@ class Hamiltonian(SamplerBase):
                 idecor += 1
 
         # print stats
-        print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
+        print("Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
         return torch.cat(pos)
 
     @staticmethod
@@ -113,7 +114,7 @@ class Hamiltonian(SamplerBase):
         p -= 0.5 * epsilon * get_grad(U, q)
 
         # full steps in q and p space
-        for iL in range(L-1):
+        for iL in range(L - 1):
             q = q + epsilon * p
             p -= 0.5 * epsilon * get_grad(U, q)
 
@@ -127,14 +128,14 @@ class Hamiltonian(SamplerBase):
         p = -p
 
         # current energy term
-        Enew = U(q) + 0.5*(p**2).sum(1)
+        Enew = U(q) + 0.5 * (p**2).sum(1)
 
         # metropolix accept/reject
         eps = torch.rand(Enew.shape)
-        cond = (torch.exp(Einit-Enew) < eps).view(-1)
+        cond = (torch.exp(Einit - Enew) < eps).view(-1)
         q[cond] = qinit[cond]
 
         # comute the accept rate
-        rate = cond.sum().float()/cond.shape[0]
+        rate = cond.sum().float() / cond.shape[0]
 
         return q, rate

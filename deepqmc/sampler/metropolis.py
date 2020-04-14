@@ -7,10 +7,20 @@ from time import time
 
 class Metropolis(SamplerBase):
 
-    def __init__(self, nwalkers=100, nstep=1000, step_size=3,
-                 nelec=1, ndim=1,
-                 init={'min': -5, 'max': 5},
-                 move={'type': 'one-elec', 'proba': 'uniform'}, wf=None):
+    def __init__(
+            self,
+            nwalkers=100,
+            nstep=1000,
+            step_size=3,
+            nelec=1,
+            ndim=1,
+            init={
+                'min': -5,
+                'max': 5},
+            move={
+                'type': 'one-elec',
+                'proba': 'uniform'},
+            wf=None):
         """Metropolis Hasting generator
 
         Args:
@@ -53,12 +63,13 @@ class Metropolis(SamplerBase):
 
         if self.movedict['proba'] == 'normal':
             _sigma = self.step_size / \
-                (2*torch.sqrt(2*torch.log(torch.tensor(2.))))
+                (2 * torch.sqrt(2 * torch.log(torch.tensor(2.))))
             self.multiVariate = MultivariateNormal(
-                torch.zeros(self.ndim), _sigma*torch.eye(self.ndim))
+                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
 
         self._move_per_iter = 1
-        if self.movedict['type'] not in ['one-elec', 'all-elec', 'all-elec-iter']:
+        if self.movedict['type'] not in [
+                'one-elec', 'all-elec', 'all-elec-iter']:
             raise ValueError(
                 " 'type' in move should be 'one-elec','all-elec','all-elec-iter'")
 
@@ -102,7 +113,7 @@ class Metropolis(SamplerBase):
         with torch.no_grad():
 
             if ntherm < 0:
-                ntherm = self.nstep+ntherm
+                ntherm = self.nstep + ntherm
 
             self.walkers.initialize(pos=pos)
 
@@ -128,14 +139,14 @@ class Metropolis(SamplerBase):
                     t0_pdf = time()
                     fxn = pdf(Xn)
                     fxn[fxn == 0.] = eps
-                    df = fxn/fx
+                    df = fxn / fx
 
                     # accept the moves
                     index = self._accept(df)
 
                     # acceptance rate
                     rate += index.byte().sum().float().to('cpu') / \
-                        (self.nwalkers*self._move_per_iter)
+                        (self.nwalkers * self._move_per_iter)
 
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
@@ -148,7 +159,9 @@ class Metropolis(SamplerBase):
                     idecor += 1
 
             if with_tqdm:
-                print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
+                print(
+                    "Acceptance rate %1.3f %%" %
+                    (rate / self.nstep * 100))
 
         return torch.cat(pos)
 
@@ -157,7 +170,7 @@ class Metropolis(SamplerBase):
 
         Args:
             pdf (callable): function to sample
-            id_elec (int): index f the electron to move 
+            id_elec (int): index f the electron to move
 
         Returns:
             torch.tensor: new positions of the walkers
@@ -183,7 +196,7 @@ class Metropolis(SamplerBase):
             new_pos[range(self.nwalkers), index,
                     :] += self._move(1)
 
-            return new_pos.view(self.nwalkers, self.nelec*self.ndim)
+            return new_pos.view(self.nwalkers, self.nelec * self.ndim)
 
     def _move(self, num_elec):
         """Return a random array of length size between
@@ -197,14 +210,16 @@ class Metropolis(SamplerBase):
             torch.tensor: random array
         """
         if self.movedict['proba'] == 'uniform':
-            d = torch.rand((self.nwalkers, num_elec, self.ndim),
-                           device=self.device).view(self.nwalkers, num_elec*self.ndim)
+            d = torch.rand(
+                (self.nwalkers, num_elec, self.ndim), device=self.device).view(
+                self.nwalkers, num_elec * self.ndim)
             return self.step_size * (2. * d - 1.)
 
         elif self.movedict['proba'] == 'normal':
             displacement = self.multiVariate.sample(
                 (self.nwalkers, num_elec)).to(self.device)
-            return displacement.view(self.nwalkers, num_elec*self.ndim)
+            return displacement.view(
+                self.nwalkers, num_elec * self.ndim)
 
     def _accept(self, P):
         """accept the move or not
@@ -218,7 +233,7 @@ class Metropolis(SamplerBase):
 
         P[P > 1] = 1.0
         tau = torch.rand_like(P)
-        index = (P-tau >= 0).reshape(-1)
+        index = (P - tau >= 0).reshape(-1)
         return index.type(torch.bool)
 
 

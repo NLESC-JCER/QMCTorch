@@ -14,7 +14,7 @@ from deepqmc.solver.plot_data import plot_energy
 
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
-               basis_type='gto', basis='sto-3g')
+               calculator='pyscf', basis='sto-3g')
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',

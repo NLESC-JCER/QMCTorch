@@ -31,7 +31,7 @@ class KineticPooling(nn.Module):
 
         self.nup = mol.nup
         self.ndown = mol.ndown
-        self.nelec = self.nup+self.ndown
+        self.nelec = self.nup + self.ndown
 
         self.orb_proj = OrbitalProjector(configs, mol)
 
@@ -69,7 +69,7 @@ class KineticPooling(nn.Module):
             Bup, Bdown = self.orb_proj.split_orbitals(d2MO)
         else:
             Bup, Bdown = self.orb_proj.split_orbitals(
-                d2MO + 2*dJdMO + d2JMO)
+                d2MO + 2 * dJdMO + d2JMO)
 
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
@@ -79,7 +79,8 @@ class KineticPooling(nn.Module):
         det_prod = torch.det(Aup) * torch.det(Adown)
 
         # kinetic terms
-        kinetic = -0.5*(btrace(iAup@Bup) + btrace(iAdown@Bdown)) * det_prod
+        kinetic = -0.5 * (btrace(iAup@Bup) +
+                          btrace(iAdown@Bdown)) * det_prod
 
         # reshape
         kinetic = kinetic.transpose(0, 1)
