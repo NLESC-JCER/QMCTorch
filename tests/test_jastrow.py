@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from deepqmc.wavefunction.jastrow import TwoBodyJastrowFactor
+from qmctorch.wavefunction.jastrow import TwoBodyJastrowFactor
 import unittest
 
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -45,7 +45,10 @@ class TestJastrow(unittest.TestCase):
 
         r = self.jastrow.edist(self.pos)
         dr = self.jastrow.edist(self.pos, derivative=1)
-        dr_grad = grad(r, self.pos, grad_outputs=torch.ones_like(r))[0]
+        dr_grad = grad(
+            r,
+            self.pos,
+            grad_outputs=torch.ones_like(r))[0]
         gradcheck(self.jastrow.edist, self.pos)
 
         assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
@@ -54,7 +57,10 @@ class TestJastrow(unittest.TestCase):
 
         val = self.jastrow(self.pos)
         dval = self.jastrow(self.pos, derivative=1)
-        dval_grad = grad(val, self.pos, grad_outputs=torch.ones_like(val))[0]
+        dval_grad = grad(
+            val,
+            self.pos,
+            grad_outputs=torch.ones_like(val))[0]
         gradcheck(self.jastrow, self.pos)
 
         assert torch.allclose(dval, dval_grad.view(

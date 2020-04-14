@@ -1,14 +1,9 @@
 from torch import optim
-from torch.optim import Adam
 
-from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital
-from deepqmc.solver.torch_utils import set_torch_double_precision
-
-from deepqmc.sampler.metropolis import Metropolis
-from deepqmc.wavefunction.molecule import Molecule
-
-from deepqmc.solver.plot_data import plot_energy
+from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.sampler import Metropolis
+from qmctorch.solver import SolverOrbital
+from qmctorch.utils import set_torch_double_precision
 
 set_torch_double_precision()
 
@@ -31,7 +26,7 @@ sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.1,
                      move={'type': 'one-elec', 'proba': 'normal'})
 
 # optimizer
-opt = Adam(wf.parameters(), lr=0.005)
+opt = optim.Adam(wf.parameters(), lr=0.005)
 
 # scheduler
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=20, gamma=0.75)
@@ -41,7 +36,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=scheduler)
 
 # # single point
-#pos, e, v = solver.single_point(ntherm=500, ndecor=100)
+# pos, e, v = solver.single_point(ntherm=500, ndecor=100)
 
 # #  sampling traj
 # pos = solver.sample(ntherm=0, ndecor=10)

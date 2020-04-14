@@ -1,12 +1,10 @@
 import torch
 import torch.optim as optim
 
-from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital
+from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.solver import SolverOrbital
+from qmctorch.sampler import Metropolis, Hamiltonian
 
-from deepqmc.sampler.metropolis import Metropolis
-from deepqmc.sampler.hamiltonian import Hamiltonian
-from deepqmc.wavefunction.molecule import Molecule
 
 import unittest
 

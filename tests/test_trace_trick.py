@@ -1,9 +1,7 @@
 import torch
 from torch.autograd import Variable, grad
 from pyscf import gto
-from deepqmc.wavefunction.wf_orbital import Orbital
-
-from deepqmc.wavefunction.molecule import Molecule
+from qmctorch.wavefunction import Molecule, Orbital
 import unittest
 
 

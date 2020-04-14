@@ -1,18 +1,11 @@
 from torch import optim
-from torch.optim import Adam, SGD
 
-from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital
-from deepqmc.utils.torch_utils import set_torch_double_precision
+from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.sampler import Metropolis
+from qmctorch.solver import SolverOrbital
 
-from deepqmc.sampler.metropolis import Metropolis
-from deepqmc.sampler.hamiltonian import Hamiltonian
-from deepqmc.wavefunction.molecule import Molecule
-
-from deepqmc.utils.plot_data import (load_observable,
-                                     save_observalbe, plot_block,
-                                     plot_walkers_traj,
-                                     plot_energy, plot_data)
+from qmctorch.utils import set_torch_double_precision
+from qmctorch.utils import (save_observalbe, plot_energy, plot_data)
 
 set_torch_double_precision()
 
@@ -51,7 +44,7 @@ lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
            {'params': wf.fc.parameters(), 'lr': 1E-3}]
 
 
-opt = Adam(lr_dict, lr=1E-3)
+opt = optim.Adam(lr_dict, lr=1E-3)
 # opt = SGD(lr_dict, lr=1E-1, momentum=0.9)
 # opt = StochasticReconfiguration(wf.parameters(), wf)
 

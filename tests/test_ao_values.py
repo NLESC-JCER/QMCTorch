@@ -1,10 +1,7 @@
 import torch
 from torch.autograd import Variable
-from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.wavefunction.molecule import Molecule
+from qmctorch.wavefunction import Orbital, Molecule
 from pyscf import gto
-
-import matplotlib.pyplot as plt
 
 import numpy as np
 import unittest
@@ -59,14 +56,10 @@ class TestAOvalues(unittest.TestCase):
         i2p_aovals = self.wf.ao(
             self.pos, derivative=2).detach().numpy()
 
-        ip_aovals_ref = self.m.eval_gto(
-            'GTOval_ip_cart', self.pos.detach().numpy()[:, :3])
-        ip_aovals_ref = ip_aovals_ref.sum(0)
+        i2p_aovals_ref = np.loadtxt('hess_ao_h2.dat')
 
-        i2p_aovals_ref = np.gradient(
-            ip_aovals_ref[:, self.iorb], self.x)
-
-        # assert np.allclose(i2p_aovals[:,0,self.iorb],i2p_aovals_ref)
+        assert np.allclose(
+            i2p_aovals[:, 0, self.iorb], i2p_aovals_ref)
 
 
 if __name__ == "__main__":
@@ -75,3 +68,4 @@ if __name__ == "__main__":
     t.setUp()
     t.test_ao()
     t.test_ao_deriv()
+    t.test_ao_hess()

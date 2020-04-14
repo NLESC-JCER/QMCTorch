@@ -1,18 +1,14 @@
-import numpy as np
-import matplotlib.pyplot as plt
-import torch
-from torch.optim import Adam, SGD, lr_scheduler
+from torch import optim
 
-from deepqmc.wavefunction.wf_orbital import Orbital
-from deepqmc.solver.solver_orbital import SolverOrbital
-from deepqmc.utils.torch_utils import set_torch_double_precision
-from deepqmc.sampler.metropolis import Metropolis
+from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.solver import SolverOrbital
+from qmctorch.sampler import Metropolis
 
-from deepqmc.wavefunction.molecule import Molecule
-from deepqmc.utils.plot_data import (load_observable,
-                                     save_observalbe, plot_block,
-                                     plot_walkers_traj,
-                                     plot_energy, plot_data)
+from qmctorch.utils import set_torch_double_precision
+
+
+from qmctorch.utils import (save_observalbe,
+                            plot_energy, plot_data)
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -55,12 +51,10 @@ lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
            {'params': wf.fc.parameters(), 'lr': 1E-3}]
 
 
-opt = Adam(lr_dict, lr=1E-3)
-# opt = SGD(lr_dict, lr=1E-1)
-# opt = StochasticReconfiguration(wf.parameters(), wf)
+opt = optim.Adam(lr_dict, lr=1E-3)
 
 # scheduler
-scheduler = lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
+scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # solver
 solver = SolverOrbital(wf=wf, sampler=sampler,
