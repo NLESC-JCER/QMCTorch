@@ -414,16 +414,16 @@ def _nabla_spherical_harmonics_l2(xyz, m):
 
     if m == 0:
         c0 = 0.31539156525252005
-        return c0 * ((- 2 * xyz[:, :, :, 0] - 2 * xyz[:, :, :, 1] + 4 * xyz[:, :, :, 2]) / r2 \
+        return c0 * ((- 2 * xyz[:, :, :, 0] - 2 * xyz[:, :, :, 1] + 4 * xyz[:, :, :, 2]) / r2
                       - 2 * (-xyz[:, :, :, 0]**2 - xyz[:, :, :, 1]**2 + 2 * xyz[:, :, :, 2]**2) * xyz.sum(3) / r3)
     if m == 2:
         c2 = 0.5462742152960396
-        return c2 * (2 * (xyz[:, :, :, 0] - xyz[:, :, :, 1]) / r2 - 2 * (xyz[:, :, :, 0]**2 \
+        return c2 * (2 * (xyz[:, :, :, 0] - xyz[:, :, :, 1]) / r2 - 2 * (xyz[:, :, :, 0]**2
                      - xyz[:, :, :, 1]**2) * xyz.sum(3) / r3)
     else:
         cm = 1.0925484305920792
         index = {-2: [0, 1], -1: [1, 2], 1: [2, 0]}
-        return cm * ((xyz[:, :, :, index[m][0]] + xyz[:, :, :, index[m][1]]) / r2 \ 
+        return cm * ((xyz[:, :, :, index[m][0]] + xyz[:, :, :, index[m][1]]) / r2
                    - 2 * xyz[:, :, :, index[m][0]] * xyz[:, :, :, index[m][1]] * xyz.sum(3) / r3)
 
 
@@ -508,12 +508,12 @@ def _lap_spherical_harmonics_l2(xyz, m):
     if m == 0:
         c0 = 0.31539156525252005
         xyz2 = xyz**2
-        return c0 * (6 / r6 * (xyz2[:, :, :, :2].sum(-1))**2 - xyz2[:, :, :, 2] * (xyz2[:, :, :, 0] \
+        return c0 * (6 / r6 * (xyz2[:, :, :, :2].sum(-1))**2 - xyz2[:, :, :, 2] * (xyz2[:, :, :, 0]
                     + xyz2[:, :, :, 1] - 2 * xyz2[:, :, :, 2]))
     if m == 2:
         c2 = 0.5462742152960396
         xyz2 = xyz**2
-        return c2 * (6 / r6 * xyz2[:, :, :, 2] * (xyz2[:, :, :, 1] - xyz2[:, :, :, 0]) \
+        return c2 * (6 / r6 * xyz2[:, :, :, 2] * (xyz2[:, :, :, 1] - xyz2[:, :, :, 0])
                    + xyz2[:, :, :, 1]**2 - xyz2[:, :, :, 0]**2)
     else:
         cm = 1.0925484305920792
