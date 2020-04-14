@@ -49,7 +49,9 @@ class ElectronDistance(nn.Module):
 
         # extact the diagonal as diag can be negative someties
         # due to numerical noise
-        diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
+        diag = torch.diag_embed(
+            torch.diagonal(
+                dist, dim1=-1, dim2=-2))
 
         # remove diagonal and add eps for backprop
         dist = torch.sqrt(dist - diag + eps_)
@@ -62,7 +64,7 @@ class ElectronDistance(nn.Module):
             eps_ = self.eps * \
                 torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
 
-            invr = (1./(dist+eps_)).unsqueeze(1)
+            invr = (1. / (dist + eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = diff_axis - diff_axis.transpose(2, 3)
             return diff_axis * invr
@@ -71,11 +73,12 @@ class ElectronDistance(nn.Module):
 
             eps_ = self.eps * \
                 torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-            invr3 = (1./(dist**3+eps_)).unsqueeze(1)
+            invr3 = (1. / (dist**3 + eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
 
-            diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
+            diff_axis = diff_axis[:, [
+                [1, 2], [2, 0], [0, 1]], ...].sum(2)
             return (diff_axis * invr3)
 
     @staticmethod
@@ -108,5 +111,5 @@ class ElectronDistance(nn.Module):
             nbatch, self.nelec, self.nelec, self.ndim)
         in2 = input.unsqueeze(2).expand(
             nbatch, self.nelec, self.nelec, self.ndim)
-        dist = torch.pow(in1-in2, 2).sum(3)
+        dist = torch.pow(in1 - in2, 2).sum(3)
         return dist

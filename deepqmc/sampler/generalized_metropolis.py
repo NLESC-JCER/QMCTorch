@@ -42,7 +42,7 @@ class GeneralizedMetropolis(SamplerBase):
         with torch.no_grad():
 
             if ntherm < 0:
-                ntherm = self.nstep+ntherm
+                ntherm = self.nstep + ntherm
 
             self.walkers.initialize(pos=pos)
 
@@ -73,13 +73,13 @@ class GeneralizedMetropolis(SamplerBase):
                 # transtions
                 Tif = self.trans(xi, xf, driftf)
                 Tfi = self.trans(xf, xi, drifti)
-                pmat = (Tif*rhof)/(Tfi*rhoi).double()
+                pmat = (Tif * rhof) / (Tfi * rhoi).double()
 
                 # accept the moves
                 index = self._accept(pmat)
 
                 # acceptance rate
-                rate += index.byte().sum().float()/self.nwalkers
+                rate += index.byte().sum().float() / self.nwalkers
 
                 # update position/function value
                 xi[index, :] = xf[index, :]
@@ -94,7 +94,9 @@ class GeneralizedMetropolis(SamplerBase):
                     idecor += 1
 
             if with_tqdm:
-                print("Acceptance rate %1.3f %%" % (rate/self.nstep*100))
+                print(
+                    "Acceptance rate %1.3f %%" %
+                    (rate / self.nstep * 100))
 
             self.walkers.pos.data = xi.data
         return torch.cat(pos)
@@ -121,7 +123,7 @@ class GeneralizedMetropolis(SamplerBase):
         new_pos[range(self.nwalkers), index,
                 :] += self._move(drift, index)
 
-        return new_pos.view(self.nwalkers, self.nelec*self.ndim)
+        return new_pos.view(self.nwalkers, self.nelec * self.ndim)
 
     def _move(self, drift, index):
 
@@ -129,14 +131,14 @@ class GeneralizedMetropolis(SamplerBase):
                        self.nelec, self.ndim)
 
         mv = MultivariateNormal(torch.zeros(self.ndim), np.sqrt(
-            self.step_size)*torch.eye(self.ndim))
+            self.step_size) * torch.eye(self.ndim))
 
         return self.step_size * d[range(self.nwalkers), index, :] \
             + mv.sample((self.nwalkers, 1)).squeeze()
 
     def trans(self, xf, xi, drifti):
-        a = (xf - xi - drifti*self.step_size).norm(dim=1)
-        return torch.exp(- 0.5*a / self.step_size)
+        a = (xf - xi - drifti * self.step_size).norm(dim=1)
+        return torch.exp(- 0.5 * a / self.step_size)
 
     def get_drift(self, pdf, x):
         with torch.enable_grad():
@@ -147,7 +149,7 @@ class GeneralizedMetropolis(SamplerBase):
             grad_rho = grad(rho, x,
                             grad_outputs=z,
                             only_inputs=True)[0]
-            return 0.5*grad_rho/rho
+            return 0.5 * grad_rho / rho
 
     def _accept(self, P):
         """accept the move or not
@@ -160,5 +162,5 @@ class GeneralizedMetropolis(SamplerBase):
         """
         P[P > 1] = 1.0
         tau = torch.rand(self.walkers.nwalkers).double()
-        index = (P-tau >= 0).reshape(-1)
+        index = (P - tau >= 0).reshape(-1)
         return index.type(torch.bool)
