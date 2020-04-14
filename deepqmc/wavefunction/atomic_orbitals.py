@@ -70,11 +70,11 @@ class AtomicOrbitals(nn.Module):
         self.radial = radial_dict[mol.basis.radial_type]
 
         # get the normalisation constants
-        # if hasattr(mol.basis,'bas_norm'):
-        #     self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
-        # else:
-        with torch.no_grad():
-            self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
+        if hasattr(mol.basis,'bas_norm'):
+            self.norm_cst = torch.tensor(mol.basis.bas_norm).type(dtype)
+        else:
+            with torch.no_grad():
+                self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
 
         self.cuda = cuda
         self.device = torch.device('cpu')

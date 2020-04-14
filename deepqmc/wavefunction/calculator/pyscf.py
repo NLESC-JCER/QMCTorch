@@ -117,7 +117,7 @@ class CalculatorPySCF(CalculatorBase):
         
         h5.create_dataset('bas_coeff',data=bas_coeff)
         h5.create_dataset('bas_exp',data=bas_exp)
-        #h5.create_dataset('bas_norm',data=bas_norm)
+        h5.create_dataset('bas_norm',data=bas_norm)
         
         
         h5.create_dataset('bas_n',data=bas_n)
@@ -157,7 +157,7 @@ class CalculatorPySCF(CalculatorBase):
 
         self.basis.bas_exp = h5['bas_exp'][()]
         self.basis.bas_coeffs = h5['bas_coeff'][()]
-        self.basis.bas_norm = h5['bas_norm'][()]
+        #self.basis.bas_norm = h5['bas_norm'][()]
 
         self.basis.index_ctr = h5['index_ctr'][()]
         self.basis.atom_coords_internal = self.atom_coords
