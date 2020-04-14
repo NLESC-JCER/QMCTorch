@@ -6,6 +6,8 @@ from pyscf import gto
 import numpy as np
 import unittest
 
+import os
+
 
 class TestAOvalues(unittest.TestCase):
 
@@ -56,7 +58,8 @@ class TestAOvalues(unittest.TestCase):
         i2p_aovals = self.wf.ao(
             self.pos, derivative=2).detach().numpy()
 
-        i2p_aovals_ref = np.loadtxt('hess_ao_h2.dat')
+        path = os.path.dirname(os.path.realpath(__file__))
+        i2p_aovals_ref = np.loadtxt(path + '/hess_ao_h2.dat')
 
         assert np.allclose(
             i2p_aovals[:, 0, self.iorb], i2p_aovals_ref)
