@@ -5,11 +5,8 @@ from torch.optim import Adam, SGD, lr_scheduler
 
 from deepqmc.wavefunction.wf_orbital import Orbital
 from deepqmc.solver.solver_orbital import SolverOrbital
-from deepqmc.solver.torch_utils import set_torch_double_precision
+from deepqmc.utils.torch_utils import set_torch_double_precision
 from deepqmc.sampler.metropolis import Metropolis
-#from deepqmc.sampler.metropolis_update_ao import Metropolis
-#from deepqmc.sampler.metropolis_kalos import Metropolis
-from deepqmc.optim.sr import StochasticReconfiguration
 
 from deepqmc.wavefunction.molecule import Molecule
 from deepqmc.utils.plot_data import (load_observable,
@@ -24,13 +21,11 @@ from deepqmc.utils.plot_data import (load_observable,
 
 set_torch_double_precision()
 
-
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               basis_type='sto',
+               calculator='adf',
                basis='dzp',
                unit='bohr')
-
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
@@ -40,17 +35,24 @@ wf = Orbital(mol, kinetic='jacobi',
 wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(nwalkers=500, nstep=2000, step_size=0.2,
-                     ndim=wf.ndim, nelec=wf.nelec,
-                     init=mol.domain('atomic'),
-                     move={'type': 'all-elec', 'proba': 'normal'}, wf=wf)
+sampler = Metropolis(
+    nwalkers=500,
+    nstep=2000,
+    step_size=0.2,
+    ndim=wf.ndim,
+    nelec=wf.nelec,
+    init=mol.domain('atomic'),
+    move={
+        'type': 'all-elec',
+        'proba': 'normal'},
+    wf=wf)
 # wf=wf)
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 3E-3},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
            {'params': wf.mo.parameters(), 'lr': 1E-3},
-           {'params': wf.fc.parameters(), 'lr': 3E-3}]
+           {'params': wf.fc.parameters(), 'lr': 1E-3}]
 
 
 opt = Adam(lr_dict, lr=1E-3)
@@ -64,7 +66,7 @@ scheduler = lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 0:
+if 1:
     pos, e, v = solver.single_point(ntherm=1000, ndecor=100)
     # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
@@ -77,7 +79,7 @@ if 0:
 
 
 # optimize the wave function
-if 1:
+if 0:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
     solver.initial_sampling(ntherm=1000, ndecor=100)
@@ -87,13 +89,14 @@ if 1:
                       resample_every=1, tqdm=True)
 
     solver.ortho_mo = False
-    data = solver.run(250, batchsize=None,
+    data = solver.run(50, batchsize=None,
                       loss='energy',
                       grad='manual',
-                      clip_loss=True)
+                      clip_loss=False)
 
     save_observalbe('h2.pkl', solver.obs_dict)
-    e, v = plot_energy(solver.obs_dict, e0=-1.1645, show_variance=True)
+    e, v = plot_energy(solver.obs_dict, e0=-
+                       1.1645, show_variance=True)
     plot_data(solver.obs_dict, obs='jastrow.weight')
 
 # # optimize the geometry

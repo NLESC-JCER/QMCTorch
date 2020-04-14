@@ -71,8 +71,11 @@ class Walkers(object):
             torch.tensor -- positions of the walkers
         """
         eps = 1E-6
-        pos = -eps + 2*eps*torch.rand(self.nwalkers, self.nelec*self.ndim)
-        return pos.type(torch.get_default_dtype()).to(device=self.device)
+        pos = -eps + 2 * eps * \
+            torch.rand(self.nwalkers, self.nelec * self.ndim)
+        return pos.type(
+            torch.get_default_dtype()).to(
+            device=self.device)
 
     def _init_uniform(self):
         """Initialize the walkers in a box covering the molecule
@@ -80,10 +83,12 @@ class Walkers(object):
         Returns:
             torch.tensor -- positions of the walkers
         """
-        pos = torch.rand(self.nwalkers, self.nelec*self.ndim)
+        pos = torch.rand(self.nwalkers, self.nelec * self.ndim)
         pos *= (self.init_domain['max'] - self.init_domain['min'])
         pos += self.init_domain['min']
-        return pos.type(torch.get_default_dtype()).to(device=self.device)
+        return pos.type(
+            torch.get_default_dtype()).to(
+            device=self.device)
 
     def _init_multivar(self):
         """Initialize the walkers in a sphere covering the molecule
@@ -96,7 +101,7 @@ class Walkers(object):
             torch.tensor(self.init_domain['sigma']))
         pos = multi.sample((self.nwalkers, self.nelec)).type(
             torch.get_default_dtype())
-        pos = pos.view(self.nwalkers, self.nelec*self.ndim)
+        pos = pos.view(self.nwalkers, self.nelec * self.ndim)
         return pos.to(device=self.device)
 
     def _init_atomic(self):
@@ -105,7 +110,7 @@ class Walkers(object):
         Returns:
             torch.tensor -- positions of the walkers
         """
-        pos = torch.zeros(self.nwalkers, self.nelec*self.ndim)
+        pos = torch.zeros(self.nwalkers, self.nelec * self.ndim)
         idx_ref, nelec_tot = [], 0
 
         nelec_placed, natom = [], 0
@@ -116,20 +121,23 @@ class Walkers(object):
 
         for iw in range(self.nwalkers):
 
-            nelec_placed = [0]*natom
+            nelec_placed = [0] * natom
             idx = torch.tensor(idx_ref)
             idx = idx[torch.randperm(nelec_tot)]
-            xyz = torch.tensor(self.init_domain['atom_coords'])[idx, :]
+            xyz = torch.tensor(
+                self.init_domain['atom_coords'])[
+                idx, :]
 
             for ielec in range(nelec_tot):
                 _idx = idx[ielec]
                 if nelec_placed[_idx] == 0:
-                    s = 1./self.init_domain['atom_num'][_idx]
+                    s = 1. / self.init_domain['atom_num'][_idx]
                 elif nelec_placed[_idx] < 5:
-                    s = 2./(self.init_domain['atom_num'][_idx]-2)
+                    s = 2. / (self.init_domain['atom_num'][_idx] - 2)
                 else:
-                    s = 3./(self.init_domain['atom_num'][_idx]-10)
-                xyz[ielec, :] += np.random.normal(scale=s, size=(1, 3))
+                    s = 3. / (self.init_domain['atom_num'][_idx] - 10)
+                xyz[ielec,
+                    :] += np.random.normal(scale=s, size=(1, 3))
                 nelec_placed[_idx] += 1
 
             pos[iw, :] = xyz.view(-1)

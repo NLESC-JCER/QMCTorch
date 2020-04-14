@@ -5,6 +5,7 @@
 .ipynb_checkpoints
 *.code-workspace
 *.t21
+*.hdf5
 
 build
 dist

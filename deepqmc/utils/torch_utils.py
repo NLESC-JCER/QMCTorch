@@ -96,9 +96,10 @@ class Loss(nn.Module):
                 median = torch.median(local_energies)
                 std = torch.std(local_energies)
                 mask = (local_energies < median +
-                        5*std) & (local_energies > median-5*std)
+                        5 * std) & (local_energies > median - 5 * std)
             else:
-                mask = torch.ones_like(local_energies).type(torch.bool)
+                mask = torch.ones_like(
+                    local_energies).type(torch.bool)
 
             # un weighted values
             if not self.use_weight:
@@ -120,17 +121,20 @@ class Loss(nn.Module):
                 self.weight['psi'] = self.wf(pos)
 
                 if self.weight['psi0'] is None:
-                    self.weight['psi0'] = self.weight['psi'].detach().clone()
+                    self.weight['psi0'] = self.weight['psi'].detach(
+                    ).clone()
 
-                w = (self.weight['psi']/self.weight['psi0'])**2
+                w = (self.weight['psi'] / self.weight['psi0'])**2
                 w /= w.sum()
 
                 if self.method == 'weighted-variance':
                     mu = torch.mean(local_energies)
-                    weighted_local_energies = (local_energies-mu)**2 * w
+                    weighted_local_energies = (
+                        local_energies - mu)**2 * w
 
                     # biased variance
-                    loss = torch.mean(weighted_local_energies[mask])*mask.sum()
+                    loss = torch.mean(
+                        weighted_local_energies[mask]) * mask.sum()
 
                     # unbiased variance
                     # loss = weighted_local_energies[mask].sum()/(mask.sum()-1)
@@ -160,4 +164,5 @@ class OrthoReg(nn.Module):
 
     def forward(self, W):
         """Return the loss : |W x W^T - I|."""
-        return self.alpha * torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))
+        return self.alpha * \
+            torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))

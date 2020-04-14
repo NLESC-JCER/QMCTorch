@@ -27,13 +27,18 @@ class SolverOrbital(SolverBase):
         SolverBase.__init__(self, wf, sampler, optimizer)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
-        self.opt = hvd.DistributedOptimizer(self.opt,
-                                            named_parameters=self.wf.named_parameters())
+        self.opt = hvd.DistributedOptimizer(
+            self.opt, named_parameters=self.wf.named_parameters())
 
         self.sampler.nwalkers //= hvd.size()
         self.sampler.walkers.nwalkers //= hvd.size()
 
-    def run(self, nepoch, batchsize=None, loss='variance', num_threads=1):
+    def run(
+            self,
+            nepoch,
+            batchsize=None,
+            loss='variance',
+            num_threads=1):
         '''Train the model.
 
         Arg:
@@ -88,7 +93,9 @@ class SolverOrbital(SolverBase):
         self.get_observable(self.obs_dict, pos)
         for n in range(nepoch):
 
-            printd(hvd.rank(), '----------------------------------------')
+            printd(
+                hvd.rank(),
+                '----------------------------------------')
             printd(hvd.rank(), 'epoch %d' % n)
 
             cumulative_loss = 0.
@@ -115,7 +122,8 @@ class SolverOrbital(SolverBase):
                 if self.wf.fc.clip:
                     self.wf.fc.apply(clipper)
 
-            cumulative_loss = self.metric_average(cumulative_loss, 'cum_loss')
+            cumulative_loss = self.metric_average(
+                cumulative_loss, 'cum_loss')
             if hvd.rank() == 0:
                 if cumulative_loss < min_loss:
                     min_loss = self.save_checkpoint(
@@ -124,16 +132,21 @@ class SolverOrbital(SolverBase):
             self.get_observable(self.obs_dict, pos, local_energy=eloc)
             self.print_observable(cumulative_loss)
 
-            printd(hvd.rank(), '----------------------------------------')
+            printd(
+                hvd.rank(),
+                '----------------------------------------')
 
             # resample the data
-            if (n % self.resample.resample_every == 0) or (n == nepoch-1):
+            if (n % self.resample.resample_every == 0) or (
+                    n == nepoch - 1):
                 if self.resample.resample_from_last:
                     pos = pos.clone().detach().to(self.device)
                 else:
                     pos = None
                 pos = self.sample(
-                    pos=pos, ntherm=self.resample.ntherm, with_tqdm=False)
+                    pos=pos,
+                    ntherm=self.resample.ntherm,
+                    with_tqdm=False)
                 pos.requires_grad = False
                 self.dataloader.dataset.data = pos
 

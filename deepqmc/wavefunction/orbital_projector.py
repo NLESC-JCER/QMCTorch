@@ -13,7 +13,7 @@ class OrbitalProjector(object):
 
         self.configs = configs
         self.nconfs = len(configs[0])
-        self.nmo = mol.norb
+        self.nmo = mol.basis.nmo
         self.nup = mol.nup
         self.ndown = mol.ndown
 
@@ -29,7 +29,8 @@ class OrbitalProjector(object):
         Pup = torch.zeros(self.nconfs, self.nmo, self.nup)
         Pdown = torch.zeros(self.nconfs, self.nmo, self.ndown)
 
-        for ic, (cup, cdown) in enumerate(zip(self.configs[0], self.configs[1])):
+        for ic, (cup, cdown) in enumerate(
+                zip(self.configs[0], self.configs[1])):
 
             for _id, imo in enumerate(cup):
                 Pup[ic][imo, _id] = 1.
@@ -48,4 +49,5 @@ class OrbitalProjector(object):
         Returns:
             torch.tensor -- all slater matrices
         """
-        return mo[:, :self.nup, :] @ self.Pup, mo[:, self.nup:, :] @ self.Pdown
+        return mo[:, :self.nup, :] @ self.Pup, mo[:,
+                                                  self.nup:, :] @ self.Pdown
