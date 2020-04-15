@@ -100,43 +100,76 @@ class SolverBase(object):
         self.task = task
 
         if task == 'geo_opt':
-            self.wf.ao.atom_coords.requires_grad = True
-
-            self.wf.ao.bas_coeffs.requires_grad = False
-            self.wf.ao.bas_exp.requires_grad = False
-            self.wf.jastrow.weight.requires_grad = False
-            for param in self.wf.mo.parameters():
-                param.requires_grad = False
-            self.wf.fc.weight.requires_grad = False
+            self.configure_geo_opt()
 
         elif task == 'wf_opt':
-            self.wf.ao.bas_exp.requires_grad = True
-            self.wf.ao.bas_coeffs.requires_grad = True
-            for param in self.wf.mo.parameters():
-                param.requires_grad = True
-            self.wf.fc.weight.requires_grad = True
-            self.wf.jastrow.weight.requires_grad = True
+            self.configure_wf_opt()
 
-            self.wf.ao.atom_coords.requires_grad = False
+            self.freeze_parameters(freeze)
 
-            if freeze is not None:
-                if not isinstance(freeze, list):
-                    freeze = [freeze]
-                for name in freeze:
-                    if name.lower() == 'ci':
-                        self.wf.fc.weight.requires_grad = False
-                    elif name.lower() == 'mo':
-                        for param in self.wf.mo.parameters():
-                            param.requires_grad = False
-                    elif name.lower() == 'ao':
-                        self.wf.ao.bas_exp.requires_grad = False
-                        self.wf.ao.bas_coeffs.requires_grad = False
-                    elif name.lower() == 'jastrow':
-                        self.wf.jastrow.weight.requires_grad = False
-                    else:
-                        opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
-                        raise ValueError(
-                            'Valid arguments for freeze are :', opt_freeze)
+    def configure_geo_opt(self):
+        """Configure the solver for geometry optimization."""
+
+        # opt atom coordinate
+        self.wf.ao.atom_coords.requires_grad = True
+
+        # no ao opt
+        self.wf.ao.bas_coeffs.requires_grad = False
+        self.wf.ao.bas_exp.requires_grad = False
+
+        # no jastrow opt
+        self.wf.jastrow.weight.requires_grad = False
+
+        # no mo opt
+        for param in self.wf.mo.parameters():
+            param.requires_grad = False
+
+        # no ci opt
+        self.wf.fc.weight.requires_grad = False
+
+    def configure_wf_opt(self):
+        """Configure the solver for wf optimization."""
+
+        # opt all wf parameters
+        self.wf.ao.bas_exp.requires_grad = True
+        self.wf.ao.bas_coeffs.requires_grad = True
+        for param in self.wf.mo.parameters():
+            param.requires_grad = True
+        self.wf.fc.weight.requires_grad = True
+        self.wf.jastrow.weight.requires_grad = True
+
+        # no opt the atom positions
+        self.wf.ao.atom_coords.requires_grad = False
+
+    def freeze_parameters(self, freeze):
+        """Freeze the optimization of specified params.
+
+        Arguments:
+            freeze {list} -- list of param to freeze
+        """
+        if freeze is not None:
+            if not isinstance(freeze, list):
+                freeze = [freeze]
+
+            for name in freeze:
+                if name.lower() == 'ci':
+                    self.wf.fc.weight.requires_grad = False
+
+                elif name.lower() == 'mo':
+                    for param in self.wf.mo.parameters():
+                        param.requires_grad = False
+
+                elif name.lower() == 'ao':
+                    self.wf.ao.bas_exp.requires_grad = False
+                    self.wf.ao.bas_coeffs.requires_grad = False
+
+                elif name.lower() == 'jastrow':
+                    self.wf.jastrow.weight.requires_grad = False
+
+                else:
+                    opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
+                    raise ValueError(
+                        'Valid arguments for freeze are :', opt_freeze)
 
     def initial_sampling(self, ntherm=-1, ndecor=100):
         """Configure the initial sampling
@@ -231,13 +264,8 @@ class SolverBase(object):
 
         return pos
 
-    def get_observable(
-            self,
-            obs_dict,
-            pos,
-            local_energy=None,
-            ibatch=None,
-            **kwargs):
+    def get_observable(self, obs_dict, pos,
+                       local_energy=None, ibatch=None, **kwargs):
         """store observale in the dictionary
 
         Arguments:
@@ -310,42 +338,6 @@ class SolverBase(object):
             elif verbose:
                 print(k + ' : ', self.obs_dict[k][-1])
                 print('loss %f' % (cumulative_loss))
-
-    def energy(self, pos=None):
-        """Get the energy of the current wave function
-
-        Keyword Arguments:
-            pos {torch.tensor} -- positions of the walkers (default: {None})
-                                  if None, perform a sampling first
-
-        Returns:
-            torch.tensor -- values of the energy
-        """
-        if pos is None:
-            pos = self.sample(ntherm=-1)
-
-        if self.wf.cuda and pos.device.type == 'cpu':
-            pos = pos.to(self.device)
-
-        return self.wf.energy(pos)
-
-    def variance(self, pos):
-        """Get the variance of the current wave function
-
-        Keyword Arguments:
-            pos {torch.tensor} -- positions of the walkers (default: {None})
-                                  if None, perform a sampling first
-
-        Returns:
-            torch.tensor -- values of the variance
-        """
-        if pos is None:
-            pos = self.sample(ntherm=-1)
-
-        if self.wf.cuda and pos.device.type == 'cpu':
-            pos = pos.to(self.device)
-
-        return self.wf.variance(pos)
 
     def single_point(self, pos=None, prt=True,
                      with_tqdm=True, ntherm=-1, ndecor=100,
@@ -473,15 +465,12 @@ class SolverBase(object):
         for snap in xyz:
             f.write('%d \n\n' % natom)
             for at in snap:
-                f.write(
-                    '%s % 7.5f % 7.5f %7.5f\n' %
-                    (at[0],
-                     at[1][0] /
-                        nm2bohr,
-                        at[1][1] /
-                        nm2bohr,
-                        at[1][2] /
-                        nm2bohr))
+                f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0],
+                                                      at[1][0] /
+                                                      nm2bohr,
+                                                      at[1][1] /
+                                                      nm2bohr,
+                                                      at[1][2] / nm2bohr))
             f.write('\n')
         f.close()
 
