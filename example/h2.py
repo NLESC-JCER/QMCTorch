@@ -7,7 +7,7 @@ from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 
 from qmctorch.utils import (save_observalbe,
-                            plot_energy, plot_data)
+                            plot_energy, plot_data, save_to_hdf5)
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -31,8 +31,8 @@ wf.jastrow.weight.data[0] = 1.
 
 # sampler
 sampler = Metropolis(nwalkers=500,
-                     nstep=2000, step_size=0.2,
-                     ntherm=1000, ndecor=100,
+                     nstep=20, step_size=0.2,
+                     ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
 
@@ -53,8 +53,9 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 0:
+if 1:
     pos, e, v = solver.single_point()
+    save_to_hdf5(solver, 'h2_qmc.hdf5')
     # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
     # Tc = plot_walkers_traj(obs)
@@ -66,7 +67,7 @@ if 0:
 
 
 # optimize the wave function
-if 1:
+if 0:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
 
