@@ -40,39 +40,35 @@ class SolverOrbital(SolverBase):
         """
 
         self.evaluate_gradient = {
-            'auto': self._evaluate_grad_auto,
-            'manual': self._evaluate_grad_manual}[grad]
+            'auto': self.evaluate_grad_auto,
+            'manual': self.evaluate_grad_manual}[grad]
 
         if 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
 
         # sample the wave function
-        pos = self.sample(ntherm=self.initial_sample.ntherm,
-                          ndecor=self.initial_sample.ndecor)
+        pos = self.sampler()
 
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
-        self.loss.use_weight = (self.resample.resample_every > 1)
+        self.loss.use_weight = (
+            self.resampling_options.resample_every > 1)
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
-
-        # resize the number of walkers
-        _nwalker_save = self.sampler.walkers.nwalkers
-        if self.resample.resample_from_last:
-            self.sampler.walkers.nwalkers = pos.shape[0]
-            self.sampler.nwalkers = pos.shape[0]
 
         # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
 
-        # change the number of steps
+        # change the number of steps/walker size
         _nstep_save = self.sampler.nstep
-        _step_size_save = self.sampler.step_size
-
-        self.sampler.nstep = self.resample.resample
-        self.sampler.step_size = self.resample.step_size
+        _ntherm_save = self.sampler.ntherm
+        _nwalker_save = self.sampler.walkers.nwalkers
+        if self.resampling_options.mode == 'update':
+            self.sampler.ntherm = -1
+            self.sampler.nstep = self.resampling_options.nstep_update
+            self.sampler.walkers.nwalkers = pos.shape[0]
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -83,7 +79,7 @@ class SolverOrbital(SolverBase):
         min_loss = 1E3
 
         # get the initial observalbe
-        self.get_observable(self.obs_dict, pos)
+        self.store_observable(self.obs_dict, pos)
 
         # loop over the epoch
         for n in range(nepoch):
@@ -119,7 +115,7 @@ class SolverOrbital(SolverBase):
             print('----------------------------------------')
 
             # resample the data
-            pos = self._resample(n, nepoch, pos)
+            pos = self.resample(n, pos)
 
             if self.task == 'geo_opt':
                 self.wf.update_mo_coeffs()
@@ -129,11 +125,10 @@ class SolverOrbital(SolverBase):
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
-        self.sampler.step_size = _step_size_save
+        self.sampler.ntherm = _ntherm_save
         self.sampler.walkers.nwalkers = _nwalker_save
-        self.sampler.nwalkers = _nwalker_save
 
-    def _evaluate_grad_auto(self, lpos):
+    def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.
 
         Arguments:
@@ -156,7 +151,7 @@ class SolverOrbital(SolverBase):
 
         return loss, eloc
 
-    def _evaluate_grad_manual(self, lpos):
+    def evaluate_grad_manual(self, lpos):
         """Evaluate the gradient using a low variance method
 
         Arguments:

@@ -18,8 +18,7 @@ def printd(rank, *args):
 
 class SolverOrbitalHorovod(SolverBase):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None):
         """Horovod distributed solver
 
         Keyword Arguments:
@@ -38,12 +37,7 @@ class SolverOrbitalHorovod(SolverBase):
         self.sampler.nwalkers //= hvd.size()
         self.sampler.walkers.nwalkers //= hvd.size()
 
-    def run(
-            self,
-            nepoch,
-            batchsize=None,
-            loss='variance',
-            num_threads=1):
+    def run(self, nepoch, batchsize=None, loss='variance', num_threads=1):
         '''Train the model.
 
         Arg:
@@ -61,8 +55,8 @@ class SolverOrbitalHorovod(SolverBase):
         torch.set_num_threads(num_threads)
 
         # sample the wave function
-        pos = self.sample(ntherm=self.resample.ntherm)
-        pos.requires_grad = False
+        pos = self.sampler(ntherm=self.resample.ntherm)
+        pos.requires_grad_(False)
 
         # handle the batch size
         if batchsize is None:
@@ -145,11 +139,12 @@ class SolverOrbitalHorovod(SolverBase):
                     pos = pos.clone().detach().to(self.device)
                 else:
                     pos = None
-                pos = self.sample(
-                    pos=pos,
-                    ntherm=self.resample.ntherm,
-                    with_tqdm=False)
-                pos.requires_grad = False
+
+                pos = self.sampler(pos=pos,
+                                   ntherm=self.resample.ntherm,
+                                   with_tqdm=False)
+                pos.requires_grad_(False)
+
                 self.dataloader.dataset.data = pos
 
             if self.task == 'geo_opt':
@@ -181,8 +176,8 @@ class SolverOrbitalHorovod(SolverBase):
         torch.set_num_threads(num_threads)
 
         # sample the wave function
-        pos = self.sample(ntherm=self.resample.ntherm)
-        pos.requires_grad = False
+        pos = self.sampler(ntherm=self.resample.ntherm)
+        pos.requires_grad_(False)
 
         # handle the batch size
         batchsize = len(pos)

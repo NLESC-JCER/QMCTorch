@@ -15,6 +15,7 @@ class SolverBase(object):
             sampler {SamplerBase} -- Samppler (default: {None})
             optimizer {torch.optim} -- Optimizer (default: {None})
         """
+
         self.wf = wf
         self.sampler = sampler
         self.opt = optimizer
@@ -31,13 +32,9 @@ class SolverBase(object):
         # default task optimize the wave function
         self.configure(task='wf_opt')
 
-        # init sampling
-        self.initial_sampling(ntherm=-1, ndecor=100)
-
         # resampling
         self.resampling(ntherm=-1, nstep=100,
-                        resample_from_last=True,
-                        resample_every=1)
+                        resample_from_last=True, resample_every=1)
 
         # observalbe
         self.observable(['local_energy'])
@@ -53,9 +50,7 @@ class SolverBase(object):
         else:
             self.device = torch.device('cpu')
 
-    def resampling(self, ntherm=-1, nstep=100, step_size=None,
-                   resample_from_last=True,
-                   resample_every=1, tqdm=False):
+    def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
         """Configure the resampling.
 
         Keyword Arguments:
@@ -71,18 +66,15 @@ class SolverBase(object):
             tqdm {bool} -- use tqdm (default: {False})
         """
 
-        self.resample = SimpleNamespace()
-        self.resample.ntherm = ntherm
-        self.resample.resample = nstep
+        self.resampling_options = SimpleNamespace()
+        valid_mode = ['never', 'full', 'update']:
+        if mode not in valid_mode
+        raise ValueError(
+            mode, 'not a valid update method : ', valid_mode)
 
-        if step_size is not None:
-            self.resample.step_size = step_size
-        else:
-            self.resample.step_size = self.sampler.step_size
-
-        self.resample.resample_from_last = resample_from_last
-        self.resample.resample_every = resample_every
-        self.resample.tqdm = tqdm
+        self.resampling_options.mode = mode
+        self.resampling_options.resample_every = resample_every
+        self.resampling_options.nstep_update = nstep_update
 
     def configure(self, task='wf_opt', freeze=None):
         """Configure the solver
@@ -171,19 +163,6 @@ class SolverBase(object):
                     raise ValueError(
                         'Valid arguments for freeze are :', opt_freeze)
 
-    def initial_sampling(self, ntherm=-1, ndecor=100):
-        """Configure the initial sampling
-
-        Keyword Arguments:
-            ntherm {int} -- Number of MC steps needed to thermalize
-                            (default: {-1})
-            ndecor {int} -- number of MC step for decorelation (default: {100})
-        """
-
-        self.initial_sample = SimpleNamespace()
-        self.initial_sample.ntherm = ntherm
-        self.initial_sample.ndecor = ndecor
-
     def observable(self, obs):
         """define the observalbe we want to track
 
@@ -210,27 +189,7 @@ class SolverBase(object):
                 self.obs_dict[key] = []
                 self.obs_dict[key + '.grad'] = []
 
-    def sample(self, ntherm=-1, ndecor=100, with_tqdm=True, pos=None):
-        """Perform a sampling
-
-        Keyword Arguments:
-            ntherm {int} -- Number of MC step for thermalization
-                            (default: {-1})
-            ndecor {int} -- Number of MC step for decorelation (default: {100})
-            with_tqdm {bool} -- use tqdm (default: {True})
-            pos {[type]} -- initial positions of the walkers (default: {None})
-
-        Returns:
-            torch.tensor -- positions of the walkers
-        """
-
-        pos = self.sampler.generate(
-            self.wf.pdf, ntherm=ntherm, ndecor=ndecor,
-            with_tqdm=with_tqdm, pos=pos)
-        pos.requires_grad = True
-        return pos
-
-    def _resample(self, n, nepoch, pos):
+    def resample(self, n, pos):
         """Resample
 
         Arguments:
@@ -242,20 +201,21 @@ class SolverBase(object):
             {torch.tensor} -- new positions of the walkers
         """
 
-        if self.resample.resample_every is not None:
+        if self.resampling_options.mode != 'never':
 
             # resample the data
-            if (n % self.resample.resample_every == 0) or (
-                    n == nepoch - 1):
+            if (n % self.resampling_options.resample_every == 0):
 
-                if self.resample.resample_from_last:
+                # make a copy of the pos if we update
+                if self.resampling_options.mode == 'update':
                     pos = pos.clone().detach().to(self.device)
+
+                # start from scratch otherwise
                 else:
                     pos = None
-                pos = self.sample(
-                    pos=pos,
-                    ntherm=self.resample.ntherm,
-                    with_tqdm=self.resample.tqdm)
+
+                # sample and update the dataset
+                pos = self.sampler(pos=pos)
                 self.dataloader.dataset.data = pos
 
             # update the weight of the loss if needed
@@ -264,8 +224,8 @@ class SolverBase(object):
 
         return pos
 
-    def get_observable(self, obs_dict, pos,
-                       local_energy=None, ibatch=None, **kwargs):
+    def store_observable(self, obs_dict, pos,
+                         local_energy=None, ibatch=None, **kwargs):
         """store observale in the dictionary
 
         Arguments:
@@ -339,44 +299,35 @@ class SolverBase(object):
                 print(k + ' : ', self.obs_dict[k][-1])
                 print('loss %f' % (cumulative_loss))
 
-    def single_point(self, pos=None, prt=True,
-                     with_tqdm=True, ntherm=-1, ndecor=100,
-                     no_grad=True):
+    def single_point(self):
         """Performs a single point calculation
 
         Keyword Arguments:
-            pos {torch.tensor} -- positions of the walkers (default: {None})
-            prt {bool} -- print the value if true (default: {True})
             with_tqdm {bool} -- use tqdm(default: {True})
-            ntherm {int} -- number of MC steps for thermalisation
-                            (default: {-1})
-            ndecor {int} -- number of MC step for decorelation (default: {100})
-            no_grad {bool} -- compute gradient (default: {True})
 
         Returns:
             [type] -- [description]
         """
 
         # check if we have to compute and store the grads
-        _grad = torch.enable_grad()
-        if no_grad and self.wf.kinetic != 'auto':
-            _grad = torch.no_grad()
+        grad_mode = torch.no_grad()
+        if self.wf.kinetic == 'auto':
+            grad_mode = torch.enable_grad()
 
-        with _grad:
+        with grad_mode:
 
-            if pos is None:
-                pos = self.sample(ntherm=ntherm, ndecor=ndecor,
-                                  with_tqdm=with_tqdm)
-
+            #  get the position and put to gpu if necessary
+            pos = self.sampler()
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 
+            # compute energy/variance/error
             e, s, err = self.wf._energy_variance_error(pos)
 
-            if prt:
-                print('Energy   : ', e.detach().item(),
-                      ' +/- ', err.detach().item())
-                print('Variance : ', s.detach().item())
+            # print data
+            print('Energy   : ', e.detach().item(),
+                  ' +/- ', err.detach().item())
+            print('Variance : ', s.detach().item())
 
         return pos, e, s
 

@@ -10,8 +10,9 @@ from .sampler_base import SamplerBase
 class GeneralizedMetropolis(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
+                 ntherm=-1, ndecor=1,
                  nelec=1, ndim=1,
-                 init={'type': 'uniform', 'min': -5, 'max': 5}):
+                 init={'type': 'uniform', 'min': -5, 'max': 5}, with_tqdm=True):
         """Metroplis Hasting sampler
 
         Args:
@@ -21,29 +22,23 @@ class GeneralizedMetropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, nelec, ndim, init)
+                             step_size, ntherm, ndecor, nelec, ndim, init, with_tqdm)
 
-    def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
-                 with_tqdm=True):
+    def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
 
         Args:
             pdf (callable): probability distribution function to be sampled
-            ntherm (int, optional): number of step before thermalization.
-                                    Defaults to 10.
-            ndecor (int, optional): number of steps for decorrelation.
-                                    Defaults to 50.
             pos (torch.tensor, optional): position to start with.
                                           Defaults to None.
-            with_tqdm (bool, optional): tqdm progress bar. Defaults to True.
 
         Returns:
             torch.tensor: positions of the walkers
         """
         with torch.no_grad():
 
-            if ntherm < 0:
-                ntherm = self.nstep + ntherm
+            if self.ntherm < 0:
+                self.ntherm = self.nstep + self.ntherm
 
             self.walkers.initialize(pos=pos)
 
@@ -56,7 +51,7 @@ class GeneralizedMetropolis(SamplerBase):
             rhoi[rhoi == 0] = 1E-16
             pos, rate, idecor = [], 0, 0
 
-            if with_tqdm:
+            if self.with_tqdm:
                 rng = tqdm(range(self.nstep))
             else:
                 rng = range(self.nstep)
@@ -89,18 +84,18 @@ class GeneralizedMetropolis(SamplerBase):
 
                 drifti[index, :] = driftf[index, :]
 
-                if (istep >= ntherm):
-                    if (idecor % ndecor == 0):
+                if (istep >= self.ntherm):
+                    if (idecor % self.ndecor == 0):
                         pos.append(xi.clone().detach())
                     idecor += 1
 
-            if with_tqdm:
-                print(
-                    "Acceptance rate %1.3f %%" %
-                    (rate / self.nstep * 100))
+            if self.with_tqdm:
+                print("Acceptance rate %1.3f %%" %
+                      (rate / self.nstep * 100))
 
             self.walkers.pos.data = xi.data
-        return torch.cat(pos)
+
+        return torch.cat(pos).requires_grad_()
 
     def move(self, drift):
         """Move electron one at a time in a vectorized way.

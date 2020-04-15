@@ -30,18 +30,12 @@ wf = Orbital(mol, kinetic='jacobi',
 wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(
-    nwalkers=500,
-    nstep=2000,
-    step_size=0.2,
-    ndim=wf.ndim,
-    nelec=wf.nelec,
-    init=mol.domain('atomic'),
-    move={
-        'type': 'all-elec',
-        'proba': 'normal'},
-    wf=wf)
-# wf=wf)
+sampler = Metropolis(nwalkers=500,
+                     nstep=2000, step_size=0.2,
+                     ntherm=1000, ndecor=100,
+                     nelec=wf.nelec, init=mol.domain('atomic'),
+                     move={'type': 'all-elec', 'proba': 'normal'})
+
 
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
@@ -60,7 +54,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
 if 1:
-    pos, e, v = solver.single_point(ntherm=1000, ndecor=100)
+    pos, e, v = solver.single_point()
     # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
     # Tc = plot_walkers_traj(obs)
@@ -75,7 +69,6 @@ if 1:
 if 0:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
-    solver.initial_sampling(ntherm=1000, ndecor=100)
 
     solver.resampling(nstep=25, ntherm=-1, step_size=0.2,
                       resample_from_last=True,

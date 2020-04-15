@@ -6,15 +6,13 @@ from .sampler_base import SamplerBase
 
 class Metropolis(SamplerBase):
 
-    def __init__(self, nwalkers=100, nstep=1000, step_size=3,
-                 nelec=1, ndim=1,
-                 init={
-                    'min': -5,
-                    'max': 5},
-                 move={
-                    'type': 'one-elec',
-                    'proba': 'uniform'},
-                 wf=None):
+    def __init__(self, nwalkers=100,
+                 nstep=1000, step_size=0.2,
+                 ntherm=-1, ndecor=1,
+                 nelec=1, ndim=3,
+                 init={'min': -5, 'max': 5},
+                 move={'type': 'all-elec', 'proba': 'normal'},
+                 with_tqdm=True):
         """Metropolis Hasting generator
 
         Args:
@@ -45,7 +43,8 @@ class Metropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, nelec, ndim, init, move)
+                             step_size, ntherm, ndecor,
+                             nelec, ndim, init, move, with_tqdm)
 
         if 'type' not in self.movedict.keys():
             print('Metroplis : Set 1 electron move by default')
@@ -74,19 +73,13 @@ class Metropolis(SamplerBase):
         else:
             self.fixed_id_elec_list = [None]
 
-    def generate(self, pdf, ntherm=10, ndecor=100, pos=None,
-                 with_tqdm=True):
+    def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
 
         Args:
             pdf (callable): probability distribution function to be sampled
-            ntherm (int, optional): number of step before thermalization.
-                                    Defaults to 10.
-            ndecor (int, optional): number of steps for decorrelation.
-                                    Defaults to 50.
             pos (torch.tensor, optional): position to start with.
                                           Defaults to None.
-            with_tqdm (bool, optional): tqdm progress bar. Defaults to True.
 
         Returns:
             torch.tensor: positions of the walkers
@@ -102,13 +95,13 @@ class Metropolis(SamplerBase):
             self.walkers.cuda = True
             self.device = torch.device('cuda')
 
-        if ntherm >= self.nstep:
+        if self.ntherm >= self.nstep:
             raise ValueError('Thermalisation longer than trajectory')
 
         with torch.no_grad():
 
-            if ntherm < 0:
-                ntherm = self.nstep + ntherm
+            if self.ntherm < 0:
+                self.ntherm = self.nstep + self.ntherm
 
             self.walkers.initialize(pos=pos)
 
@@ -117,7 +110,7 @@ class Metropolis(SamplerBase):
             fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
 
-            if with_tqdm:
+            if self.with_tqdm:
                 rng = tqdm(range(self.nstep))
             else:
                 rng = range(self.nstep)
@@ -146,17 +139,16 @@ class Metropolis(SamplerBase):
                     fx[index] = fxn[index]
                     fx[fx == 0] = eps
 
-                if (istep >= ntherm):
-                    if (idecor % ndecor == 0):
+                if (istep >= self.ntherm):
+                    if (idecor % self.ndecor == 0):
                         pos.append(self.walkers.pos.to('cpu').clone())
                     idecor += 1
 
-            if with_tqdm:
-                print(
-                    "Acceptance rate %1.3f %%" %
-                    (rate / self.nstep * 100))
+            if self.with_tqdm:
+                print("Acceptance rate %1.3f %%" %
+                      (rate / self.nstep * 100))
 
-        return torch.cat(pos)
+        return torch.cat(pos).requires_grad_()
 
     def move(self, pdf, id_elec):
         """Move electron one at a time in a vectorized way.
