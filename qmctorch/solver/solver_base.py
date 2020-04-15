@@ -384,7 +384,7 @@ class SolverBase(object):
             if prt:
                 print('Energy   : ', e.detach().item(),
                       ' +/- ', err.detach().item())
-                print('Variance : ', torch.sqrt(s).detach().item())
+                print('Variance : ', s.detach().item())
 
         return pos, e, s
 

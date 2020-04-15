@@ -18,8 +18,8 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='adf',
-               basis='dzp',
+               calculator='pyscf',
+               basis='sto-3g',
                unit='bohr')
 
 # define the wave function

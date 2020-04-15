@@ -5,13 +5,15 @@ from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis, Hamiltonian
 
-
+import numpy as np
 import unittest
 
 
 class TestH2ADF(unittest.TestCase):
 
     def setUp(self):
+
+        torch.manual_seed(0)
 
         # molecule
         self.mol = Molecule(
@@ -47,6 +49,10 @@ class TestH2ADF(unittest.TestCase):
         # ground state energy
         self.ground_state_energy = -1.16
 
+        # value of the energy for seed=0
+        self.expected_energy = -1.1572532653808594
+        self.expected_variance = 0.05085879936814308
+
         # ground state pos
         self.ground_state_pos = 0.69
 
@@ -59,12 +65,14 @@ class TestH2ADF(unittest.TestCase):
         # sample and compute observables
         _, e, v = self.solver.single_point()
 
-        print('Energy   :', e)
-        print('Variance :', v)
+        print('Energy   :', e.data)
+        print('Variance :', v.data)
 
-        # assert(e>self.ground_state_energy and e<-1.)
         assert(e > 2 * self.ground_state_energy and e < 0.)
         assert(v > 0 and v < 5.)
+
+        assert(np.isclose(e.data, self.expected_energy))
+        assert(np.isclose(v.data.item(), self.expected_variance))
 
 
 if __name__ == "__main__":

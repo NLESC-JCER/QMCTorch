@@ -50,9 +50,13 @@ class CalculatorPySCF(CalculatorBase):
         kz = {0: [0], 1: [0, 0, 1], 2: [0, 0, 1, 0, 1, 2]}
 
         h5 = h5py.File(self.out_file, 'w')
+
         h5['TotalEnergy'] = rhf.e_tot
+        h5['radial_type'] = 'sto'
+        h5['harmonics_type'] = 'cart'
+
         # number of unique ao (e.g. px,py,px -> p)
-        h5['nbas'] = mol.nbas
+        # h5['nbas'] = mol.nbas
 
         # total number of ao
         # wrong if there are d orbitals as counts only 5 d orbs (sph)
@@ -134,7 +138,12 @@ class CalculatorPySCF(CalculatorBase):
         mos = self.normalize_columns(mos)
         h5.create_dataset('mos', data=mos)
 
+        # atom coords
+        h5.create_dataset('atom_coords_internal',
+                          data=self.atom_coords)
         h5.close()
+
+        self.check_h5file()
 
     def get_atoms_str(self):
         """Refresh the atom string (use after atom move). """

@@ -13,6 +13,8 @@ class TestH2(unittest.TestCase):
 
     def setUp(self):
 
+        torch.manual_seed(0)
+
         # optimal parameters
         self.opt_r = 0.69  # the two h are at +0.69 and -0.69
         self.opt_sigma = 1.24
@@ -73,6 +75,8 @@ class TestH2(unittest.TestCase):
 
         print('Energy   :', e)
         print('Variance :', v)
+        print(e.data.item())
+        print(v.data.item())
 
         # assert(e>self.ground_state_energy and e<-1.)
         assert(e > 2 * self.ground_state_energy and e < 0.)

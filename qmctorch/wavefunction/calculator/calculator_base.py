@@ -28,7 +28,7 @@ class CalculatorBase(object):
         """Check if the hdf5 contains all the necessary fields."""
         h5 = h5py.File(self.out_file, 'r')
 
-        names = ['bas_coeffs', 'bas_exp', 'nshells',
+        names = ['bas_coeff', 'bas_exp', 'nshells',
                  'atom_coords_internal', 'nao', 'nmo',
                  'index_ctr', 'mos', 'TotalEnergy']
 
@@ -39,7 +39,8 @@ class CalculatorBase(object):
             names += ['bas_n', 'bas_l', 'bas_m']
 
         for n in names:
-            assert(n in h5.keys())
+            if n not in h5.keys():
+                raise KeyError(n, ' not in the hdf5 file')
 
         h5.close()
 
