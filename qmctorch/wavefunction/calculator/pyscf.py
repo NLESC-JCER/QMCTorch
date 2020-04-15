@@ -8,23 +8,17 @@ from .calculator_base import CalculatorBase
 
 class CalculatorPySCF(CalculatorBase):
 
-    def __init__(self, atoms, atom_coords, basis, scf, units):
+    def __init__(self, atoms, atom_coords, basis, scf, units, molname):
 
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units)
-        self.basis.harmonics_type = 'cartesian'
+            self, atoms, atom_coords, basis, scf, units, molname, 'pyscf')
         self.run()
 
     def run(self):
         """Run the scf calculation using PySCF."""
 
-        h5name = ''.join(self.atoms) + '_' + self.basis_name + '.hdf5'
-        if os.path.isfile(h5name):
-
-            print('Reusing previous calculation from ', h5name)
-            h5 = h5py.File(h5name, 'r')
-            e = h5['TotalEnergy'][()]
-            print('== SCF Energy : ', e)
+        if os.path.isfile(self.out_file):
+            print('Reusing previous calculation from ', self.out_file)
 
         else:
 
@@ -38,32 +32,37 @@ class CalculatorPySCF(CalculatorBase):
                 unit=self.units)
             rhf = scf.RHF(mol).run()
 
-            self.save_data(mol, rhf, h5name)
+            self.save_data(mol, rhf)
 
-        self.out_file = h5name
+        # print total energy
+        self.print_total_energy()
 
-    def save_data(self, mol, rhf, file_name):
+    def save_data(self, mol, rhf):
         """Save the data to HDF5
 
         Arguments:
             mol {pyscf.gto.M} -- psycf Molecule
             rhf {pyscf.scf} -- scf object
-            file_name {str} -- name of the file
         """
 
         kx = {0: [0], 1: [1, 0, 0], 2: [2, 1, 1, 0, 0, 0]}
         ky = {0: [0], 1: [0, 1, 0], 2: [0, 1, 0, 2, 1, 0]}
         kz = {0: [0], 1: [0, 0, 1], 2: [0, 0, 1, 0, 1, 2]}
 
-        h5 = h5py.File(file_name, 'w')
+        h5 = h5py.File(self.out_file, 'w')
+
         h5['TotalEnergy'] = rhf.e_tot
+        h5['radial_type'] = 'gto'
+        h5['harmonics_type'] = 'cart'
+
         # number of unique ao (e.g. px,py,px -> p)
-        h5['nbas'] = mol.nbas
+        # h5['nbas'] = mol.nbas
 
         # total number of ao
         # wrong if there are d orbitals as counts only 5 d orbs (sph)
         # h5['nao'] = mol.nao
         h5['nao'] = len(mol.cart_labels())
+        h5['nmo'] = rhf.mo_energy.shape[0]
 
         nshells = [0] * mol.natm
 
@@ -134,60 +133,17 @@ class CalculatorPySCF(CalculatorBase):
         h5.create_dataset('bas_ky', data=bas_ky)
         h5.create_dataset('bas_kz', data=bas_kz)
 
-        h5['nmo'] = rhf.mo_energy.shape[0]
-        h5.create_dataset('mos', data=rhf.mo_coeff)
-        h5.create_dataset('cart2sph', data=mol.cart2sph_coeff())
+        # molecular orbitals
+        mos = mol.cart2sph_coeff() @ rhf.mo_coeff
+        mos = self.normalize_columns(mos)
+        h5.create_dataset('mos', data=mos)
 
+        # atom coords
+        h5.create_dataset('atom_coords_internal',
+                          data=self.atom_coords)
         h5.close()
 
-    def get_basis(self):
-        """Get the basis information needed to compute the AO values."""
-
-        h5 = h5py.File(self.out_file, 'r')
-
-        self.basis.radial_type = 'gto'
-        self.basis.harmonics_type = 'cart'
-
-        self.basis.nao = int(h5['nao'][()])
-        self.basis.nmo = int(h5['nmo'][()])
-
-        self.basis.nshells = h5['nshells'][()]
-
-        self.basis.bas_kr = h5['bas_kr'][()]
-        self.basis.bas_kx = h5['bas_kx'][()]
-        self.basis.bas_ky = h5['bas_ky'][()]
-        self.basis.bas_kz = h5['bas_kz'][()]
-
-        self.basis.bas_n = h5['bas_n'][()]
-        self.basis.bas_l = h5['bas_l'][()]
-
-        self.basis.bas_exp = h5['bas_exp'][()]
-        self.basis.bas_coeffs = h5['bas_coeff'][()]
-
-        # the norm given by pyscf only accounts
-        # for the radial part
-        # self.basis.bas_norm = h5['bas_norm'][()]
-
-        self.basis.index_ctr = h5['index_ctr'][()]
-        self.basis.atom_coords_internal = self.atom_coords
-
-        h5.close()
-
-        self.check_basis(self.basis)
-
-        return self.basis
-
-    def get_mo_coeffs(self):
-        """Get the MO coefficient expressed in the BAS."""
-
-        h5 = h5py.File(self.out_file, 'r')
-
-        mos = h5['mos'][()]
-        cart2sph = h5['cart2sph']
-        bas_mos = cart2sph @ mos
-        h5.close()
-
-        return self.normalize_columns(bas_mos)
+        self.check_h5file()
 
     def get_atoms_str(self):
         """Refresh the atom string (use after atom move). """

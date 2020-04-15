@@ -5,13 +5,17 @@ from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis, Hamiltonian
 
+import platform
 
+import numpy as np
 import unittest
 
 
 class TestH2(unittest.TestCase):
 
     def setUp(self):
+
+        torch.manual_seed(0)
 
         # optimal parameters
         self.opt_r = 0.69  # the two h are at +0.69 and -0.69
@@ -62,7 +66,7 @@ class TestH2(unittest.TestCase):
         # ground state pos
         self.ground_state_pos = 0.69
 
-    def test_single_point(self):
+    def test1_single_point(self):
 
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
         self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
@@ -71,14 +75,21 @@ class TestH2(unittest.TestCase):
         # sample and compute observables
         _, e, v = self.solver.single_point()
 
-        print('Energy   :', e)
-        print('Variance :', v)
+        # values on different arch
+        expected_energy = [-1.1464850902557373,
+                           -1.14937478612449]
 
-        # assert(e>self.ground_state_energy and e<-1.)
-        assert(e > 2 * self.ground_state_energy and e < 0.)
-        assert(v > 0 and v < 5.)
+        # values on different arch
+        expected_variance = [0.9279592633247375,
+                             0.7445300449383236]
 
-    def test_single_point_hmc(self):
+        assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
+        assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
+
+        # assert(e > 2 * self.ground_state_energy and e < 0.)
+        # assert(v > 0 and v < 5.)
+
+    def test2_single_point_hmc(self):
 
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
         self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
@@ -87,14 +98,21 @@ class TestH2(unittest.TestCase):
         # sample and compute observables
         _, e, v = self.solver.single_point()
 
-        print('Energy   :', e)
-        print('Variance :', v)
+        # values on different arch
+        expected_energy = [-1.077970027923584,
+                           -1.027975961270174]
 
-        # assert(e>self.ground_state_energy and e<-1.)
-        assert(e > 2 * self.ground_state_energy and e < 0.)
-        assert(v > 0 and v < 5.)
+        # values on different arch
+        expected_variance = [0.17763596773147583,
+                             0.19953053065068135]
 
-    def test_geo_opt(self):
+        assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
+        assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
+
+        # assert(e > 2 * self.ground_state_energy and e < 0.)
+        # assert(v > 0 and v < 5.)
+
+    def test3_geo_opt(self):
 
         self.solver.wf.ao.atom_coords[0, 2].data = torch.tensor(-0.37)
         self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)
@@ -122,5 +140,5 @@ if __name__ == "__main__":
     # unittest.main()
     t = TestH2()
     t.setUp()
-    t.test_single_point()
+    t.test1_single_point()
     # t.test_single_point_hmc()

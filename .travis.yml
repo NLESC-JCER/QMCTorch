@@ -1,6 +1,6 @@
 # Config file for automatic testing at travis-ci.org
 sudo: false
-distr : "trusty"
+distr : "bionic"
 
 language: generic
 
@@ -27,7 +27,8 @@ install:
 
 # command to run tests
 script:
-  - pytest --cov=qmctorch tests --cov-report xml:coverage.xml
+  - cd tests
+  - pytest --cov=qmctorch --cov-report xml:coverage.xml
   - mv coverage.xml ../
   - mv .coverage ../
   - cd ../

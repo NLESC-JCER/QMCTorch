@@ -9,7 +9,8 @@ from .calculator.pyscf import CalculatorPySCF
 class Molecule(object):
 
     def __init__(self, atom, calculator='adf',
-                 scf='hf', basis='dzp', unit='bohr'):
+                 scf='hf', basis='dzp', unit='bohr',
+                 name=None):
 
         self.atoms_str = atom
         self.unit = unit
@@ -19,14 +20,18 @@ class Molecule(object):
         self.atomic_number = []
         self.atomic_nelec = []
         self.nelec = 0
+        self.name = name
 
         if self.unit not in ['angs', 'bohr']:
             raise ValueError('unit should be angs or bohr')
 
         self.process_atom_str()
-        calc = {'adf': CalculatorADF, 'pyscf': CalculatorPySCF}
-        self.calculator = calc[calculator](
-            self.atoms, self.atom_coords, basis, scf, self.unit)
+
+        calc = {'adf': CalculatorADF,
+                'pyscf': CalculatorPySCF}[calculator]
+
+        self.calculator = calc(
+            self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
         self.basis = self.calculator.get_basis()
 
     def process_atom_str(self):
@@ -70,6 +75,10 @@ class Molecule(object):
             raise ValueError("Only equal spin up/down supported.")
         self.nup = math.ceil(self.nelec / 2)
         self.ndown = math.floor(self.nelec / 2)
+
+        # name of the system
+        if self.name is None:
+            self.name = self.get_mol_name(self.atoms)
 
     def read_xyz_file(self):
         """Process a xyz file containing the data
@@ -127,6 +136,14 @@ class Molecule(object):
                 'Method to initialize the walkers not recognized')
 
         return domain
+
+    @staticmethod
+    def get_mol_name(atoms):
+        mol_name = ''
+        unique_atoms = list(set(atoms))
+        for ua in unique_atoms:
+            mol_name += ua + str(atoms.count(ua))
+        return mol_name
 
 
 if __name__ == "__main__":
