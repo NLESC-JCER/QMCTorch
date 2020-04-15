@@ -7,7 +7,7 @@ from qmctorch.utils import (DataSet, Loss, OrthoReg)
 
 try:
     import horovod.torch as hvd
-except ImportError:
+except ModuleNotFoundError:
     pass
 
 
