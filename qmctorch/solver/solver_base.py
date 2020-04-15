@@ -33,8 +33,7 @@ class SolverBase(object):
         self.configure(task='wf_opt')
 
         # resampling
-        self.resampling(ntherm=-1, nstep=100,
-                        resample_from_last=True, resample_every=1)
+        self.configure_resampling()
 
         # observalbe
         self.observable(['local_energy'])
@@ -67,10 +66,10 @@ class SolverBase(object):
         """
 
         self.resampling_options = SimpleNamespace()
-        valid_mode = ['never', 'full', 'update']:
-        if mode not in valid_mode
-        raise ValueError(
-            mode, 'not a valid update method : ', valid_mode)
+        valid_mode = ['never', 'full', 'update']
+        if mode not in valid_mode:
+            raise ValueError(
+                mode, 'not a valid update method : ', valid_mode)
 
         self.resampling_options.mode = mode
         self.resampling_options.resample_every = resample_every
@@ -215,7 +214,7 @@ class SolverBase(object):
                     pos = None
 
                 # sample and update the dataset
-                pos = self.sampler(pos=pos)
+                pos = self.sampler(self.wf.pdf, pos=pos)
                 self.dataloader.dataset.data = pos
 
             # update the weight of the loss if needed
@@ -317,7 +316,7 @@ class SolverBase(object):
         with grad_mode:
 
             #  get the position and put to gpu if necessary
-            pos = self.sampler()
+            pos = self.sampler(self.wf.pdf)
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 

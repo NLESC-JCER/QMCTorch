@@ -47,7 +47,7 @@ class SolverOrbital(SolverBase):
             self.opt.lpos_needed = False
 
         # sample the wave function
-        pos = self.sampler()
+        pos = self.sampler(self.wf.pdf)
 
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
