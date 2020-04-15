@@ -27,7 +27,8 @@ install:
 
 # command to run tests
 script:
-  - pytest --cov=qmctorch tests --cov-report xml:coverage.xml
+  - cd tests
+  - pytest --cov=qmctorch --cov-report xml:coverage.xml
   - mv coverage.xml ../
   - mv .coverage ../
   - cd ../
