@@ -5,7 +5,7 @@ from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis, Hamiltonian
 
-
+import numpy as np
 import unittest
 
 
@@ -73,14 +73,14 @@ class TestH2(unittest.TestCase):
         # sample and compute observables
         _, e, v = self.solver.single_point()
 
-        print('Energy   :', e)
-        print('Variance :', v)
-        print(e.data.item())
-        print(v.data.item())
+        expected_energy = -1.1464850902557373
+        expected_variance = 0.9279592633247375
 
-        # assert(e>self.ground_state_energy and e<-1.)
-        assert(e > 2 * self.ground_state_energy and e < 0.)
-        assert(v > 0 and v < 5.)
+        assert(np.isclose(e.data, expected_energy))
+        assert(np.isclose(v.data, expected_variance))
+
+        # assert(e > 2 * self.ground_state_energy and e < 0.)
+        # assert(v > 0 and v < 5.)
 
     def test_single_point_hmc(self):
 
@@ -91,12 +91,14 @@ class TestH2(unittest.TestCase):
         # sample and compute observables
         _, e, v = self.solver.single_point()
 
-        print('Energy   :', e)
-        print('Variance :', v)
+        expected_energy = -1.077970027923584
+        expected_variance = 0.17763596773147583
 
-        # assert(e>self.ground_state_energy and e<-1.)
-        assert(e > 2 * self.ground_state_energy and e < 0.)
-        assert(v > 0 and v < 5.)
+        assert(np.isclose(e.data, expected_energy))
+        assert(np.isclose(v.data, expected_variance))
+
+        # assert(e > 2 * self.ground_state_energy and e < 0.)
+        # assert(v > 0 and v < 5.)
 
     def test_geo_opt(self):
 
@@ -126,5 +128,5 @@ if __name__ == "__main__":
     # unittest.main()
     t = TestH2()
     t.setUp()
-    t.test_single_point()
+    # t.test_single_point()
     # t.test_single_point_hmc()

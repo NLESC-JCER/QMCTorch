@@ -52,7 +52,7 @@ class CalculatorPySCF(CalculatorBase):
         h5 = h5py.File(self.out_file, 'w')
 
         h5['TotalEnergy'] = rhf.e_tot
-        h5['radial_type'] = 'sto'
+        h5['radial_type'] = 'gto'
         h5['harmonics_type'] = 'cart'
 
         # number of unique ao (e.g. px,py,px -> p)
