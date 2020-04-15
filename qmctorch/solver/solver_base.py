@@ -439,3 +439,14 @@ class SolverBase(object):
             NotImplementedError:
         """
         raise NotImplementedError()
+
+    def save_to_hdf5(self, fname):
+
+        h5 = h5py.File(fname, 'w')
+        
+        solver_grp = h5.create_group('solver')
+        mol_grp = h5.create_group('molecule')
+        wf_grp = h5.create_group('wave_function')
+        opt_grp = h5.create_group('opt')
+
+        h5.close()

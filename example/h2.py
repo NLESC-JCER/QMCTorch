@@ -53,7 +53,7 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 1:
+if 0:
     pos, e, v = solver.single_point()
     save_to_hdf5(solver, 'h2_qmc.hdf5')
     # pos = solver.sample(ntherm=1000, ndecor=100)
@@ -67,7 +67,7 @@ if 1:
 
 
 # optimize the wave function
-if 0:
+if 1:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
 
@@ -84,7 +84,7 @@ if 0:
     e, v = plot_energy(solver.obs_dict, e0=-
                        1.1645, show_variance=True)
     plot_data(solver.obs_dict, obs='jastrow.weight')
-
+    save_to_hdf5(solver, 'h2_qmc.hdf5')
 # # optimize the geometry
 # solver.configure(task='geo_opt')
 # solver.observable(['local_energy','atomic_distances'])

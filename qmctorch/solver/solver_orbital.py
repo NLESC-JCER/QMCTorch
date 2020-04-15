@@ -15,7 +15,7 @@ class SolverOrbital(SolverBase):
             wf {WaveFunction} -- WaveFuntion object (default: {None})
             sampler {SamplerBase} -- Samppler (default: {None})
             optimizer {torch.optim} -- Optimizer (default: {None})
-            scheduler (torch.schedul) -- Scheduler (default: {None})
+            scheduler (torch.scheduler) -- Scheduler (default: {None})
         """
 
         SolverBase.__init__(self, wf, sampler, optimizer)

@@ -1,7 +1,7 @@
 import h5py
 
 
-def save_to_hdf5(obj, fname):
+def dump_to_hdf5(obj, fname):
     """Save the object in a hdf5 file."""
     h5 = h5py.File(fname, 'w')
     insert_object(obj, h5)
@@ -14,13 +14,15 @@ def insert_object(obj, parent_grp, obj_name=None):
     if obj_name is None:
         obj_name = obj.__class__.__name__
 
-    if obj_name.startswith('_'):
-        return
-
     if haschildren(obj):
-        own_grp = parent_grp.create_group(obj_name)
-        for child_name, child_obj in children(obj):
-            insert_object(child_obj,  own_grp, obj_name=child_name)
+        try:
+            own_grp = parent_grp.create_group(obj_name)
+            for child_name, child_obj in children(obj):
+                insert_object(child_obj,  own_grp,
+                              obj_name=child_name)
+        except:
+            print(obj_name, type(obj), obj)
+
     else:
         try:
             parent_grp.create_dataset(obj_name, data=obj)
