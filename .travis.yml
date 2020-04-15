@@ -1,6 +1,6 @@
 # Config file for automatic testing at travis-ci.org
 sudo: false
-distr : "trusty"
+distr : "bionic"
 
 language: generic
 
