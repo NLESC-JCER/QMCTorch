@@ -69,6 +69,7 @@ class SolverOrbital(SolverBase):
             self.sampler.ntherm = -1
             self.sampler.nstep = self.resampling_options.nstep_update
             self.sampler.walkers.nwalkers = pos.shape[0]
+            self.sampler.nwalkers = pos.shape[0]
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -102,8 +103,8 @@ class SolverOrbital(SolverBase):
                 self.optimization_step(lpos)
 
                 # observable
-                self.get_observable(self.obs_dict, pos,
-                                    local_energy=eloc, ibatch=ibatch)
+                self.store_observable(self.obs_dict, pos,
+                                      local_energy=eloc, ibatch=ibatch)
 
             # save the model if necessary
             if cumulative_loss < min_loss:
@@ -127,6 +128,7 @@ class SolverOrbital(SolverBase):
         self.sampler.nstep = _nstep_save
         self.sampler.ntherm = _ntherm_save
         self.sampler.walkers.nwalkers = _nwalker_save
+        self.sampler.nwalkers = _nwalker_save
 
     def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.

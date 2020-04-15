@@ -53,7 +53,7 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 1:
+if 0:
     pos, e, v = solver.single_point()
     # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
@@ -66,16 +66,15 @@ if 1:
 
 
 # optimize the wave function
-if 0:
+if 1:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
 
-    solver.resampling(nstep=25, ntherm=-1, step_size=0.2,
-                      resample_from_last=True,
-                      resample_every=1, tqdm=False)
+    solver.configure_resampling(
+        mode='update', resample_every=1, nstep_update=25)
 
     solver.ortho_mo = False
-    data = solver.run(250, batchsize=None,
+    data = solver.run(5, batchsize=None,
                       loss='energy',
                       grad='manual',
                       clip_loss=False)
