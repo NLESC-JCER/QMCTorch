@@ -49,10 +49,6 @@ class TestH2ADF(unittest.TestCase):
         # ground state energy
         self.ground_state_energy = -1.16
 
-        # value of the energy for seed=0
-        self.expected_energy = -1.1572532653808594
-        self.expected_variance = 0.05085879936814308
-
         # ground state pos
         self.ground_state_pos = 0.69
 
@@ -65,14 +61,18 @@ class TestH2ADF(unittest.TestCase):
         # sample and compute observables
         _, e, v = self.solver.single_point()
 
-        print('Energy   :', e.data)
-        print('Variance :', v.data)
+        # vals on different archs
+        expected_energy = [-1.1572532653808594,
+                           -1.1501641653648578]
 
-        assert(e > 2 * self.ground_state_energy and e < 0.)
-        assert(v > 0 and v < 5.)
+        expected_variance = [0.05085879936814308,
+                             0.05094174843043177]
 
-        assert(np.isclose(e.data, self.expected_energy))
-        assert(np.isclose(v.data.item(), self.expected_variance))
+        assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
+        assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
+
+        # assert(e > 2 * self.ground_state_energy and e < 0.)
+        # assert(v > 0 and v < 5.)
 
 
 if __name__ == "__main__":
