@@ -43,54 +43,6 @@ class CalculatorBase(object):
 
         h5.close()
 
-    def get_basis(self):
-        """Get the basis information needed to compute the AO values."""
-
-        h5 = h5py.File(self.hdf5file, 'r')
-        basis_grp = h5['basis']
-
-        self.basis.radial_type = basis_grp['radial_type'][()]
-        self.basis.harmonics_type = basis_grp['harmonics_type'][()]
-
-        self.basis.nao = int(basis_grp['nao'][()])
-        self.basis.nmo = int(basis_grp['nmo'][()])
-
-        self.basis.nshells = basis_grp['nshells'][()]
-        self.basis.index_ctr = basis_grp['index_ctr'][()]
-
-        self.basis.bas_exp = basis_grp['bas_exp'][()]
-        self.basis.bas_coeffs = basis_grp['bas_coeff'][()]
-
-        self.basis.atom_coords_internal = basis_grp['atom_coords_internal'][(
-        )]
-
-        if self.basis.harmonics_type == 'cart':
-            self.basis.bas_kr = basis_grp['bas_kr'][()]
-            self.basis.bas_kx = basis_grp['bas_kx'][()]
-            self.basis.bas_ky = basis_grp['bas_ky'][()]
-            self.basis.bas_kz = basis_grp['bas_kz'][()]
-
-        elif self.basis.harmonics_type == 'sph':
-            self.basis.bas_n = basis_grp['bas_n'][()]
-            self.basis.bas_l = basis_grp['bas_l'][()]
-            self.basis.bas_m = basis_grp['bas_m'][()]
-
-        h5.close()
-        return self.basis
-
-    def get_mo_coeffs(self):
-        """Get the molecule orbital coefficients."""
-
-        h5 = h5py.File(self.hdf5file, 'r')
-        return h5['calculator']['mos'][()]
-
-    def print_total_energy(self):
-        """Print the total energy."""
-        h5 = h5py.File(self.hdf5file, 'r')
-        e = h5['calculator']['TotalEnergy'][()]
-        print('== SCF Energy : ', e)
-        h5.close()
-
     @staticmethod
     def normalize_columns(mat):
         """Normalize a matrix column-wise.

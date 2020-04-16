@@ -1,0 +1,15 @@
+[22:42:31] Running PLAMS located in /home/nico/adf2019.302/scripting/scm/plams
+[22:42:31] Using Python 3.7.4 located in /home/nico/miniconda3/bin/python
+[22:42:31] PLAMS defaults were loaded from /home/nico/adf2019.302/scripting/scm/plams/plams_defaults
+[22:42:31] PLAMS environment initialized
+[22:42:31] PLAMS working folder: /home/nico/QMCTorch/example/plams_workdir.002
+[22:42:31] JOB HH_dzp STARTED
+[22:42:31] Starting HH_dzp.prerun()
+[22:42:31] HH_dzp.prerun() finished
+[22:42:31] JOB HH_dzp RUNNING
+[22:42:31] Executing HH_dzp.run
+[22:42:34] Execution of HH_dzp.run finished with returncode 0
+[22:42:34] JOB HH_dzp FINISHED
+[22:42:34] Starting HH_dzp.postrun()
+[22:42:34] HH_dzp.postrun() finished
+[22:42:34] JOB HH_dzp SUCCESSFUL
