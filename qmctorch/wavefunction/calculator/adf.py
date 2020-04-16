@@ -13,37 +13,32 @@ except ModuleNotFoundError:
 
 class CalculatorADF(CalculatorBase):
 
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname):
+    def __init__(self, atoms, atom_coords, basis, scf, units, molname, hdf5file):
 
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'adf')
+            self, atoms, atom_coords, basis, scf, units, molname, 'adf', hdf5file)
         self.run()
 
     def run(self):
         """Run the calculation using ADF."""
 
-        if os.path.isfile(self.out_file):
-            print('Reusing previous calculation from ', self.out_file)
+        # path needed for the calculation
+        wd = ''.join(self.atoms) + '_' + self.basis_name
+        t21_name = wd + '.t21'
+        plams_wd = './plams_workdir'
+        t21_path = os.path.join(
+            plams_wd, os.path.join(wd, t21_name))
 
-        else:
+        # configure plams and run the calculation
+        self.init_plams()
+        mol = self.get_plams_molecule()
+        sett = self.get_plams_settings()
+        job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
+        job.run()
 
-            # path needed for the calculation
-            wd = ''.join(self.atoms) + '_' + self.basis_name
-            t21_name = wd + '.t21'
-            plams_wd = './plams_workdir'
-            t21_path = os.path.join(
-                plams_wd, os.path.join(wd, t21_name))
-
-            # configure plams and run the calculation
-            self.init_plams()
-            mol = self.get_plams_molecule()
-            sett = self.get_plams_settings()
-            job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
-            job.run()
-
-            # extract the data to hdf5
-            self.save_data(t21_path)
-            shutil.rmtree(plams_wd)
+        # extract the data to hdf5
+        self.save_data(t21_path)
+        shutil.rmtree(plams_wd)
 
         # print energy
         self.print_total_energy()
@@ -85,7 +80,7 @@ class CalculatorADF(CalculatorBase):
         """Save the basis information needed to compute the AO values."""
 
         kf = plams.KFFile(kffile)
-        h5 = h5py.File(self.out_file, 'w')
+        h5 = h5py.File(self.hdf5file, 'a')
 
         h5['TotalEnergy'] = kf.read('Total Energy', 'Total energy')
         h5['radial_type'] = 'sto'
@@ -161,4 +156,4 @@ class CalculatorADF(CalculatorBase):
 
         # close and check
         h5.close()
-        self.check_h5file(self.out_file)
+        self.check_h5file(self.hdf5file)

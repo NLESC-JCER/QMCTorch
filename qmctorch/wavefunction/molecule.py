@@ -2,6 +2,8 @@ import os
 import math
 import numpy as np
 from mendeleev import element
+from types import SimpleNamespace
+import h5py
 
 from .calculator.adf import CalculatorADF
 from .calculator.pyscf import CalculatorPySCF
@@ -30,20 +32,25 @@ class Molecule(object):
 
         self.process_atom_str()
 
-        calc = {'adf': CalculatorADF,
-                'pyscf': CalculatorPySCF}[calculator]
-
-        self.calculator = calc(
-            self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
-
-        self.basis = self.calculator.get_basis()
-        self.mos = self.calculator.get_mo_coeffs()
-
-        self.out_file = '_'.join(
+        self.hdf5file = '_'.join(
             [self.name, calculator, basis]) + '.hdf5'
-        self.atoms = np.array(self.atoms).astype('S')
 
-        dump_to_hdf5(self, self.out_file)
+        if os.path.isfile(self.hdf5file):
+            print('Reusing data from ', self.hdf5file)
+            self.basis = self.load_basis()
+
+        else:
+            calc = {'adf': CalculatorADF,
+                    'pyscf': CalculatorPySCF}[calculator]
+
+            self.calculator = calc(
+                self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+
+            self.basis = self.calculator.run()
+
+            dump_to_hdf5(self, self.hdf5file, root_name='molecule')
+
+        self.check_basis()
 
     def process_atom_str(self):
         '''Process the input file.'''
@@ -155,6 +162,75 @@ class Molecule(object):
         for ua in unique_atoms:
             mol_name += ua + str(atoms.count(ua))
         return mol_name
+
+    def load_basis(self):
+        """Get the basis information needed to compute the AO values."""
+
+        h5 = h5py.File(self.hdf5file, 'r')
+        basis_grp = h5['molecule']['basis']
+        self.basis = SimpleNamespace()
+
+        self.basis.radial_type = basis_grp['radial_type'][()]
+        self.basis.harmonics_type = basis_grp['harmonics_type'][()]
+
+        self.basis.nao = int(basis_grp['nao'][()])
+        self.basis.nmo = int(basis_grp['nmo'][()])
+
+        self.basis.nshells = basis_grp['nshells'][()]
+        self.basis.index_ctr = basis_grp['index_ctr'][()]
+
+        self.basis.bas_exp = basis_grp['bas_exp'][()]
+        self.basis.bas_coeffs = basis_grp['bas_coeff'][()]
+
+        self.basis.atom_coords_internal = basis_grp['atom_coords_internal'][(
+        )]
+
+        self.basis.TotalEnergy = basis_grp['TotalEnergy'][()]
+        self.basis.mos = basis_grp['mos'][()]
+
+        if self.basis.harmonics_type == 'cart':
+            self.basis.bas_kr = basis_grp['bas_kr'][()]
+            self.basis.bas_kx = basis_grp['bas_kx'][()]
+            self.basis.bas_ky = basis_grp['bas_ky'][()]
+            self.basis.bas_kz = basis_grp['bas_kz'][()]
+
+        elif self.basis.harmonics_type == 'sph':
+            self.basis.bas_n = basis_grp['bas_n'][()]
+            self.basis.bas_l = basis_grp['bas_l'][()]
+            self.basis.bas_m = basis_grp['bas_m'][()]
+
+        h5.close()
+        return self.basis
+
+    def load_mo_coeffs(self):
+        """Get the molecule orbital coefficients."""
+
+        h5 = h5py.File(self.hdf5file, 'r')
+        return h5['molecule']['basis']['mos'][()]
+
+    def print_total_energy(self):
+        """Print the total energy."""
+        h5 = h5py.File(self.hdf5file, 'r')
+        e = h5['molecule']['basis']['TotalEnergy'][()]
+        print('== SCF Energy : ', e)
+        h5.close()
+
+    def check_basis(self):
+        """Check if the basis contains all the necessary fields."""
+
+        names = ['bas_coeffs', 'bas_exp', 'nshells',
+                 'atom_coords_internal', 'nao', 'nmo',
+                 'index_ctr', 'mos', 'TotalEnergy']
+
+        if self.basis.harmonics_type == 'cart':
+            names += ['bas_kx', 'bas_ky', 'bas_kz', 'bas_kr']
+
+        elif self.basis.harmonics_type == 'sph':
+            names += ['bas_n', 'bas_l', 'bas_m']
+
+        for n in names:
+            if not hasattr(self.basis, n):
+                raise ValueError(n, ' not in the basis namespace')
 
 
 if __name__ == "__main__":
