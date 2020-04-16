@@ -180,7 +180,7 @@ class Molecule(object):
         self.basis.index_ctr = basis_grp['index_ctr'][()]
 
         self.basis.bas_exp = basis_grp['bas_exp'][()]
-        self.basis.bas_coeffs = basis_grp['bas_coeff'][()]
+        self.basis.bas_coeffs = basis_grp['bas_coeffs'][()]
 
         self.basis.atom_coords_internal = basis_grp['atom_coords_internal'][(
         )]

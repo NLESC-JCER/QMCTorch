@@ -104,10 +104,8 @@ class Orbital(WaveFunction):
         Returns:
             nn.Parameters -- MO matrix as a parameter
         """
-        mo_coeff = torch.tensor(
-            self.mol.calculator.get_mo_coeffs()).type(
-                torch.get_default_dtype())
-        # return nn.Parameter(mo_coeff)
+        mo_coeff = torch.tensor(self.mol.basis.mos).type(
+            torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):

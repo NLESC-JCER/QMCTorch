@@ -18,10 +18,10 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='adf',
+               calculator='pyscf',
                basis='dzp',
                unit='bohr')
-exit()
+
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
              configs='cas(2,2)',
@@ -31,7 +31,7 @@ wf.jastrow.weight.data[0] = 1.
 
 # sampler
 sampler = Metropolis(nwalkers=500,
-                     nstep=20, step_size=0.2,
+                     nstep=2000, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
@@ -53,9 +53,9 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 0:
+if 1:
     pos, e, v = solver.single_point()
-    save_to_hdf5(solver, 'h2_qmc.hdf5')
+    dump_to_hdf5(solver, 'h2_qmc.hdf5')
     # pos = solver.sample(ntherm=1000, ndecor=100)
     # obs = solver.sampling_traj(pos)
     # Tc = plot_walkers_traj(obs)
@@ -67,7 +67,7 @@ if 0:
 
 
 # optimize the wave function
-if 1:
+if 0:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.observable(['local_energy'])
 

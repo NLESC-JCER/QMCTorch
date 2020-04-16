@@ -118,7 +118,7 @@ class CalculatorPySCF(CalculatorBase):
         basis.nshells = nshells
         basis.index_ctr = index_ctr
 
-        basis.bas_coeff = bas_coeff
+        basis.bas_coeffs = bas_coeff
         basis.bas_exp = bas_exp
         basis.bas_norm = bas_norm
 
