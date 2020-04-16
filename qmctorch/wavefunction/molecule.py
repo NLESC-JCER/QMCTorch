@@ -2,8 +2,11 @@ import os
 import math
 import numpy as np
 from mendeleev import element
+
 from .calculator.adf import CalculatorADF
 from .calculator.pyscf import CalculatorPySCF
+
+from ..utils import dump_to_hdf5
 
 
 class Molecule(object):
@@ -32,7 +35,15 @@ class Molecule(object):
 
         self.calculator = calc(
             self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+
         self.basis = self.calculator.get_basis()
+        self.mos = self.calculator.get_mo_coeffs()
+
+        self.out_file = '_'.join(
+            [self.name, calculator, basis]) + '.hdf5'
+        self.atoms = np.array(self.atoms).astype('S')
+
+        dump_to_hdf5(self, self.out_file)
 
     def process_atom_str(self):
         '''Process the input file.'''
