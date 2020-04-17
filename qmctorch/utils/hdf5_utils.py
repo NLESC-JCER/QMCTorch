@@ -2,11 +2,52 @@ import h5py
 import numpy as np
 import torch
 import warnings
+from types import SimpleNamespace
 
 
 def print_insert_error(obj, obj_name):
     warnings.warn('Issue inserting %s of type %s' %
                   (obj_name, str(type(obj))))
+
+
+def print_load_error(obj, parent_grp):
+    warnings.warn('Issue loading %s' % parent_grp.name)
+
+
+def load_from_hdf5(obj, fname, root_name):
+    h5 = h5py.File(fname, 'r')
+
+    if root_name is None:
+        root_grp = h5
+    else:
+        root_grp = h5[root_name]
+
+    load_object(obj, root_name)
+    h5.close()
+
+
+def load_object(obj, parent_grp):
+    if type(parent_grp) is h5py._hl.group.Group:
+        load_group(obj, parent_grp)
+    elif type(parent_grp) is h5py._hl.group.Dataset:
+        load_data(obj, parent_grp)
+
+
+def load_group(obj, parent_grp):
+    try:
+        for child_name, child_grp in children(parent_grp):
+            load_object(obj.__getattribute__(child_name), child_grp)
+    except:
+        print_load_error(obj, parent_grp)
+
+
+def load_data(obj, dataset):
+    try:
+        name = dataset.name.split('/')[-1]
+        vals = dataset[()]
+        obj.__setattr__('name', val)
+    except:
+        print_load_error(obj, dataset)
 
 
 def dump_to_hdf5(obj, fname, root_name=None):

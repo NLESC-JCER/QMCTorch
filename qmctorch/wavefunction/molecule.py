@@ -13,9 +13,9 @@ from ..utils import dump_to_hdf5
 
 class Molecule(object):
 
-    def __init__(self, atom, calculator='adf',
+    def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
-                 name=None):
+                 name=None, load=None):
 
         self.atoms_str = atom
         self.unit = unit
@@ -26,6 +26,9 @@ class Molecule(object):
         self.atomic_nelec = []
         self.nelec = 0
         self.name = name
+
+        if load is not None:
+            self.load_hdf5(load)
 
         if self.unit not in ['angs', 'bohr']:
             raise ValueError('unit should be angs or bohr')
@@ -233,6 +236,9 @@ class Molecule(object):
         for n in names:
             if not hasattr(self.basis, n):
                 raise ValueError(n, ' not in the basis namespace')
+
+    def load_hdf5(self, filename):
+        load_from_hdf5(self, filename)
 
 
 if __name__ == "__main__":
