@@ -48,6 +48,7 @@ class Molecule(object):
 
             self.basis = self.calculator.run()
 
+            # trasnform atom type for hdf5 storage
             dump_to_hdf5(self, self.hdf5file, root_name='molecule')
 
         self.check_basis()
@@ -97,6 +98,7 @@ class Molecule(object):
         # name of the system
         if self.name is None:
             self.name = self.get_mol_name(self.atoms)
+        self.atoms = np.array(self.atoms)
 
     def read_xyz_file(self):
         """Process a xyz file containing the data
