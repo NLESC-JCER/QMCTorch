@@ -18,12 +18,12 @@ from qmctorch.utils import (save_observalbe,
 set_torch_double_precision()
 
 # define the molecule
-# mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-#                calculator='pyscf',
-#                basis='dzp',
-#                unit='bohr')
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+               calculator='pyscf',
+               basis='dzp',
+               unit='bohr')
 
-mol = Molecule(load='H2_pyscf_dzp.hdf5')
+# mol = Molecule(load='H2_pyscf_dzp.hdf5')
 
 
 # define the wave function

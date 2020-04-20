@@ -120,7 +120,7 @@ def insert_data(obj, parent_grp, obj_name):
 
     try:
         insert_fn(obj, parent_grp, obj_name)
-        insert_type(obj, parent_grp, obj_name)
+        # insert_type(obj, parent_grp, obj_name)
     except:
         print_insert_error(obj, obj_name)
 
