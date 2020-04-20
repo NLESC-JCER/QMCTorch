@@ -3,6 +3,7 @@ import os
 from pyscf import gto, scf
 import h5py
 from types import SimpleNamespace
+import numpy as np
 
 from .calculator_base import CalculatorBase
 
@@ -118,17 +119,17 @@ class CalculatorPySCF(CalculatorBase):
         basis.nshells = nshells
         basis.index_ctr = index_ctr
 
-        basis.bas_coeffs = bas_coeff
-        basis.bas_exp = bas_exp
-        basis.bas_norm = bas_norm
+        basis.bas_coeffs = np.array(bas_coeff)
+        basis.bas_exp = np.array(bas_exp)
+        basis.bas_norm = np.array(bas_norm)
 
         basis.bas_n = bas_n
         basis.bas_l = bas_l
-        basis.bas_kr = bas_kr
+        basis.bas_kr = np.array(bas_kr)
 
-        basis.bas_kx = bas_kx
-        basis.bas_ky = bas_ky
-        basis.bas_kz = bas_kz
+        basis.bas_kx = np.array(bas_kx)
+        basis.bas_ky = np.array(bas_ky)
+        basis.bas_kz = np.array(bas_kz)
 
         # molecular orbitals
         basis.mos = mol.cart2sph_coeff() @ rhf.mo_coeff
