@@ -8,7 +8,7 @@ import h5py
 from .calculator.adf import CalculatorADF
 from .calculator.pyscf import CalculatorPySCF
 
-from ..utils import dump_to_hdf5
+from ..utils import dump_to_hdf5, load_from_hdf5
 
 
 class Molecule(object):
@@ -17,42 +17,49 @@ class Molecule(object):
                  scf='hf', basis='dzp', unit='bohr',
                  name=None, load=None):
 
-        self.atoms_str = atom
-        self.unit = unit
-        self.max_angular = 2
-        self.atoms = []
         self.atom_coords = []
-        self.atomic_number = []
         self.atomic_nelec = []
-        self.nelec = 0
+        self.atomic_number = []
+        self.atoms = []
+        self.atoms_str = atom
+        self.hdf5file = None
+        self.max_angular = 2
         self.name = name
+        self.natom = 0
+        self.ndown = 0
+        self.nelec = 0
+        self.nup = 0
+        self.unit = unit
+        self.basis = SimpleNamespace()
 
         if load is not None:
             self.load_hdf5(load)
 
-        if self.unit not in ['angs', 'bohr']:
-            raise ValueError('unit should be angs or bohr')
-
-        self.process_atom_str()
-
-        self.hdf5file = '_'.join(
-            [self.name, calculator, basis]) + '.hdf5'
-
-        if os.path.isfile(self.hdf5file):
-            print('Reusing data from ', self.hdf5file)
-            self.basis = self.load_basis()
-
         else:
-            calc = {'adf': CalculatorADF,
-                    'pyscf': CalculatorPySCF}[calculator]
 
-            self.calculator = calc(
-                self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+            if self.unit not in ['angs', 'bohr']:
+                raise ValueError('unit should be angs or bohr')
 
-            self.basis = self.calculator.run()
+            self.process_atom_str()
 
-            # trasnform atom type for hdf5 storage
-            dump_to_hdf5(self, self.hdf5file, root_name='molecule')
+            self.hdf5file = '_'.join(
+                [self.name, calculator, basis]) + '.hdf5'
+
+            if os.path.isfile(self.hdf5file):
+                print('Reusing data from ', self.hdf5file)
+                self.basis = self.load_basis()
+
+            else:
+                calc = {'adf': CalculatorADF,
+                        'pyscf': CalculatorPySCF}[calculator]
+
+                self.calculator = calc(
+                    self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+
+                self.basis = self.calculator.run()
+
+                dump_to_hdf5(self, self.hdf5file,
+                             root_name='molecule')
 
         self.check_basis()
 
@@ -238,7 +245,31 @@ class Molecule(object):
                 raise ValueError(n, ' not in the basis namespace')
 
     def load_hdf5(self, filename):
-        load_from_hdf5(self, filename)
+
+        # load the data
+        load_from_hdf5(self, filename, 'molecule')
+
+        # cast some of the important data type
+        # should be done by the hdf5_utils in the future
+        self.atoms = self.atoms.astype('U')
+        self.basis.nao = int(self.basis.nao)
+        self.basis.nmo = int(self.basis.nmo)
+
+        cast_fn = {'nelec': int,
+                   'nup': int,
+                   'ndown': int,
+                   'atoms': lambda x: x.astype('U'),
+                   'atomic_nelec': lambda x: [int(i) for i in x]}
+
+        for name, fn in cast_fn.items():
+            self.__setattr__(name, fn(self.__getattribute__(name)))
+
+        cast_fn = {'nao': int,
+                   'nmo': int}
+
+        for name, fn in cast_fn.items():
+            self.basis.__setattr__(
+                name, fn(self.basis.__getattribute__(name)))
 
 
 if __name__ == "__main__":

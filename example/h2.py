@@ -7,7 +7,8 @@ from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 
 from qmctorch.utils import (save_observalbe,
-                            plot_energy, plot_data, dump_to_hdf5)
+                            plot_energy, plot_data,
+                            dump_to_hdf5)
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -17,10 +18,13 @@ from qmctorch.utils import (save_observalbe,
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='pyscf',
-               basis='dzp',
-               unit='bohr')
+# mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+#                calculator='pyscf',
+#                basis='dzp',
+#                unit='bohr')
+
+mol = Molecule(load='H2_pyscf_dzp.hdf5')
+
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',

@@ -6,48 +6,67 @@ from types import SimpleNamespace
 
 
 def print_insert_error(obj, obj_name):
-    warnings.warn('Issue inserting %s of type %s' %
+    warnings.warn('Issue inserting data %s of type %s' %
                   (obj_name, str(type(obj))))
 
 
-def print_load_error(obj, parent_grp):
-    warnings.warn('Issue loading %s' % parent_grp.name)
+def print_insert_type_error(obj, obj_name):
+    warnings.warn('Issue inserting type of data %s (%s)' %
+                  (obj_name, str(type(obj))))
 
 
-def load_from_hdf5(obj, fname, root_name):
+def print_load_error(grp):
+    warnings.warn('Issue loading %s' % grp)
+
+
+def load_from_hdf5(obj, fname, obj_name):
     h5 = h5py.File(fname, 'r')
+    root_grp = h5[obj_name]
 
-    if root_name is None:
-        root_grp = h5
-    else:
-        root_grp = h5[root_name]
-
-    load_object(obj, root_name)
+    load_object(root_grp, obj, obj_name)
     h5.close()
 
 
-def load_object(obj, parent_grp):
-    if type(parent_grp) is h5py._hl.group.Group:
-        load_group(obj, parent_grp)
-    elif type(parent_grp) is h5py._hl.group.Dataset:
-        load_data(obj, parent_grp)
+def load_object(grp, parent_obj, grp_name):
+    """Load the hdf5 file in a class."""
+
+    for child_grp_name, child_grp in grp.items():
+
+        if isgroup(child_grp):
+            load_group(child_grp, parent_obj, child_grp_name)
+        else:
+            load_data(child_grp, parent_obj, child_grp_name)
 
 
-def load_group(obj, parent_grp):
+def load_group(grp, parent_obj, grp_name):
+    """Load  agroup in the class instance."""
     try:
-        for child_name, child_grp in children(parent_grp):
-            load_object(obj.__getattribute__(child_name), child_grp)
+        if not hasattr(parent_obj, grp_name):
+            parent_obj.__setattr__(
+                grp_name, SimpleNamespace())
+        load_object(grp,
+                    parent_obj.__getattribute__(
+                        grp_name),
+                    grp_name)
     except:
-        print_load_error(obj, parent_grp)
+        print_load_error(grp_name)
 
 
-def load_data(obj, dataset):
+def load_data(grp, parent_obj, grp_name):
+    """Load a data in the class instance."""
     try:
-        name = dataset.name.split('/')[-1]
-        vals = dataset[()]
-        obj.__setattr__('name', val)
+        parent_obj.__setattr__(grp_name, grp[()])
     except:
-        print_load_error(obj, dataset)
+        print_load_error(grp_name)
+
+
+def lookup_cast(ori_type, current_type):
+    raise NotImplementedError(
+        "cast the data to the type contained in .attrs['type']")
+
+
+def isgroup(grp):
+    return type(grp) == h5py._hl.group.Group or type(grp) == h5py._hl.files.File
 
 
 def dump_to_hdf5(obj, fname, root_name=None):
@@ -101,8 +120,16 @@ def insert_data(obj, parent_grp, obj_name):
 
     try:
         insert_fn(obj, parent_grp, obj_name)
+        insert_type(obj, parent_grp, obj_name)
     except:
         print_insert_error(obj, obj_name)
+
+
+def insert_type(obj, parent_grp, obj_name):
+    try:
+        parent_grp[obj_name].attrs['type'] = str(type(obj))
+    except:
+        print_insert_type_error(obj, obj_name)
 
 
 def insert_default(obj, parent_grp, obj_name):
