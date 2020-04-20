@@ -33,6 +33,7 @@ class Molecule(object):
         self.basis = SimpleNamespace()
 
         if load is not None:
+            print('Restarting calculation from ', load)
             self.load_hdf5(load)
 
         else:
@@ -46,10 +47,12 @@ class Molecule(object):
                 [self.name, calculator, basis]) + '.hdf5'
 
             if os.path.isfile(self.hdf5file):
-                print('Reusing data from ', self.hdf5file)
+                print('Reusing scf calculation from ', self.hdf5file)
                 self.basis = self.load_basis()
 
             else:
+                print('Running scf calculation')
+
                 calc = {'adf': CalculatorADF,
                         'pyscf': CalculatorPySCF}[calculator]
 

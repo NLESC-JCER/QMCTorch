@@ -3,11 +3,13 @@ from types import SimpleNamespace
 from tqdm import tqdm
 import numpy as np
 
+from ..utils import dump_to_hdf5
+
 
 class SolverBase(object):
 
     def __init__(self, wf=None, sampler=None,
-                 optimizer=None, scheduler=None):
+                 optimizer=None, scheduler=None, output=None):
         """Base class for the solvers
 
         Keyword Arguments:
@@ -48,6 +50,11 @@ class SolverBase(object):
             self.sampler.walkers.cuda = True
         else:
             self.device = torch.device('cpu')
+
+        self.hdf5file = output
+        if output is None:
+            self.hdf5file = self.wf.mol.name + '_QMC.hdf5'
+        dump_to_hdf5(self, self.hdf5file)
 
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
         """Configure the resampling.
@@ -321,12 +328,24 @@ class SolverBase(object):
                 pos = pos.to(self.device)
 
             # compute energy/variance/error
-            e, s, err = self.wf._energy_variance_error(pos)
+            el = self.wf.local_energy(pos)
+            e, s, err = torch.mean(el), torch.var(
+                el), self.wf.sampling_error(el)
 
             # print data
             print('Energy   : ', e.detach().item(),
                   ' +/- ', err.detach().item())
             print('Variance : ', s.detach().item())
+
+            # dump data to hdf5
+            dump_to_hdf5({'pos': pos,
+                          'local_energy': el,
+                          'energy': e,
+                          'variance': s,
+                          'error': err
+                          },
+                         self.hdf5file,
+                         root_name='single_point')
 
         return pos, e, s
 
@@ -375,6 +394,10 @@ class SolverBase(object):
         el = []
         for ip in tqdm(p):
             el.append(self.wf.local_energy(ip).detach().numpy())
+
+        dump_to_hdf5({'local_energy': el, 'pos': p},
+                     self.hdf5file, 'sampling_trajectory')
+
         return {'local_energy': el, 'pos': p}
 
     def print_parameters(self, grad=False):
@@ -439,15 +462,3 @@ class SolverBase(object):
             NotImplementedError:
         """
         raise NotImplementedError()
-
-    def save_to_hdf5(self, fname):
-
-        h5 = h5py.File(fname, 'w')
-
-        solver_grp = h5.create_group('solver')
-
-        mol_grp = h5.create_group('molecule')
-        wf_grp = h5.create_group('wave_function')
-        opt_grp = h5.create_group('opt')
-
-        h5.close()

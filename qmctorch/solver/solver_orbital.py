@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 
 from .solver_base import SolverBase
-from qmctorch.utils import (DataSet, Loss, OrthoReg)
+from qmctorch.utils import (DataSet, Loss, OrthoReg, dump_to_hdf5)
 
 
 class SolverOrbital(SolverBase):
@@ -129,6 +129,9 @@ class SolverOrbital(SolverBase):
         self.sampler.ntherm = _ntherm_save
         self.sampler.walkers.nwalkers = _nwalker_save
         self.sampler.nwalkers = _nwalker_save
+
+        # dump
+        dump_to_hdf5(self.obs_dict, self.hdf5file, self.task)
 
     def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.

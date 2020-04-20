@@ -20,6 +20,8 @@ def print_load_error(grp):
 
 
 def load_from_hdf5(obj, fname, obj_name):
+    """Load a hdf5 file inot a class."""
+
     h5 = h5py.File(fname, 'r')
     root_grp = h5[obj_name]
 
@@ -72,7 +74,7 @@ def isgroup(grp):
 def dump_to_hdf5(obj, fname, root_name=None):
     """Save the object in a hdf5 file."""
 
-    h5 = h5py.File(fname, 'w')
+    h5 = h5py.File(fname, 'a')
 
     if root_name is None:
         root_name = obj.__class__.__name__
