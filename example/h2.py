@@ -58,10 +58,10 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 if 1:
     obs = solver.single_point()
 
-    # solver.sampler.ntherm = 1000
-    # solver.sampler.ndecor = 100
-    # pos = solver.sampler(solver.wf.pdf)
-    # obs = solver.sampling_traj(pos)
+    solver.sampler.ntherm = 1000
+    solver.sampler.ndecor = 100
+    pos = solver.sampler(solver.wf.pdf)
+    obs = solver.sampling_traj(pos)
     # Tc = plot_walkers_traj(obs.local_energy)
     # plot_block(obs)
 
@@ -71,7 +71,7 @@ if 1:
 
 
 # optimize the wave function
-if 0:
+if 1:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.track_observable(['local_energy'])
 

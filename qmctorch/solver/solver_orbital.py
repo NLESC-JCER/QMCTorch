@@ -2,7 +2,8 @@ import torch
 from torch.utils.data import DataLoader
 
 from .solver_base import SolverBase
-from qmctorch.utils import (DataSet, Loss, OrthoReg, dump_to_hdf5)
+from qmctorch.utils import (
+    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
 
 
 class SolverOrbital(SolverBase):
@@ -38,6 +39,10 @@ class SolverOrbital(SolverBase):
             grad {str} -- Method to compute the gradient (auto, manual)
                           (default: {'auto'})
         """
+
+        # observalbe
+        if not hasattr(self, 'observable'):
+            self.track_observable(['local_energy'])
 
         self.evaluate_gradient = {
             'auto': self.evaluate_grad_auto,
@@ -134,6 +139,7 @@ class SolverOrbital(SolverBase):
         if hdf5_group is None:
             hdf5_group = self.task
         dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
+        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
     def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.

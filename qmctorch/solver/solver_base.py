@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from tqdm import tqdm
 import numpy as np
 
-from ..utils import dump_to_hdf5
+from ..utils import dump_to_hdf5, add_group_attr
 
 
 class SolverBase(object):
@@ -27,7 +27,6 @@ class SolverBase(object):
         self.cuda = False
         self.device = torch.device('cpu')
         self.task = None
-        self.obs_dict = {}
 
         # penalty to orthogonalize the MO
         # see torch_utils.py
@@ -38,9 +37,6 @@ class SolverBase(object):
 
         # resampling
         self.configure_resampling()
-
-        # observalbe
-        self.track_observable(['local_energy'])
 
         # distributed model
         self.save_model = 'model.pth'
@@ -352,6 +348,8 @@ class SolverBase(object):
             dump_to_hdf5(obs,
                          self.hdf5file,
                          root_name=hdf5_group)
+            add_group_attr(self.hdf5file, hdf5_group,
+                           {'type': 'single_point'})
 
         return obs
 
@@ -404,7 +402,8 @@ class SolverBase(object):
         obs = SimpleNamespace(local_energy=el, pos=pos)
         dump_to_hdf5(obs,
                      self.hdf5file, hdf5_group)
-
+        add_group_attr(self.hdf5file, hdf5_group,
+                       {'type': 'sampling_traj'})
         return obs
 
     def print_parameters(self, grad=False):

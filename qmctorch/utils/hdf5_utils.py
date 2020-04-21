@@ -20,7 +20,13 @@ def print_load_error(grp):
 
 
 def load_from_hdf5(obj, fname, obj_name):
-    """Load a hdf5 file inot a class."""
+    """Load the content of an hdf5 file in an object.
+
+    Arguments:
+        obj {object} -- object where to load the data
+        fname {str} -- name pf the hdf5 file
+        obj_name {str} -- name of the root group in the hdf5
+    """
 
     h5 = h5py.File(fname, 'r')
     root_grp = h5[obj_name]
@@ -30,7 +36,13 @@ def load_from_hdf5(obj, fname, obj_name):
 
 
 def load_object(grp, parent_obj, grp_name):
-    """Load the hdf5 file in a class."""
+    """Load object attribute from the hdf5 group/data
+
+    Arguments:
+        grp {hdf5 group} -- the current group in the hdf5 architecture
+        parent_obj {object} -- parent object
+        grp_name {str} -- name of the group
+    """
 
     for child_grp_name, child_grp in grp.items():
 
@@ -41,7 +53,13 @@ def load_object(grp, parent_obj, grp_name):
 
 
 def load_group(grp, parent_obj, grp_name):
-    """Load  agroup in the class instance."""
+    """Load object attribute from the hdf5 group
+
+    Arguments:
+        grp {hdf5 group} -- the current group in the hdf5 architecture
+        parent_obj {object} -- parent object
+        grp_name {str} -- name of the group
+    """
     try:
         if not hasattr(parent_obj, grp_name):
             parent_obj.__setattr__(
@@ -55,7 +73,13 @@ def load_group(grp, parent_obj, grp_name):
 
 
 def load_data(grp, parent_obj, grp_name):
-    """Load a data in the class instance."""
+    """Load object attribute from the hdf5 data
+
+    Arguments:
+        grp {hdf5 group} -- the current group in the hdf5 architecture
+        parent_obj {object} -- parent object
+        grp_name {str} -- name of the group
+    """
     try:
         parent_obj.__setattr__(grp_name, grp[()])
     except:
@@ -68,11 +92,28 @@ def lookup_cast(ori_type, current_type):
 
 
 def isgroup(grp):
+    """Check if current hdf5 group is a group
+
+    Arguments:
+        grp {hdf5 group} -- hdf5 group or dataset
+
+    Returns:
+        bool -- True if the group is a group
+    """
+
     return type(grp) == h5py._hl.group.Group or type(grp) == h5py._hl.files.File
 
 
 def dump_to_hdf5(obj, fname, root_name=None):
-    """Save the object in a hdf5 file."""
+    """Dump the content of an object in a hdf5 file.
+
+    Arguments:
+        obj {object} -- object to dump
+        fname {str} -- name of the hdf5
+
+    Keyword Arguments:
+        root_name {str} -- root group in the hdf5 file (default: {None})
+    """
 
     h5 = h5py.File(fname, 'a')
 
@@ -84,7 +125,13 @@ def dump_to_hdf5(obj, fname, root_name=None):
 
 
 def insert_object(obj, parent_grp, obj_name):
-    """recursively insert the object in the parent group."""
+    """Insert the content of the object in the hdf5 file
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
 
     if haschildren(obj):
         insert_group(obj, parent_grp, obj_name)
@@ -93,7 +140,13 @@ def insert_object(obj, parent_grp, obj_name):
 
 
 def insert_group(obj, parent_grp, obj_name):
-    """Insert an object wich children in new group in the parent group."""
+    """Insert the content of the object in a hdf5 group
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     if obj_name.startswith('_'):
         return
 
@@ -106,7 +159,13 @@ def insert_group(obj, parent_grp, obj_name):
 
 
 def insert_data(obj, parent_grp, obj_name):
-    """Insert an obj whitout children in the parent group."""
+    """Insert the content of the object in a hdf5 dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     try:
         lookup_insert = {list: insert_list,
                          tuple: insert_tuple,
@@ -128,6 +187,13 @@ def insert_data(obj, parent_grp, obj_name):
 
 
 def insert_type(obj, parent_grp, obj_name):
+    """Insert the content of the type object in an attribute
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     try:
         parent_grp[obj_name].attrs['type'] = str(type(obj))
     except:
@@ -135,7 +201,13 @@ def insert_type(obj, parent_grp, obj_name):
 
 
 def insert_default(obj, parent_grp, obj_name):
-    """Base insert as a hdf5 dataset."""
+    """Default funtion to insert a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     try:
         parent_grp.create_dataset(obj_name, data=obj)
     except:
@@ -143,7 +215,13 @@ def insert_default(obj, parent_grp, obj_name):
 
 
 def insert_list(obj, parent_grp, obj_name):
-    """Insert a list as a dataset or datagroup."""
+    """funtion to insert a list as a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     try:
         parent_grp.create_dataset(obj_name, data=obj)
     except:
@@ -155,33 +233,71 @@ def insert_list(obj, parent_grp, obj_name):
 
 
 def insert_tuple(obj, parent_grp, obj_name):
+    """funtion to insert a tuple as a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     insert_list(list(obj), parent_grp, obj_name)
 
 
 def insert_numpy(obj, parent_grp, obj_name):
-    """Insert a numpy nd array."""
+    """funtion to insert a numpy array as a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     if obj.dtype.str.startswith('<U'):
         obj = obj.astype('S')
     insert_default(obj, parent_grp, obj_name)
 
 
 def insert_torch_tensor(obj, parent_grp, obj_name):
-    """Insert a torch tensor array."""
+    """funtion to insert a torch tensor as a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     insert_numpy(obj.detach().numpy(), parent_grp, obj_name)
 
 
 def insert_torch_parameter(obj, parent_grp, obj_name):
-    """Insert the data of a torch parameter."""
+    """funtion to insert a torch parameter as a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     insert_torch_tensor(obj.data, parent_grp, obj_name)
 
 
 def insert_none(obj, parent_grp, obj_name):
-    """Insert a none."""
+    """funtion to insert a None Type as a dataset
+
+    Arguments:
+        obj {object} -- object to save
+        parent_grp {hdf5 group} -- group where to dump
+        obj_name {str} -- name of the object
+    """
     return
 
 
 def haschildren(obj):
-    """Checks if the obj has children."""
+    """Check if the object has children
+
+    Arguments:
+        obj {object} -- the object to check
+
+    Returns:
+        bool -- True if the object has children
+    """
     ommit_type = [torch.nn.parameter.Parameter, torch.Tensor]
     if type(obj) in ommit_type:
         return False
@@ -190,10 +306,32 @@ def haschildren(obj):
 
 
 def children(obj):
-    """Returns the items of the object."""
+    """Returns the children of the object as items
+
+    Arguments:
+        obj {object} -- the object to check
+
+    Returns:
+        dict -- items 
+    """
 
     if hasattr(obj, '__dict__'):
         return obj.__dict__.items()
 
     elif hasattr(obj, 'keys'):
         return obj.items()
+
+
+def add_group_attr(filename, grp_name, attr):
+    """Add attribute to a given group
+
+    Arguments:
+        filename {str} -- name of the file
+        grp_name {str} -- name of the group
+        attr {dict} -- attrivutes to add
+    """
+
+    h5 = h5py.File(filename, 'a')
+    for k, v in attr.items():
+        h5[grp_name].attrs[k] = v
+    h5.close()
