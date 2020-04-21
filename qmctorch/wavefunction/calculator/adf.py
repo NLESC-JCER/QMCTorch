@@ -135,14 +135,14 @@ class CalculatorADF(CalculatorBase):
         basis.nshells = basis_nshells
         basis.index_ctr = np.arange(nao)
 
-        basis.bas_kx = basis_bas_kx
-        basis.bas_ky = basis_bas_ky
-        basis.bas_kz = basis_bas_kz
-        basis.bas_kr = basis_bas_kr
+        basis.bas_kx = np.array(basis_bas_kx)
+        basis.bas_ky = np.array(basis_bas_ky)
+        basis.bas_kz = np.array(basis_bas_kz)
+        basis.bas_kr = np.array(basis_bas_kr)
 
-        basis.bas_exp = basis_bas_exp
+        basis.bas_exp = np.array(basis_bas_exp)
         basis.bas_coeffs = np.ones_like(basis_bas_exp)
-        basis.bas_norm = basis_bas_norm
+        basis.bas_norm = np.array(basis_bas_norm)
 
         basis.atom_coords_internal = np.array(
             kf.read('Geometry', 'xyz')).reshape(-1, 3)

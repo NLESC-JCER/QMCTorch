@@ -13,7 +13,7 @@ def atomic_orbital_norm(basis):
     if basis.harmonics_type == 'sph':
 
         if basis.radial_type == 'sto':
-            return norm_slater_spherial(basis.bas_n, basis.bas_exp)
+            return norm_slater_spherical(basis.bas_n, basis.bas_exp)
 
         elif basis.radial_type == 'gto':
             return norm_gaussian_spherical(basis.bas_n, basis.bas_exp)
@@ -34,7 +34,7 @@ def atomic_orbital_norm(basis):
                 basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_exp)
 
 
-def norm_slater_spherial(bas_n, bas_exp):
+def norm_slater_spherical(bas_n, bas_exp):
     """ Normalization of STOs
     [1] www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital
     [2] C Filippi,
@@ -123,5 +123,5 @@ def norm_gaussian_cartesian(a, b, c, exp):
 
     cm1 = (2 * c - 1).astype('int')
     z = (4 * exp)**(c / 2) / torch.sqrt(torch.tensor(f2(cm1)))
-    
+
     return (pref * x * y * z).type(torch.get_default_dtype())
