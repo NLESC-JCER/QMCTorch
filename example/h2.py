@@ -6,9 +6,7 @@ from qmctorch.sampler import Metropolis
 
 from qmctorch.utils import set_torch_double_precision
 
-from qmctorch.utils import (save_observalbe,
-                            plot_energy, plot_data,
-                            dump_to_hdf5)
+from qmctorch.utils import (plot_energy, plot_data, plot_walkers_traj)
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -57,14 +55,14 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 1:
-    pos, e, v = solver.single_point()
+if 0:
+    obs = solver.single_point()
 
-    # solver.sampler.ntherm = 1000
-    # solver.sampler.ndecor = 100
-    # pos = solver.sampler(solver.wf.pdf)
-    # obs = solver.sampling_traj(pos)
-    # Tc = plot_walkers_traj(obs)
+    solver.sampler.ntherm = 1000
+    solver.sampler.ndecor = 100
+    pos = solver.sampler(solver.wf.pdf)
+    obs = solver.sampling_traj(pos)
+    Tc = plot_walkers_traj(obs.local_energy)
     # plot_block(obs)
 
     # save_observalbe('obs.pkl', obs)
@@ -73,9 +71,9 @@ if 1:
 
 
 # optimize the wave function
-if 0:
+if 1:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-    solver.observable(['local_energy'])
+    solver.track_observable(['local_energy'])
 
     solver.configure_resampling(
         mode='update', resample_every=1, nstep_update=25)
@@ -86,10 +84,9 @@ if 0:
                       grad='manual',
                       clip_loss=False)
 
-    save_observalbe('h2.pkl', solver.obs_dict)
-    e, v = plot_energy(solver.obs_dict, e0=-
+    e, v = plot_energy(solver.observable.local_energy, e0=-
                        1.1645, show_variance=True)
-    plot_data(solver.obs_dict, obs='jastrow.weight')
+    plot_data(solver.observable, obsname='jastrow.weight')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

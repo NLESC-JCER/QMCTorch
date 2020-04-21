@@ -40,7 +40,7 @@ class SolverBase(object):
         self.configure_resampling()
 
         # observalbe
-        self.observable(['local_energy'])
+        self.track_observable(['local_energy'])
 
         # distributed model
         self.save_model = 'model.pth'
@@ -172,31 +172,107 @@ class SolverBase(object):
                     raise ValueError(
                         'Valid arguments for freeze are :', opt_freeze)
 
-    def observable(self, obs):
+    def track_observable(self, obs_name):
         """define the observalbe we want to track
 
         Arguments:
-            obs {list} -- list of str defining the observalbe.
+            obs_name {list} -- list of str defining the observalbe.
                           Each str must correspond to a WaveFuncion method
         """
 
-        # reset the dict
-        self.obs_dict = {}
+        # reset the Namesapce
+        self.observable = SimpleNamespace()
 
-        for k in obs:
-            self.obs_dict[k] = []
+        if 'local_energy' not in obs_name:
+            obs_name += ['local_energy']
 
-        if 'local_energy' not in self.obs_dict:
-            self.obs_dict['local_energy'] = []
+        if self.task == 'geo_opt' and 'geometry' not in obs_name:
+            obs_name += ['geometry']
 
-        if self.task == 'geo_opt' and 'geometry' not in self.obs_dict:
-            self.obs_dict['geometry'] = []
+        for k in obs_name:
+            self.observable.__setattr__(k, [])
 
         for key, p in zip(self.wf.state_dict().keys(),
                           self.wf.parameters()):
             if p.requires_grad:
-                self.obs_dict[key] = []
-                self.obs_dict[key + '.grad'] = []
+                self.observable.__setattr__(key, [])
+                self.observable.__setattr__(key+'.grad', [])
+
+    def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
+        """store observale in the dictionary
+
+        Arguments:
+            obs_dict {dict} -- dictionary of the observalbe
+            pos {torch.tensor} -- positions of th walkers
+
+        Keyword Arguments:
+            local_energy {torch.tensor} -- precomputed values of the local
+                                           energy (default: {None})
+            ibatch {int]} -- index of the current batch (default: {None})
+        """
+
+        if self.wf.cuda and pos.device.type == 'cpu':
+            pos = pos.to(self.device)
+
+        for obs in self.observable.__dict__.keys():
+
+            # store local energy
+            if obs == 'local_energy' and local_energy is not None:
+                data = local_energy.cpu().detach().numpy()
+
+                if (ibatch is None) or (ibatch == 0):
+                    self.observable.local_energy.append(data)
+                else:
+                    self.observable.local_energy[-1] = np.append(
+                        self.observable.local_energy[-1], data)
+
+            # store variational parameter
+            elif obs in self.wf.state_dict():
+                layer, param = obs.split('.')
+                p = self.wf.__getattr__(layer).__getattr__(param)
+                self.observable.__getattribute__(
+                    obs).append(p.data.clone().numpy())
+
+                if p.grad is not None:
+                    self.observable.__getattribute__(obs +
+                                                     '.grad').append(p.grad.clone().numpy())
+                else:
+                    self.observable.__getattribute__(obs +
+                                                     '.grad').append(torch.zeros_like(p.data))
+
+            # store any other defined method
+            elif hasattr(self.wf, obs):
+                func = self.wf.__getattribute__(obs)
+                data = func(pos)
+                if isinstance(data, torch.Tensor):
+                    data = data.cpu().detach().numpy()
+                self.observable.__getattribute__(obs).append(data)
+
+    def print_observable(self, cumulative_loss, verbose=False):
+        """Print the observalbe to csreen
+
+        Arguments:
+            cumulative_loss {float} -- current loss value
+
+        Keyword Arguments:
+            verbose {bool} -- print all the observables (default: {False})
+        """
+
+        for k in self.observable.__dict__.keys():
+
+            if k == 'local_energy':
+
+                eloc = self.observable.local_energy[-1]
+                e = np.mean(eloc)
+                v = np.var(eloc)
+                err = np.sqrt(v / len(eloc))
+                print('energy   : %f +/- %f' % (e, err))
+                print('variance : %f' % np.sqrt(v))
+
+            elif verbose:
+                print(
+                    k + ' : ', self.observable.__getattribute__(k)[-1])
+                print('loss %f' % (cumulative_loss))
 
     def resample(self, n, pos):
         """Resample
@@ -233,81 +309,6 @@ class SolverBase(object):
 
         return pos
 
-    def store_observable(self, obs_dict, pos,
-                         local_energy=None, ibatch=None, **kwargs):
-        """store observale in the dictionary
-
-        Arguments:
-            obs_dict {dict} -- dictionary of the observalbe
-            pos {torch.tensor} -- positions of th walkers
-
-        Keyword Arguments:
-            local_energy {torch.tensor} -- precomputed values of the local
-                                           energy (default: {None})
-            ibatch {int]} -- index of the current batch (default: {None})
-        """
-
-        if self.wf.cuda and pos.device.type == 'cpu':
-            pos = pos.to(self.device)
-
-        for obs in self.obs_dict.keys():
-
-            # store local energy
-            if obs == 'local_energy' and local_energy is not None:
-                data = local_energy.cpu().detach().numpy()
-
-                if (ibatch is None) or (ibatch == 0):
-                    self.obs_dict[obs].append(data)
-                else:
-                    self.obs_dict[obs][-1] = np.append(
-                        self.obs_dict[obs][-1], data)
-
-            # store variational parameter
-            elif obs in self.wf.state_dict():
-                layer, param = obs.split('.')
-                p = self.wf.__getattr__(layer).__getattr__(param)
-                self.obs_dict[obs].append(p.data.clone().numpy())
-
-                if p.grad is not None:
-                    self.obs_dict[obs +
-                                  '.grad'].append(p.grad.clone().numpy())
-                else:
-                    self.obs_dict[obs +
-                                  '.grad'].append(torch.zeros_like(p.data))
-
-            # store any other defined method
-            elif hasattr(self.wf, obs):
-                func = self.wf.__getattribute__(obs)
-                data = func(pos)
-                if isinstance(data, torch.Tensor):
-                    data = data.cpu().detach().numpy()
-                self.obs_dict[obs].append(data)
-
-    def print_observable(self, cumulative_loss, verbose=False):
-        """Print the observalbe to csreen
-
-        Arguments:
-            cumulative_loss {float} -- current loss value
-
-        Keyword Arguments:
-            verbose {bool} -- print all the observables (default: {False})
-        """
-
-        for k in self.obs_dict:
-
-            if k == 'local_energy':
-
-                eloc = self.obs_dict['local_energy'][-1]
-                e = np.mean(eloc)
-                v = np.var(eloc)
-                err = np.sqrt(v / len(eloc))
-                print('energy   : %f +/- %f' % (e, err))
-                print('variance : %f' % np.sqrt(v))
-
-            elif verbose:
-                print(k + ' : ', self.obs_dict[k][-1])
-                print('loss %f' % (cumulative_loss))
-
     def single_point(self, hdf5_group='single_point'):
         """Performs a single point calculation
 
@@ -341,16 +342,18 @@ class SolverBase(object):
             print('Variance : ', s.detach().item())
 
             # dump data to hdf5
-            dump_to_hdf5({'pos': pos,
-                          'local_energy': el,
-                          'energy': e,
-                          'variance': s,
-                          'error': err
-                          },
+            obs = SimpleNamespace(
+                pos=pos,
+                local_energy=el,
+                energy=e,
+                variance=s,
+                error=err
+            )
+            dump_to_hdf5(obs,
                          self.hdf5file,
                          root_name=hdf5_group)
 
-        return pos, e, s
+        return obs
 
     def save_checkpoint(self, epoch, loss, filename):
         """Save a checkpoint file
@@ -398,10 +401,11 @@ class SolverBase(object):
         for ip in tqdm(p):
             el.append(self.wf.local_energy(ip).detach().numpy())
 
-        dump_to_hdf5({'local_energy': el, 'pos': p},
+        obs = SimpleNamespace(local_energy=el, pos=pos)
+        dump_to_hdf5(obs,
                      self.hdf5file, hdf5_group)
 
-        return {'local_energy': el, 'pos': p}
+        return obs
 
     def print_parameters(self, grad=False):
         """print the parameters to screen

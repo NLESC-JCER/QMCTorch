@@ -80,7 +80,7 @@ class SolverOrbital(SolverBase):
         min_loss = 1E3
 
         # get the initial observalbe
-        self.store_observable(self.obs_dict, pos)
+        self.store_observable(pos)
 
         # loop over the epoch
         for n in range(nepoch):
@@ -103,8 +103,8 @@ class SolverOrbital(SolverBase):
                 self.optimization_step(lpos)
 
                 # observable
-                self.store_observable(self.obs_dict, pos,
-                                      local_energy=eloc, ibatch=ibatch)
+                self.store_observable(
+                    pos, local_energy=eloc, ibatch=ibatch)
 
             # save the model if necessary
             if cumulative_loss < min_loss:
@@ -133,7 +133,7 @@ class SolverOrbital(SolverBase):
         # dump
         if hdf5_group is None:
             hdf5_group = self.task
-        dump_to_hdf5(self.obs_dict, self.hdf5file, hdf5_group)
+        dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
 
     def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.
