@@ -238,7 +238,7 @@ class SolverBase(object):
                                                      '.grad').append(p.grad.clone().numpy())
                 else:
                     self.observable.__getattribute__(obs +
-                                                     '.grad').append(torch.zeros_like(p.data))
+                                                     '.grad').append(torch.zeros_like(p.data).numpy())
 
             # store any other defined method
             elif hasattr(self.wf, obs):
