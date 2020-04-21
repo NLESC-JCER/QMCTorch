@@ -9,13 +9,15 @@ from ..utils import dump_to_hdf5
 class SolverBase(object):
 
     def __init__(self, wf=None, sampler=None,
-                 optimizer=None, scheduler=None, output=None):
+                 optimizer=None, scheduler=None,
+                 output=None):
         """Base class for the solvers
 
         Keyword Arguments:
             wf {WaveFunction} -- WaveFuntion object (default: {None})
             sampler {SamplerBase} -- Samppler (default: {None})
             optimizer {torch.optim} -- Optimizer (default: {None})
+            output {str} -- name of the hdf5 file
         """
 
         self.wf = wf
@@ -53,7 +55,8 @@ class SolverBase(object):
 
         self.hdf5file = output
         if output is None:
-            self.hdf5file = self.wf.mol.name + '_QMC.hdf5'
+            basename = self.wf.mol.hdf5file.split('.')[0]
+            self.hdf5file = basename + '_QMCTorch.hdf5'
         dump_to_hdf5(self, self.hdf5file)
 
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
@@ -305,7 +308,7 @@ class SolverBase(object):
                 print(k + ' : ', self.obs_dict[k][-1])
                 print('loss %f' % (cumulative_loss))
 
-    def single_point(self):
+    def single_point(self, hdf5_group='single_point'):
         """Performs a single point calculation
 
         Keyword Arguments:
@@ -345,7 +348,7 @@ class SolverBase(object):
                           'error': err
                           },
                          self.hdf5file,
-                         root_name='single_point')
+                         root_name=hdf5_group)
 
         return pos, e, s
 
@@ -380,7 +383,7 @@ class SolverBase(object):
             self.obs_dict[key] = []
         self.obs_dict[key].append(data)
 
-    def sampling_traj(self, pos):
+    def sampling_traj(self, pos, hdf5_group='sampling_trajectory'):
         """Compute the local energy along a sampling trajectory
 
         Arguments:
@@ -396,7 +399,7 @@ class SolverBase(object):
             el.append(self.wf.local_energy(ip).detach().numpy())
 
         dump_to_hdf5({'local_energy': el, 'pos': p},
-                     self.hdf5file, 'sampling_trajectory')
+                     self.hdf5file, hdf5_group)
 
         return {'local_energy': el, 'pos': p}
 

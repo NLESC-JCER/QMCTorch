@@ -21,7 +21,7 @@ class SolverOrbital(SolverBase):
         SolverBase.__init__(self, wf, sampler, optimizer)
 
     def run(self, nepoch, batchsize=None, loss='variance',
-            clip_loss=False, grad='auto'):
+            clip_loss=False, grad='auto', hdf5_group=None):
         """Run the optimization
 
         Arguments:
@@ -131,7 +131,9 @@ class SolverOrbital(SolverBase):
         self.sampler.nwalkers = _nwalker_save
 
         # dump
-        dump_to_hdf5(self.obs_dict, self.hdf5file, self.task)
+        if hdf5_group is None:
+            hdf5_group = self.task
+        dump_to_hdf5(self.obs_dict, self.hdf5file, hdf5_group)
 
     def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic diff of the required loss.
