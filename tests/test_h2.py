@@ -73,7 +73,8 @@ class TestH2(unittest.TestCase):
         self.solver.sampler = self.sampler
 
         # sample and compute observables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
 
         # values on different arch
         expected_energy = [-1.1464850902557373,
@@ -96,7 +97,8 @@ class TestH2(unittest.TestCase):
         self.solver.sampler = self.hmc_sampler
 
         # sample and compute observables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
 
         # values on different arch
         expected_energy = [-1.077970027923584,
@@ -127,7 +129,9 @@ class TestH2(unittest.TestCase):
         self.solver.wf.eval()
 
         # sample and compute variables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
+
         e = e.data.numpy()
         v = v.data.numpy()
 

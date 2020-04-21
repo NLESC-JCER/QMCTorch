@@ -55,14 +55,14 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 0:
+if 1:
     obs = solver.single_point()
 
-    solver.sampler.ntherm = 1000
-    solver.sampler.ndecor = 100
-    pos = solver.sampler(solver.wf.pdf)
-    obs = solver.sampling_traj(pos)
-    Tc = plot_walkers_traj(obs.local_energy)
+    # solver.sampler.ntherm = 1000
+    # solver.sampler.ndecor = 100
+    # pos = solver.sampler(solver.wf.pdf)
+    # obs = solver.sampling_traj(pos)
+    # Tc = plot_walkers_traj(obs.local_energy)
     # plot_block(obs)
 
     # save_observalbe('obs.pkl', obs)
@@ -71,7 +71,7 @@ if 0:
 
 
 # optimize the wave function
-if 1:
+if 0:
     solver.configure(task='wf_opt', freeze=['ao', 'mo'])
     solver.track_observable(['local_energy'])
 

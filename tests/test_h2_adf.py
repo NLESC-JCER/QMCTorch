@@ -59,7 +59,8 @@ class TestH2ADF(unittest.TestCase):
         self.solver.sampler = self.sampler
 
         # sample and compute observables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
 
         # vals on different archs
         expected_energy = [-1.1572532653808594,
