@@ -52,8 +52,6 @@ def plot_energy(local_energy, e0=None, show_variance=False):
 
     plt.show()
 
-    return energy, variance
-
 
 def plot_data(observable, obsname):
     """Plot the evolution a given data

@@ -21,6 +21,7 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                basis='dzp',
                unit='bohr')
 
+# load the molecule from a previous hdf5
 # mol = Molecule(load='H2_pyscf_dzp.hdf5')
 
 
@@ -44,54 +45,47 @@ lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
            {'params': wf.mo.parameters(), 'lr': 1E-3},
            {'params': wf.fc.parameters(), 'lr': 1E-3}]
-
-
 opt = optim.Adam(lr_dict, lr=1E-3)
 
 # scheduler
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
-# solver
+# QMC solver
 solver = SolverOrbital(wf=wf, sampler=sampler,
                        optimizer=opt, scheduler=None)
 
-if 1:
-    obs = solver.single_point()
 
-    solver.sampler.ntherm = 1000
-    solver.sampler.ndecor = 100
-    pos = solver.sampler(solver.wf.pdf)
-    obs = solver.sampling_traj(pos)
-    # Tc = plot_walkers_traj(obs.local_energy)
-    # plot_block(obs)
+# perform a single point calculation
+obs = solver.single_point()
 
-    # save_observalbe('obs.pkl', obs)
-    # obs = load_observable('obs.pkl')
-    # plot_energy(obs, e0=-1.1645, show_variance=True)
+# compute the sampling trajectory
+solver.sampler.ntherm = 1000
+solver.sampler.ndecor = 100
+pos = solver.sampler(solver.wf.pdf)
+obs = solver.sampling_traj(pos)
+plot_walkers_traj(obs.local_energy)
 
 
 # optimize the wave function
-if 1:
-    solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-    solver.track_observable(['local_energy'])
+solver.configure(task='wf_opt', freeze=['ao', 'mo'])
+solver.track_observable(['local_energy'])
 
-    solver.configure_resampling(
-        mode='update', resample_every=1, nstep_update=25)
+solver.configure_resampling(
+    mode='update', resample_every=1, nstep_update=25)
+solver.ortho_mo = False
+data = solver.run(5, batchsize=None,
+                  loss='energy',
+                  grad='manual',
+                  clip_loss=False)
 
-    solver.ortho_mo = False
-    data = solver.run(5, batchsize=None,
-                      loss='energy',
-                      grad='manual',
-                      clip_loss=False)
+plot_energy(solver.observable.local_energy, e0=-
+            1.1645, show_variance=True)
+plot_data(solver.observable, obsname='jastrow.weight')
 
-    e, v = plot_energy(solver.observable.local_energy, e0=-
-                       1.1645, show_variance=True)
-    plot_data(solver.observable, obsname='jastrow.weight')
-
-# # optimize the geometry
-# solver.configure(task='geo_opt')
-# solver.observable(['local_energy','atomic_distances'])
-# solver.run(5,loss='energy')
-
-# plot the data
-# plot_observable(solver.obs_dict, e0=-1.16)
+# optimize the geometry
+solver.configure(task='geo_opt')
+solver.tack_observable(['local_energy', 'atomic_distances'])
+data = solver.run(5, batchsize=None,
+                  loss='energy',
+                  grad='manual',
+                  clip_loss=False)
