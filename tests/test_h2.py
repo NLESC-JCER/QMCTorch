@@ -120,7 +120,8 @@ class TestH2(unittest.TestCase):
         self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)
 
         self.solver.configure(task='geo_opt')
-        self.solver.observable(['local_energy', 'atomic_distances'])
+        self.solver.track_observable(
+            ['local_energy', 'atomic_distances'])
         self.solver.run(50, loss='energy')
 
         # load the best model
