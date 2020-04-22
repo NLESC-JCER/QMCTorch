@@ -56,14 +56,14 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 
 # perform a single point calculation
-obs = solver.single_point()
+# obs = solver.single_point()
 
 # compute the sampling trajectory
-solver.sampler.ntherm = 1000
-solver.sampler.ndecor = 100
-pos = solver.sampler(solver.wf.pdf)
-obs = solver.sampling_traj(pos)
-plot_walkers_traj(obs.local_energy)
+# solver.sampler.ntherm = 1000
+# solver.sampler.ndecor = 100
+# pos = solver.sampler(solver.wf.pdf)
+# obs = solver.sampling_traj(pos)
+# plot_walkers_traj(obs.local_energy)
 
 
 # optimize the wave function
@@ -82,10 +82,10 @@ plot_energy(solver.observable.local_energy, e0=-
             1.1645, show_variance=True)
 plot_data(solver.observable, obsname='jastrow.weight')
 
-# optimize the geometry
-solver.configure(task='geo_opt')
-solver.tack_observable(['local_energy', 'atomic_distances'])
-data = solver.run(5, batchsize=None,
-                  loss='energy',
-                  grad='manual',
-                  clip_loss=False)
+# # optimize the geometry
+# solver.configure(task='geo_opt')
+# solver.tack_observable(['local_energy', 'atomic_distances'])
+# data = solver.run(5, batchsize=None,
+#                   loss='energy',
+#                   grad='manual',
+#                   clip_loss=False)

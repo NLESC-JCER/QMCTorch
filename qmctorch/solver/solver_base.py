@@ -399,9 +399,11 @@ class SolverBase(object):
         for ip in tqdm(p):
             el.append(self.wf.local_energy(ip).detach().numpy())
 
-        obs = SimpleNamespace(local_energy=el, pos=pos)
+        el = np.array(el).squeeze(-1)
+        obs = SimpleNamespace(local_energy=np.array(el), pos=pos)
         dump_to_hdf5(obs,
                      self.hdf5file, hdf5_group)
+
         add_group_attr(self.hdf5file, hdf5_group,
                        {'type': 'sampling_traj'})
         return obs

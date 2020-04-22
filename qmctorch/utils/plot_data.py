@@ -79,7 +79,7 @@ def plot_data(observable, obsname):
     plt.show()
 
 
-def plot_walkers_traj(obs, traj_index='all'):
+def plot_walkers_traj(eloc, traj_index='all'):
     """Plot the trajectory of all the individual walkers
 
     Arguments:
@@ -92,7 +92,7 @@ def plot_walkers_traj(obs, traj_index='all'):
         float -- decorelation time
     """
 
-    eloc = np.array(obs.local_energy).squeeze(-1)
+    #eloc = np.array(obs.local_energy).squeeze(-1)
 
     nstep, nwalkers = eloc.shape
 
@@ -132,7 +132,6 @@ def plot_block(eloc):
         eloc {np.array} -- values of the local energy
     """
 
-    eloc = np.array(obs_dict['local_energy']).squeeze(-1)
     nstep, nwalkers = eloc.shape
     max_block_size = nstep // 2
 
