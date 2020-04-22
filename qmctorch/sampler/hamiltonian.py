@@ -7,7 +7,8 @@ from .sampler_base import SamplerBase
 class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
-                 step_size=0.1, init={'min': -2, 'max': 2}, L=10):
+                 step_size=0.1, ntherm=-1, ndecor=1, init={'min': -2, 'max': 2}, L=10,
+                 with_tqdm=True):
         ''' HMC SAMPLER
         Args:
             f (func) : function to sample
@@ -18,7 +19,8 @@ class Hamiltonian(SamplerBase):
         '''
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, nelec, ndim, init, None)
+                             step_size, ntherm, ndecor,
+                             nelec, ndim, init, None, with_tqdm)
         self.traj_length = L
 
     @staticmethod
@@ -46,15 +48,23 @@ class Hamiltonian(SamplerBase):
     def log_func(func):
         return lambda x: -torch.log(func(x))
 
-    def generate(self, pdf, ntherm=10, ndecor=10,
-                 with_tqdm=True, pos=None):
-        '''perform a HMC sampling of the pdf
-        Returns:
-            X (list) : positions of the walkers
-        '''
+    def __call__(self, pdf, pos=None):
+        """Generate walkers followinf HMC
 
-        if ntherm < 0:
-            ntherm = self.nstep + ntherm
+        Arguments:
+            pdf {callable} -- density to sample
+
+        Keyword Arguments:
+            ntherm {int} -- number of iterations needed to thermalize (default: {10})
+            ndecor {int} -- number of iterations needed to decorelate (default: {10})
+            pos {torch.tensor} -- initial position of the walker (default: {None})
+
+        Returns:
+            torch.tensor -- sampling points
+        """
+
+        if self.ntherm < 0:
+            self.ntherm = self.nstep + self.ntherm
 
         self.walkers.initialize(pos=pos)
         self.walkers.pos = self.walkers.pos.clone()
@@ -66,7 +76,7 @@ class Hamiltonian(SamplerBase):
         rate = 0
         idecor = 0
 
-        if with_tqdm:
+        if self.with_tqdm:
             rng = tqdm(range(self.nstep))
         else:
             rng = range(self.nstep)
@@ -80,14 +90,14 @@ class Hamiltonian(SamplerBase):
             rate += _r
 
             # store
-            if (istep >= ntherm):
-                if (idecor % ndecor == 0):
+            if (istep >= self.ntherm):
+                if (idecor % self.ndecor == 0):
                     pos.append(self.walkers.pos.detach())
                 idecor += 1
 
         # print stats
         print("Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
-        return torch.cat(pos)
+        return torch.cat(pos).requires_grad_()
 
     @staticmethod
     def _step(U, get_grad, epsilon, L, qinit):

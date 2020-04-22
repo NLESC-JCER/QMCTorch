@@ -73,7 +73,8 @@ class TestH2(unittest.TestCase):
         self.solver.sampler = self.sampler
 
         # sample and compute observables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
 
         # values on different arch
         expected_energy = [-1.1464850902557373,
@@ -96,7 +97,8 @@ class TestH2(unittest.TestCase):
         self.solver.sampler = self.hmc_sampler
 
         # sample and compute observables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
 
         # values on different arch
         expected_energy = [-1.077970027923584,
@@ -118,7 +120,8 @@ class TestH2(unittest.TestCase):
         self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)
 
         self.solver.configure(task='geo_opt')
-        self.solver.observable(['local_energy', 'atomic_distances'])
+        self.solver.track_observable(
+            ['local_energy', 'atomic_distances'])
         self.solver.run(50, loss='energy')
 
         # load the best model
@@ -127,7 +130,9 @@ class TestH2(unittest.TestCase):
         self.solver.wf.eval()
 
         # sample and compute variables
-        _, e, v = self.solver.single_point()
+        obs = self.solver.single_point()
+        e, v = obs.energy, obs.variance
+
         e = e.data.numpy()
         v = v.data.numpy()
 

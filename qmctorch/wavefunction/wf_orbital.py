@@ -8,6 +8,8 @@ from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
 from .jastrow import TwoBodyJastrowFactor
 
+from ..utils import register_extra_attributes
+
 
 class Orbital(WaveFunction):
 
@@ -98,16 +100,20 @@ class Orbital(WaveFunction):
             self.device = torch.device('cuda')
             self.to(self.device)
 
+        # register the callable for hdf5 dump
+        register_extra_attributes(self,
+                                  ['ao', 'mo_scf',
+                                   'mo', 'jastrow',
+                                   'pool', 'kinpool', 'fc'])
+
     def get_mo_coeffs(self):
         """get the molecular orbital coefficient
 
         Returns:
             nn.Parameters -- MO matrix as a parameter
         """
-        mo_coeff = torch.tensor(
-            self.mol.calculator.get_mo_coeffs()).type(
-                torch.get_default_dtype())
-        # return nn.Parameter(mo_coeff)
+        mo_coeff = torch.tensor(self.mol.basis.mos).type(
+            torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):

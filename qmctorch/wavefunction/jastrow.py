@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from .electron_distance import ElectronDistance
-
+from ..utils import register_extra_attributes
 
 class TwoBodyJastrowFactor(nn.Module):
 
@@ -43,6 +43,8 @@ class TwoBodyJastrowFactor(nn.Module):
             self.device)
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
+
+        register_extra_attributes(self, ['weight'])
 
     def _to_device(self):
         """Export the non parameter variable to the device."""

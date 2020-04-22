@@ -2,37 +2,69 @@ import os
 import math
 import numpy as np
 from mendeleev import element
+from types import SimpleNamespace
+import h5py
+
 from .calculator.adf import CalculatorADF
 from .calculator.pyscf import CalculatorPySCF
+
+from ..utils import dump_to_hdf5, load_from_hdf5
 
 
 class Molecule(object):
 
-    def __init__(self, atom, calculator='adf',
+    def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
-                 name=None):
+                 name=None, load=None):
 
-        self.atoms_str = atom
-        self.unit = unit
-        self.max_angular = 2
-        self.atoms = []
         self.atom_coords = []
-        self.atomic_number = []
         self.atomic_nelec = []
-        self.nelec = 0
+        self.atomic_number = []
+        self.atoms = []
+        self.atoms_str = atom
+        self.hdf5file = None
+        self.max_angular = 2
         self.name = name
+        self.natom = 0
+        self.ndown = 0
+        self.nelec = 0
+        self.nup = 0
+        self.unit = unit
+        self.basis = SimpleNamespace()
 
-        if self.unit not in ['angs', 'bohr']:
-            raise ValueError('unit should be angs or bohr')
+        if load is not None:
+            print('Restarting calculation from ', load)
+            self.load_hdf5(load)
 
-        self.process_atom_str()
+        else:
 
-        calc = {'adf': CalculatorADF,
-                'pyscf': CalculatorPySCF}[calculator]
+            if self.unit not in ['angs', 'bohr']:
+                raise ValueError('unit should be angs or bohr')
 
-        self.calculator = calc(
-            self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
-        self.basis = self.calculator.get_basis()
+            self.process_atom_str()
+
+            self.hdf5file = '_'.join(
+                [self.name, calculator, basis]) + '.hdf5'
+
+            if os.path.isfile(self.hdf5file):
+                print('Reusing scf calculation from ', self.hdf5file)
+                self.basis = self.load_basis()
+
+            else:
+                print('Running scf calculation')
+
+                calc = {'adf': CalculatorADF,
+                        'pyscf': CalculatorPySCF}[calculator]
+
+                self.calculator = calc(
+                    self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+
+                self.basis = self.calculator.run()
+
+                dump_to_hdf5(self, self.hdf5file,
+                             root_name='molecule')
+
+        self.check_basis()
 
     def process_atom_str(self):
         '''Process the input file.'''
@@ -79,6 +111,7 @@ class Molecule(object):
         # name of the system
         if self.name is None:
             self.name = self.get_mol_name(self.atoms)
+        self.atoms = np.array(self.atoms)
 
     def read_xyz_file(self):
         """Process a xyz file containing the data
@@ -144,6 +177,102 @@ class Molecule(object):
         for ua in unique_atoms:
             mol_name += ua + str(atoms.count(ua))
         return mol_name
+
+    def load_basis(self):
+        """Get the basis information needed to compute the AO values."""
+
+        h5 = h5py.File(self.hdf5file, 'r')
+        basis_grp = h5['molecule']['basis']
+        self.basis = SimpleNamespace()
+
+        self.basis.radial_type = basis_grp['radial_type'][()]
+        self.basis.harmonics_type = basis_grp['harmonics_type'][()]
+
+        self.basis.nao = int(basis_grp['nao'][()])
+        self.basis.nmo = int(basis_grp['nmo'][()])
+
+        self.basis.nshells = basis_grp['nshells'][()]
+        self.basis.index_ctr = basis_grp['index_ctr'][()]
+
+        self.basis.bas_exp = basis_grp['bas_exp'][()]
+        self.basis.bas_coeffs = basis_grp['bas_coeffs'][()]
+
+        self.basis.atom_coords_internal = basis_grp['atom_coords_internal'][(
+        )]
+
+        self.basis.TotalEnergy = basis_grp['TotalEnergy'][()]
+        self.basis.mos = basis_grp['mos'][()]
+
+        if self.basis.harmonics_type == 'cart':
+            self.basis.bas_kr = basis_grp['bas_kr'][()]
+            self.basis.bas_kx = basis_grp['bas_kx'][()]
+            self.basis.bas_ky = basis_grp['bas_ky'][()]
+            self.basis.bas_kz = basis_grp['bas_kz'][()]
+
+        elif self.basis.harmonics_type == 'sph':
+            self.basis.bas_n = basis_grp['bas_n'][()]
+            self.basis.bas_l = basis_grp['bas_l'][()]
+            self.basis.bas_m = basis_grp['bas_m'][()]
+
+        h5.close()
+        return self.basis
+
+    def load_mo_coeffs(self):
+        """Get the molecule orbital coefficients."""
+
+        h5 = h5py.File(self.hdf5file, 'r')
+        return h5['molecule']['basis']['mos'][()]
+
+    def print_total_energy(self):
+        """Print the total energy."""
+        h5 = h5py.File(self.hdf5file, 'r')
+        e = h5['molecule']['basis']['TotalEnergy'][()]
+        print('== SCF Energy : ', e)
+        h5.close()
+
+    def check_basis(self):
+        """Check if the basis contains all the necessary fields."""
+
+        names = ['bas_coeffs', 'bas_exp', 'nshells',
+                 'atom_coords_internal', 'nao', 'nmo',
+                 'index_ctr', 'mos', 'TotalEnergy']
+
+        if self.basis.harmonics_type == 'cart':
+            names += ['bas_kx', 'bas_ky', 'bas_kz', 'bas_kr']
+
+        elif self.basis.harmonics_type == 'sph':
+            names += ['bas_n', 'bas_l', 'bas_m']
+
+        for n in names:
+            if not hasattr(self.basis, n):
+                raise ValueError(n, ' not in the basis namespace')
+
+    def load_hdf5(self, filename):
+
+        # load the data
+        load_from_hdf5(self, filename, 'molecule')
+
+        # cast some of the important data type
+        # should be done by the hdf5_utils in the future
+        self.atoms = self.atoms.astype('U')
+        self.basis.nao = int(self.basis.nao)
+        self.basis.nmo = int(self.basis.nmo)
+
+        cast_fn = {'nelec': int,
+                   'nup': int,
+                   'ndown': int,
+                   'atoms': lambda x: x.astype('U'),
+                   'atomic_nelec': lambda x: [int(i) for i in x]}
+
+        for name, fn in cast_fn.items():
+            self.__setattr__(name, fn(self.__getattribute__(name)))
+
+        cast_fn = {'nao': int,
+                   'nmo': int}
+
+        for name, fn in cast_fn.items():
+            self.basis.__setattr__(
+                name, fn(self.basis.__getattribute__(name)))
 
 
 if __name__ == "__main__":

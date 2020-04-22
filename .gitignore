@@ -29,3 +29,5 @@ docs/apidocs
 # pytorch
 *.pth*
 
+# runs dir
+runs/*

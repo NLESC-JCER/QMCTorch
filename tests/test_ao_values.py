@@ -6,6 +6,8 @@ from pyscf import gto
 import numpy as np
 import unittest
 
+import matplotlib.pyplot as plt
+
 import os
 
 

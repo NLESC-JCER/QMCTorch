@@ -4,11 +4,11 @@ from matplotlib import cm
 import pickle
 
 
-def plot_energy(obs_dict, e0=None, show_variance=False):
-    """Plot the evolutionof the energy along the trajectory
+def plot_energy(local_energy, e0=None, show_variance=False):
+    """Plot the evolution of the energy along the trajectory
 
     Arguments:
-        obs_dict {dict} -- dictionary pf observable
+        local_energy {np.array} -- array containing the local energy
 
     Keyword Arguments:
         e0 {float} -- optimal value of the enrgy (default: {None})
@@ -21,13 +21,12 @@ def plot_energy(obs_dict, e0=None, show_variance=False):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    data = obs_dict['local_energy']
-    n = len(data)
+    n = len(local_energy)
     epoch = np.arange(n)
 
     # get the variance
-    energy = np.array([np.mean(e) for e in data])
-    variance = np.array([np.var(e) for e in data])
+    energy = np.array([np.mean(e) for e in local_energy])
+    variance = np.array([np.var(e) for e in local_energy])
 
     # get the mean value
     print("Energy   : %f " % np.mean(energy))
@@ -53,26 +52,25 @@ def plot_energy(obs_dict, e0=None, show_variance=False):
 
     plt.show()
 
-    return energy, variance
 
-
-def plot_data(obs_dict, obs):
+def plot_data(observable, obsname):
     """Plot the evolution a given data
 
     Arguments:
-        obs_dict {dict} -- dictionary of observable
-        obs {str} -- name (key) of the desired observable
+        obs_dict {SimpleNamespace} -- namespace of observable
+        obsname {str} -- name (key) of the desired observable
     """
 
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    data = np.array(obs_dict[obs]).flatten()
+    data = np.array(observable.__getattribute__(obsname)).flatten()
     epoch = np.arange(len(data))
     ax.plot(epoch, data, color='#144477')
 
-    if obs + '.grad' in obs_dict:
-        data = np.array(obs_dict[obs + '.grad']).flatten()
+    if obsname + '.grad' in observable.__dict__.keys():
+        data = np.array(observable.__getattribute__(
+            obsname + '.grad')).flatten()
         ax2 = ax.twinx()
         ax2.plot(epoch, data, color='blue')
         ax2.set_ylabel('gradient', color='blue')
@@ -81,11 +79,11 @@ def plot_data(obs_dict, obs):
     plt.show()
 
 
-def plot_walkers_traj(obs, traj_index='all'):
+def plot_walkers_traj(eloc, traj_index='all'):
     """Plot the trajectory of all the individual walkers
 
     Arguments:
-        obs_dict {dict} -- dictionary of observable
+        obs {SimpleNamespace} -- Namespace of the observables
 
     Keyword Arguments:
         traj_index {str} -- all or index of a given walker (default: {'all'})
@@ -94,8 +92,7 @@ def plot_walkers_traj(obs, traj_index='all'):
         float -- decorelation time
     """
 
-    eloc = obs['local_energy']
-    eloc = np.array(eloc).squeeze(-1)
+    #eloc = np.array(obs.local_energy).squeeze(-1)
 
     nstep, nwalkers = eloc.shape
 
@@ -103,9 +100,7 @@ def plot_walkers_traj(obs, traj_index='all'):
     celoc /= np.arange(1, nstep + 1)
 
     var_decor = np.sqrt(np.var(np.mean(celoc, axis=1)))
-    print(var_decor)
     var = np.sqrt(np.var(celoc, axis=1) / (nstep - 1))
-    print(var)
 
     Tc = (var_decor / var)**2
 
@@ -130,14 +125,13 @@ def plot_walkers_traj(obs, traj_index='all'):
     return Tc
 
 
-def plot_block(obs_dict):
+def plot_block(eloc):
     """Plot the blocking thingy
 
     Arguments:
-        obs_dict {dict} -- dictionary of observable
+        eloc {np.array} -- values of the local energy
     """
 
-    eloc = np.array(obs_dict['local_energy']).squeeze(-1)
     nstep, nwalkers = eloc.shape
     max_block_size = nstep // 2
 
@@ -150,30 +144,3 @@ def plot_block(obs_dict):
 
     plt.plot(np.array(evar))
     plt.show()
-
-
-def save_observalbe(filename, obs_dict):
-    """save the dictionary to file
-
-    Arguments:
-        filename {str} -- name of the file
-        obs_dict {dict} -- dictionary of observable
-    """
-    with open(filename, 'wb') as fhandle:
-        pickle.dump(
-            obs_dict,
-            fhandle,
-            protocol=pickle.HIGHEST_PROTOCOL)
-
-
-def load_observable(filename):
-    """load the dictionary to variable
-
-    Arguments:
-        filename {str} -- name of the file
-
-    Returns:
-        dict -- dictionary of observable
-    """
-    with open(filename, 'rb') as fhandle:
-        return pickle.load(fhandle)
