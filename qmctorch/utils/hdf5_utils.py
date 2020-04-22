@@ -387,6 +387,13 @@ def get_child_object(obj, child_name):
         except AttributeError:
             pass
 
+    if hasattr(obj, '__getitem__'):
+        try:
+            return obj.__getitem__(child_name)
+
+        except AttributeError:
+            pass
+
 
 def add_group_attr(filename, grp_name, attr):
     """Add attribute to a given group
