@@ -356,7 +356,10 @@ def get_children_names(obj):
     if hasattr(obj, '__extra_attr__'):
         names += obj.__extra_attr__
 
-    return names
+    if hasattr(obj, 'state_dict'):
+        names += list(obj.state_dict().keys())
+
+    return list(set(names))
 
 
 def get_child_object(obj, child_name):

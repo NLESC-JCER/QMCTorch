@@ -3,6 +3,7 @@ from torch import nn
 from .radial_functions import radial_gaussian, radial_slater
 from .norm_orbital import atomic_orbital_norm
 from .spherical_harmonics import Harmonics
+from ..utils import register_extra_attributes
 
 
 class AtomicOrbitals(nn.Module):
