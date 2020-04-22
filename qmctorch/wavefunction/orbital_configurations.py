@@ -4,7 +4,9 @@ import torch
 class OrbitalConfigurations(object):
 
     def __init__(self, mol):
-        self.mol = mol
+        # self.mol = mol
+        self.nup = mol.nup
+        self.ndown = mol.ndown
 
     def get_configs(self, configs):
         """Get the configuratio in the CI expansion
@@ -60,8 +62,8 @@ class OrbitalConfigurations(object):
             tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
             electronic confs
         """
-        _gs_up = list(range(self.mol.nup))
-        _gs_down = list(range(self.mol.ndown))
+        _gs_up = list(range(self.nup))
+        _gs_down = list(range(self.ndown))
         cup, cdown = [_gs_up], [_gs_down]
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
@@ -74,13 +76,13 @@ class OrbitalConfigurations(object):
             nvirt (int): number of virtual orbitals in the active space
         """
 
-        _gs_up = list(range(self.mol.nup))
-        _gs_down = list(range(self.mol.ndown))
+        _gs_up = list(range(self.nup))
+        _gs_down = list(range(self.ndown))
         cup, cdown = [_gs_up], [_gs_down]
 
         for iocc in range(
-                self.mol.nup - 1, self.mol.nup - 1 - nocc, -1):
-            for ivirt in range(self.mol.nup, self.mol.nup + nvirt, 1):
+                self.nup - 1, self.nup - 1 - nocc, -1):
+            for ivirt in range(self.nup, self.nup + nvirt, 1):
                 _xt = self._create_excitation(
                     _gs_up.copy(), iocc, ivirt)
                 cup, cdown = self._append_excitations(
@@ -101,21 +103,21 @@ class OrbitalConfigurations(object):
             norb (int) : number of orbitals in the active space
         """
 
-        _gs_up = list(range(self.mol.nup))
-        _gs_down = list(range(self.mol.ndown))
+        _gs_up = list(range(self.nup))
+        _gs_down = list(range(self.ndown))
         cup, cdown = self._get_single_config(nocc, nvirt)
         cup = cup.tolist()
         cdown = cdown.tolist()
 
         for iocc_up in range(
-                self.mol.nup - 1, self.mol.nup - 1 - nocc, -1):
+                self.nup - 1, self.nup - 1 - nocc, -1):
             for ivirt_up in range(
-                    self.mol.nup, self.mol.nup + nvirt, 1):
+                    self.nup, self.nup + nvirt, 1):
 
                 for iocc_down in range(
-                        self.mol.ndown - 1, self.mol.ndown - 1 - nocc, -1):
+                        self.ndown - 1, self.ndown - 1 - nocc, -1):
                     for ivirt_down in range(
-                            self.mol.ndown, self.mol.ndown + nvirt, 1):
+                            self.ndown, self.ndown + nvirt, 1):
 
                         _xt_up = self._create_excitation(
                             _gs_up.copy(), iocc_up, ivirt_up)
@@ -135,13 +137,13 @@ class OrbitalConfigurations(object):
         """
         from itertools import combinations, product
 
-        idx_low, idx_high = self.mol.nup - nocc, self.mol.nup + nvirt
+        idx_low, idx_high = self.nup - nocc, self.nup + nvirt
         orb_index_up = range(idx_low, idx_high)
         idx_frz = list(range(idx_low))
         _cup = [idx_frz + list(l)
                 for l in list(combinations(orb_index_up, nelec // 2))]
 
-        idx_low, idx_high = self.mol.nup - nocc - 1, self.mol.nup + nvirt - 1
+        idx_low, idx_high = self.nup - nocc - 1, self.nup + nvirt - 1
 
         _cdown = [
             idx_frz +

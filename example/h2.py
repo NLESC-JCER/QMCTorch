@@ -67,20 +67,20 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 
 
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-solver.track_observable(['local_energy'])
+# solver.configure(task='wf_opt', freeze=['ao', 'mo'])
+# solver.track_observable(['local_energy'])
 
-solver.configure_resampling(
-    mode='update', resample_every=1, nstep_update=25)
-solver.ortho_mo = False
-data = solver.run(5, batchsize=None,
-                  loss='energy',
-                  grad='manual',
-                  clip_loss=False)
+# solver.configure_resampling(
+#     mode='update', resample_every=1, nstep_update=25)
+# solver.ortho_mo = False
+# data = solver.run(5, batchsize=None,
+#                   loss='energy',
+#                   grad='manual',
+#                   clip_loss=False)
 
-plot_energy(solver.observable.local_energy, e0=-
-            1.1645, show_variance=True)
-plot_data(solver.observable, obsname='jastrow.weight')
+# plot_energy(solver.observable.local_energy, e0=-
+#             1.1645, show_variance=True)
+# plot_data(solver.observable, obsname='jastrow.weight')
 
 # # optimize the geometry
 # solver.configure(task='geo_opt')

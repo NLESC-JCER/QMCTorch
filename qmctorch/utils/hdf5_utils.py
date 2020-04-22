@@ -150,12 +150,23 @@ def insert_group(obj, parent_grp, obj_name):
     if obj_name.startswith('_'):
         return
 
-    try:
-        own_grp = parent_grp.create_group(obj_name)
-        for child_name, child_obj in children(obj):
-            insert_object(child_obj,  own_grp, child_name)
-    except:
-        print_insert_error(obj, obj_name)
+    if obj_name not in parent_grp:
+
+        try:
+            own_grp = parent_grp.create_group(obj_name)
+            # for child_name, child_obj in children(obj):
+            #     insert_object(child_obj,  own_grp, child_name)
+            for child_name in get_children_names(obj):
+
+                child_obj = get_child_object(obj, child_name)
+                insert_object(child_obj,  own_grp, child_name)
+
+        except:
+            print_insert_error(obj, obj_name)
+
+    else:
+        print(
+            'object %s already exists, keeping existing version of the data' % obj_name)
 
 
 def insert_data(obj, parent_grp, obj_name):
@@ -166,6 +177,10 @@ def insert_data(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
+
+    if obj_name.startswith('_'):
+        return
+
     try:
         lookup_insert = {list: insert_list,
                          tuple: insert_tuple,
@@ -322,6 +337,54 @@ def children(obj):
         return obj.items()
 
 
+def get_children_names(obj):
+    """Returns the children names of the object as items
+
+    Arguments:
+        obj {object} -- the object to check
+
+    Returns:
+        dict -- items 
+    """
+
+    if hasattr(obj, '__dict__'):
+        names = list(obj.__dict__.keys())
+
+    elif hasattr(obj, 'keys'):
+        names = list(obj.keys())
+
+    if hasattr(obj, '__extra_attr__'):
+        names += obj.__extra_attr__
+
+    return names
+
+
+def get_child_object(obj, child_name):
+    """Return the child object
+
+    Arguments:
+        obj {object} -- parent object
+        child_name {str} -- cild name
+
+    Returns:
+        object -- child object
+    """
+
+    if hasattr(obj, '__getattr__'):
+        try:
+            return obj.__getattr__(child_name)
+
+        except AttributeError:
+            pass
+
+    if hasattr(obj, '__getattribute__'):
+        try:
+            return obj.__getattribute__(child_name)
+
+        except AttributeError:
+            pass
+
+
 def add_group_attr(filename, grp_name, attr):
     """Add attribute to a given group
 
@@ -335,3 +398,15 @@ def add_group_attr(filename, grp_name, attr):
     for k, v in attr.items():
         h5[grp_name].attrs[k] = v
     h5.close()
+
+
+def register_extra_attributes(obj, attr_names):
+    """Register extra attribute to be able to dump them
+
+    Arguments:
+        obj {object} -- the object where we want to add attr
+        attr_names {list} -- a list of attr names
+    """
+    if not hasattr(obj, '__extra_attr__'):
+        obj.__extra_attr__ = []
+    obj.__extra_attr__ += attr_names
