@@ -1,10 +1,9 @@
 import torch
-from torch import nn
 
 from torch.autograd import grad, Variable
 
 
-class WaveFunction(nn.Module):
+class WaveFunction(torch.nn.Module):
 
     def __init__(self, nelec, ndim, kinetic='auto', cuda=False):
 

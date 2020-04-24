@@ -22,13 +22,43 @@ import sys
 from unittest.mock import MagicMock
 
 
-class Mock(MagicMock):
-    @classmethod
-    def __getattr__(cls, name):
-        return MagicMock()
+# MOCK_CLASSES = ['torch.nn.Module']
 
 
-MOCK_MODULES = [
+# class Mock(MagicMock):
+#     @classmethod
+#     def __getattr__(cls, name):
+#         if name in MOCK_CLASSES:
+#             return object
+#         return MagicMock()
+
+
+# MOCK_MODULES = [
+#     'numpy',
+#     'scipy',
+#     'h5py',
+#     'scipy.signal',
+#     'torch',
+#     'torch.utils',
+#     'torch.utils.data',
+#     'matplotlib',
+#     'matplotlib.pyplot',
+#     'torch.autograd',
+#     'torch.nn',
+#     'torch.nn.Module'
+#     'torch.optim',
+#     'torch.cuda',
+#     'torch.distributions',
+#     'mendeleev',
+#     'pandas',
+#     'pyscf',
+#     'adf',
+#     'tqdm']
+
+# sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
+
+
+autodoc_mock_imports = [
     'numpy',
     'scipy',
     'h5py',
@@ -49,8 +79,8 @@ MOCK_MODULES = [
     'adf',
     'tqdm']
 
-sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 sys.path.insert(0, os.path.abspath('../'))
+
 
 # -- General configuration ------------------------------------------------
 
@@ -123,17 +153,22 @@ todo_include_todos = False
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-on_rtd = os.environ.get('READTHEDOCS') == 'True'
-if on_rtd:
-    html_theme = 'default'
-else:
-    html_theme = 'classic'
+# on_rtd = os.environ.get('READTHEDOCS') == 'True'
+# if on_rtd:
+#     html_theme = 'default'
+# else:
+#     html_theme = 'classic'
+
+html_theme = 'sphinx_rtd_theme'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
 # documentation.
 #
-# html_theme_options = {}
+# html_theme_options = {
+#     "rightsidebar": 'true',
+#     "relbarbgcolor": "black"
+# }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
@@ -211,6 +246,12 @@ texinfo_documents = [
      'Miscellaneous'),
 ]
 
+# Example configuration for intersphinx: refer to the Python standard library.
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/', None),
+    'numpy': ('http://docs.scipy.org/doc/numpy/', None),
+    'pytorch': ('http://pytorch.org/docs/1.4.0/', None),
+}
 
 autoclass_content = 'init'
 autodoc_member_order = 'bysource'
