@@ -122,7 +122,7 @@ class TestH2(unittest.TestCase):
         self.solver.configure(task='geo_opt')
         self.solver.track_observable(
             ['local_energy', 'atomic_distances'])
-        self.solver.run(50, loss='energy')
+        self.solver.run(5, loss='energy', grad='auto')
 
         # load the best model
         best_model = torch.load('model.pth')
@@ -145,5 +145,6 @@ if __name__ == "__main__":
     # unittest.main()
     t = TestH2()
     t.setUp()
-    t.test1_single_point()
+    # t.test1_single_point()
     # t.test_single_point_hmc()
+    t.test3_geo_opt()

@@ -33,8 +33,8 @@ wf = Orbital(mol, kinetic='jacobi',
 wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(nwalkers=500,
-                     nstep=2000, step_size=0.2,
+sampler = Metropolis(nwalkers=50,
+                     nstep=200, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
@@ -66,7 +66,7 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # plot_walkers_traj(obs.local_energy)
 
 
-# optimize the wave function
+# # optimize the wave function
 # solver.configure(task='wf_opt', freeze=['ao', 'mo'])
 # solver.track_observable(['local_energy'])
 
@@ -82,10 +82,10 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 #             1.1645, show_variance=True)
 # plot_data(solver.observable, obsname='jastrow.weight')
 
-# # optimize the geometry
-# solver.configure(task='geo_opt')
-# solver.tack_observable(['local_energy', 'atomic_distances'])
-# data = solver.run(5, batchsize=None,
-#                   loss='energy',
-#                   grad='manual',
-#                   clip_loss=False)
+# optimize the geometry
+solver.configure(task='geo_opt')
+solver.track_observable(['local_energy', 'atomic_distances'])
+data = solver.run(5, batchsize=None,
+                  loss='energy',
+                  grad='manual',
+                  clip_loss=False)
