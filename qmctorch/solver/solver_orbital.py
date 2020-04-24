@@ -22,7 +22,7 @@ class SolverOrbital(SolverBase):
 
         SolverBase.__init__(self, wf, sampler, optimizer, output)
 
-    def run(self, nepoch, batchsize=None, loss='venergyariance',
+    def run(self, nepoch, batchsize=None, loss='energy',
             clip_loss=False, grad='manual', hdf5_group=None):
         """Run th optimization
 
