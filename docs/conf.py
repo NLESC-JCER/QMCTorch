@@ -42,6 +42,11 @@ MOCK_MODULES = [
     'torch.nn',
     'torch.optim',
     'torch.cuda',
+    'torch.distributions',
+    'mendeleev',
+    'pandas',
+    'pyscf',
+    'adf',
     'tqdm']
 
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)

@@ -17,7 +17,7 @@ It is also possible to read the coordinate from an xyz file using :
 where 'h2o.xyz' is the path to the xyz file. 
 
 Interface with QM packages
---------------------------------
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The two other keyword arguments (``calculator`` and ``basis``) refers to the QM packages that can be used to define the basis set
 used to describe the electronic strucrure of the molecule. The calculator refers to a particular QM package and so far only

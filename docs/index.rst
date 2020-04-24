@@ -13,6 +13,8 @@ Welcome to QMCTorch's documentation!
    intro
    qmc
    qmctorch
+   example
+   api
 
 Indices and tables
 ==================

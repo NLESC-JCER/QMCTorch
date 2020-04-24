@@ -9,7 +9,7 @@ from qmctorch.utils import (
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None):
+                 scheduler=None, output=None):
         """Serial solver
 
         Keyword Arguments:
@@ -19,7 +19,7 @@ class SolverOrbital(SolverBase):
             scheduler (torch.scheduler) -- Scheduler (default: {None})
         """
 
-        SolverBase.__init__(self, wf, sampler, optimizer)
+        SolverBase.__init__(self, wf, sampler, optimizer, output)
 
     def run(self, nepoch, batchsize=None, loss='variance',
             clip_loss=False, grad='auto', hdf5_group=None):
