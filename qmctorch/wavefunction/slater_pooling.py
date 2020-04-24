@@ -9,14 +9,13 @@ class SlaterPooling(nn.Module):
     """Applies a slater determinant pooling in the active space."""
 
     def __init__(self, configs, mol, cuda=False):
-        """Layer that computes all the slater determinant from the MO matrix.
+        """Computes the Sater determinants
 
-        Arguments:
-            configs {list} -- slater configuration
-            mol {Molecule} -- Instance of the Molecule object
+        Args:
+            configs (tuple): configuratin of the electrons
+            mol (Molecule): Molecule instance
+            cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
 
-        Keyword Arguments:
-            cuda {bool} -- use cuda (default: {False})
         """
         super(SlaterPooling, self).__init__()
 
@@ -35,18 +34,16 @@ class SlaterPooling(nn.Module):
             self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, input, return_matrix=False):
-        """Computes the SD values
+        """Computes the values of the determinats
 
-        Arguments:
-            input {torch.tensor} -- MO matrices nbatc x nelec x nmo
-
-        Keyword Arguments:
-            return_matrix {bool} -- if true return the slater matrices
-                                   (default: {False})
+        Args:
+            input (torch.tensor): MO matrices nbatc x nelec x nmo
+            return_matrix (bool, optional): if true return the slater matrices 
+                                            instead of their determinats. 
+                                            Defaults to False.
 
         Returns:
-            torch.tensor -- slater matrices or determinant depending
-                            on return_matrix
+            torch.tensor: slater determinants
         """
 
         mo_up, mo_down = self.orb_proj.split_orbitals(input)

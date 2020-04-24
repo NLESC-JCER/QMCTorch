@@ -32,9 +32,3 @@ Walkers
 .. automodule:: qmctorch.sampler.walkers
     :members:
     :undoc-members:
-
-Base sampler
-------------------------------------------
-.. automodule:: qmctorch.sampler.sampler_base
-    :members:
-    :undoc-members:

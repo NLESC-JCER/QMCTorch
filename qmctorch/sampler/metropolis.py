@@ -20,26 +20,26 @@ class Metropolis(SamplerBase):
             nstep (int, optional): Number of steps. Defaults to 1000.
             step_size (int, optional): length of the step. Defaults to 3.
             nelec (int, optional): total number of electrons. Defaults to 1.
+            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
+            ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
             ndim (int, optional): total number of dimension. Defaults to 1.
-            init (dict, optional): method to init the positions of the walkers.
-                                   uniform : {'min': min_val, 'max': max_val}
-                                   normal : {'mean' : [x,y,z],
-                                             'sigma':3x3 matrix}
-                                   See Molecule.domain
-                                   Defaults to {'min': -5, 'max': 5}.
-            move (dict, optional): method to move the electrons.
-                                   'type' :
-                                        'one-elec': move a single electron
-                                                    per iteration
-                                        'all-elec': move all electrons at
-                                                    the same time
-                                        'all-elec-iter': move all electrons
-                                                        by iterating
-                                                        through single elec
-                                                        moves
-                                    'proba' : 'uniform', 'normal'
-                                    Defaults to {'type': 'one-elec',
-                                                 'proba': 'uniform'}.
+            init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
+
+            move (dict, optional): method to move the electrons. default('all-elec','normal') \n
+                                   'type':
+                                        'one-elec': move a single electron per iteration \n
+                                        'all-elec': move all electrons at the same time \n
+                                        'all-elec-iter': move all electrons by iterating through single elec moves \n
+                                    'proba' : 
+                                        'uniform': uniform ina cube \n
+                                        'normal': gussian in a sphere \n
+            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
+
+        Examples::
+            >>> mol = Molecule('h2.xyz')
+            >>> wf = Orbital(mol)
+            >>> sampler = Metropolis(nwalkers=100, nelec=wf.nelec)
+            >>> pos = sampler(wf.pdf)
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,

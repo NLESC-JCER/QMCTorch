@@ -3,18 +3,21 @@ from torch import nn
 from .electron_distance import ElectronDistance
 from ..utils import register_extra_attributes
 
+
 class TwoBodyJastrowFactor(nn.Module):
 
     def __init__(self, nup, ndown, w=1., cuda=False):
-        """Layer to compute the Jatrow factor
+        """Computes the Pade-Jastrow factor
 
-        Arguments:
-            nup {int} -- number of spin up electrons
-            ndown {int} -- number of spin down electrons
+        .. math::
+            J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
+            B_{ij} = \\frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
-        Keyword Arguments:
-            w {float} -- value of the variational parameter (default: {1.})
-            cuda {bool} -- use cuda (default: {False})
+        Args:
+            nup (int): number of spin up electons
+            ndow (int): number of spin down electons
+            w (float, optional): Value of the variational parameter. Defaults to 1..
+            cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
         super(TwoBodyJastrowFactor, self).__init__()
@@ -56,11 +59,7 @@ class TwoBodyJastrowFactor(nn.Module):
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, pos, derivative=0, jacobian=True):
-        """Compute the Jastrow factors as :
-
-        .. math::
-            J = \Prod_{i<j} \exp(B_{ij}) with
-            B_{ij} = \frac{w_0 r_{i,j}}{1 + w r_{i,j}}
+        """Compute the Jastrow factors.
 
         Args:
             pos (torch.tensor): Positions of the electrons

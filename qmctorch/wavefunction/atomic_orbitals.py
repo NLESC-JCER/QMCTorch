@@ -9,13 +9,11 @@ from ..utils import register_extra_attributes
 class AtomicOrbitals(nn.Module):
 
     def __init__(self, mol, cuda=False):
-        """Atomic Orbital Layer
+        """Computes the value of atomic orbitals
 
-        Arguments:
-            mol {Molecule} -- Molecule instance
-
-        Keyword Arguments:
-            cuda {bool} -- use cuda (default: {False})
+        Args:
+            mol (Molecule): Molecule object
+            cuda (bool, optional): Turn GPU ON/OFF Defaults to False.
         """
 
         super(AtomicOrbitals, self).__init__()
@@ -96,14 +94,19 @@ class AtomicOrbitals(nn.Module):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(
-            self,
-            input,
-            derivative=0,
-            jacobian=True,
-            one_elec=False):
-        """Computes the values of the atomic orbitals (or their derivatives)
-        for the electrons positions in input.
+    def forward(self, input, derivative=0, jacobian=True, one_elec=False):
+        """Computes the values of the atomic orbitals.
+
+        .. math::
+            \phi_i(r_j) = \sum_n c_n \\text{Rad}^{i}_n(r_j) \\text{Y}^{i}_n(r_j)
+
+        where Rad is the radial part and Y the spherical harmonics part. 
+        It is also possible to compute the first and second derivatives
+
+        .. math::
+            \\nabla \phi_i(r_j) = \\frac{d}{dx_j} \phi_i(r_j) + \\frac{d}{dy_j} \phi_i(r_j) + \\frac{d}{dz_j} \phi_i(r_j) \n
+            \\text{grad} \phi_i(r_j) = (\\frac{d}{dx_j} \phi_i(r_j), \\frac{d}{dy_j} \phi_i(r_j), \\frac{d}{dz_j} \phi_i(r_j)) \n
+            \Delta \phi_i(r_j) = \\frac{d^2}{dx^2_j} \phi_i(r_j) + \\frac{d^2}{dy^2_j} \phi_i(r_j) + \\frac{d^2}{dz^2_j} \phi_i(r_j)
 
         Args:
             input (torch.tensor): Positions of the electrons
@@ -118,9 +121,16 @@ class AtomicOrbitals(nn.Module):
             one_elec (bool, optional): if only one electron is in input
 
         Returns:
-            torch.tensor: Value of the AO (or their derivatives)
-                          size : Nbatch, Nelec, Norb (jacobian = True)
+            torch.tensor: Value of the AO (or their derivatives) \n
+                          size : Nbatch, Nelec, Norb (jacobian = True) \n
                           size : Nbatch, Nelec, Norb, Ndim (jacobian = False)
+
+        Examples::
+            >>> mol = Molecule('h2.xyz')
+            >>> ao = AtomicOrbitals(mol)
+            >>> pos = torch.rand(100,6)
+            >>> aovals = ao(pos)
+            >>> daovals = ao(pos,derivative=1)
         """
 
         if not jacobian:
@@ -165,11 +175,7 @@ class AtomicOrbitals(nn.Module):
             # return the jacobian
             if jacobian:
                 dR = self.radial(
-                    r,
-                    self.bas_n,
-                    self.bas_exp,
-                    xyz=xyz,
-                    derivative=1)
+                    r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1)
                 dY = self.harmonics(xyz, derivative=1)
 
                 # -> (Nbatch,Nelec,Nbas)
@@ -178,12 +184,7 @@ class AtomicOrbitals(nn.Module):
             # returm individual components
             else:
                 dR = self.radial(
-                    r,
-                    self.bas_n,
-                    self.bas_exp,
-                    xyz=xyz,
-                    derivative=1,
-                    jacobian=False)
+                    r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1, jacobian=False)
                 dY = self.harmonics(xyz, derivative=1, jacobian=False)
                 # -> (Nbatch,Nelec,Nbas,Ndim)
                 bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
@@ -196,11 +197,7 @@ class AtomicOrbitals(nn.Module):
             dY = self.harmonics(xyz, derivative=1, jacobian=False)
 
             d2R = self.radial(
-                r,
-                self.bas_n,
-                self.bas_exp,
-                xyz=xyz,
-                derivative=2)
+                r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2)
             d2Y = self.harmonics(xyz, derivative=2)
 
             bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
@@ -213,11 +210,8 @@ class AtomicOrbitals(nn.Module):
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
-            ao = torch.zeros(
-                nbatch,
-                self.nelec,
-                self.norb,
-                device=self.device)
+            ao = torch.zeros(nbatch, self.nelec,
+                             self.norb, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
 
         else:
@@ -237,16 +231,26 @@ class AtomicOrbitals(nn.Module):
         return ao
 
     def update(self, ao, pos, idelec):
-        """Update the AO matrix if only the idelec electron has been moved.
+        """Update an AO matrix with the new positions of one electron
 
-        Arguments:
-            ao {torch.tensor} -- input ao matrix
-            pos {torch.tensor} -- position of the electron that has moved
-            idelec {int} -- index of the electron that has moved
+        Args:
+            ao (torch.tensor): initial AO matrix
+            pos (torch.tensor): new positions of some electrons
+            idelec (int): index of the electron that has moved
 
         Returns:
-            torch.tensor -- new ao matrix
+            torch.tensor: new AO matrix
+
+        Examples::
+            >>> mol = Molecule('h2.xyz')
+            >>> ao = AtomicOrbitals(mol)
+            >>> pos = torch.rand(100,6)
+            >>> aovals = ao(pos)
+            >>> id = 0
+            >>> pos[:,:3] = torch.rand(100,3)
+            >>> ao.update(aovals, pos, 0)
         """
+
         ao_new = ao.clone()
         ids, ide = (idelec) * 3, (idelec + 1) * 3
         ao_new[:, idelec, :] = self.forward(

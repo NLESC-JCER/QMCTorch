@@ -4,14 +4,6 @@ Utilities
 .. automodule:: qmctorch.utils
 
 
-Torch Utilities
-----------------------------------------
-
-.. automodule:: qmctorch.utils.torch_utils
-    :members:
-    :undoc-members:
-
-
 Plotting routines
 ----------------------------------------
 
@@ -19,6 +11,24 @@ Plotting routines
     :members:
     :undoc-members:
 
+Torch Utilities
+----------------------------------------
+
+.. automodule:: qmctorch.utils.torch_utils
+    :members:
+    :undoc-members:
+
+.. autoclass:: DataSet
+    :members:
+    :undoc-members:
+
+.. autoclass:: Loss
+    :members:
+    :undoc-members:
+
+.. autoclass:: OrthoReg
+    :members:
+    :undoc-members:
 
 HDF5 Storage
 ----------------------------------------

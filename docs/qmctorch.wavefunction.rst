@@ -8,10 +8,9 @@ QMCNet
 .. automodule:: qmctorch.wavefunction.wf_orbital
 .. autoclass:: Orbital
     :members:
-    :inherited-members:
 
 
-Wavefunction Base Class
+Base Class
 -------------------------------------------
 .. automodule:: qmctorch.wavefunction.wf_base
 .. autoclass:: WaveFunction

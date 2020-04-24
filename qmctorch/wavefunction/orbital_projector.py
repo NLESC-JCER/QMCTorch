@@ -4,12 +4,11 @@ import torch
 class OrbitalProjector(object):
 
     def __init__(self, configs, mol):
-        """Projects the MO matrix in different matrices corresponding
-           to the Slater Determinant.
+        """Project the MO matrix in Slater Matrices
 
-        Arguments:
-            configs {list} -- configuration of the slater determinant
-            mol {Molecule} -- Molecule instance
+        Args:
+            configs (list): configurations of the slater determinants
+            mol (Molecule): Molecule object
         """
 
         self.configs = configs
@@ -44,11 +43,11 @@ class OrbitalProjector(object):
     def split_orbitals(self, mo):
         """Split the orbital  matrix in multiple slater matrices
 
-        Arguments:
-            mo {torch.tensor} -- molecular orbital matrix
+        Args:
+            mo (torch.tensor): molecular orbital matrix
 
         Returns:
-            torch.tensor -- all slater matrices
+            torch.tensor: all slater matrices
         """
         return mo[:, :self.nup, :] @ self.Pup, mo[:,
                                                   self.nup:, :] @ self.Pdown

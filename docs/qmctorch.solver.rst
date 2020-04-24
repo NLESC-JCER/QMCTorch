@@ -11,14 +11,6 @@ Solver
     :members:
     :undoc-members:
 
-
-Distributed Solver
-----------------------------------------
-
-.. automodule:: qmctorch.solver.solver_orbital_horovod
-    :members:
-    :undoc-members:
-
 Solver base class
 ----------------------------------------
 

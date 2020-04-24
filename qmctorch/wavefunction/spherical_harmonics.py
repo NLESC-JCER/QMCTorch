@@ -4,10 +4,24 @@ import torch
 class Harmonics(object):
 
     def __init__(self, type, **kwargs):
-        """Main class handling the spherical harmonics
+        """Compute spherical or cartesian harmonics and their derivatives
 
-        Arguments:
-            type {str} -- type of spherical harmonics : cart or sph
+        Args:
+            type (str): harmonics type (cart or sph)
+
+        Keyword Arguments:
+            bas_l (torch.tensor): second quantum numbers (sph)
+            bas_m (torch.tensor): third quantum numbers (sph)
+            bas_kx (torch.tensor): x exponent (cart)
+            bas_ky (torch.tensor): xy exponent (cart)
+            bas_kz (torch.tensor): z exponent (cart)
+
+        Examples::
+            >>> mol = Molecule('h2.xyz')
+            >>> harm = Harmonics(cart)
+            >>> pos = torch.rand(100,6)
+            >>> hvals = harm(pos)
+            >>> dhvals = harm(pos,derivative=1)
         """
 
         self.type = type
@@ -41,13 +55,8 @@ class Harmonics(object):
         """
 
         if self.type == 'cart':
-            return CartesianHarmonics(
-                xyz,
-                self.bas_kx,
-                self.bas_ky,
-                self.bas_kz,
-                derivative,
-                jacobian)
+            return CartesianHarmonics(xyz, self.bas_kx, self.bas_ky, self.bas_kz,
+                                      derivative, jacobian)
         elif self.type == 'sph':
             return SphericalHarmonics(
                 xyz, self.bas_l, self.bas_m, derivative, jacobian)
@@ -56,21 +65,22 @@ class Harmonics(object):
 
 
 def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
-    """Computes the Real cartesian harmonics
-        x^kx, y^ky z^kz
-    Arguments:
-        xyz {torch.tensor} -- coordinate of each electrons from each BAS
-                              center (Nbatch, Nelec, Nbas, Ndim)
-        kx {torch.tensor} -- x exponent
-        ky {torch.tensor} -- y exponent
-        kz {torch.tensor} -- z exponent
+    """Computes Real Cartesian Harmonics
 
-    Keyword Arguments:
-        derivative {int} -- order of the derivative (default: {0})
-        jacobian (bool, optional) --  Return the jacobian (i.e. the sum of
-                                      the derivatives) or the individual
-                                      terms. Defaults to True.
-                                      False only for derivative=1
+    .. math::
+        Y = x^{k_x} \\times y^{k_y} \\times z^{k_z}
+
+    Args:
+        xyz (torch.tensor): distance between sampling points and orbital centers \n
+                            size : (Nbatch, Nelec, Nbas, Ndim)
+        kx (torch.tensor): x exponents
+        ky (torch.tensor): y exponents
+        kz (torch.tensor): z exponents
+        derivative (int, optional): degree of the derivative. Defaults to 0.
+        jacobian (bool, optional): returns the sum of the derivative if True. Defaults to True.
+
+    Returns:
+        torch.tensor: values of the harmonics at the sampling points
     """
 
     if derivative == 0:
@@ -120,15 +130,17 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
 
 def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):
     """Compute the Real Spherical Harmonics of the AO.
+
     Args:
-        xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, distance component of each
-              point from each RBF center
-        l : array(Nrbf) l quantum number
-        m : array(Nrbf) m quantum number
+        xyz (torch.tensor): distance between sampling points and orbital centers \n
+                            size : (Nbatch, Nelec, Nbas, Ndim)
+        l (torch.tensor):  l quantum number
+        m (torch.tensor):  m quantum number
+
     Returns:
-        Y array (Nbatch,Nelec,Nrbf) : value of each SH at each point
-        or array (Nbatch,Nelec,Nrbf, Ndim) : grad of each SH at each point
-                                            (if jacobian=False)
+        Y (torch.tensor): value of each harmonics at each points (or derivative) \n
+                          size : (Nbatch,Nelec,Nrbf) for jacobian=True \n
+                          size : (Nbatch,Nelec,Nrbf, Ndim) for jacobian=False
     """
 
     if jacobian:
@@ -142,13 +154,16 @@ def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):
 
 def get_spherical_harmonics(xyz, lval, m, derivative):
     """Compute the Real Spherical Harmonics of the AO.
+
     Args:
-        xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, distance component of each
-              point from each RBF center
-        l : array(Nrbf) l quantum number
-        m : array(Nrbf) m quantum number
+        xyz (torch.tensor): distance between sampling points and orbital centers \n
+                            size : (Nbatch, Nelec, Nbas, Ndim)
+        l (torch.tensor): l quantum number
+        m (torch.tensor): m quantum number
+
     Returns:
-        Y array (Nbatch,Nelec,Nrbf) : value of each SH at each point
+        Y (torch.tensor): value of each harmonics at each points (or derivative) \n
+                          size : (Nbatch,Nelec,Nrbf) 
     """
 
     Y = torch.zeros_like(xyz[..., 0])
@@ -200,13 +215,16 @@ def get_spherical_harmonics(xyz, lval, m, derivative):
 
 def get_grad_spherical_harmonics(xyz, lval, m):
     """Compute the gradient of the Real Spherical Harmonics of the AO.
+
     Args:
-        xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, distance component of each
-              point from each RBF center
-        l : array(Nrbf) l quantum number
-        m : array(Nrbf) m quantum number
+        xyz (torch.tensor): distance between sampling points and orbital centers \n
+                            size : (Nbatch, Nelec, Nbas, Ndim)
+        l (torch.tensor): l quantum number
+        m (torch.tensor): m quantum number
+
     Returns:
-        Y array (Nbatch,Nelec,Nrbf,3) : value of each grad SH at each point
+        Y (torch.tensor): value of each harmonics at each points (or derivative) \n
+                          size : (Nbatch,Nelec,Nrbf,3) 
     """
 
     Y = torch.zeros_like(xyz)
@@ -335,7 +353,8 @@ def _grad_spherical_harmonics_l1(xyz, m):
 
     if m == -1:
         return p * (torch.stack([-xyz[:, :, :, 1] * xyz[:, :, :, 0],
-                                 xyz[:, :, :, 0]**2 + xyz[:, :, :, 2]**2,
+                                 xyz[:, :, :, 0]**2 +
+                                 xyz[:, :, :, 2]**2,
                                  -xyz[:, :, :, 1] * xyz[:, :, :, 2]],
                                 dim=-1))
     if m == 0:
@@ -420,16 +439,16 @@ def _nabla_spherical_harmonics_l2(xyz, m):
     if m == 0:
         c0 = 0.31539156525252005
         return c0 * ((- 2 * xyz[:, :, :, 0] - 2 * xyz[:, :, :, 1] + 4 * xyz[:, :, :, 2]) / r2
-                      - 2 * (-xyz[:, :, :, 0]**2 - xyz[:, :, :, 1]**2 + 2 * xyz[:, :, :, 2]**2) * xyz.sum(3) / r3)
+                     - 2 * (-xyz[:, :, :, 0]**2 - xyz[:, :, :, 1]**2 + 2 * xyz[:, :, :, 2]**2) * xyz.sum(3) / r3)
     if m == 2:
         c2 = 0.5462742152960396
         return c2 * (2 * (xyz[:, :, :, 0] - xyz[:, :, :, 1]) / r2 - 2 * (xyz[:, :, :, 0]**2
-                     - xyz[:, :, :, 1]**2) * xyz.sum(3) / r3)
+                                                                         - xyz[:, :, :, 1]**2) * xyz.sum(3) / r3)
     else:
         cm = 1.0925484305920792
         index = {-2: [0, 1], -1: [1, 2], 1: [2, 0]}
         return cm * ((xyz[:, :, :, index[m][0]] + xyz[:, :, :, index[m][1]]) / r2
-                   - 2 * xyz[:, :, :, index[m][0]] * xyz[:, :, :, index[m][1]] * xyz.sum(3) / r3)
+                     - 2 * xyz[:, :, :, index[m][0]] * xyz[:, :, :, index[m][1]] * xyz.sum(3) / r3)
 
 
 def _grad_spherical_harmonics_l2(xyz, m):
@@ -514,15 +533,14 @@ def _lap_spherical_harmonics_l2(xyz, m):
         c0 = 0.31539156525252005
         xyz2 = xyz**2
         return c0 * (6 / r6 * (xyz2[:, :, :, :2].sum(-1))**2 - xyz2[:, :, :, 2] * (xyz2[:, :, :, 0]
-                    + xyz2[:, :, :, 1] - 2 * xyz2[:, :, :, 2]))
+                                                                                   + xyz2[:, :, :, 1] - 2 * xyz2[:, :, :, 2]))
     if m == 2:
         c2 = 0.5462742152960396
         xyz2 = xyz**2
         return c2 * (6 / r6 * xyz2[:, :, :, 2] * (xyz2[:, :, :, 1] - xyz2[:, :, :, 0])
-                   + xyz2[:, :, :, 1]**2 - xyz2[:, :, :, 0]**2)
+                     + xyz2[:, :, :, 1]**2 - xyz2[:, :, :, 0]**2)
     else:
         cm = 1.0925484305920792
         index = {-2: [0, 1], -1: [1, 2], 1: [2, 0]}
         return cm * (- 6 * xyz[:, :, :, index[m][0]]
                      * xyz[:, :, :, index[m][1]] / r4)
-                     
