@@ -16,6 +16,22 @@ class Molecule(object):
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
                  name=None, load=None):
+        """Create a molecule in QMCTorch
+
+        Args:
+            atom (str or None, optional): defines the atoms and their positions. Defaults to None.
+            calculator (str, optional): selet scf calculator. Defaults to 'adf'.
+            scf (str, optional): select scf level of theory. Defaults to 'hf'.
+            basis (str, optional): select the basis set. Defaults to 'dzp'.
+            unit (str, optional): units of the coordinates. Defaults to 'bohr'.
+            name (str or None, optional): name of the molecule. Defaults to None.
+            load (str or None, optional): path to a hdf5 file to load. Defaults to None.
+
+        Examples:
+            >>> from qmctorch.wavefunction import Molecule
+            >>> mol = Molecule(atom='H 0 0 0; H 0 0 1', unit='angs',
+            ...                calculator='adf', basis='dzp')
+        """
 
         self.atom_coords = []
         self.atomic_nelec = []
@@ -34,21 +50,21 @@ class Molecule(object):
 
         if load is not None:
             print('Restarting calculation from ', load)
-            self.load_hdf5(load)
+            self._load_hdf5(load)
 
         else:
 
             if self.unit not in ['angs', 'bohr']:
                 raise ValueError('unit should be angs or bohr')
 
-            self.process_atom_str()
+            self._process_atom_str()
 
             self.hdf5file = '_'.join(
                 [self.name, calculator, basis]) + '.hdf5'
 
             if os.path.isfile(self.hdf5file):
                 print('Reusing scf calculation from ', self.hdf5file)
-                self.basis = self.load_basis()
+                self.basis = self._load_basis()
 
             else:
                 print('Running scf calculation')
@@ -64,23 +80,64 @@ class Molecule(object):
                 dump_to_hdf5(self, self.hdf5file,
                              root_name='molecule')
 
-        self.check_basis()
+        self._check_basis()
 
-    def process_atom_str(self):
-        '''Process the input file.'''
+    def domain(self, method):
+        """Returns information to initialize the walkers
+
+        Args:
+            method (str): 'center', all electron at the center of the system
+                          'uniform', all electrons in a cube surrounding the molecule
+                          'normal',  all electrons in a sphere surrounding the molecule
+                          'atomic', electrons around the atoms
+
+        Returns:
+            dict: dictionary containing corresponding information
+
+        Examples::
+            >>> mol = Molecule('h2.xyz')
+            >>> domain = mol.domain('atomic')
+        """
+        domain = dict()
+
+        if method == 'center':
+            domain['center'] = np.mean(self.atom_coords, 0)
+
+        elif method == 'uniform':
+            domain['min'] = np.min(self.atom_coords) - 0.5
+            domain['max'] = np.max(self.atom_coords) + 0.5
+
+        elif method == 'normal':
+            domain['mean'] = np.mean(self.atom_coords, 0)
+            domain['sigma'] = np.diag(
+                np.std(self.atom_coords, 0) + 0.25)
+
+        elif method == 'atomic':
+            domain['atom_coords'] = self.atom_coords
+            domain['atom_num'] = self.atomic_number
+            domain['atom_nelec'] = self.atomic_nelec
+
+        else:
+            raise ValueError(
+                'Method to initialize the walkers not recognized')
+
+        return domain
+
+    def _process_atom_str(self):
+        """Process the atom description."""
 
         if os.path.isfile(self.atoms_str):
-            atoms = self.read_xyz_file()
+            atoms = self._read_xyz_file()
         else:
             atoms = self.atoms_str.split(';')
 
-        self.get_atomic_properties(atoms)
+        self._get_atomic_properties(atoms)
 
-    def get_atomic_properties(self, atoms):
-        """Get the properties of all atoms in the molecule
+    def _get_atomic_properties(self, atoms):
+        """Generates the atomic propeties of the molecule
 
-        Arguments:
-            atoms {list} -- atoms and xyz position
+        Args:
+            atoms (str): atoms given in input
         """
 
         # loop over all atoms
@@ -110,10 +167,10 @@ class Molecule(object):
 
         # name of the system
         if self.name is None:
-            self.name = self.get_mol_name(self.atoms)
+            self.name = self._get_mol_name(self.atoms)
         self.atoms = np.array(self.atoms)
 
-    def read_xyz_file(self):
+    def _read_xyz_file(self):
         """Process a xyz file containing the data
 
         Returns:
@@ -128,57 +185,15 @@ class Molecule(object):
         self.atoms_str += atoms[-1]
         return atoms
 
-    def domain(self, method):
-        """Define the walker initialization method
-
-        Arguments:
-            method str -- 'center'  : all electron at the center of the system
-                          'uniform' : all electrons in a box
-                                      covering the system
-                          'normal   : all electrons in a shpere
-                                      covering the system
-                          'atomic'  : electrons around atoms
-
-        Raises:
-            ValueError: if method is not supported
-
-        Returns:
-            dict -- data required to initialize the walkers
-        """
-        domain = dict()
-
-        if method == 'center':
-            domain['center'] = np.mean(self.atom_coords, 0)
-
-        elif method == 'uniform':
-            domain['min'] = np.min(self.atom_coords) - 0.5
-            domain['max'] = np.max(self.atom_coords) + 0.5
-
-        elif method == 'normal':
-            domain['mean'] = np.mean(self.atom_coords, 0)
-            domain['sigma'] = np.diag(
-                np.std(self.atom_coords, 0) + 0.25)
-
-        elif method == 'atomic':
-            domain['atom_coords'] = self.atom_coords
-            domain['atom_num'] = self.atomic_number
-            domain['atom_nelec'] = self.atomic_nelec
-
-        else:
-            raise ValueError(
-                'Method to initialize the walkers not recognized')
-
-        return domain
-
     @staticmethod
-    def get_mol_name(atoms):
+    def _get_mol_name(atoms):
         mol_name = ''
         unique_atoms = list(set(atoms))
         for ua in unique_atoms:
             mol_name += ua + str(atoms.count(ua))
         return mol_name
 
-    def load_basis(self):
+    def _load_basis(self):
         """Get the basis information needed to compute the AO values."""
 
         h5 = h5py.File(self.hdf5file, 'r')
@@ -217,20 +232,25 @@ class Molecule(object):
         h5.close()
         return self.basis
 
-    def load_mo_coeffs(self):
-        """Get the molecule orbital coefficients."""
+    # def load_mo_coeffs(self):
+    #     """Get the molecule orbital coefficients."""
 
-        h5 = h5py.File(self.hdf5file, 'r')
-        return h5['molecule']['basis']['mos'][()]
+    #     h5 = h5py.File(self.hdf5file, 'r')
+    #     return h5['molecule']['basis']['mos'][()]
 
     def print_total_energy(self):
-        """Print the total energy."""
+        """Print the SCF energy of the molecule.
+
+        Examples::
+            >>> mol = Molecule('h2.xyz', calculator='adf', basis='sz')
+            >>> mol.print_total_energy()
+        """
         h5 = h5py.File(self.hdf5file, 'r')
         e = h5['molecule']['basis']['TotalEnergy'][()]
         print('== SCF Energy : ', e)
         h5.close()
 
-    def check_basis(self):
+    def _check_basis(self):
         """Check if the basis contains all the necessary fields."""
 
         names = ['bas_coeffs', 'bas_exp', 'nshells',
@@ -247,7 +267,12 @@ class Molecule(object):
             if not hasattr(self.basis, n):
                 raise ValueError(n, ' not in the basis namespace')
 
-    def load_hdf5(self, filename):
+    def _load_hdf5(self, filename):
+        """Load a molecule from hdf5
+
+        Args:
+            filename (str): path to the file to be loaded
+        """
 
         # load the data
         load_from_hdf5(self, filename, 'molecule')

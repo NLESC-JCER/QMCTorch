@@ -11,13 +11,14 @@ class SolverBase(object):
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
                  output=None):
-        """Base class for the solvers
+        """Base Class for QMC solver 
 
-        Keyword Arguments:
-            wf {WaveFunction} -- WaveFuntion object (default: {None})
-            sampler {SamplerBase} -- Samppler (default: {None})
-            optimizer {torch.optim} -- Optimizer (default: {None})
-            output {str} -- name of the hdf5 file
+        Args:
+            wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
+            sampler (qmctorch.sampler, optional): Sampler. Defaults to None.
+            optimizer (torch.optim, optional): optimizer. Defaults to None.
+            scheduler (torch.optim, optional): scheduler. Defaults to None.
+            output (str, optional): hdf5 filename. Defaults to None.
         """
 
         self.wf = wf
@@ -56,19 +57,15 @@ class SolverBase(object):
         dump_to_hdf5(self, self.hdf5file)
 
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
-        """Configure the resampling.
+        """Configure the resampling
 
-        Keyword Arguments:
-            ntherm {int} -- Number of MC steps needed to thermalize
-                            (default: {-1})
-            nstep {int} -- Number of MC step (default: {100})
-            step_size {float} -- step size (if none left unchanged)
-                                 (default: {None})
-            resample_from_last {bool} -- Use previous positions as starting
-                                         point (default: {True})
-            resample_every {int} -- Number of optimization step between
-                                    resampling (default: {1})
-            tqdm {bool} -- use tqdm (default: {False})
+        Args:
+            mode (str, optional): method to resample : 'full', 'update', 'never' 
+                                  Defaults to 'update'.
+            resample_every (int, optional): Number of optimization steps between resampling
+                                 Defaults to 1.
+            nstep_update (int, optional): Number of MC steps in update mode. 
+                                          Defaults to 25.
         """
 
         self.resampling_options = SimpleNamespace()
@@ -82,16 +79,13 @@ class SolverBase(object):
         self.resampling_options.nstep_update = nstep_update
 
     def configure(self, task='wf_opt', freeze=None):
-        """Configure the solver
+        """Configure the optimization.
 
-        Keyword Arguments:
-            task {str} -- task to perform (geo_opt, wf_opt)
-                          (default: {'wf_opt'})
-            freeze {list} -- parameters to freeze (ao, mo, jastrow, ci)
-                             (default: {None})
-
-        Raises:
-            ValueError: if freeze does not good is
+        Args:
+            task (str, optional): Optimization task: 'wf_opt', 'geo_opt'.
+                                  Defaults to 'wf_opt'.
+            freeze (list, optional): list pf layers to freeze.
+                                     Defaults to None.
         """
 
         self.task = task
@@ -141,8 +135,8 @@ class SolverBase(object):
     def freeze_parameters(self, freeze):
         """Freeze the optimization of specified params.
 
-        Arguments:
-            freeze {list} -- list of param to freeze
+        Args:
+            freeze (list): list of param to freeze
         """
         if freeze is not None:
             if not isinstance(freeze, list):
@@ -171,9 +165,9 @@ class SolverBase(object):
     def track_observable(self, obs_name):
         """define the observalbe we want to track
 
-        Arguments:
-            obs_name {list} -- list of str defining the observalbe.
-                          Each str must correspond to a WaveFuncion method
+        Args:
+            obs_name (list): list of str defining the observalbe.
+                             Each str must correspond to a WaveFuncion method
         """
 
         # reset the Namesapce
@@ -197,14 +191,12 @@ class SolverBase(object):
     def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
         """store observale in the dictionary
 
-        Arguments:
-            obs_dict {dict} -- dictionary of the observalbe
-            pos {torch.tensor} -- positions of th walkers
-
-        Keyword Arguments:
-            local_energy {torch.tensor} -- precomputed values of the local
-                                           energy (default: {None})
-            ibatch {int]} -- index of the current batch (default: {None})
+        Args:
+            obs_dict (dict): dictionary of the observalbe
+            pos (torch.tensor): positions of th walkers
+            local_energy (torch.tensor, optional): precomputed values of the local
+                                           energy. Defaults to None
+            ibatch (int): index of the current batch. Defaults to None
         """
 
         if self.wf.cuda and pos.device.type == 'cpu':
@@ -247,11 +239,9 @@ class SolverBase(object):
     def print_observable(self, cumulative_loss, verbose=False):
         """Print the observalbe to csreen
 
-        Arguments:
-            cumulative_loss {float} -- current loss value
-
-        Keyword Arguments:
-            verbose {bool} -- print all the observables (default: {False})
+        Args:
+            cumulative_loss (float): current loss value
+            verbose (bool, optional): print all the observables. Defaults to False
         """
 
         for k in self.observable.__dict__.keys():
@@ -271,15 +261,15 @@ class SolverBase(object):
                 print('loss %f' % (cumulative_loss))
 
     def resample(self, n, pos):
-        """Resample
+        """Resample the wave function
 
-        Arguments:
-            n {int} -- current epoch value
-            nepoch {int} -- total number of epoch
-            pos {torch.tensor} -- positions of the walkers
+        Args:
+            n (int): current epoch value
+            nepoch (int): total number of epoch
+            pos (torch.tensor): positions of the walkers
 
         Returns:
-            {torch.tensor} -- new positions of the walkers
+            (torch.tensor): new positions of the walkers
         """
 
         if self.resampling_options.mode != 'never':
@@ -306,13 +296,14 @@ class SolverBase(object):
         return pos
 
     def single_point(self, hdf5_group='single_point'):
-        """Performs a single point calculation
+        """Performs a single point calculatin
 
-        Keyword Arguments:
-            with_tqdm {bool} -- use tqdm(default: {True})
+        Args:
+            hdf5_group (str, optional): hdf5 group where to store the data.
+                                        Defaults to 'single_point'.
 
         Returns:
-            [type] -- [description]
+            SimpleNamespace: contains the local energy, positions, ...
         """
 
         # check if we have to compute and store the grads
@@ -354,16 +345,6 @@ class SolverBase(object):
         return obs
 
     def save_checkpoint(self, epoch, loss, filename):
-        """Save a checkpoint file
-
-        Arguments:
-            epoch {int} -- epoch number
-            loss {float} -- current loss
-            filename {str} -- name of the check point file
-
-        Returns:
-            float -- loss
-        """
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.wf.state_dict(),
@@ -387,11 +368,12 @@ class SolverBase(object):
     def sampling_traj(self, pos, hdf5_group='sampling_trajectory'):
         """Compute the local energy along a sampling trajectory
 
-        Arguments:
-            pos {torch.tensor} -- positions of the walkers along the trajectory
-
+        Args:
+            pos (torch.tensor): positions of the walkers along the trajectory
+            hdf5_group (str, optional): name of the group where to store the data.
+                                        Defaults to 'sampling_trajecory'
         Returns:
-            dict -- local energy and mean energy
+            SimpleNamespace : contains energy/positions/
         """
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.nwalkers, ndim)
@@ -409,11 +391,6 @@ class SolverBase(object):
         return obs
 
     def print_parameters(self, grad=False):
-        """print the parameters to screen
-
-        Keyword Arguments:
-            grad {bool} -- also print their gradients (default: {False})
-        """
         for p in self.wf.parameters():
             if p.requires_grad:
                 if grad:
@@ -436,8 +413,8 @@ class SolverBase(object):
     def save_traj(self, fname):
         """Save trajectory of geo_opt
 
-        Arguments:
-            fname {str} -- file name
+        Args:
+            fname (str): file name
         """
         f = open(fname, 'w')
         xyz = self.obs_dict['geometry']
@@ -456,17 +433,4 @@ class SolverBase(object):
         f.close()
 
     def run(self, nepoch, batchsize=None, loss='variance'):
-        """Run the optimization
-
-        Arguments:
-            nepoch {int} -- number of epoch to run for
-
-        Keyword Arguments:
-            batchsize {int} -- size of the batch. If None, entire sampling
-                               points are used (default: {None})
-            loss {str} -- method to compute the loss (default: {'variance'})
-
-        Raises:
-            NotImplementedError:
-        """
         raise NotImplementedError()

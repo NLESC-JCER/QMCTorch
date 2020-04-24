@@ -3,10 +3,17 @@ import numpy as np
 
 
 def atomic_orbital_norm(basis):
-    """Comptues the norm of a given function
+    """Computes the norm of the atomic orbitals
 
-    Arguments:
-        basis {namespace} -- basis namespace
+    Args:
+        basis (Namespace): basis object of the Molecule instance 
+
+    Returns:
+        torch.tensor: Norm of the atomic orbitals
+
+    Examples::
+        >>> mol = Molecule('h2.xyz', basis='dzp', calculator='adf')
+        >>> norm = atomic_orbital_norm(mol.basis)
     """
 
     # spherical
@@ -35,15 +42,17 @@ def atomic_orbital_norm(basis):
 
 
 def norm_slater_spherical(bas_n, bas_exp):
-    """ Normalization of STOs
-    [1] www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital
-    [2] C Filippi,
-        Multiconf wave functions for QMC of first row diatomic molecules,
-        JCP 105, 213 1996
-    [3] Monte Carlo Methods in Ab Inition Quantum Chemistry, B.L. Hammond
+    """Normalization of STOs with Sphecrical Harmonics. \n
+     * www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital \n
+     * C Filippi,  JCP 105, 213 1996 \n
+     * Monte Carlo Methods in Ab Inition Quantum Chemistry, B.L. Hammond
+
+    Args:
+        bas_n (torch.tensor): prinicpal quantum number
+        bas_exp (torch.tensor): slater exponents
 
     Returns:
-        torch.tensor -- normalization factor
+        torch.tensor: normalization factor
     """
     nfact = torch.tensor([np.math.factorial(2 * n)
                           for n in bas_n], dtype=torch.get_default_dtype())
@@ -51,13 +60,16 @@ def norm_slater_spherical(bas_n, bas_exp):
 
 
 def norm_gaussian_spherical(bas_n, bas_exp):
-    """ Normlization of GTOs.
-    [1] Computational Quantum Chemistry: An interactive Intrduction to
-        basis set theory
-        eq : 1.14 page 23.'''
+    """Normlization of GTOs with spherical harmonics. \n
+     * Computational Quantum Chemistry: An interactive Intrduction to basis set theory \n
+        eq : 1.14 page 23.
+
+    Args:
+        bas_n (torch.tensor): prinicpal quantum number
+        bas_exp (torch.tensor): slater exponents
 
     Returns:
-        torch.tensor -- normalization factor
+        torch.tensor: normalization factor
     """
 
     from scipy.special import factorial2 as f2
@@ -74,15 +86,18 @@ def norm_gaussian_spherical(bas_n, bas_exp):
 
 
 def norm_slater_cartesian(a, b, c, n, exp):
-    """normaliation of cartesian slater
-    Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
+    """Normaliation of STos with cartesian harmonics. \n
+     * Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 
-    Arguments:
-        a {[type]} -- exponent of x
-        b {[type]} --  exponent of y
-        c {[type]} --  exponent of z
-        n {[type]} --  exponent of r
-        exp {[type]} -- coefficient of the expo
+    Args:
+        a (torch.tensor): exponent of x
+        b (torch.tensor): exponent of y
+        c (torch.tensor): exponent of z
+        n (torch.tensor): exponent of r
+        exp (torch.tensor): Sater exponent 
+
+    Returns:
+        torch.tensor: normalization factor
     """
     from scipy.special import factorial2 as f2
 
@@ -102,14 +117,17 @@ def norm_slater_cartesian(a, b, c, n, exp):
 
 
 def norm_gaussian_cartesian(a, b, c, exp):
-    """normaliation of cartesian gaussian
-    Monte Carlo Methods in Ab Initio Quantum Chemistry page 280
+    """Normaliation of GTOs with cartesian harmonics. \n
+     * Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 
-    Arguments:
-        a {[type]} -- exponent of x
-        b {[type]} --  exponent of y
-        c {[type]} --  exponent of z
-        exp {[type]} -- coefficient of the expo
+    Args:
+        a (torch.tensor): exponent of x
+        b (torch.tensor): exponent of y
+        c (torch.tensor): exponent of z
+        exp (torch.tensor): Sater exponent 
+
+    Returns:
+        torch.tensor: normalization factor
     """
 
     from scipy.special import factorial2 as f2

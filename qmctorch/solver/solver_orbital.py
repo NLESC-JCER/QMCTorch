@@ -9,35 +9,36 @@ from qmctorch.utils import (
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None):
-        """Serial solver
+                 scheduler=None, output=None):
+        """Basic QMC solver 
 
-        Keyword Arguments:
-            wf {WaveFunction} -- WaveFuntion object (default: {None})
-            sampler {SamplerBase} -- Samppler (default: {None})
-            optimizer {torch.optim} -- Optimizer (default: {None})
-            scheduler (torch.scheduler) -- Scheduler (default: {None})
+        Args:
+            wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
+            sampler (qmctorch.sampler, optional): Sampler. Defaults to None.
+            optimizer (torch.optim, optional): optimizer. Defaults to None.
+            scheduler (torch.optim, optional): scheduler. Defaults to None.
+            output (str, optional): hdf5 filename. Defaults to None.
         """
 
-        SolverBase.__init__(self, wf, sampler, optimizer)
+        SolverBase.__init__(self, wf, sampler, optimizer, output)
 
-    def run(self, nepoch, batchsize=None, loss='variance',
-            clip_loss=False, grad='auto', hdf5_group=None):
-        """Run the optimization
+    def run(self, nepoch, batchsize=None, loss='energy',
+            clip_loss=False, grad='manual', hdf5_group=None):
+        """Run th optimization
 
-        Arguments:
-            nepoch {int} -- number of epoch
-
-        Keyword Arguments:
-            batchsize {int} -- batchsize. If None all the points at once
-                               (default: {None})
-            loss {str} -- loss to be used  (default: {'variance'})
-                          (energy, variance,
-                           weighted-energy, weighted-variance)
-            clip_loss {bool} -- Remove points above/below 5 sigma of the mean
-                                (default: {False})
-            grad {str} -- Method to compute the gradient (auto, manual)
-                          (default: {'auto'})
+        Args:
+            nepoch (int): Number of optimziation step
+            batchsize (int, optional): Number of sample in a mini batch.
+                                       If None, all samples are used.
+                                       Defaults to None.
+            loss (str, optional): merhod to compute the loss: variance or energy.
+                                  Defaults to 'energy'.
+            clip_loss (bool, optional): Clip the loss values at +/- 5std.
+                                        Defaults to False.
+            grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
+                                  Defaults to 'auto'.
+            hdf5_group (str, optional): name of the hdf5 group where to store the data.
+                                        Defaults to wf.task.
         """
 
         # observalbe
@@ -142,13 +143,13 @@ class SolverOrbital(SolverBase):
         add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
     def evaluate_grad_auto(self, lpos):
-        """Evaluate the gradient using automatic diff of the required loss.
+        """Evaluate the gradient using automatic differentiation
 
-        Arguments:
-            lpos {torch.tensor} -- positions of the walkers
+        Args:
+            lpos (torch.tensor): sampling points
 
         Returns:
-            tuple -- (loss, local energy)
+            tuple: loss values and local energies
         """
 
         # compute the loss
@@ -165,13 +166,16 @@ class SolverOrbital(SolverBase):
         return loss, eloc
 
     def evaluate_grad_manual(self, lpos):
-        """Evaluate the gradient using a low variance method
+        """Evaluate the gradient using low variance express
 
-        Arguments:
-            lpos {torch.tensor} -- positions of the walkers
+        Args:
+            lpos ([type]): [description]
+
+        Args:
+            lpos (torch.tensor): sampling points
 
         Returns:
-            tuple -- (loss, local energy)
+            tuple: loss values and local energies
         """
 
         if self.loss.method in ['energy', 'weighted-energy']:

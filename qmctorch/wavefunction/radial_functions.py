@@ -1,29 +1,23 @@
 import torch
 
 
-def radial_slater(
-        R,
-        bas_n,
-        bas_exp,
-        xyz=None,
-        derivative=0,
-        jacobian=True):
+def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """Compute the radial part of STOs (or its derivative).
 
-    Arguments:
-        R {torch.tensor} -- distance between each electron and each atom
-        bas_n {torch.tensor} -- principal quantum number
-        bas_exp {torch.tensor} -- exponents of the exponential
+    Args:
+        R (torch.tensor): distance between each electron and each atom
+        bas_n (torch.tensor): principal quantum number
+        bas_exp (torch.tensor): exponents of the exponential
 
     Keyword Arguments:
-        xyz {torch.tensor} -- positions of the electrons
-                              (needed for derivative) (default: {None})
-        derivative {int} -- degree of the derivative (default: {0})
-        jacobian {bool} -- return the jacobian, i.e the sum of the gradients
+        xyz (torch.tensor): positions of the electrons
+                            (needed for derivative) (default: {None})
+        derivative (int): degree of the derivative (default: {0})
+        jacobian (bool): return the jacobian, i.e the sum of the gradients
                            (default: {True})
 
     Returns:
-        torch.tensor -- values of each orbital radial part at each position
+        torch.tensor: values of each orbital radial part at each position
     """
 
     if derivative == 0:
@@ -62,29 +56,23 @@ def radial_slater(
                 (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
 
-def radial_gaussian(
-        R,
-        bas_n,
-        bas_exp,
-        xyz=None,
-        derivative=0,
-        jacobian=True):
-    """Compute the radial part of GTOs (or its derivative).
+def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
+    """ompute the radial part of GTOs (or its derivative).
 
-    Arguments:
-        R {torch.tensor} -- distance between each electron and each atom
-        bas_n {torch.tensor} -- principal quantum number
-        bas_exp {torch.tensor} -- exponents of the exponential
+    Args:
+        R (torch.tensor): distance between each electron and each atom
+        bas_n (torch.tensor): principal quantum number
+        bas_exp (torch.tensor): exponents of the exponential
 
     Keyword Arguments:
-        xyz {torch.tensor} -- positions of the electrons
-                              (needed for derivative) (default: {None})
-        derivative {int} -- degree of the derivative (default: {0})
-        jacobian {bool} -- return the jacobian, i.e the sum of the gradients
+        xyz (torch.tensor): positions of the electrons
+                            (needed for derivative) (default: {None})
+        derivative (int): degree of the derivative (default: {0})
+        jacobian (bool): return the jacobian, i.e the sum of the gradients
                            (default: {True})
 
     Returns:
-        torch.tensor -- values of each orbital radial part at each position
+        torch.tensor: values of each orbital radial part at each position
     """
     if derivative == 0:
         return R**bas_n * torch.exp(-bas_exp * R**2)

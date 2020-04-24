@@ -15,15 +15,14 @@ def bproj(M, P):
 class KineticPooling(nn.Module):
 
     def __init__(self, configs, mol, cuda=False):
-        """Layer that computes the kinetic energy using the jacobi formula
+        """Computes the kinetic energy using the Jacobi formula
 
-        Arguments:
-            configs {list} -- configuration of the slater determinant
-            mol {[type]} -- Instance of a Molecule object
-
-        Keyword Arguments:
-            cuda {bool} -- use cuda (default: {False})
+        Args:
+            configs (list): list of slater determinants
+            mol (Molecule): instance of a Molecule object
+            cuda (bool, optional): GPU ON/OFF. Defaults to False.
         """
+
         super(KineticPooling, self).__init__()
 
         self.configs = configs
@@ -41,26 +40,20 @@ class KineticPooling(nn.Module):
             self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, MO, d2MO, dJdMO=None, d2JMO=None):
-        """ Compute the kinetic energy using the trace trick
-        for a product of spin up/down determinant
+        """Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
+
         .. math::
-
-            T \Psi  =  T Dup Ddwn
-                    = -1/2 Dup * Ddown  * ( \Delta_up Dup  + \Delta_down Ddown)
-
-            using the trace trick with D = |A| :
-                O(D) = D trace(A^{-1} O(A))
-                and Delta_up(D_down) = 0
+            -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}  
+            ( \Delta_{up} D_{up}  + \Delta_{down} D_{down} )
 
         Args:
-            MO : matrix of MO vals (Nbatch, Nelec, Nmo)
-            d2MO : matrix of \Delta MO vals (Nbatch, Nelec, Nmo)
-            dJdMO : matrix of the \frac{\nabla J}{J} \nabla MO
-            d2JMO : matrix of the \frac{\Delta J}{J} MO
-            return_local_energy : divide the contrbutions by det(MO) to get
-                                  local energy instead of kinetic energy
-        Return:
-            K : T Psi (Nbatch, Ndet)
+            MO (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
+            d2MO (torch.tensor): matrix of :math:`\Delta` MO vals(Nbatch, Nelec, Nmo)
+            dJdMO (torch.tensor, optional): matrix of the :math:`\\frac{\\nabla J}{J} \\nabla MO`. Defaults to None.
+            d2JMO (torch.tensor, optional): matrix of the :math:`\\frac{\Delta J}{J} MO`. Defaults to None.
+
+        Returns:
+            torch.tensor: kinetic energy
         """
 
         # shortcut up/down matrices

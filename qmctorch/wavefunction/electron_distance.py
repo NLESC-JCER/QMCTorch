@@ -5,12 +5,20 @@ from torch import nn
 class ElectronDistance(nn.Module):
 
     def __init__(self, nelec, ndim):
-        """Compute the distance between electrons.
+        """Computes the electron-electron distances
 
-        Arguments:
-            nelec {int} -- number of electrons
-            ndim {int} -- number of dimension
+        Args:
+            nelec (int): number of electrons
+            ndim (int): number of spatial dimensions 
+
+        Examples::
+            >>> edist = ElectronDistance(2,3)
+            >>> pos = torch.tensor(500,6)
+            >>> r = edist(pos)
+            >>> dr = edist(pos,derivative=1)
+
         """
+
         super(ElectronDistance, self).__init__()
         self.nelec = nelec
         self.ndim = ndim
@@ -22,20 +30,28 @@ class ElectronDistance(nn.Module):
             self.eps = 1E-16
 
     def forward(self, input, derivative=0):
-        """Compute the pairwise distance between two sets of electrons
-        or the derivative of these elements wrt to the first electron :
+        """Compute the pairwise distance between the electrons
+        or its derivative. \n
 
-        i.e. d r_ij / dx_i (as opposed to d r_ij / dx_j)
+        When required, the derivative is computed wrt to the first electron i.e.
+
+        .. math::
+            \\frac{dr_{ij}}{dx_i} 
+
+        which is different from :    
+
+        .. math::
+            \\frac{d r_{ij}}{dx_j}
 
         Args:
-            input (torch.tesnor): position of the electron
-                                  Nbatch x [Nelec x Ndim]
-            derivative (int, optional): degre of the derivative.
+            input (torch.tesnor): position of the electron \n
+                                  size : Nbatch x [Nelec x Ndim]
+            derivative (int, optional): degre of the derivative. \n
                                         Defaults to 0.
 
         Returns:
-            torch.tensor: distance (or derivative) matrix
-                          Nbatch x Nelec x Nelec if derivative = 0
+            torch.tensor: distance (or derivative) matrix \n
+                          Nbatch x Nelec x Nelec if derivative = 0 \n
                           Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
 
         """
@@ -63,7 +79,8 @@ class ElectronDistance(nn.Module):
         elif derivative == 1:
 
             eps_ = self.eps * \
-                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+                torch.diag(dist.new_ones(
+                    dist.shape[-1])).expand_as(dist)
 
             invr = (1. / (dist + eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
@@ -73,7 +90,8 @@ class ElectronDistance(nn.Module):
         elif derivative == 2:
 
             eps_ = self.eps * \
-                torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+                torch.diag(dist.new_ones(
+                    dist.shape[-1])).expand_as(dist)
             invr3 = (1. / (dist**3 + eps_)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
             diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2

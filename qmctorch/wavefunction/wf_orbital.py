@@ -15,26 +15,18 @@ class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi', use_jastrow=True, cuda=False):
-        """Network to compute a wave function
+        """Implementation of the QMC Network. 
 
-        Arguments:
-            mol {Molecule} -- Instance of a molecule object
+        Args:
+            mol (qmc.wavefunction.Molecule): a molecule object
+            configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
+            kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
+            use_jastrow (bool, optional): turn jastrow factor ON/OFF. Defaults to True.
+            cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
 
-        Keyword Arguments:
-            configs {str} -- configuration in the active space
-                            'ground state',
-                            'cas(nelec,norb)'
-                            'single(nelec,norb)'
-                            'single_double(nelec,norb)'
-                            (default: {'ground_state'})
-
-            kinetic {str} -- method to compute the kinetic energy
-                            (jacobi, auto, fd) (default: {'jacobi'})
-            use_jastrow {bool} -- use a jastrow factor (default: {True})
-            cuda {bool} -- use cuda (default: {False})
-
-        Raises:
-            ValueError: if cuda requested and not available
+        Examples::
+            >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
+            >>> wf = Orbital(mol, configs='cas(2,2)')
         """
 
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
@@ -107,35 +99,32 @@ class Orbital(WaveFunction):
                                    'pool', 'kinpool', 'fc'])
 
     def get_mo_coeffs(self):
-        """get the molecular orbital coefficient
-
-        Returns:
-            nn.Parameters -- MO matrix as a parameter
-        """
         mo_coeff = torch.tensor(self.mol.basis.mos).type(
             torch.get_default_dtype())
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
-        """Update the MO matrix for example in a geo opt run."""
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
     def forward(self, x, ao=None):
-        """Compute the value of the wave function for a multiple conformation
-           of the electrons
+        """computes the value of the wave function for the sampling points
 
-        Arguments:
-            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
+        .. math::
+            \Psi(R) = \sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
 
-        Keyword Arguments:
-            ao {torch.tensor} -- AO matrix [nbatch, nelec,nao]
-                                if present used as input of the MO.
-                                usefull when updating the waeve function after
-                                a 1 elec move (default: {None})
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            ao (torch.tensor, optional): values of the atomic orbitals (Nbatch, Nelec, Nao)
 
         Returns:
-            torch.tensor -- value of the wave function for the configurations
+            torch.tensor: values of the wave functions at each sampling point (Nbatch, 1)
+
+        Examples::
+            >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
+            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> pos = torch.rand(500,6)
+            >>> vals = wf(pos)
         """
 
         if self.use_jastrow:
@@ -178,15 +167,23 @@ class Orbital(WaveFunction):
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
     def local_energy_jacobi(self, pos):
-        """Computes the local energy using the jacobi formula (trace trick)
-        for the kinetic energy
+        """Computes the local energy using the Jacobi formula
 
-        Arguments:
-            pos {torch.tensor} -- positions of the electrons
-                                  [nbatch, nelec*ndim]
+        .. math::
+            E = K(R) + V_{ee}(R) + V_{en}(R) + V_{nn}
+
+        Args:
+            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
         Returns:
-            torch.tensor -- value of the local energy [nbatch]
+            [torch.tensor]: values of the local enrgies at each sampling points
+
+        Examples::
+            >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
+            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> pos = torch.rand(500,6)
+            >>> vals = wf.local_energy_jacobi(pos)
+
         """
 
         ke = self.kinetic_energy_jacobi(pos)
@@ -197,14 +194,17 @@ class Orbital(WaveFunction):
             + self.nuclear_repulsion()
 
     def kinetic_energy_jacobi(self, x, **kwargs):
-        """Compute the value of the kinetic enery using
-        the Jacobi formula for derivative of determinant.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
+        C. Filippi, Simple Formalism for Efficient Derivatives .
 
-        Arguments:
-            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
+        .. math::
+             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
         Returns:
-            torch.tensor -- value of the kinetic energy [nbatch]
+            torch.tensor: values of the kinetic energy at each sampling points
         """
 
         mo = self._get_mo_vals(x)
@@ -232,14 +232,14 @@ class Orbital(WaveFunction):
     def nuclear_potential(self, pos):
         """Computes the electron-nuclear term
 
-        Arguments:
-            pos {torch.tensor} -- positions of the electrons
-                                  [nbatch, nelec*ndim]
+        .. math:
+            V_{en} = - \sum_e \sum_n \\frac{Z_n}{r_{en}}
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
         Returns:
-            torch.tensor -- value of the electron-nuclear term [nbatch]
-
-        TODO : vectorize that !!
+            torch.tensor: values of the electon-nuclear energy at each sampling points
         """
 
         p = torch.zeros(pos.shape[0], device=self.device)
@@ -257,14 +257,14 @@ class Orbital(WaveFunction):
     def electronic_potential(self, pos):
         """Computes the electron-electron term
 
-        Arguments:
-            pos {torch.tensor} -- positions of the electrons
-                                  [nbatch, nelec*ndim]
+        .. math:
+            V_{ee} = \sum_{e_1} \sum_{e_2} \\frac{1}{r_{e_1e_2}}
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
         Returns:
-            torch.tensor -- value of the el-el repulsion [nbatch]
-
-        TODO : vectorize that !!
+            torch.tensor: values of the electon-electron energy at each sampling points
         """
 
         pot = torch.zeros(pos.shape[0], device=self.device)
@@ -282,10 +282,11 @@ class Orbital(WaveFunction):
     def nuclear_repulsion(self):
         """Computes the nuclear-nuclear repulsion term
 
-        Returns:
-            torch.tensor -- value of the nuclear repulsion
+        .. math:
+            V_{nn} = \sum_{n_1} \sum_{n_2} \\frac{Z_1Z_2}{r_{n_1n_2}}
 
-        TODO : vectorize that !!
+        Returns:
+            torch.tensor: values of the nuclear-nuclear energy at each sampling points
         """
 
         vnn = 0.
@@ -300,13 +301,13 @@ class Orbital(WaveFunction):
         return vnn
 
     def geometry(self, pos):
-        """Return the current geometry of the molecule
+        """Returns the gemoetry of the system in xyz format
 
-        Arguments:
-            pos {[type]} -- dummy argument
+        Args:
+            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
         Returns:
-            list -- atomic types and positions
+            list: list where each element is one line of the xyz file
         """
         d = []
         for iat in range(self.natom):

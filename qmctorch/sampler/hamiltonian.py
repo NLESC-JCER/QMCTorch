@@ -9,14 +9,20 @@ class Hamiltonian(SamplerBase):
     def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
                  step_size=0.1, ntherm=-1, ndecor=1, init={'min': -2, 'max': 2}, L=10,
                  with_tqdm=True):
-        ''' HMC SAMPLER
+        """Hamiltonian Monte Carlo Sampler.
+
         Args:
-            f (func) : function to sample
-            nstep (int) : number of mc step
-            nwalkers (int) : number of walkers
-            eps (float) : size of the mc step
-            boudnary (float) : boudnary of the space
-        '''
+            nwalkers (int, optional): Number of walkers. Defaults to 100.
+            nstep (int, optional): Number of steps. Defaults to 1000.
+            step_size (int, optional): length of the step. Defaults to 3.
+            nelec (int, optional): total number of electrons. Defaults to 1.
+            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
+            ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
+            ndim (int, optional): total number of dimension. Defaults to 1.
+            init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
+            L (int, optional): length of the trajectory . Defaults to 10.
+            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
+        """
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
@@ -25,16 +31,6 @@ class Hamiltonian(SamplerBase):
 
     @staticmethod
     def get_grad(func, inp):
-        '''Compute the gradient of a function
-        wrt the value of its input
-
-        Args:
-            func : function to get the gradient of
-            inp : input
-        Returns:
-            grad : gradient of the func wrt the input
-        '''
-
         inp.requires_grad = True
         val = func(inp)
         z = Variable(torch.ones(val.shape))

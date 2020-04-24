@@ -6,16 +6,14 @@ from torch.distributions import MultivariateNormal
 class Walkers(object):
 
     def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
-        """Walkers of the MC sampling
+        """Creates Walkers for the sampler.
 
-        Keyword Arguments:
-            nwalkers {int} -- number of walkers (default: {100})
-            nelec {int} -- number of electrons (default: {1})
-            ndim {int} -- number of dimension for each electron (default: {1})
-            init {dict} -- method and data to initialize the walkers
-                           (default:{None}) see Molecule.domain()
+        Args:
+            nwalkers (int, optional): Number of walkers. Defaults to 100.
+            nelec (int, optional): number of electron. Defaults to 1.
+            ndim (int, optional): Number of dimensions. Defaults to 1.
+            init (dict, optional): method to initialize the walkers. Defaults to None. (see Molecule.domain())
         """
-
         self.nwalkers = nwalkers
         self.ndim = ndim
         self.nelec = nelec
@@ -31,10 +29,8 @@ class Walkers(object):
         """Initalize the position of the walkers
 
         Args:
-            method (str, optional): how to initialize the positions.
-                                    Defaults to 'uniform'.
-            pos ([type], optional): existing position of the walkers.
-                                    Defaults to None.
+            method (str, optional): how to initialize the positions. Defaults to 'uniform'.
+            pos ([type], optional): existing position of the walkers. Defaults to None.
 
         Raises:
             ValueError: if the method is not recognized
@@ -68,7 +64,7 @@ class Walkers(object):
         """Initialize the walkers at the center of the molecule
 
         Returns:
-            torch.tensor -- positions of the walkers
+            torch.tensor: positions of the walkers
         """
         eps = 1E-6
         pos = -eps + 2 * eps * \
@@ -81,7 +77,7 @@ class Walkers(object):
         """Initialize the walkers in a box covering the molecule
 
         Returns:
-            torch.tensor -- positions of the walkers
+            torch.tensor: positions of the walkers
         """
         pos = torch.rand(self.nwalkers, self.nelec * self.ndim)
         pos *= (self.init_domain['max'] - self.init_domain['min'])
