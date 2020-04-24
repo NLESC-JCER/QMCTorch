@@ -5,17 +5,12 @@ import pickle
 
 
 def plot_energy(local_energy, e0=None, show_variance=False):
-    """Plot the evolution of the energy along the trajectory
+    """Plot the evolution of the energy
 
-    Arguments:
-        local_energy {np.array} -- array containing the local energy
-
-    Keyword Arguments:
-        e0 {float} -- optimal value of the enrgy (default: {None})
-        show_variance {bool} -- plot the variance (default: {False})
-
-    Returns:
-        tuple -- (energy, variance)
+    Args:
+        local_energy (np.ndarray): local energies along the trajectory
+        e0 (float, optional): Target value for the energy. Defaults to None.
+        show_variance (bool, optional): show the variance if True. Defaults to False.
     """
 
     fig = plt.figure()
@@ -56,9 +51,9 @@ def plot_energy(local_energy, e0=None, show_variance=False):
 def plot_data(observable, obsname):
     """Plot the evolution a given data
 
-    Arguments:
-        obs_dict {SimpleNamespace} -- namespace of observable
-        obsname {str} -- name (key) of the desired observable
+    Args:
+        obs_dict (SimpleNamespace): namespace of observable
+        obsname (str): name (key) of the desired observable
     """
 
     fig = plt.figure()
@@ -82,14 +77,12 @@ def plot_data(observable, obsname):
 def plot_walkers_traj(eloc, traj_index='all'):
     """Plot the trajectory of all the individual walkers
 
-    Arguments:
-        obs {SimpleNamespace} -- Namespace of the observables
-
-    Keyword Arguments:
-        traj_index {str} -- all or index of a given walker (default: {'all'})
+    Args:
+        obs (SimpleNamespace): Namespace of the observables
+        traj_index (int, str, optional): all or index of a given walker Defaults to 'all'
 
     Returns:
-        float -- decorelation time
+        float :  Decorelation time
     """
 
     #eloc = np.array(obs.local_energy).squeeze(-1)
@@ -128,8 +121,8 @@ def plot_walkers_traj(eloc, traj_index='all'):
 def plot_block(eloc):
     """Plot the blocking thingy
 
-    Arguments:
-        eloc {np.array} -- values of the local energy
+    Args:
+        eloc (np.array): values of the local energy
     """
 
     nstep, nwalkers = eloc.shape
