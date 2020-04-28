@@ -75,6 +75,13 @@ class TestH2ADF(unittest.TestCase):
         # assert(e > 2 * self.ground_state_energy and e < 0.)
         # assert(v > 0 and v < 5.)
 
+    def test_wf_opt(self):
+
+        self.solver.configure(task='wf_opt')
+        self.solver.track_observable(['local_energy'])
+        obs = self.solver.run(5, loss='energy', grad='auto')
+        plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
+
 
 if __name__ == "__main__":
     unittest.main()

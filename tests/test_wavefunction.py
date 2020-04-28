@@ -83,6 +83,8 @@ class TestWaveFunction(unittest.TestCase):
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
+        efd = self.wf.kinetic_energy_finite_difference(self.pos)
+
 
 if __name__ == "__main__":
     unittest.main()
