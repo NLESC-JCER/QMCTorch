@@ -6,6 +6,9 @@ Pytorch Implementation of Real Space Quantum Monte Carlo Simulations of Molecula
 [![Coverage Status](https://coveralls.io/repos/github/NLESC-JCER/QMCTorch/badge.svg?branch=master)](https://coveralls.io/github/NLESC-JCER/QMCTorch?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5d99212add2a4f0591adc6248fec258d)](https://www.codacy.com/manual/NicoRenaud/QMCTorch?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=NLESC-JCER/QMCTorch&amp;utm_campaign=Badge_Grade)
 
+## Documentation 
+https://qmctorch.readthedocs.io/en/latest/intro.html
+
 ## Introduction
 
 QMCTorch allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle-in-a-box model as well as molecular systems. It uses `pytorch` as a deep learning framework and `pyscf` or `adf` to obtain the basis set information and the first guess of the molecular orbitals.
