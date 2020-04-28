@@ -1,0 +1,5 @@
+[report]
+omit = 
+    test/test_*.py
+    qmctorch/solver/solver_orbital_horovod.py
+    qmctorch/wavefunction/calculator/adf.py

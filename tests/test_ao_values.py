@@ -68,9 +68,4 @@ class TestAOvalues(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestAOvalues()
-    t.setUp()
-    t.test_ao()
-    t.test_ao_deriv()
-    t.test_ao_hess()
+    unittest.main()

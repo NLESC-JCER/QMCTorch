@@ -22,27 +22,6 @@ class CalculatorBase(object):
         raise NotImplementedError(
             'Implement a save_data method in your calculator.')
 
-    def check_h5file(self):
-        """Check if the hdf5 contains all the necessary fields."""
-        h5 = h5py.File(self.hdf5file, 'r')
-        calc_grp = h5['calculator']
-
-        names = ['bas_coeff', 'bas_exp', 'nshells',
-                 'atom_coords_internal', 'nao', 'nmo',
-                 'index_ctr', 'mos', 'TotalEnergy']
-
-        if calc_grp['harmonics_type'] == 'cart':
-            names += ['bas_kx', 'bas_ky', 'bas_kz', 'bas_kr']
-
-        elif calc_grp['harmonics_type'] == 'sph':
-            names += ['bas_n', 'bas_l', 'bas_m']
-
-        for n in names:
-            if n not in calc_grp.keys():
-                raise KeyError(n, ' not in the hdf5 file')
-
-        h5.close()
-
     @staticmethod
     def normalize_columns(mat):
         """Normalize a matrix column-wise.
