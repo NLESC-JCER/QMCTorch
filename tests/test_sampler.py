@@ -85,10 +85,4 @@ class TestSampler(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    # t = TestSampler()
-    # t.setUp()
-    # t.test_walkers_init()
-    # t.test_metropolis()
-    # t.test_hmc()
-    # t.test_gmh()
+    unittest.main()

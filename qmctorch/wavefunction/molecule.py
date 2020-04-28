@@ -298,12 +298,3 @@ class Molecule(object):
         for name, fn in cast_fn.items():
             self.basis.__setattr__(
                 name, fn(self.basis.__getattribute__(name)))
-
-
-if __name__ == "__main__":
-
-    mol = Molecule(
-        atom='H 0 0 -3.015; O 0 0 0; H 0 0 3.015',
-        calculator='adf',
-        basis='dzp',
-        unit='bohr')

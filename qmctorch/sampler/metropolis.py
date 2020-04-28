@@ -241,12 +241,3 @@ class Metropolis(SamplerBase):
         tau = torch.rand_like(P)
         index = (P - tau >= 0).reshape(-1)
         return index.type(torch.bool)
-
-
-if __name__ == "__main__":
-
-    def pdf(pos):
-        return torch.exp(-(pos**2).prod(1))
-
-    sampler = Metropolis()
-    pos = sampler.generate(pdf)
