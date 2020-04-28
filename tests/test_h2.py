@@ -16,6 +16,7 @@ class TestH2(unittest.TestCase):
     def setUp(self):
 
         torch.manual_seed(0)
+        np.random.seed(0)
 
         # optimal parameters
         self.opt_r = 0.69  # the two h are at +0.69 and -0.69
@@ -114,7 +115,14 @@ class TestH2(unittest.TestCase):
         # assert(e > 2 * self.ground_state_energy and e < 0.)
         # assert(v > 0 and v < 5.)
 
-    def test3_geo_opt(self):
+    def test3_wf_opt(self):
+        self.solver.sampler = self.sampler
+
+        self.solver.configure(task='wf_opt')
+        self.solver.track_observable(['local_energy'])
+        self.solver.run(5, loss='energy', grad='auto')
+
+    def test4_geo_opt(self):
 
         self.solver.wf.ao.atom_coords[0, 2].data = torch.tensor(-0.37)
         self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)

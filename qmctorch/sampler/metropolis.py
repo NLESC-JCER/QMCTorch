@@ -44,34 +44,9 @@ class Metropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
-                             nelec, ndim, init, move, with_tqdm)
+                             nelec, ndim, init, with_tqdm)
 
-        if 'type' not in self.movedict.keys():
-            print('Metroplis : Set 1 electron move by default')
-            self.movedict['type'] = 'one-elec'
-
-        if 'proba' not in self.movedict.keys():
-            print('Metroplis : Set uniform trial move probability')
-            self.movedict['proba'] = 'uniform'
-
-        if self.movedict['proba'] == 'normal':
-            _sigma = self.step_size / \
-                (2 * torch.sqrt(2 * torch.log(torch.tensor(2.))))
-            self.multiVariate = MultivariateNormal(
-                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
-
-        self._move_per_iter = 1
-        if self.movedict['type'] not in [
-                'one-elec', 'all-elec', 'all-elec-iter']:
-            raise ValueError(
-                " 'type' in move should be 'one-elec','all-elec', \
-                  'all-elec-iter'")
-
-        if self.movedict['type'] == 'all-elec-iter':
-            self.fixed_id_elec_list = range(self.nelec)
-            self._move_per_iter = self.nelec
-        else:
-            self.fixed_id_elec_list = [None]
+        self.configure_move(move)
 
     def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
@@ -149,6 +124,52 @@ class Metropolis(SamplerBase):
                       (rate / self.nstep * 100))
 
         return torch.cat(pos).requires_grad_()
+
+    def configure_move(self, move):
+        """Configure the electron moves
+
+        Args:
+            move (dict, optional): method to move the electrons. default('all-elec','normal') \n
+                                   'type':
+                                        'one-elec': move a single electron per iteration \n
+                                        'all-elec': move all electrons at the same time \n
+                                        'all-elec-iter': move all electrons by iterating through single elec moves \n
+                                    'proba' : 
+                                        'uniform': uniform ina cube \n
+                                        'normal': gussian in a sphere \n
+
+        Raises:
+            ValueError: If moves are not recognized
+        """
+
+        self.movedict = move
+
+        if 'type' not in self.movedict.keys():
+            print('Metroplis : Set 1 electron move by default')
+            self.movedict['type'] = 'one-elec'
+
+        if 'proba' not in self.movedict.keys():
+            print('Metroplis : Set uniform trial move probability')
+            self.movedict['proba'] = 'uniform'
+
+        if self.movedict['proba'] == 'normal':
+            _sigma = self.step_size / \
+                (2 * torch.sqrt(2 * torch.log(torch.tensor(2.))))
+            self.multiVariate = MultivariateNormal(
+                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
+
+        self._move_per_iter = 1
+        if self.movedict['type'] not in [
+                'one-elec', 'all-elec', 'all-elec-iter']:
+            raise ValueError(
+                " 'type' in move should be 'one-elec','all-elec', \
+                  'all-elec-iter'")
+
+        if self.movedict['type'] == 'all-elec-iter':
+            self.fixed_id_elec_list = range(self.nelec)
+            self._move_per_iter = self.nelec
+        else:
+            self.fixed_id_elec_list = [None]
 
     def move(self, pdf, id_elec):
         """Move electron one at a time in a vectorized way.

@@ -22,14 +22,13 @@ class TestWaveFunction(unittest.TestCase):
             calculator='pyscf',
             basis='sto-3g')
 
-        self.wf = Orbital(mol, kinetic='auto')
+        self.wf = Orbital(mol, kinetic='auto', configs='cas(2,2)')
         self.pos = torch.tensor(np.random.rand(10, 6))
         self.pos.requires_grad = True
 
     def test_forward(self):
 
         wfvals = self.wf(self.pos)
-
         ref = torch.tensor([[0.1514],
                             [0.1427],
                             [0.2215],
@@ -40,7 +39,6 @@ class TestWaveFunction(unittest.TestCase):
                             [0.0963],
                             [0.1722],
                             [0.2988]])
-
         assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
     def test_local_energy(self):
@@ -68,7 +66,6 @@ class TestWaveFunction(unittest.TestCase):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
-
         ref = torch.tensor([[0.9461],
                             [0.4120],
                             [2.1962],

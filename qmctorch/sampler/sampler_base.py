@@ -4,7 +4,7 @@ from .walkers import Walkers
 
 class SamplerBase(object):
 
-    def __init__(self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, move, with_tqdm):
+    def __init__(self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, with_tqdm):
         """Base class for the sampler.
 
         Arguments:
@@ -14,7 +14,6 @@ class SamplerBase(object):
             nelec {int} -- number of electrons
             ndim {int} -- number of dimension per elec
             init {dict} -- method/data to initialize th walkers
-            move {dict} -- method/data to perform the move
         """
 
         self.nwalkers = nwalkers
@@ -24,7 +23,6 @@ class SamplerBase(object):
         self.step_size = step_size
         self.ntherm = ntherm
         self.ndecor = ndecor
-        self.movedict = move
         self.cuda = False
         self.device = torch.device('cpu')
         self.with_tqdm = with_tqdm
