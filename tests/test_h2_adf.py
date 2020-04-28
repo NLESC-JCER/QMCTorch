@@ -3,7 +3,8 @@ import torch.optim as optim
 
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
-from qmctorch.sampler import Metropolis, Hamiltonian
+from qmctorch.sampler import Metropolis
+from qmctorch.utils import plot_energy
 
 import numpy as np
 import unittest
