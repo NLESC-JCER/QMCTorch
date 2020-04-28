@@ -1,6 +1,6 @@
 # QMCTorch
 
-Pytorch Implementtion of Reals Space Quantum Monte Carlo simulations of Molecular systems
+Pytorch Implementation of Real Space Quantum Monte Carlo Simulations of Molecular Systems
 
 [![Build Status](https://travis-ci.com/NLESC-JCER/QMCTorch.svg?branch=master)](https://travis-ci.com/NLESC-JCER/QMCTorch)
 [![Coverage Status](https://coveralls.io/repos/github/NLESC-JCER/QMCTorch/badge.svg?branch=master)](https://coveralls.io/github/NLESC-JCER/QMCTorch?branch=master)
