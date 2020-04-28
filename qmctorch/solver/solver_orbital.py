@@ -142,6 +142,8 @@ class SolverOrbital(SolverBase):
         dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
         add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
+        return self.observable
+
     def evaluate_grad_auto(self, lpos):
         """Evaluate the gradient using automatic differentiation
 

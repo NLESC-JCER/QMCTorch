@@ -155,4 +155,7 @@ class TestH2(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    t = TestH2()
+    t.setUp()
+    t.test3_wf_opt()
