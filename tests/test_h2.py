@@ -4,6 +4,7 @@ import torch.optim as optim
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis, Hamiltonian
+from qmctorch.utils import plot_energy, plot_data, plot_walkers_traj, plot_block
 
 import platform
 
@@ -88,9 +89,6 @@ class TestH2(unittest.TestCase):
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
 
-        # assert(e > 2 * self.ground_state_energy and e < 0.)
-        # assert(v > 0 and v < 5.)
-
     def test2_single_point_hmc(self):
 
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
@@ -112,15 +110,13 @@ class TestH2(unittest.TestCase):
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
 
-        # assert(e > 2 * self.ground_state_energy and e < 0.)
-        # assert(v > 0 and v < 5.)
-
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler
 
         self.solver.configure(task='wf_opt')
         self.solver.track_observable(['local_energy'])
-        self.solver.run(5, loss='energy', grad='auto')
+        obs = self.solver.run(5, loss='energy', grad='auto')
+        plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
 
     def test4_geo_opt(self):
 
@@ -148,11 +144,15 @@ class TestH2(unittest.TestCase):
         assert(e > 2 * self.ground_state_energy and e < 0.)
         assert(v > 0 and v < 2.)
 
+    def test5_sampling_traj(self):
+        self.solver.sampler = self.sampler
+        self.solver.sampler.ntherm = 1000
+        self.solver.sampler.ndecor = 100
+        pos = self.solver.sampler(self.solver.wf.pdf)
+        obs = self.solver.sampling_traj(pos)
+        plot_walkers_traj(obs.local_energy)
+        plot_block(obs.local_energy)
+
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestH2()
-    t.setUp()
-    # t.test1_single_point()
-    # t.test_single_point_hmc()
-    t.test3_geo_opt()
+    unittest.main()

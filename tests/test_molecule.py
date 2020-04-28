@@ -39,8 +39,4 @@ class TestMolecule(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestMolecule()
-    t.test1_create()
-    t.test2_load()
-    t.test3_domain()
+    unittest.main()

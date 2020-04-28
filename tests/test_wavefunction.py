@@ -85,9 +85,4 @@ class TestWaveFunction(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestWaveFunction()
-    t.setUp()
-    t.test_forward()
-    t.test_local_energy()
-    t.test_kinetic_energy()
+    unittest.main()
