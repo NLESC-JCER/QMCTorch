@@ -1,7 +1,7 @@
 Installation
 =========================
 
-pip
+Via Python Package
 -----------------------------
 
 The latest release of QMCTorch can be installed usint the pypi package manager with :
@@ -11,7 +11,7 @@ The latest release of QMCTorch can be installed usint the pypi package manager w
 If you are planning to only use QMCTorch this is the quickest way to obtain the code
 
 
-GitHub
+Via GitHub
 -------------
 
 For user who would like to contribute, the code is hosted on GitHub_ (https://github.com/NLESC-JCER/QMCTorch)

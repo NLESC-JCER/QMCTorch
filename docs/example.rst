@@ -1,5 +1,5 @@
-Example : H2
-=========================
+Wave function Optimization : H2
+====================================
 
 We present here a complete example on how to use QMCTorch on a H2 molecule
 
@@ -69,3 +69,5 @@ We present here a complete example on how to use QMCTorch on a H2 molecule
 >>> solver.configure(task='geo_opt')
 >>> solver.tack_observable(['local_energy', 'atomic_distances'])
 >>> data = solver.run(5, batchsize=None, loss='energy', grad='manual', clip_loss=False)
+
+.. image:: ../pics/h2_dzp.png
