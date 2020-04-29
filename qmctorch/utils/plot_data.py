@@ -74,12 +74,12 @@ def plot_data(observable, obsname):
     plt.show()
 
 
-def plot_walkers_traj(eloc, traj_index='all'):
+def plot_walkers_traj(eloc, walkers='mean'):
     """Plot the trajectory of all the individual walkers
 
     Args:
         obs (SimpleNamespace): Namespace of the observables
-        traj_index (int, str, optional): all or index of a given walker Defaults to 'all'
+        walkers (int, str, optional): all, mean or index of a given walker Defaults to 'all'
 
     Returns:
         float :  Decorelation time
@@ -97,21 +97,28 @@ def plot_walkers_traj(eloc, traj_index='all'):
 
     Tc = (var_decor / var)**2
 
-    if traj_index is not None:
-        plt.subplot(1, 2, 1)
+    if walkers is not None:
+        # plt.subplot(1, 2, 1)
 
-        if traj_index == 'all':
-
+        if walkers == 'all':
             plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
             cmap = cm.hot(np.linspace(0, 1, nwalkers))
             for i in range(nwalkers):
                 plt.plot(celoc.T[:, i], color=cmap[i])
+
+        elif walkers == 'mean':
+            plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
+            plt.plot(np.mean(celoc.T, axis=1), linewidth=5)
+
         else:
-            plt.plot(eloc[traj_index, :], 'o',
+            plt.plot(eloc[walkers, :], 'o',
                      alpha=1 / nwalkers, c='grey')
             plt.plot(celoc.T[traj_index, :])
-        plt.subplot(1, 2, 2)
-        plt.hist(Tc)
+        plt.grid()
+        plt.xlabel('Monte Carlo Steps')
+        plt.ylabel('Energy (Hartree)')
+        # plt.subplot(1, 2, 2)
+        # plt.hist(Tc)
 
     plt.show()
 

@@ -9,6 +9,8 @@ Pytorch Implementation of Real Space Quantum Monte Carlo Simulations of Molecula
 ## Documentation 
 https://qmctorch.readthedocs.io/en/latest/intro.html
 
+
+<!-- 
 ## Introduction
 
 QMCTorch allows to leverage deep learning to optimize QMC wave functions. The package offers solutions to optimize particle-in-a-box model as well as molecular systems. It uses `pytorch` as a deep learning framework and `pyscf` or `adf` to obtain the basis set information and the first guess of the molecular orbitals.
@@ -128,4 +130,4 @@ Note that comfiguring the solver to perform a geometry optimization is done in o
 
 <p align="center">
 <img src="./pics/h2o.gif" title="Wave function Ooptimization of a H2 molecule">
-</p>
+</p> -->

@@ -66,7 +66,7 @@ class Walkers(object):
         Returns:
             torch.tensor: positions of the walkers
         """
-        eps = 1E-6
+        eps = 1E-3
         pos = -eps + 2 * eps * \
             torch.rand(self.nwalkers, self.nelec * self.ndim)
         return pos.type(
@@ -131,7 +131,7 @@ class Walkers(object):
                 elif nelec_placed[_idx] < 5:
                     s = 2. / (self.init_domain['atom_num'][_idx] - 2)
                 else:
-                    s = 3. / (self.init_domain['atom_num'][_idx] - 10)
+                    s = 3. / (self.init_domain['atom_num'][_idx] - 3)
                 xyz[ielec,
                     :] += np.random.normal(scale=s, size=(1, 3))
                 nelec_placed[_idx] += 1
