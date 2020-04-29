@@ -23,3 +23,12 @@ The two other keyword arguments (``calculator`` and ``basis``) refers to the QM 
 used to describe the electronic strucrure of the molecule. The calculator refers to a particular QM package and so far only
 ``pyscf`` and ``adf`` are supported. ``basis``  refers to the basis set used for the calculation.
 The value of the keyword argument should be a valid name of an **all electron** basis set.
+
+Load from HDF5
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Creating a molecule will automatically geneate a HDF5 file containing all the information
+about the molecule (geometry, basis, etc ...). It is possible to load this hdf5 file in molecule
+
+>>> mol = Molecule(load='H2_adf_dzp.hdf5')
+
