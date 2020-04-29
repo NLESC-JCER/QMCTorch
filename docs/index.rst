@@ -18,8 +18,10 @@ Quantum Monte Carlo with Pytorch
    :maxdepth: 2
    :caption: Tutorial:
 
-   example
-   h2o_geo_opt
+   tutorial_sampling_traj
+   tutorial_wf_opt
+   tutorial_geo_opt
+   tutorial_hdf5
 
 .. toctree::
    :maxdepth: 2
