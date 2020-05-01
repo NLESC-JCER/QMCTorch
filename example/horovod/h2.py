@@ -3,7 +3,7 @@ from torch.optim import Adam
 import horovod.torch as hvd
 
 from qmctorch.wavefunction import Orbital, Molecule
-from qmctorch.solver.solver_orbital_horovod import SolverOrbital
+from qmctorch.solver import SolverOrbitalHorovod
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
@@ -48,13 +48,21 @@ opt = optim.Adam(lr_dict, lr=1E-3)
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # QMC solver
-solver = SolverOrbital(wf=wf, sampler=sampler,
-                       optimizer=opt, scheduler=scheduler)
+solver = SolverOrbitalHorovod(wf=wf, sampler=sampler,
+                              optimizer=opt, scheduler=scheduler)
 
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['mo', 'bas_exp'])
+solver.configure(task='wf_opt', freeze=['mo', 'ao'])
 solver.track_observable(['local_energy'])
-solver.run(50, loss='energy')
+
+solver.configure_resampling(mode='update',
+                            resample_every=1,
+                            nstep_update=50)
+
+obs = solver.run(250, batchsize=None,
+                 loss='energy',
+                 grad='manual',
+                 clip_loss=False)
 
 plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
 plot_data(solver.observable, obsname='jastrow.weight')

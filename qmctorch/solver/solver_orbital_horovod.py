@@ -239,7 +239,7 @@ class SolverOrbitalHorovod(SolverOrbital):
             error=err
         )
 
-        # dumpt to file
+        # dump to file
         if hvd.rank() == 0:
 
             dump_to_hdf5(obs,
