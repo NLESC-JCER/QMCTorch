@@ -8,7 +8,7 @@ Quantum Monte Carlo with Pytorch
 
 .. toctree::
    :maxdepth: 2
-   :caption: QMCTorch:
+   :caption: QMCTorch
 
    intro
    qmc
@@ -16,7 +16,7 @@ Quantum Monte Carlo with Pytorch
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorial:
+   :caption: Tutorial
 
    tutorial_sampling_traj
    tutorial_wf_opt
@@ -26,7 +26,16 @@ Quantum Monte Carlo with Pytorch
 
 .. toctree::
    :maxdepth: 2
-   :caption: Documentation:
+   :caption: Examples
+
+   example_sp
+   example_opt
+   example_gpu
+   example_horovod  
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Documentation
 
    api
 
