@@ -2,6 +2,7 @@
 
 Pytorch Implementation of Real Space Quantum Monte Carlo Simulations of Molecular Systems
 
+[![PyPI version](https://badge.fury.io/py/qmctorch.svg)](https://badge.fury.io/py/qmctorch)
 [![Build Status](https://travis-ci.com/NLESC-JCER/QMCTorch.svg?branch=master)](https://travis-ci.com/NLESC-JCER/QMCTorch)
 [![Coverage Status](https://coveralls.io/repos/github/NLESC-JCER/QMCTorch/badge.svg?branch=master)](https://coveralls.io/github/NLESC-JCER/QMCTorch?branch=master)
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5d99212add2a4f0591adc6248fec258d)](https://www.codacy.com/manual/NicoRenaud/QMCTorch?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=NLESC-JCER/QMCTorch&amp;utm_campaign=Badge_Grade)
