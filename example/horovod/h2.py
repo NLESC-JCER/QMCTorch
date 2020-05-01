@@ -15,13 +15,15 @@ from qmctorch.utils import (plot_energy, plot_data)
 
 hvd.init()
 if torch.cuda.is_available():
-    torch.cuda.set_device(hvd.local_rank())
+    torch.cuda.set_device(hvd.rank())
 
 set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='pyscf', basis='sto-6g', unit='bohr')
+               calculator='pyscf', basis='sto-3g',
+               unit='bohr', rank=hvd.local_rank())
+
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
@@ -30,8 +32,8 @@ wf = Orbital(mol, kinetic='jacobi',
 wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(nwalkers=2000,
-                     nstep=2000, step_size=0.2,
+sampler = Metropolis(nwalkers=200,
+                     nstep=200, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
@@ -49,7 +51,8 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # QMC solver
 solver = SolverOrbitalHorovod(wf=wf, sampler=sampler,
-                              optimizer=opt, scheduler=scheduler)
+                              optimizer=opt, scheduler=scheduler,
+                              rank=hvd.rank())
 
 # optimize the wave function
 solver.configure(task='wf_opt', freeze=['mo', 'ao'])
@@ -59,10 +62,11 @@ solver.configure_resampling(mode='update',
                             resample_every=1,
                             nstep_update=50)
 
-obs = solver.run(250, batchsize=None,
+obs = solver.run(5, batchsize=None,
                  loss='energy',
                  grad='manual',
                  clip_loss=False)
 
-plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
-plot_data(solver.observable, obsname='jastrow.weight')
+if hvd.rank() == 0:
+    plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
+    plot_data(solver.observable, obsname='jastrow.weight')

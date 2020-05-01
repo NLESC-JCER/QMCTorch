@@ -20,18 +20,21 @@ def printd(rank, *args):
 
 class SolverOrbitalHorovod(SolverOrbital):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None):
-        """Horovod distributed solver
+    def __init__(self, wf=None, sampler=None, optimizer=None,
+                 scheduler=None, output=None, rank=0):
+        """Distributed QMC solver 
 
-        Keyword Arguments:
-            wf {WaveFunction} -- WaveFuntion object (default: {None})
-            sampler {SamplerBase} -- Samppler (default: {None})
-            optimizer {torch.optim} -- Optimizer (default: {None})
-            scheduler (torch.schedul) -- Scheduler (default: {None})
+        Args:
+            wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
+            sampler (qmctorch.sampler, optional): Sampler. Defaults to None.
+            optimizer (torch.optim, optional): optimizer. Defaults to None.
+            scheduler (torch.optim, optional): scheduler. Defaults to None.
+            output (str, optional): hdf5 filename. Defaults to None.
+            rank (int, optional): rank of he process. Defaults to 0.
         """
 
         SolverOrbital.__init__(self, wf, sampler,
-                               optimizer, scheduler, output)
+                               optimizer, scheduler, output, rank)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(
@@ -176,8 +179,10 @@ class SolverOrbitalHorovod(SolverOrbital):
         # dump
         if hdf5_group is None:
             hdf5_group = self.task
-        dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
-        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
+
+        if hvd.rank() == 0:
+            dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
+            add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
         return self.observable
 

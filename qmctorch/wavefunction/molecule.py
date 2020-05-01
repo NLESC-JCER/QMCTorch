@@ -15,7 +15,7 @@ class Molecule(object):
 
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
-                 name=None, load=None):
+                 name=None, load=None, rank=0):
         """Create a molecule in QMCTorch
 
         Args:
@@ -26,6 +26,7 @@ class Molecule(object):
             unit (str, optional): units of the coordinates. Defaults to 'bohr'.
             name (str or None, optional): name of the molecule. Defaults to None.
             load (str or None, optional): path to a hdf5 file to load. Defaults to None.
+            rank (int, optional): Rank of the process. Defaults to 0.
 
         Examples:
             >>> from qmctorch.wavefunction import Molecule
@@ -77,8 +78,9 @@ class Molecule(object):
 
                 self.basis = self.calculator.run()
 
-                dump_to_hdf5(self, self.hdf5file,
-                             root_name='molecule')
+                if rank == 0:
+                    dump_to_hdf5(self, self.hdf5file,
+                                 root_name='molecule')
 
         self._check_basis()
 

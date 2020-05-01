@@ -9,7 +9,7 @@ from qmctorch.utils import (
 class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None, output=None):
+                 scheduler=None, output=None, rank=0):
         """Basic QMC solver 
 
         Args:
@@ -18,9 +18,11 @@ class SolverOrbital(SolverBase):
             optimizer (torch.optim, optional): optimizer. Defaults to None.
             scheduler (torch.optim, optional): scheduler. Defaults to None.
             output (str, optional): hdf5 filename. Defaults to None.
+            rank (int, optional): rank of he process. Defaults to 0.
         """
 
-        SolverBase.__init__(self, wf, sampler, optimizer, output)
+        SolverBase.__init__(self, wf, sampler,
+                            optimizer, scheduler, output, rank)
 
     def run(self, nepoch, batchsize=None, loss='energy',
             clip_loss=False, grad='manual', hdf5_group=None):

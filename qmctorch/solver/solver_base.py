@@ -10,7 +10,7 @@ class SolverBase(object):
 
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
-                 output=None):
+                 output=None, rank=0):
         """Base Class for QMC solver 
 
         Args:
@@ -19,6 +19,7 @@ class SolverBase(object):
             optimizer (torch.optim, optional): optimizer. Defaults to None.
             scheduler (torch.optim, optional): scheduler. Defaults to None.
             output (str, optional): hdf5 filename. Defaults to None.
+            rank (int, optional): rank of he process. Defaults to 0.
         """
 
         self.wf = wf
@@ -54,7 +55,9 @@ class SolverBase(object):
         if output is None:
             basename = self.wf.mol.hdf5file.split('.')[0]
             self.hdf5file = basename + '_QMCTorch.hdf5'
-        dump_to_hdf5(self, self.hdf5file)
+
+        if rank == 0:
+            dump_to_hdf5(self, self.hdf5file)
 
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
         """Configure the resampling
