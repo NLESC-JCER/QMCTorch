@@ -8,6 +8,12 @@ Pytorch Implementation of Real Space Quantum Monte Carlo Simulations of Molecula
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/5d99212add2a4f0591adc6248fec258d)](https://www.codacy.com/manual/NicoRenaud/QMCTorch?utm_source=github.com&amp;utm_medium=referral&amp;utm_content=NLESC-JCER/QMCTorch&amp;utm_campaign=Badge_Grade)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.3780094.svg)](https://doi.org/10.5281/zenodo.3780094)
 
+## Installation
+
+Clone the repository and install the code from source or use the Python package manager:
+
+`pip install qmctorch`
+
 ## Documentation 
 https://qmctorch.readthedocs.io/en/latest/intro.html
 
