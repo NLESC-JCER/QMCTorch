@@ -2,7 +2,7 @@ import torch
 from torch.utils.data import DataLoader
 import warnings
 
-from .solver_base import SolverBase
+from .solver_orbital import SolverOrbital
 from qmctorch.utils import (DataSet, Loss, OrthoReg)
 
 try:
@@ -16,9 +16,9 @@ def printd(rank, *args):
         print(*args)
 
 
-class SolverOrbitalHorovod(SolverBase):
+class SolverOrbitalHorovod(SolverOrbital):
 
-    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None):
+    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None):
         """Horovod distributed solver
 
         Keyword Arguments:
@@ -28,7 +28,8 @@ class SolverOrbitalHorovod(SolverBase):
             scheduler (torch.schedul) -- Scheduler (default: {None})
         """
 
-        SolverBase.__init__(self, wf, sampler, optimizer)
+        SolverBase.__init__(self, wf, sampler,
+                            optimizer, scheduler, output)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(
@@ -37,14 +38,33 @@ class SolverOrbitalHorovod(SolverBase):
         self.sampler.nwalkers //= hvd.size()
         self.sampler.walkers.nwalkers //= hvd.size()
 
-    def run(self, nepoch, batchsize=None, loss='variance', num_threads=1):
-        '''Train the model.
+    def run(self, nepoch, batchsize=None, loss='energy',
+            clip_loss=False, grad='manual', hdf5_group=None,
+            num_threads=1):
+        """Run the optimization
 
-        Arg:
-            nepoch : number of epoch
-            batchsize : size of the minibatch, if None take all points at once
-            loss : loss used ('energy','variance' or callable (for supervised)
-        '''
+        Args:
+            nepoch (int): Number of optimziation step
+            batchsize (int, optional): Number of sample in a mini batch.
+                                       If None, all samples are used.
+                                       Defaults to None.
+            loss (str, optional): merhod to compute the loss: variance or energy.
+                                  Defaults to 'energy'.
+            clip_loss (bool, optional): Clip the loss values at +/- 5std.
+                                        Defaults to False.
+            grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
+                                  Defaults to 'auto'.
+            hdf5_group (str, optional): name of the hdf5 group where to store the data.
+                                        Defaults to wf.task.
+        """
+
+        # observalbe
+        if not hasattr(self, 'observable'):
+            self.track_observable(['local_energy'])
+
+        self.evaluate_gradient = {
+            'auto': self.evaluate_grad_auto,
+            'manual': self.evaluate_grad_manual}[grad]
 
         if 'lpos_needed' not in self.opt.defaults:
             self.opt.defaults['lpos_needed'] = False
@@ -55,16 +75,30 @@ class SolverOrbitalHorovod(SolverBase):
         torch.set_num_threads(num_threads)
 
         # sample the wave function
-        pos = self.sampler(ntherm=self.resample.ntherm)
-        pos.requires_grad_(False)
+        pos = self.sampler(self.wf.pdf)
+        # pos.requires_grad_(False)
+
+        # get the loss
+        self.loss = Loss(self.wf, method=loss, clip=clip_loss)
+        self.loss.use_weight = (
+            self.resampling_options.resample_every > 1)
+
+        # orthogonalization penalty for the MO coeffs
+        self.ortho_loss = OrthoReg()
 
         # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
 
-        # change the number of steps
+        # change the number of steps/walker size
         _nstep_save = self.sampler.nstep
-        self.sampler.nstep = self.resample.resample
+        _ntherm_save = self.sampler.ntherm
+        _nwalker_save = self.sampler.walkers.nwalkers
+        if self.resampling_options.mode == 'update':
+            self.sampler.ntherm = -1
+            self.sampler.nstep = self.resampling_options.nstep_update
+            self.sampler.walkers.nwalkers = pos.shape[0]
+            self.sampler.nwalkers = pos.shape[0]
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -77,19 +111,12 @@ class SolverOrbitalHorovod(SolverBase):
         self.dataloader = DataLoader(self.dataset,
                                      batch_size=batchsize,
                                      **kwargs)
-
-        # get the loss
-        self.loss = Loss(self.wf, method=loss)
-
-        # orthogonalization penalty for the MO coeffs
-        self.ortho_loss = OrthoReg()
-
         cumulative_loss = []
         min_loss = 1E3
 
         # get the initial observalbe
+        self.store_observable(pos)
 
-        self.get_observable(self.obs_dict, pos)
         for n in range(nepoch):
 
             printd(
@@ -98,54 +125,38 @@ class SolverOrbitalHorovod(SolverBase):
             printd(hvd.rank(), 'epoch %d' % n)
 
             cumulative_loss = 0.
-            for data in self.dataloader:
+            for ibatch, data in enumerate(self.dataloader):
 
+                # get data
                 lpos = data.to(self.device)
                 lpos.requires_grad = True
 
-                loss, eloc = self.loss(lpos)
-                if self.wf.mo.weight.requires_grad:
-                    loss += self.ortho_loss(self.wf.mo.weight)
+                # get the gradient
+                loss, eloc = self.evaluate_gradient(lpos)
                 cumulative_loss += loss
 
-                # compute gradients
-                self.opt.zero_grad()
-                loss.backward()
+                # optimize the parameters
+                self.optimization_step(lpos)
 
-                # optimize
-                if 'lpos_needed' in self.opt.defaults:
-                    self.opt.step(lpos)
-                else:
-                    self.opt.step()
+                # observable
+                self.store_observable(
+                    pos, local_energy=eloc, ibatch=ibatch)
 
-            cumulative_loss = self.metric_average(
-                cumulative_loss, 'cum_loss')
+            cumulative_loss = self.metric_average(cumulative_loss,
+                                                  'cum_loss')
+
             if hvd.rank() == 0:
                 if cumulative_loss < min_loss:
                     min_loss = self.save_checkpoint(
                         n, cumulative_loss, self.save_model)
 
-            self.get_observable(self.obs_dict, pos, local_energy=eloc)
             self.print_observable(cumulative_loss)
 
-            printd(
-                hvd.rank(),
-                '----------------------------------------')
+            printd(hvd.rank(),
+                   '----------------------------------------')
 
             # resample the data
-            if (n % self.resample.resample_every == 0) or (
-                    n == nepoch - 1):
-                if self.resample.resample_from_last:
-                    pos = pos.clone().detach().to(self.device)
-                else:
-                    pos = None
-
-                pos = self.sampler(pos=pos,
-                                   ntherm=self.resample.ntherm,
-                                   with_tqdm=False)
-                pos.requires_grad_(False)
-
-                self.dataloader.dataset.data = pos
+            pos = self.resample(n, pos)
 
             if self.task == 'geo_opt':
                 self.wf.update_mo_coeffs()
@@ -155,8 +166,19 @@ class SolverOrbitalHorovod(SolverBase):
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
+        self.sampler.ntherm = _ntherm_save
+        self.sampler.walkers.nwalkers = _nwalker_save
+        self.sampler.nwalkers = _nwalker_save
 
-    def single_point(self, pos=None, prt=True, ntherm=-1, ndecor=100):
+        # dump
+        if hdf5_group is None:
+            hdf5_group = self.task
+        dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
+        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
+
+        return self.observable
+
+    def single_point(self, pos=None, prt=True):
         """Performs a single point calculation
 
         Keyword Arguments:
@@ -176,7 +198,7 @@ class SolverOrbitalHorovod(SolverBase):
         torch.set_num_threads(num_threads)
 
         # sample the wave function
-        pos = self.sampler(ntherm=self.resample.ntherm)
+        pos = self.sampler(self.wf.pdf)
         pos.requires_grad_(False)
 
         # handle the batch size
@@ -189,7 +211,6 @@ class SolverOrbitalHorovod(SolverBase):
             kwargs = {'num_workers': num_threads, 'pin_memory': True}
         else:
             kwargs = {'num_workers': num_threads}
-
         self.dataloader = DataLoader(self.dataset,
                                      batch_size=batchsize,
                                      **kwargs)
@@ -201,13 +222,33 @@ class SolverOrbitalHorovod(SolverBase):
             eloc = self.wf.local_energy(lpos)
 
         eloc_all = hvd.allgather(eloc, name='local_energies')
-        e = torch.mean(eloc_all)
-        s = torch.var(eloc_all)
+        e, s = torch.mean(eloc_all), torch.var(eloc_all)
+        err = self.wf.sampling_error(eloc_all)
 
-        if prt:
-            printd(hvd.rank(), 'Energy   : ', e)
-            printd(hvd.rank(), 'Variance : ', s)
-        return pos, e, s
+        # print data
+        print('Energy   : ', e.detach().item(),
+              ' +/- ', err.detach().item())
+        print('Variance : ', s.detach().item())
+
+        # dump data to hdf5
+        obs = SimpleNamespace(
+            pos=pos,
+            local_energy=el,
+            energy=e,
+            variance=s,
+            error=err
+        )
+
+        # dumpt to file
+        if hvd.rank() == 0:
+
+            dump_to_hdf5(obs,
+                         self.hdf5file,
+                         root_name=hdf5_group)
+            add_group_attr(self.hdf5file, hdf5_group,
+                           {'type': 'single_point'})
+
+        return obs
 
     @staticmethod
     def metric_average(val, name):

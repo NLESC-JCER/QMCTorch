@@ -24,7 +24,7 @@ class SolverOrbital(SolverBase):
 
     def run(self, nepoch, batchsize=None, loss='energy',
             clip_loss=False, grad='manual', hdf5_group=None):
-        """Run th optimization
+        """Run the optimization
 
         Args:
             nepoch (int): Number of optimziation step
