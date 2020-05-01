@@ -1,5 +1,5 @@
 import torch
-from torch.optim import Adam
+from torch import optim
 import horovod.torch as hvd
 
 from qmctorch.wavefunction import Orbital, Molecule

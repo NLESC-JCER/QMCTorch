@@ -3,7 +3,9 @@ from torch.utils.data import DataLoader
 import warnings
 
 from .solver_orbital import SolverOrbital
-from qmctorch.utils import (DataSet, Loss, OrthoReg)
+from qmctorch.utils import (
+    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+
 
 try:
     import horovod.torch as hvd
@@ -28,8 +30,8 @@ class SolverOrbitalHorovod(SolverOrbital):
             scheduler (torch.schedul) -- Scheduler (default: {None})
         """
 
-        SolverBase.__init__(self, wf, sampler,
-                            optimizer, scheduler, output)
+        SolverOrbital.__init__(self, wf, sampler,
+                               optimizer, scheduler, output)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(
@@ -66,8 +68,8 @@ class SolverOrbitalHorovod(SolverOrbital):
             'auto': self.evaluate_grad_auto,
             'manual': self.evaluate_grad_manual}[grad]
 
-        if 'lpos_needed' not in self.opt.defaults:
-            self.opt.defaults['lpos_needed'] = False
+        if 'lpos_needed' not in self.opt.__dict__.keys():
+            self.opt.lpos_needed = False
 
         self.wf.train()
 
@@ -76,7 +78,7 @@ class SolverOrbitalHorovod(SolverOrbital):
 
         # sample the wave function
         pos = self.sampler(self.wf.pdf)
-        # pos.requires_grad_(False)
+        pos.requires_grad_(False)
 
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
@@ -157,6 +159,7 @@ class SolverOrbitalHorovod(SolverOrbital):
 
             # resample the data
             pos = self.resample(n, pos)
+            pos.requires_grad = False
 
             if self.task == 'geo_opt':
                 self.wf.update_mo_coeffs()
