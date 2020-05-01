@@ -21,6 +21,7 @@ Quantum Monte Carlo with Pytorch
    tutorial_sampling_traj
    tutorial_wf_opt
    tutorial_geo_opt
+   tutorial_gpus
    tutorial_hdf5
 
 .. toctree::
