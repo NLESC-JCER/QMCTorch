@@ -222,14 +222,14 @@ class SolverBase(object):
                 layer, param = obs.split('.')
                 p = self.wf.__getattr__(layer).__getattr__(param)
                 self.observable.__getattribute__(
-                    obs).append(p.data.clone().numpy())
+                    obs).append(p.data.cpu().numpy())
 
                 if p.grad is not None:
                     self.observable.__getattribute__(obs +
-                                                     '.grad').append(p.grad.clone().numpy())
+                                                     '.grad').append(p.grad.cpu().numpy())
                 else:
                     self.observable.__getattribute__(obs +
-                                                     '.grad').append(torch.zeros_like(p.data).numpy())
+                                                     '.grad').append(torch.zeros_like(p.data).cpu().numpy())
 
             # store any other defined method
             elif hasattr(self.wf, obs):
@@ -382,7 +382,7 @@ class SolverBase(object):
         p = pos.view(-1, self.sampler.nwalkers, ndim)
         el = []
         for ip in tqdm(p):
-            el.append(self.wf.local_energy(ip).detach().numpy())
+            el.append(self.wf.local_energy(ip).cpu().detach().numpy())
 
         el = np.array(el).squeeze(-1)
         obs = SimpleNamespace(local_energy=np.array(el), pos=pos)

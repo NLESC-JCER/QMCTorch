@@ -23,7 +23,8 @@ class GeneralizedMetropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor, nelec, ndim, init, cuda, with_tqdm)
+                             step_size, ntherm, ndecor, nelec, ndim, init,
+                             cuda, with_tqdm)
 
     def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
