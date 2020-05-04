@@ -32,7 +32,8 @@ sampler = Metropolis(nwalkers=2000,
                      nstep=2000, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec', 'proba': 'normal'},
+                    cuda=True)
 
 
 # optimizer
