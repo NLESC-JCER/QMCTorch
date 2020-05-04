@@ -12,7 +12,7 @@ class Metropolis(SamplerBase):
                  nelec=1, ndim=3,
                  init={'min': -5, 'max': 5},
                  move={'type': 'all-elec', 'proba': 'normal'},
-                 with_tqdm=True):
+                 cuda=False, with_tqdm=True):
         """Metropolis Hasting generator
 
         Args:
@@ -33,6 +33,7 @@ class Metropolis(SamplerBase):
                                     'proba' : 
                                         'uniform': uniform ina cube \n
                                         'normal': gussian in a sphere \n
+            cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
             with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
 
         Examples::
@@ -65,10 +66,6 @@ class Metropolis(SamplerBase):
             eps = 1E-7
         elif _type_ == torch.float64:
             eps = 1E-16
-
-        if self.cuda:
-            self.walkers.cuda = True
-            self.device = torch.device('cuda')
 
         if self.ntherm >= self.nstep:
             raise ValueError('Thermalisation longer than trajectory')

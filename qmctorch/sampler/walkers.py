@@ -5,7 +5,7 @@ from torch.distributions import MultivariateNormal
 
 class Walkers(object):
 
-    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None):
+    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, cuda=False):
         """Creates Walkers for the sampler.
 
         Args:
@@ -13,6 +13,7 @@ class Walkers(object):
             nelec (int, optional): number of electron. Defaults to 1.
             ndim (int, optional): Number of dimensions. Defaults to 1.
             init (dict, optional): method to initialize the walkers. Defaults to None. (see Molecule.domain())
+            cuda (bool, optional): turn cuda ON/OFF. Defaults to False
         """
         self.nwalkers = nwalkers
         self.ndim = ndim
@@ -22,8 +23,12 @@ class Walkers(object):
         self.pos = None
         self.status = None
 
-        self.cuda = False
-        self.device = torch.device('cpu')
+        self.cuda = cuda
+
+        if cuda:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
 
     def initialize(self, pos=None):
         """Initalize the position of the walkers
@@ -137,4 +142,4 @@ class Walkers(object):
                 nelec_placed[_idx] += 1
 
             pos[iw, :] = xyz.view(-1)
-        return pos
+        return pos.to(device=self.device)
