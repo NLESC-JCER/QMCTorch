@@ -8,7 +8,7 @@ class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
                  step_size=0.1, ntherm=-1, ndecor=1, init={'min': -2, 'max': 2}, L=10,
-                 with_tqdm=True):
+                 cuda=False, with_tqdm=True):
         """Hamiltonian Monte Carlo Sampler.
 
         Args:
@@ -26,7 +26,7 @@ class Hamiltonian(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
-                             nelec, ndim, init, with_tqdm)
+                             nelec, ndim, init, cuda, with_tqdm)
         self.traj_length = L
 
     @staticmethod

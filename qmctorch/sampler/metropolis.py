@@ -45,7 +45,7 @@ class Metropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
-                             nelec, ndim, init, with_tqdm)
+                             nelec, ndim, init, cuda, with_tqdm)
 
         self.configure_move(move)
 

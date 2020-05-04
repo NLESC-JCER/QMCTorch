@@ -12,7 +12,8 @@ class GeneralizedMetropolis(SamplerBase):
     def __init__(self, nwalkers=100, nstep=1000, step_size=3,
                  ntherm=-1, ndecor=1,
                  nelec=1, ndim=1,
-                 init={'type': 'uniform', 'min': -5, 'max': 5}, with_tqdm=True):
+                 init={'type': 'uniform', 'min': -5, 'max': 5},
+                 cuda=False, with_tqdm=True):
         """Metroplis Hasting sampler
 
         Args:
@@ -22,7 +23,7 @@ class GeneralizedMetropolis(SamplerBase):
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor, nelec, ndim, init, with_tqdm)
+                             step_size, ntherm, ndecor, nelec, ndim, init, cuda, with_tqdm)
 
     def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
