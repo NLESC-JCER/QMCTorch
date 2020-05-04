@@ -55,7 +55,8 @@ class AtomicOrbitals(nn.Module):
             self.harmonics = Harmonics(
                 mol.basis.harmonics_type,
                 bas_l=mol.basis.bas_l,
-                bas_m=mol.basis.bas_m)
+                bas_m=mol.basis.bas_m,
+                cuda=cuda)
 
         elif mol.basis.harmonics_type == 'cart':
             self.bas_n = torch.tensor(mol.basis.bas_kr).type(dtype)
@@ -63,7 +64,8 @@ class AtomicOrbitals(nn.Module):
                 mol.basis.harmonics_type,
                 bas_kx=mol.basis.bas_kx,
                 bas_ky=mol.basis.bas_ky,
-                bas_kz=mol.basis.bas_kz)
+                bas_kz=mol.basis.bas_kz,
+                cuda=False)
 
         # select the radial apart
         radial_dict = {'sto': radial_slater,

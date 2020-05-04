@@ -15,6 +15,7 @@ class Harmonics(object):
             bas_kx (torch.tensor): x exponent (cart)
             bas_ky (torch.tensor): xy exponent (cart)
             bas_kz (torch.tensor): z exponent (cart)
+            cuda (bool): use cuda (defaults False)
 
         Examples::
             >>> mol = Molecule('h2.xyz')
@@ -26,14 +27,30 @@ class Harmonics(object):
 
         self.type = type
 
+        # check if we need cuda
+        if 'cuda' not in kwargs:
+            cuda = False
+        else:
+            cuda = kwargs['cuda']
+
+        # select the device
+        if cuda:
+            self.device = torch.device('cuda')
+        else:
+            self.device = torch.device('cpu')
+
+        # register parameters
         if self.type == 'sph':
-            self.bas_l = torch.tensor(kwargs['bas_l'])
-            self.bas_m = torch.tensor(kwargs['bas_m'])
+            self.bas_l = torch.tensor(kwargs['bas_l']).to(self.device)
+            self.bas_m = torch.tensor(kwargs['bas_m']).to(self.device)
 
         elif self.type == 'cart':
-            self.bas_kx = torch.tensor(kwargs['bas_kx'])
-            self.bas_ky = torch.tensor(kwargs['bas_ky'])
-            self.bas_kz = torch.tensor(kwargs['bas_kz'])
+            self.bas_kx = torch.tensor(
+                kwargs['bas_kx']).to(self.device)
+            self.bas_ky = torch.tensor(
+                kwargs['bas_ky']).to(self.device)
+            self.bas_kz = torch.tensor(
+                kwargs['bas_kz']).to(self.device)
 
     def __call__(self, xyz, derivative=0, jacobian=True):
         """Computes the cartesian or spherical harmonics
