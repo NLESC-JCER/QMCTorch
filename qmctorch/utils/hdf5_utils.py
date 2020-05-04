@@ -279,7 +279,7 @@ def insert_torch_tensor(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
-    insert_numpy(obj.detach().numpy(), parent_grp, obj_name)
+    insert_numpy(obj.cpu().detach().numpy(), parent_grp, obj_name)
 
 
 def insert_torch_parameter(obj, parent_grp, obj_name):
@@ -290,7 +290,7 @@ def insert_torch_parameter(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
-    insert_torch_tensor(obj.data, parent_grp, obj_name)
+    insert_torch_tensor(obj.data.cpu(), parent_grp, obj_name)
 
 
 def insert_none(obj, parent_grp, obj_name):
