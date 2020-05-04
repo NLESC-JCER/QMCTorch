@@ -65,7 +65,7 @@ class AtomicOrbitals(nn.Module):
                 bas_kx=mol.basis.bas_kx,
                 bas_ky=mol.basis.bas_ky,
                 bas_kz=mol.basis.bas_kz,
-                cuda=False)
+                cuda=cuda)
 
         # select the radial apart
         radial_dict = {'sto': radial_slater,
