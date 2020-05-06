@@ -7,6 +7,7 @@ class OrbitalConfigurations(object):
         # self.mol = mol
         self.nup = mol.nup
         self.ndown = mol.ndown
+        self.norb = mol.basis.nmo
 
     def get_configs(self, configs):
         """Get the configuratio in the CI expansion
