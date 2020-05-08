@@ -56,6 +56,10 @@ class SlaterPooling(nn.Module):
 
         Args:
             configs (tuple): configuratin of the electrons
+
+        Returns:
+            exc_up, exc_down : index of the obitals in the excitaitons
+                               [i,j],[l,m] : excitation i -> l, j -> l
         """
         exc_up, exc_down = [], []
         for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
@@ -81,6 +85,16 @@ class SlaterPooling(nn.Module):
 
         Args:
             configs (tuple): configuratin of the electrons
+
+        Returns:
+            exc_up, exc_down : index of the obitals in the excitaitons
+                               [i,j],[l,m] : excitation i -> l, j -> l
+            index_up, index_down : index map for the unique exc
+                                 [0,0,...], [0,1,...] means that 
+                                 1st : excitation is composed of unique_up[0]*unique_down[0]
+                                 2nd : excitation is composed of unique_up[0]*unique_down[1]
+                                 ....
+
         """
         uniq_exc_up, uniq_exc_down = [], []
         index_uniq_exc_up, index_uniq_exc_down = [], []
@@ -146,7 +160,10 @@ class SlaterPooling(nn.Module):
             torch.tensor: slater determinants
         """
 
+        # compute the determinant of the unique single excitation
         det_unique_up, det_unique_down = self.det_unique_single(input)
+
+        # returns the product of spin up/down required by each excitation
         return (det_unique_up[:, self.index_unique_excitation[0]] *
                 det_unique_down[:, self.index_unique_excitation[1]])
 
@@ -178,37 +195,61 @@ class SlaterPooling(nn.Module):
     def det_unique_single(self, input):
         """Computes the SD of single excitations
 
+        .. note:: The determinants of the single excitations 
+        are calculated from the ground state determinant and 
+        the ground state Slater matrices whith one column modified.
+        See : Monte Carlo Methods in ab initio quantum chemistry 
+              B.L. Hammond, appendix B1
+
+        Note that when the excitation comes from a deep orbital, the resulting
+        slater matrix has one column changed (with the new orbital) and several 
+        permutation We therefore need to multiply the slater determinant 
+        by (-1)^nperm.
+
+        .. math::
+            MO = [ A | B ]
+            det(Exc_{ij}) = (det(A) * A^{-1} * B)_{i,j}
+
         Args:
             input (torch.tensor): MO matrices nbatch x nelec x nmo
+
         """
 
         nbatch = input.shape[0]
 
-        if not hasattr(self.exc_mask, 'mask_unique_single_up'):
-            self.exc_mask.get_mask_unique_single()
+        if not hasattr(self.exc_mask, 'index_unique_single_up'):
+            self.exc_mask.get_index_unique_single()
 
+        # occupied orbital matrix + det and inv on spin up
         Aup = input[:, :self.nup, :self.nup]
-        Adown = input[:, self.nup:, :self.ndown]
-
         detAup = torch.det(Aup)
         invAup = torch.inverse(Aup)
 
+        # occupied orbital matrix + det and inv on spin down
+        Adown = input[:, self.nup:, :self.ndown]
         detAdown = torch.det(Adown)
         invAdown = torch.inverse(Adown)
 
+        # virtual orbital matrices spin up/down
         Bup = input[:, :self.nup, self.nup:self.index_max_orb_up]
         Bdown = input[:, self.nup:,
                       self.ndown: self.index_max_orb_down]
 
+        # determinant of the unique excitation spin up
         det_up = (invAup @ Bup).view(
             nbatch, -1)[:, self.exc_mask.index_unique_single_up]
 
+        # determinant of the unique excitation spin down
         det_down = (invAdown @ Bdown).view(
             nbatch, -1)[:, self.exc_mask.index_unique_single_down]
 
+        # multiply with ground state determinant
+        # and account for permutation for deep permutation
         det_up = detAup.unsqueeze(-1) * det_up.view(nbatch, -1)
         det_up *= self.exc_mask.sign_unique_single_up
 
+        # multiply with ground state determinant
+        # and account for permutation for deep permutation
         det_down = detAdown.unsqueeze(-1) * det_down.view(nbatch, -1)
         det_down *= self.exc_mask.sign_unique_single_down
 
