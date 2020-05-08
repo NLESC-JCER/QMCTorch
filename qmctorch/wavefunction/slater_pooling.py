@@ -134,8 +134,8 @@ class SlaterPooling(nn.Module):
         Returns:
             torch.tensor: slater determinants
         """
-
-        return self.det_explicit(input)
+        return self.det_single(input)
+        # return self.det_explicit(input)
 
     def det_explicit(self, input):
         """Computes the values of the determinants from the slater matrices
