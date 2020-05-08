@@ -26,7 +26,8 @@ class SlaterPooling(nn.Module):
         self.ndown = mol.ndown
 
         self.orb_proj = OrbitalProjector(configs, mol)
-        self.exc_mask = ExcitationMask(self.unique_excitation, mol)
+        self.exc_mask = ExcitationMask(self.unique_excitation, mol,
+                                       (self.index_max_orb_up, self.index_max_orb_down))
 
         if cuda:
             self.device = torch.device('cuda')
@@ -47,7 +48,7 @@ class SlaterPooling(nn.Module):
         self.index_max_orb_down = self.configs[1].max().item() + 1
 
         self.excitation_index = self.get_excitation(configs)
-        self.unique_excitation, self.index_uniq_excitation = self.get_unique_excitation(
+        self.unique_excitation, self.index_unique_excitation = self.get_unique_excitation(
             configs)
 
     def get_excitation(self, configs):
@@ -120,9 +121,9 @@ class SlaterPooling(nn.Module):
             torch.tensor: slater determinants
         """
 
-        return self.pull_explicit(input)
+        return self.det_explicit(input)
 
-    def pull_explicit(self, input):
+    def det_explicit(self, input):
         """Computes the values of the determinants from the slater matrices
 
         Args:
@@ -134,6 +135,20 @@ class SlaterPooling(nn.Module):
 
         mo_up, mo_down = self.get_slater_matrices(input)
         return (torch.det(mo_up) * torch.det(mo_down)).transpose(0, 1)
+
+    def det_single(self, input):
+        """Computes the determinant of ground state + single
+
+        Args:
+            input (torch.tensor): MO matrices nbatch x nelec x nmo
+
+        Returns:
+            torch.tensor: slater determinants
+        """
+
+        det_unique_up, det_unique_down = self.det_unique_single(input)
+        return (det_unique_up[:, self.index_unique_excitation[0]] *
+                det_unique_down[:, self.index_unique_excitation[1]])
 
     def get_slater_matrices(self, input):
         """Computes the slater matrices
@@ -147,29 +162,60 @@ class SlaterPooling(nn.Module):
         """
         return self.orb_proj.split_orbitals(input)
 
-    def pull_singles(self, input):
+    def det_ground_state(self, input):
+        """Computes the SD of the ground state
+
+        Args:
+            input (torch.tensor): MO matrices nbatch x nelec x nmo
+        """
+
+        if not hasattr(self.exc_mask, 'mask_unique_single_up'):
+            self.exc_mask.get_mask_unique_single()
+
+        return (torch.det(input[:, :self.nup, :self.nup]),
+                torch.det(input[:, self.nup:, :self.ndown]))
+
+    def det_unique_single(self, input):
         """Computes the SD of single excitations
 
         Args:
             input (torch.tensor): MO matrices nbatch x nelec x nmo
         """
 
-        detAup = torch.det(
-            input[:, :self.nup, :self.nup]).view(-1, 1, 1)
-        invAup = torch.inverse(input[:, :self.nup, :self.nup])
+        nbatch = input.shape[0]
 
-        detAdown = torch.det(
-            input[:, self.nup:, :self.ndown]).view(-1, 1, 1)
-        invAdown = torch.inverse(input[:, self.nup:, :self.ndown])
+        if not hasattr(self.exc_mask, 'mask_unique_single_up'):
+            self.exc_mask.get_mask_unique_single()
 
-        det_single_up = detAdown * detAup * (invAup @  input[:, :self.nup,
-                                                             self.nup: self.index_max_orb_up])
-        det_single_down = detAup * detAdow * (invAdown @  input[:, : self.nup,
-                                                                self.nup: self.index_max_orb_down])
+        Aup = input[:, :self.nup, :self.nup]
+        Adown = input[:, self.nup:, :self.ndown]
 
-        return torch.stack((det_single_up, det_single_down))
+        detAup = torch.det(Aup)
+        invAup = torch.inverse(Aup)
 
-    def pull_excitation(self, input):
+        detAdown = torch.det(Adown)
+        invAdown = torch.inverse(Adown)
+
+        Bup = input[:, :self.nup, self.nup:self.index_max_orb_up]
+        Bdown = input[:, self.nup:,
+                      self.ndown: self.index_max_orb_down]
+
+        det_up = (invAup @ Bup).view(
+            nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+
+        det_down = (invAdown @ Bdown).view(
+            nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+
+        det_up = detAup.unsqueeze(-1) * det_up.view(nbatch, -1)
+        det_up *= self.exc_mask.sign_unique_single_up
+
+        det_down = detAdown.unsqueeze(-1) * det_down.view(nbatch, -1)
+        det_down *= self.exc_mask.sign_unique_single_down
+
+        return torch.cat((detAup.unsqueeze(-1), det_up), dim=1),\
+            torch.cat((detAdown.unsqueeze(-1), det_down), dim=1)
+
+    def det_excitation(self, input):
         """Computes the values of the determinants from the slater matrices
 
         Args:
