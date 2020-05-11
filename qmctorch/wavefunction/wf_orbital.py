@@ -332,4 +332,9 @@ class Orbital(WaveFunction):
             self.interp_mo_func = interpolator_regular_grid(
                 func, x, y, z)
 
-        return interpolate_regular_grid(self.interp_mo_func, pos)
+        nbatch = pos.shape[0]
+        mos = torch.zeros(nbatch, self.mol.nelec, self.mol.basis.nmo)
+        mos[:, :, :self.index_mo_max] = interpolate_regular_grid(
+            self.interp_mo_func, pos)
+        return mos
+        # return interpolate_regular_grid(self.interp_mo_func, pos)
