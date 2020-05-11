@@ -9,6 +9,7 @@ from .wf_base import WaveFunction
 from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
+from ..utils.interpolate import get_grid, interpolator_regular_grid, interpolate_regular_grid
 
 
 class Orbital(WaveFunction):
@@ -67,6 +68,7 @@ class Orbital(WaveFunction):
         self.configs_method = configs
         self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
+        self.index_mo_max = torch.stack(self.configs).max().item()
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(
@@ -316,3 +318,18 @@ class Orbital(WaveFunction):
                                       :].detach().numpy().tolist()
             d.append((at, xyz))
         return d
+
+    def interpolate_mo(self, pos):
+
+        if not hasattr(self, 'interp_mo_func'):
+            x, y, z = get_grid(self.mol.atom_coords)
+
+            def func(x):
+                ao = self.ao(x, one_elec=True)
+                mo = self.mo(self.mo_scf(ao)).squeeze(1)
+                return mo[:, :self.index_mo_max]
+
+            self.interp_mo_func = interpolator_regular_grid(
+                func, x, y, z)
+
+        return interpolate_regular_grid(self.interp_mo_func, pos)

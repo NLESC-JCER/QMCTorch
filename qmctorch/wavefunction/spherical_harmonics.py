@@ -101,7 +101,9 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
     """
 
     if derivative == 0:
-        return xyz[..., 0]**kx * xyz[..., 1]**ky * xyz[..., 2]**kz
+        k = torch.stack((kx, ky, kz)).transpose(0, 1)
+        return (xyz**k).prod(-1)
+        # return xyz[..., 0]**kx * xyz[..., 1]**ky * xyz[..., 2]**kz
 
     elif derivative == 1:
 

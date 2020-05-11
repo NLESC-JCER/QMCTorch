@@ -4,6 +4,8 @@ from .radial_functions import radial_gaussian, radial_slater
 from .norm_orbital import atomic_orbital_norm
 from .spherical_harmonics import Harmonics
 from ..utils import register_extra_attributes
+from ..utils.interpolate import get_grid, interpolator_regular_grid, interpolate_regular_grid
+from time import time
 
 
 class AtomicOrbitals(nn.Module):
@@ -150,26 +152,35 @@ class AtomicOrbitals(nn.Module):
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
+        # t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
         # print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         r = torch.sqrt((xyz**2).sum(3))
+        # print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         R = self.radial(r, self.bas_n, self.bas_exp)
+        # print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
+        # t0 = time()
         Y = self.harmonics(xyz)
+        # print('Y : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
+            # t0 = time()
             bas = R * Y
+            # print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
@@ -217,6 +228,7 @@ class AtomicOrbitals(nn.Module):
             ao.index_add_(2, self.index_ctr, bas)
 
         else:
+            # t0 = time()
             # -> (Nbatch,Nelec,Nbas, Ndim)
             bas = self.norm_cst.unsqueeze(-1) * \
                 self.bas_coeffs.unsqueeze(-1) * bas
@@ -226,6 +238,7 @@ class AtomicOrbitals(nn.Module):
             ao = torch.zeros(nbatch, self.nelec, self.norb,
                              3, device=self.device)
             ao.index_add_(2, self.index_ctr, bas)
+            # print('add : ', time()-t0)
 
         if one_elec:
             self.nelec = nelec_save
@@ -258,3 +271,28 @@ class AtomicOrbitals(nn.Module):
         ao_new[:, idelec, :] = self.forward(
             pos[:, ids:ide], one_elec=True).squeeze(1)
         return ao_new
+
+    def get_interpolator(self):
+        """evaluate the interpolation function."""
+
+        x, y, z = get_grid(self.atom_coords)
+
+        def func(x):
+            return self(x, one_elec=True).squeeze(1)
+
+        self.interp_func = interpolator_regular_grid(func, x, y, z)
+
+    def interpolate(self, pos):
+        """Interpolate the values of the ao at pos
+
+        Args:
+            pos (torch.tensor): positions of the walkers (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: values of the ao (Nbatch, Nelec, Nao)
+        """
+
+        if not hasattr(self, 'interp_func'):
+            self.get_interpolator()
+
+        return interpolate_regular_grid(self.interp_func, pos)
