@@ -105,7 +105,7 @@ def logspace(n, length):
         return np.concatenate((-x[::-1], x[1:]))
 
 
-def get_log_grid(atomic_positions, n=6, length=2.):
+def get_log_grid(atomic_positions, n=4, length=2.):
     """Computes a logarithmic grid 
 
     Args:
@@ -131,10 +131,31 @@ def get_log_grid(atomic_positions, n=6, length=2.):
 
 
 def interpolator_log(func, grid_pts):
-    return LinearNDInterpolator(grid_pts, func(grid_pts), fill_value=-0.)
+    """compute a linear ND interpolator
+
+    Args:
+        func (callable):  compute the value of the funtion to interpolate
+        grid_pts (np.ndarray): grid points in the x direction
+
+    Returns:
+        callable: interpolation function
+    """
+
+    return LinearNDInterpolator(grid_pts,
+                                func(grid_pts),
+                                fill_value=-0.)
 
 
 def interpolate_log(interpfunc, pos):
+    """Interpolate the  funtion
+
+    Args:
+        interpfunc (callable): function to interpolate the data points
+        pos (torch.tensor): positions of the walkers Nbatch x 3*Nelec
+
+    Returns:
+        torch.tensor: interpolated values of the function evaluated at pos
+    """
 
     nbatch = pos.shape[0]
     nelec = pos.shape[1]//3
