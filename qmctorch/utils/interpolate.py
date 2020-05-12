@@ -2,10 +2,11 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 from scipy.interpolate import RegularGridInterpolator
+from scipy.interpolate import LinearNDInterpolator
 
 
-def get_grid(atomic_positions, resolution=0.5, border_length=2,):
-    """Computes grid points frm the atomic positions
+def get_grid(atomic_positions, resolution=0.5, border_length=2.):
+    """Computes a regular grid points from the atomic positions
 
     Args:
         atomic_positions (torch.Tensor, np.ndarray, list): atomic positions
@@ -63,7 +64,11 @@ def interpolator_regular_grid(func, x, y, z):
     grid = torch.tensor(grid)
     data = func(grid)
     data = data.transpose(0, 1).reshape(nx, ny, nz, -1)
-    return RegularGridInterpolator((x, y, z), data.detach().numpy())
+    return RegularGridInterpolator((x, y, z),
+                                   data.detach().numpy(),
+                                   method='nearest',
+                                   bounds_error=False,
+                                   fill_value=0.)
 
 
 def interpolate_regular_grid(interpfunc, pos):
@@ -80,6 +85,59 @@ def interpolate_regular_grid(interpfunc, pos):
     nelec = pos.shape[1]//3
     ndim = 3
     data = interpfunc(pos.reshape(
-        nbatch, nelec, ndim).transpose(0, 1))
+        nbatch, nelec, ndim).transpose(0, 1).detach().numpy())
 
     return torch.tensor(data.transpose(1, 0, 2))
+
+
+def is_even(x):
+    return x//2*2 == x
+
+
+def logspace(n, length):
+
+    k = np.log(length+1)/np.log(10)
+    if is_even(n):
+        x = np.logspace(0.01, k, n//2)-1
+        return np.concatenate((-x[::-1], x[1:]))
+    else:
+        x = np.logspace(0.0, k, n//2+1)-1
+        return np.concatenate((-x[::-1], x[1:]))
+
+
+def get_log_grid(atomic_positions, n=6, length=2.):
+    """Computes a logarithmic grid 
+
+    Args:
+        atomic_positions (list, np.ndarray, torch.tensor): positions of the atoms
+        n (int, optional): number of points in each axis around each atom. Defaults to 6.
+        length (float, optional): absolute value of the max distance from the atom. Defaults to 2..
+
+    Returns:
+        np.ndanrray: grid points (Npts,3)
+    """
+
+    x = logspace(n, length)
+    pts = np.stack(np.meshgrid(x, x, x, indexing='ij')
+                   ).T.reshape(-1, 3)
+    grid_pts = None
+    for pos in atomic_positions:
+        _tmp = pts + pos
+        if grid_pts is None:
+            grid_pts = _tmp
+        else:
+            grid_pts = np.concatenate((grid_pts, _tmp))
+    return grid_pts
+
+
+def interpolator_log(func, grid_pts):
+    return LinearNDInterpolator(grid_pts, func(grid_pts), fill_value=-0.)
+
+
+def interpolate_log(interpfunc, pos):
+
+    nbatch = pos.shape[0]
+    nelec = pos.shape[1]//3
+    ndim = 3
+
+    return torch.tensor(interpfunc(pos.reshape(nbatch, nelec, ndim)))

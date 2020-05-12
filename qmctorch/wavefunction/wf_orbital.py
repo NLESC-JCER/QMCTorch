@@ -9,14 +9,16 @@ from .wf_base import WaveFunction
 from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
-from ..utils.interpolate import get_grid, interpolator_regular_grid, interpolate_regular_grid
+from ..utils.interpolate import (get_grid, interpolator_regular_grid,
+                                 interpolate_regular_grid, get_log_grid,
+                                 interpolator_log, interpolate_log)
 
 
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi', use_jastrow=True, cuda=False):
-        """Implementation of the QMC Network. 
+        """Implementation of the QMC Network.
 
         Args:
             mol (qmc.wavefunction.Molecule): a molecule object
@@ -320,6 +322,32 @@ class Orbital(WaveFunction):
         return d
 
     def interpolate_mo(self, pos):
+
+        if not hasattr(self, 'interp_mo_func'):
+            grid_pts = get_log_grid(self.mol.atom_coords)
+
+            def func(x):
+                ao = self.ao(torch.tensor(x), one_elec=True)
+                mo = self.mo(self.mo_scf(ao)).squeeze(1)
+                return mo[:, :self.index_mo_max].detach()
+
+            self.interp_mo_func = interpolator_log(func, grid_pts)
+
+        nbatch = pos.shape[0]
+        mos = torch.zeros(nbatch, self.mol.nelec, self.mol.basis.nmo)
+        mos[:, :, :self.index_mo_max] = interpolate_log(
+            self.interp_mo_func, pos)
+        return mos
+
+    def interpolate_mo_regular_grid(self, pos):
+        """Interpolate the mo occupied in the configs.
+
+        Args:
+            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: mo values Nbatch, Nelec, Nmo
+        """
 
         if not hasattr(self, 'interp_mo_func'):
             x, y, z = get_grid(self.mol.atom_coords)
