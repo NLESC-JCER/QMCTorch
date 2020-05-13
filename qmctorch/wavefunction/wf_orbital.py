@@ -9,7 +9,7 @@ from .wf_base import WaveFunction
 from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
-from ..utils.interpolate import (get_grid, get_log_grid,
+from ..utils.interpolate import (get_reg_grid, get_log_grid,
                                  interpolator_reg_grid, interpolate_reg_grid,
                                  interpolator_irreg_grid, interpolate_irreg_grid)
 
@@ -377,7 +377,7 @@ class Orbital(WaveFunction):
                 'orb must occupied or all')
 
         if not hasattr(self, 'interp_mo_func'):
-            x, y, z = get_grid(self.mol.atom_coords)
+            x, y, z = get_reg_grid(self.mol.atom_coords)
 
             def func(x):
                 ao = self.ao(x, one_elec=True)

@@ -4,8 +4,13 @@ from .radial_functions import radial_gaussian, radial_slater
 from .norm_orbital import atomic_orbital_norm
 from .spherical_harmonics import Harmonics
 from ..utils import register_extra_attributes
-from ..utils.interpolate import get_grid, interpolator_reg_grid, interpolate_reg_grid
+from ..utils.interpolate import (get_reg_grid, logspace,
+                                 interpolator_reg_grid,
+                                 interpolate_reg_grid)
+
+from scipy.interpolate import RegularGridInterpolator as RegInterp
 from time import time
+import numpy as np
 
 
 class AtomicOrbitals(nn.Module):
@@ -104,7 +109,7 @@ class AtomicOrbitals(nn.Module):
         .. math::
             \phi_i(r_j) = \sum_n c_n \\text{Rad}^{i}_n(r_j) \\text{Y}^{i}_n(r_j)
 
-        where Rad is the radial part and Y the spherical harmonics part. 
+        where Rad is the radial part and Y the spherical harmonics part.
         It is also possible to compute the first and second derivatives
 
         .. math::
@@ -272,15 +277,37 @@ class AtomicOrbitals(nn.Module):
             pos[:, ids:ide], one_elec=True).squeeze(1)
         return ao_new
 
-    def get_interpolator(self):
+    def get_interpolator(self, n=6, length=2):
         """evaluate the interpolation function."""
 
-        x, y, z = get_grid(self.atom_coords)
+        xpts = logspace(n, length)
+        nxpts = len(xpts)
+
+        grid = np.stack(np.meshgrid(
+            xpts, xpts, xpts, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
+        grid = torch.tensor(grid)
 
         def func(x):
-            return self(x, one_elec=True).squeeze(1)
+            nbatch = x.shape[0]
+            xyz = x.view(-1, 1, 1, 3).expand(-1, 1, self.nbas, 3)
+            r = torch.sqrt((xyz**2).sum(3))
+            R = self.radial(r, self.bas_n, self.bas_exp)
+            Y = self.harmonics(xyz)
+            bas = R * Y
+            bas = self.norm_cst * self.bas_coeffs * bas
+            ao = torch.zeros(nbatch, self.nelec,
+                             self.norb, device=self.device)
+            ao.index_add_(2, self.index_ctr, bas)
+            return ao
 
-        self.interp_func = interpolator_reg_grid(func, x, y, z)
+        data = func(grid).detach().numpy()
+        data = data.reshape(nxpts, nxpts, nxpts, -1)
+
+        self.interp_func = [RegInterp((xpts, xpts, xpts),
+                                      data[..., i],
+                                      method='linear',
+                                      bounds_error=False,
+                                      fill_value=0.) for i in range(self.nbas)]
 
     def interpolate(self, pos):
         """Interpolate the values of the ao at pos
@@ -293,6 +320,23 @@ class AtomicOrbitals(nn.Module):
         """
 
         if not hasattr(self, 'interp_func'):
+            t0 = time()
             self.get_interpolator()
+            print('___', time()-t0)
 
-        return interpolate_reg_grid(self.interp_func, pos)
+        t0 = time()
+        bas_coords = self.atom_coords.repeat_interleave(
+            self.nshells, dim=0)
+        print('___bas ', time()-t0)
+
+        t0 = time()
+        xyz = (pos.view(-1, self.nelec, 1, self.ndim) -
+               bas_coords[None, ...]).detach().numpy()
+        print('___ xyz', time()-t0)
+
+        t0 = time()
+        data = np.array([self.interp_func[ibas](xyz[:, :, ibas, :])
+                         for ibas in range(self.nbas)])
+        print('___ data', time()-t0)
+
+        return torch.tensor(data.transpose(1, 2, 0))

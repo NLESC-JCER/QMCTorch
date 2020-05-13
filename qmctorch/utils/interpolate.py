@@ -40,7 +40,7 @@ def get_boundaries(atomic_positions, border_length=2.):
     return pmin, pmax
 
 
-def get_grid(atomic_positions, resolution=0.1, border_length=2.):
+def get_reg_grid(atomic_positions, resolution=0.1, border_length=2.):
     """Computes a regular grid points from the atomic positions
 
     Args:
@@ -101,18 +101,20 @@ def interpolate_reg_grid(interpfunc, pos):
     nbatch = pos.shape[0]
     nelec = pos.shape[1]//3
     ndim = 3
-    data = interpfunc(pos.reshape(
-        nbatch, nelec, ndim).transpose(0, 1).detach().numpy())
 
-    return torch.tensor(data.transpose(1, 0, 2))
+    data = interpfunc(pos.reshape(
+        nbatch, nelec, ndim).detach().numpy())
+
+    return torch.tensor(data)
 
 
 def is_even(x):
+    """return true if x is even."""
     return x//2*2 == x
 
 
 def logspace(n, length):
-
+    """returns a 1d array of logspace between -length and +length."""
     k = np.log(length+1)/np.log(10)
     if is_even(n):
         x = np.logspace(0.01, k, n//2)-1
