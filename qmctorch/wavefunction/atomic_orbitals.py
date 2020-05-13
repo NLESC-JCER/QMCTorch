@@ -4,7 +4,7 @@ from .radial_functions import radial_gaussian, radial_slater
 from .norm_orbital import atomic_orbital_norm
 from .spherical_harmonics import Harmonics
 from ..utils import register_extra_attributes
-from ..utils.interpolate import get_grid, interpolator_regular_grid, interpolate_regular_grid
+from ..utils.interpolate import get_grid, interpolator_reg_grid, interpolate_reg_grid
 from time import time
 
 
@@ -280,7 +280,7 @@ class AtomicOrbitals(nn.Module):
         def func(x):
             return self(x, one_elec=True).squeeze(1)
 
-        self.interp_func = interpolator_regular_grid(func, x, y, z)
+        self.interp_func = interpolator_reg_grid(func, x, y, z)
 
     def interpolate(self, pos):
         """Interpolate the values of the ao at pos
@@ -295,4 +295,4 @@ class AtomicOrbitals(nn.Module):
         if not hasattr(self, 'interp_func'):
             self.get_interpolator()
 
-        return interpolate_regular_grid(self.interp_func, pos)
+        return interpolate_reg_grid(self.interp_func, pos)
