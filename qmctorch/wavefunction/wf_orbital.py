@@ -320,75 +320,75 @@ class Orbital(WaveFunction):
             d.append((at, xyz))
         return d
 
-    def interpolate_mo_irreg_grid(self, pos, n=6, orb='occupied'):
-        """Interpolate the mo occupied in the configs.
+    # def interpolate_mo_irreg_grid(self, pos, n=6, orb='occupied'):
+    #     """Interpolate the mo occupied in the configs.
 
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            n (int, optional): Interpolation order. Defaults to 6.
+    #     Args:
+    #         pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
+    #         n (int, optional): Interpolation order. Defaults to 6.
 
-        Returns:
-            torch.tensor: mo values Nbatch, Nelec, Nmo
-        """
+    #     Returns:
+    #         torch.tensor: mo values Nbatch, Nelec, Nmo
+    #     """
 
-        if orb == 'occupied':
-            self.interp_mo_max_index = torch.stack(
-                self.configs).max().item()+1
-        elif orb == 'all':
-            self.interp_mo_max_index = self.mol.basis.nmo+1
-        else:
-            raise ValueError(
-                'orb must occupied or all')
+    #     if orb == 'occupied':
+    #         self.interp_mo_max_index = torch.stack(
+    #             self.configs).max().item()+1
+    #     elif orb == 'all':
+    #         self.interp_mo_max_index = self.mol.basis.nmo+1
+    #     else:
+    #         raise ValueError(
+    #             'orb must occupied or all')
 
-        if not hasattr(self, 'interp_mo_func'):
-            grid_pts = get_log_grid(self.mol.atom_coords, n=n)
+    #     if not hasattr(self, 'interp_mo_func'):
+    #         grid_pts = get_log_grid(self.mol.atom_coords, n=n)
 
-            def func(x):
-                ao = self.ao(torch.tensor(x), one_elec=True)
-                mo = self.mo(self.mo_scf(ao)).squeeze(1)
-                return mo[:, :self.interp_mo_max_index].detach()
+    #         def func(x):
+    #             ao = self.ao(torch.tensor(x), one_elec=True)
+    #             mo = self.mo(self.mo_scf(ao)).squeeze(1)
+    #             return mo[:, :self.interp_mo_max_index].detach()
 
-            self.interp_mo_func = interpolator_irreg_grid(
-                func, grid_pts)
+    #         self.interp_mo_func = interpolator_irreg_grid(
+    #             func, grid_pts)
 
-        nbatch = pos.shape[0]
-        mos = torch.zeros(nbatch, self.mol.nelec, self.mol.basis.nmo)
-        mos[:, :, :self.interp_mo_max_index] = interpolate_irreg_grid(
-            self.interp_mo_func, pos)
-        return mos
+    #     nbatch = pos.shape[0]
+    #     mos = torch.zeros(nbatch, self.mol.nelec, self.mol.basis.nmo)
+    #     mos[:, :, :self.interp_mo_max_index] = interpolate_irreg_grid(
+    #         self.interp_mo_func, pos)
+    #     return mos
 
-    def interpolate_mo_reg_grid(self, pos,  orb='occupied'):
-        """Interpolate the mo occupied in the configs.
+    # def interpolate_mo_reg_grid(self, pos,  orb='occupied'):
+    #     """Interpolate the mo occupied in the configs.
 
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
+    #     Args:
+    #         pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
-        Returns:
-            torch.tensor: mo values Nbatch, Nelec, Nmo
-        """
+    #     Returns:
+    #         torch.tensor: mo values Nbatch, Nelec, Nmo
+    #     """
 
-        if orb == 'occupied':
-            self.interp_mo_max_index = torch.stack(
-                self.configs).max().item()+1
-        elif orb == 'all':
-            self.interp_mo_max_index = self.mol.basis.nmo+1
-        else:
-            raise ValueError(
-                'orb must occupied or all')
+    #     if orb == 'occupied':
+    #         self.interp_mo_max_index = torch.stack(
+    #             self.configs).max().item()+1
+    #     elif orb == 'all':
+    #         self.interp_mo_max_index = self.mol.basis.nmo+1
+    #     else:
+    #         raise ValueError(
+    #             'orb must occupied or all')
 
-        if not hasattr(self, 'interp_mo_func'):
-            x, y, z = get_reg_grid(self.mol.atom_coords)
+    #     if not hasattr(self, 'interp_mo_func'):
+    #         x, y, z = get_reg_grid(self.mol.atom_coords)
 
-            def func(x):
-                ao = self.ao(x, one_elec=True)
-                mo = self.mo(self.mo_scf(ao)).squeeze(1)
-                return mo[:, :self.interp_mo_max_index]
+    #         def func(x):
+    #             ao = self.ao(x, one_elec=True)
+    #             mo = self.mo(self.mo_scf(ao)).squeeze(1)
+    #             return mo[:, :self.interp_mo_max_index]
 
-            self.interp_mo_func = interpolator_reg_grid(
-                func, x, y, z)
+    #         self.interp_mo_func = interpolator_reg_grid(
+    #             func, x, y, z)
 
-        nbatch = pos.shape[0]
-        mos = torch.zeros(nbatch, self.mol.nelec, self.mol.basis.nmo)
-        mos[:, :, :self.interp_mo_max_index] = interpolate_reg_grid(
-            self.interp_mo_func, pos)
-        return mos
+    #     nbatch = pos.shape[0]
+    #     mos = torch.zeros(nbatch, self.mol.nelec, self.mol.basis.nmo)
+    #     mos[:, :, :self.interp_mo_max_index] = interpolate_reg_grid(
+    #         self.interp_mo_func, pos)
+    #     return mos

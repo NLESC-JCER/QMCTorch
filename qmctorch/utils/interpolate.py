@@ -6,6 +6,183 @@ from scipy.interpolate import LinearNDInterpolator
 from scipy.interpolate import CloughTocher2DInterpolator
 
 
+class InterpolateMolecularOrbitals(object):
+
+    def __init__(self, wf):
+        """Interpolation of the AO using a log grid centered on each atom."""
+        self.wf = wf
+
+    def __call__(self, pos, method='irreg', orb='occupied', **kwargs):
+
+        if method == 'irreg':
+            n = kwargs['n'] if 'n' in kwargs else 6
+            return self.interpolate_mo_irreg_grid(pos, n=n, orb=orb)
+
+        elif method == 'reg':
+            rstr, bstr = 'resolution', 'border_length'
+            res = kwargs[rstr] if rstr in kwargs else 0.1
+            blength = kwargs[bstr] if bstr in kwargs else 2.
+            return self.interpolate_mo_reg_grid(pos, res, blength, orb)
+
+    def get_mo_max_index(self, orb):
+        """Get the index of the highest MO to inlcude in the interpoaltion
+
+        Args:
+            orb (str): occupied or all
+
+        Raises:
+            ValueError: if orb not valid
+        """
+
+        if orb == 'occupied':
+            self.mo_max_index = torch.stack(
+                self.wf.configs).max().item()+1
+        elif orb == 'all':
+            self.mo_max_index = self.wf.mol.basis.nmo+1
+        else:
+            raise ValueError(
+                'orb must occupied or all')
+
+    def interpolate_mo_irreg_grid(self, pos, n, orb):
+        """Interpolate the mo occupied in the configs.
+
+        Args:
+            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            n (int, optional): Interpolation order. Defaults to 6.
+
+        Returns:
+            torch.tensor: mo values Nbatch, Nelec, Nmo
+        """
+        self.get_mo_max_index(orb)
+
+        if not hasattr(self, 'interp_mo_func'):
+            grid_pts = get_log_grid(self.wf.mol.atom_coords, n=n)
+
+            def func(x):
+                ao = self.wf.ao(torch.tensor(x), one_elec=True)
+                mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
+                return mo[:, :self.mo_max_index].detach()
+
+            self.interp_mo_func = interpolator_irreg_grid(
+                func, grid_pts)
+
+        nbatch = pos.shape[0]
+        mos = torch.zeros(nbatch, self.wf.mol.nelec,
+                          self.wf.mol.basis.nmo)
+        mos[:, :, :self.mo_max_index] = interpolate_irreg_grid(
+            self.interp_mo_func, pos)
+        return mos
+
+    def interpolate_mo_reg_grid(self, pos,  res, blength, orb):
+        """Interpolate the mo occupied in the configs.
+
+        Args:
+            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: mo values Nbatch, Nelec, Nmo
+        """
+
+        self.get_mo_max_index(orb)
+
+        if not hasattr(self, 'interp_mo_func'):
+            x, y, z = get_reg_grid(
+                self.mol.atom_coords, resolution=res, border_length=blength)
+
+            def func(x):
+                ao = self.ao(x, one_elec=True)
+                mo = self.mo(self.mo_scf(ao)).squeeze(1)
+                return mo[:, :self.mo_max_index]
+
+            self.interp_mo_func = interpolator_reg_grid(
+                func, x, y, z)
+
+        nbatch = pos.shape[0]
+        mos = torch.zeros(nbatch, self.wf.mol.nelec,
+                          self.wf.mol.basis.nmo)
+        mos[:, :, :self.mo_max_index] = interpolate_reg_grid(
+            self.interp_mo_func, pos)
+        return mos
+
+
+class InterpolateAtomicOribtals(object):
+
+    def __init__(self, wf):
+        """Interpolation of the AO using a log grid centered on each atom."""
+        self.wf = wf
+
+    def __call__(self, pos, n=6, length=2):
+        """Interpolate the AO.
+
+        Args:
+            pos (torch.tensor): positions of the walkers
+            n (int, optional): number of points on each log axis. Defaults to 6.
+            length (int, optional): half length of the grid. Defaults to 2.
+
+        Returns:
+            torch.tensor: Interpolated values
+        """
+
+        if not hasattr(self, 'interp_func'):
+            t0 = time()
+            self.get_interpolator()
+            print('___', time()-t0)
+
+        t0 = time()
+        bas_coords = self.wf.atom_coords.repeat_interleave(
+            self.wf.nshells, dim=0)  # <- we need the number of AO per atom not the number of BAS per atom
+        print('___bas ', time()-t0)
+
+        t0 = time()
+        xyz = (pos.view(-1, self.wf.nelec, 1, self.wf.ndim) -
+               bas_coords[None, ...]).detach().numpy()
+        print('___ xyz', time()-t0)
+
+        t0 = time()
+        data = np.array([self.interp_func[ibas](xyz[:, :, irob, :])
+                         for iorb in range(self.wf.norb)])
+        print('___ data', time()-t0)
+
+        return torch.tensor(data.transpose(1, 2, 0))
+
+    def get_interpolator(self, n=6, length=2):
+        """evaluate the interpolation function.
+
+        Args:
+            n (int, optional): number of points on each log axis. Defaults to 6.
+            length (int, optional): half length of the grid. Defaults to 2.
+        """
+
+        xpts = logspace(n, length)
+        nxpts = len(xpts)
+
+        grid = np.stack(np.meshgrid(
+            xpts, xpts, xpts, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
+        grid = torch.tensor(grid)
+
+        def func(x):
+            nbatch = x.shape[0]
+            xyz = x.view(-1, 1, 1, 3).expand(-1, 1, self.wf.nbas, 3)
+            r = torch.sqrt((xyz**2).sum(3))
+            R = self.wf.radial(r, self.wf.bas_n, self.wf.bas_exp)
+            Y = self.wf.harmonics(xyz)
+            bas = R * Y
+            bas = self.wf.norm_cst * self.wf.bas_coeffs * bas
+            ao = torch.zeros(nbatch, self.wf.nelec,
+                             self.wf.norb, device=self.wf.device)
+            ao.index_add_(2, self.wf.index_ctr, bas)
+            return ao
+
+        data = func(grid).detach().numpy()
+        data = data.reshape(nxpts, nxpts, nxpts, -1)
+
+        self.interp_func = [RegInterp((xpts, xpts, xpts),
+                                      data[..., i],
+                                      method='linear',
+                                      bounds_error=False,
+                                      fill_value=0.) for i in range(self.wf.norb)]
+
+
 def get_boundaries(atomic_positions, border_length=2.):
     """Computes the boundaries of the structure
 
