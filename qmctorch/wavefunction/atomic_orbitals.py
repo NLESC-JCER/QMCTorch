@@ -47,6 +47,8 @@ class AtomicOrbitals(nn.Module):
 
         # index for the contractions
         self.index_ctr = torch.tensor(mol.basis.index_ctr)
+        self.contract = not len(torch.unique(
+            self.index_ctr)) == len(self.index_ctr)
 
         # get the coeffs of the bas
         self.bas_coeffs = torch.tensor(
@@ -158,35 +160,35 @@ class AtomicOrbitals(nn.Module):
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
-        # t0 = time()
+        t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
-        # print('xyz : ', time()-t0)
+        print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
-        r = torch.sqrt((xyz**2).sum(3))
-        # print('r : ', time()-t0)
+        t0 = time()
+        r = torch.sqrt((xyz*xyz).sum(3))
+        print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
+        t0 = time()
         R = self.radial(r, self.bas_n, self.bas_exp)
-        # print('R : ', time()-t0)
+        print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
+        t0 = time()
         Y = self.harmonics(xyz)
-        # print('Y : ', time()-t0)
+        print('Y : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
-            # t0 = time()
+            t0 = time()
             bas = R * Y
-            # print('bas : ', time()-t0)
+            print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
@@ -223,15 +225,20 @@ class AtomicOrbitals(nn.Module):
 
         # product with coefficients and primitives norm
         if jacobian:
-
+            t0 = time()
             # -> (Nbatch,Nelec,Nbas)
             bas = self.norm_cst * self.bas_coeffs * bas
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
-            ao = torch.zeros(nbatch, self.nelec,
-                             self.norb, device=self.device)
-            ao.index_add_(2, self.index_ctr, bas)
+            if self.contract:
+                ao = torch.zeros(nbatch, self.nelec,
+                                 self.norb, device=self.device)
+                ao.index_add_(2, self.index_ctr, bas)
+
+            else:
+                ao = bas
+            print('add : ', time()-t0)
 
         else:
             # t0 = time()

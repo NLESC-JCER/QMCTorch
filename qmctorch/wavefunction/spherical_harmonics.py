@@ -1,4 +1,5 @@
 import torch
+from ..utils import fast_power
 
 
 class Harmonics(object):
@@ -101,8 +102,14 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
     """
 
     if derivative == 0:
+
         k = torch.stack((kx, ky, kz)).transpose(0, 1)
-        return (xyz**k).prod(-1)
+
+        if k.max() < 3:
+            return fast_power(xyz, k).prod(-1)
+
+        else:
+            return (xyz**k).prod(-1)
 
     elif derivative == 1:
 

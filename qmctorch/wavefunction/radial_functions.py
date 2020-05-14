@@ -1,4 +1,5 @@
 import torch
+from ..utils import fast_power
 
 
 def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
@@ -21,7 +22,15 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """
 
     if derivative == 0:
-        return R**bas_n * torch.exp(-bas_exp * R)
+
+        if bas_n.max() < 3:
+            rn = fast_power(R, bas_n)
+        else:
+            rn = R**bas_n
+
+        expr = torch.exp(-bas_exp * R)
+
+        return rn * expr
 
     elif derivative > 0:
 

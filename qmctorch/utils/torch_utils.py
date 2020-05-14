@@ -15,6 +15,27 @@ def set_torch_single_precision():
     torch.set_default_tensor_type(torch.FloatTensor)
 
 
+def fast_power(x, k):
+    """Computes x**k when k have elements 0, 1, 2
+
+    Args:
+        x (torch.tensor): input
+        k (torch.tensor): exponents
+
+    Returns:
+        torch.tensor: x**k
+    """
+
+    out = x.clone()
+    out.masked_fill_(k == 0, 1)
+
+    if k.max() > 1:
+        mask = k == 2
+        out[..., mask] *= out[..., mask]
+
+    return out
+
+
 class DataSet(Dataset):
 
     def __init__(self, data):
@@ -183,4 +204,5 @@ class OrthoReg(nn.Module):
     def forward(self, W):
         """Return the loss : |W x W^T - I|."""
         return self.alpha * \
-            torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))
+            torch.norm(W.mm(W.transpose(0, 1)) -
+                       torch.eye(W.shape[0]))
