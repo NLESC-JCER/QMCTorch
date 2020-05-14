@@ -130,7 +130,7 @@ class InterpolateAtomicOribtals(object):
 
         t0 = time()
         bas_coords = self.wf.atom_coords.repeat_interleave(
-            self.wf.nshells, dim=0)  # <- we need the number of AO per atom not the number of BAS per atom
+            self.wf.mol.basis.nao_per_atom, dim=0)  # <- we need the number of AO per atom not the number of BAS per atom
         print('___bas ', time()-t0)
 
         t0 = time()
