@@ -40,6 +40,7 @@ class AtomicOrbitals(nn.Module):
 
         # define the BAS positions.
         self.nshells = torch.tensor(mol.basis.nshells)
+        self.nao_per_atom = torch.tensor(mol.basis.nao_per_atom)
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
         self.nbas = len(self.bas_coords)

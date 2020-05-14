@@ -209,6 +209,7 @@ class Molecule(object):
         self.basis.nmo = int(basis_grp['nmo'][()])
 
         self.basis.nshells = basis_grp['nshells'][()]
+        self.basis.nao_per_atom = basis_grp['nao_per_atom'][()]
         self.basis.index_ctr = basis_grp['index_ctr'][()]
 
         self.basis.bas_exp = basis_grp['bas_exp'][()]

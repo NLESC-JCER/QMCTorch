@@ -5,6 +5,8 @@ from scipy.interpolate import RegularGridInterpolator
 from scipy.interpolate import LinearNDInterpolator
 from scipy.interpolate import CloughTocher2DInterpolator
 
+from time import time
+
 
 class InterpolateMolecularOrbitals(object):
 
@@ -87,11 +89,11 @@ class InterpolateMolecularOrbitals(object):
 
         if not hasattr(self, 'interp_mo_func'):
             x, y, z = get_reg_grid(
-                self.mol.atom_coords, resolution=res, border_length=blength)
+                self.wf.mol.atom_coords, resolution=res, border_length=blength)
 
             def func(x):
-                ao = self.ao(x, one_elec=True)
-                mo = self.mo(self.mo_scf(ao)).squeeze(1)
+                ao = self.wf.ao(x, one_elec=True)
+                mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
                 return mo[:, :self.mo_max_index]
 
             self.interp_mo_func = interpolator_reg_grid(
@@ -129,18 +131,18 @@ class InterpolateAtomicOribtals(object):
             print('___', time()-t0)
 
         t0 = time()
-        bas_coords = self.wf.atom_coords.repeat_interleave(
-            self.wf.mol.basis.nao_per_atom, dim=0)  # <- we need the number of AO per atom not the number of BAS per atom
+        bas_coords = self.wf.ao.atom_coords.repeat_interleave(
+            self.wf.ao.nao_per_atom, dim=0)  # <- we need the number of AO per atom not the number of BAS per atom
         print('___bas ', time()-t0)
 
         t0 = time()
-        xyz = (pos.view(-1, self.wf.nelec, 1, self.wf.ndim) -
+        xyz = (pos.view(-1, self.wf.ao.nelec, 1, self.wf.ao.ndim) -
                bas_coords[None, ...]).detach().numpy()
         print('___ xyz', time()-t0)
 
         t0 = time()
-        data = np.array([self.interp_func[ibas](xyz[:, :, irob, :])
-                         for iorb in range(self.wf.norb)])
+        data = np.array([self.interp_func[iorb](xyz[:, :, iorb, :])
+                         for iorb in range(self.wf.ao.norb)])
         print('___ data', time()-t0)
 
         return torch.tensor(data.transpose(1, 2, 0))
@@ -162,25 +164,27 @@ class InterpolateAtomicOribtals(object):
 
         def func(x):
             nbatch = x.shape[0]
-            xyz = x.view(-1, 1, 1, 3).expand(-1, 1, self.wf.nbas, 3)
+            xyz = x.view(-1, 1, 1, 3).expand(-1,
+                                             1, self.wf.ao.nbas, 3)
             r = torch.sqrt((xyz**2).sum(3))
-            R = self.wf.radial(r, self.wf.bas_n, self.wf.bas_exp)
-            Y = self.wf.harmonics(xyz)
+            R = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp)
+            Y = self.wf.ao.harmonics(xyz)
             bas = R * Y
-            bas = self.wf.norm_cst * self.wf.bas_coeffs * bas
-            ao = torch.zeros(nbatch, self.wf.nelec,
-                             self.wf.norb, device=self.wf.device)
-            ao.index_add_(2, self.wf.index_ctr, bas)
+            bas = self.wf.ao.norm_cst * self.wf.ao.bas_coeffs * bas
+            ao = torch.zeros(nbatch, self.wf.ao.nelec,
+                             self.wf.ao.norb, device=self.wf.ao.device)
+            ao.index_add_(2, self.wf.ao.index_ctr, bas)
             return ao
 
         data = func(grid).detach().numpy()
         data = data.reshape(nxpts, nxpts, nxpts, -1)
 
-        self.interp_func = [RegInterp((xpts, xpts, xpts),
-                                      data[..., i],
-                                      method='linear',
-                                      bounds_error=False,
-                                      fill_value=0.) for i in range(self.wf.norb)]
+        self.interp_func = [RegularGridInterpolator((xpts, xpts, xpts),
+                                                    data[..., i],
+                                                    method='linear',
+                                                    bounds_error=False,
+                                                    fill_value=0.) for i in range(self.wf.ao.norb)]
 
 
 def get_boundaries(atomic_positions, border_length=2.):
