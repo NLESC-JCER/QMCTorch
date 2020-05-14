@@ -78,8 +78,8 @@ class Orbital(WaveFunction):
                                             w=1., cuda=cuda)
 
         #  define the SD pooling layer
-        self.pool = SlaterPooling(
-            self.configs, mol, cuda)
+        self.pool = SlaterPooling(self.configs_method,
+                                  self.configs, mol, cuda)
 
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula

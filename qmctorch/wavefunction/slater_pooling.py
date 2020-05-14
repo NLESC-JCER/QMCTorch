@@ -8,10 +8,11 @@ class SlaterPooling(nn.Module):
 
     """Applies a slater determinant pooling in the active space."""
 
-    def __init__(self, configs, mol, cuda=False):
+    def __init__(self, config_method, configs, mol, cuda=False):
         """Computes the Sater determinants
 
         Args:
+            config_method (str): method used to define the config
             configs (tuple): configuratin of the electrons
             mol (Molecule): Molecule instance
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
@@ -19,6 +20,7 @@ class SlaterPooling(nn.Module):
         """
         super(SlaterPooling, self).__init__()
 
+        self.config_method = config_method
         self.process_configs(configs)
 
         self.nmo = mol.basis.nmo
@@ -134,8 +136,10 @@ class SlaterPooling(nn.Module):
         Returns:
             torch.tensor: slater determinants
         """
-        return self.det_single(input)
-        # return self.det_explicit(input)
+        if self.config_method.startswith('single'):
+            return self.det_single(input)
+        else:
+            return self.det_explicit(input)
 
     def det_explicit(self, input):
         """Computes the values of the determinants from the slater matrices
