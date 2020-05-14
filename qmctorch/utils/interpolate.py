@@ -61,7 +61,8 @@ class InterpolateMolecularOrbitals(object):
             grid_pts = get_log_grid(self.wf.mol.atom_coords, n=n)
 
             def func(x):
-                ao = self.wf.ao(torch.tensor(x), one_elec=True)
+                x = torch.tensor(x).type(torch.get_default_dtype())
+                ao = self.wf.ao(x, one_elec=True)
                 mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
                 return mo[:, :self.mo_max_index].detach()
 
@@ -92,6 +93,7 @@ class InterpolateMolecularOrbitals(object):
                 self.wf.mol.atom_coords, resolution=res, border_length=blength)
 
             def func(x):
+                x = torch.tensor(x).type(torch.get_default_dtype())
                 ao = self.wf.ao(x, one_elec=True)
                 mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
                 return mo[:, :self.mo_max_index]
@@ -160,9 +162,9 @@ class InterpolateAtomicOribtals(object):
 
         grid = np.stack(np.meshgrid(
             xpts, xpts, xpts, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
-        grid = torch.tensor(grid)
 
         def func(x):
+            x = torch.tensor(x).type(torch.get_default_dtype())
             nbatch = x.shape[0]
             xyz = x.view(-1, 1, 1, 3).expand(-1,
                                              1, self.wf.ao.nbas, 3)
@@ -259,7 +261,7 @@ def interpolator_reg_grid(func, x, y, z):
     nx, ny, nz = len(x), len(y), len(z)
     grid = np.stack(np.meshgrid(
         z, y, x, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
-    grid = torch.tensor(grid)
+    #grid = torch.tensor(grid)
     data = func(grid).detach().numpy()
     data = data.reshape(nx, ny, nz, -1)
     return RegularGridInterpolator((x, y, z),

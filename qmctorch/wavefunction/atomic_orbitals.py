@@ -163,6 +163,7 @@ class AtomicOrbitals(nn.Module):
         # t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
+
         # print('xyz : ', time()-t0)
 
         # compute the distance
@@ -233,7 +234,8 @@ class AtomicOrbitals(nn.Module):
             # -> (Nbatch,Nelec,Norb)
             if self.contract:
                 ao = torch.zeros(nbatch, self.nelec,
-                                 self.norb, device=self.device)
+                                 self.norb, device=self.device).type(torch.get_default_dtype())
+
                 ao.index_add_(2, self.index_ctr, bas)
 
             else:
@@ -249,7 +251,7 @@ class AtomicOrbitals(nn.Module):
             # contract the basis
             # -> (Nbatch,Nelec,Norb, Ndim)
             ao = torch.zeros(nbatch, self.nelec, self.norb,
-                             3, device=self.device)
+                             3, device=self.device).type(torch.get_default_dtype())
             ao.index_add_(2, self.index_ctr, bas)
             # print('add : ', time()-t0)
 

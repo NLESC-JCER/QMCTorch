@@ -17,8 +17,9 @@ from ..utils.interpolate import (get_reg_grid, get_log_grid,
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi', use_jastrow=True, cuda=False,
-                 include_mo='all'):
+                 kinetic='jacobi',
+                 use_jastrow=True, cuda=False,
+                 include_all_mo=True):
         """Implementation of the QMC Network.
 
         Args:
@@ -55,8 +56,8 @@ class Orbital(WaveFunction):
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
-        self.include_mo = include_mo
-        self.nmo_opt = mol.basis.nmo if include_mo == 'all' else self.highest_occ_mo
+        self.include_all_mo = include_all_mo
+        self.nmo_opt = mol.basis.nmo if include_all_mo else self.highest_occ_mo
         self.mo_scf = nn.Linear(
             mol.basis.nao, self.nmo_opt, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
@@ -109,7 +110,7 @@ class Orbital(WaveFunction):
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(self.mol.basis.mos).type(
             torch.get_default_dtype())
-        if self.include_mo == 'occupied':
+        if not self.include_all_mo:
             mo_coeff = mo_coeff[:, :self.highest_occ_mo]
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
