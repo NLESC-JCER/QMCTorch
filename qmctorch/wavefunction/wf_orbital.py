@@ -17,7 +17,8 @@ from ..utils.interpolate import (get_reg_grid, get_log_grid,
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi', use_jastrow=True, cuda=False):
+                 kinetic='jacobi', use_jastrow=True, cuda=False,
+                 include_mo='all'):
         """Implementation of the QMC Network.
 
         Args:
@@ -43,20 +44,30 @@ class Orbital(WaveFunction):
         self.atoms = mol.atoms
         self.natom = mol.natom
 
+        # define the SD we want
+        self.orb_confs = OrbitalConfigurations(mol)
+        self.configs_method = configs
+        self.configs = self.orb_confs.get_configs(configs)
+        self.nci = len(self.configs[0])
+        self.highest_occ_mo = torch.stack(self.configs).max()+1
+
         # define the atomic orbital layer
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
+        self.include_mo = include_mo
+        self.nmo_opt = mol.basis.nmo if include_mo == 'all' else self.highest_occ_mo
         self.mo_scf = nn.Linear(
-            mol.basis.nao, mol.basis.nmo, bias=False)
+            mol.basis.nao, self.nmo_opt, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
         self.mo_scf.weight.requires_grad = False
         if self.cuda:
             self.mo_scf.to(self.device)
 
         # define the mo mixing layer
-        self.mo = nn.Linear(mol.basis.nmo, mol.basis.nmo, bias=False)
-        self.mo.weight = nn.Parameter(torch.eye(mol.basis.nmo))
+        self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
+        self.mo.weight = nn.Parameter(
+            torch.eye(mol.basis.nmo, self.nmo_opt))
         if self.cuda:
             self.mo.to(self.device)
 
@@ -64,12 +75,6 @@ class Orbital(WaveFunction):
         self.use_jastrow = use_jastrow
         self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
                                             w=1., cuda=cuda)
-
-        # define the SD we want
-        self.orb_confs = OrbitalConfigurations(mol)
-        self.configs_method = configs
-        self.configs = self.orb_confs.get_configs(configs)
-        self.nci = len(self.configs[0])
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(
@@ -104,6 +109,8 @@ class Orbital(WaveFunction):
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(self.mol.basis.mos).type(
             torch.get_default_dtype())
+        if self.include_mo == 'occupied':
+            mo_coeff = mo_coeff[:, :self.highest_occ_mo]
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
