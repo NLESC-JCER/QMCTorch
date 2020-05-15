@@ -97,7 +97,7 @@ class OrbitalConfigurations(object):
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
     def _get_single_double_config(self, nocc, nvirt):
-        """Get the confs of the singlet + double
+        """Get the confs of the single + double
 
         Args:
             nelec (int): number of electrons in the active space
@@ -110,15 +110,20 @@ class OrbitalConfigurations(object):
         cup = cup.tolist()
         cdown = cdown.tolist()
 
-        for iocc_up in range(
-                self.nup - 1, self.nup - 1 - nocc, -1):
-            for ivirt_up in range(
-                    self.nup, self.nup + nvirt, 1):
+        idx_occ_up = list(
+            range(self.nup - 1, self.nup - 1 - nocc, -1))
+        idx_vrt_up = list(range(self.nup, self.nup + nvirt, 1))
 
-                for iocc_down in range(
-                        self.ndown - 1, self.ndown - 1 - nocc, -1):
-                    for ivirt_down in range(
-                            self.ndown, self.ndown + nvirt, 1):
+        idx_occ_down = list(range(
+            self.ndown - 1, self.ndown - 1 - nocc, -1))
+        idx_vrt_down = list(range(self.ndown, self.ndown + nvirt, 1))
+
+        # ground, single and double with 1 elec excited per spin
+        for iocc_up in idx_occ_up:
+            for ivirt_up in idx_vrt_up:
+
+                for iocc_down in idx_occ_down:
+                    for ivirt_down in idx_vrt_down:
 
                         _xt_up = self._create_excitation(
                             _gs_up.copy(), iocc_up, ivirt_up)
@@ -126,6 +131,26 @@ class OrbitalConfigurations(object):
                             _gs_down.copy(), iocc_down, ivirt_down)
                         cup, cdown = self._append_excitations(
                             cup, cdown, _xt_up, _xt_down)
+
+        # double with 2elec excited on spin up
+        for occ1, occ2 in torch.combinations(torch.tensor(idx_occ_up), r=2):
+            for vrt1, vrt2 in torch.combinations(torch.tensor(idx_vrt_up), r=2):
+                _xt_up = self._create_excitation(
+                    _gs_up.copy(), occ1, vrt2)
+                _xt_up = self._create_excitation(_xt_up, occ2, vrt1)
+                cup, cdown = self._append_excitations(
+                    cup, cdown, _xt_up, _gs_down)
+
+        # double with 2elec excited per spin
+        for occ1, occ2 in torch.combinations(torch.tensor(idx_occ_down), r=2):
+            for vrt1, vrt2 in torch.combinations(torch.tensor(idx_vrt_down), r=2):
+
+                _xt_down = self._create_excitation(
+                    _gs_down.copy(), occ1, vrt2)
+                _xt_down = self._create_excitation(
+                    _xt_down, occ2, vrt1)
+                cup, cdown = self._append_excitations(
+                    cup, cdown, _gs_up, _xt_down)
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
@@ -194,7 +219,7 @@ class OrbitalConfigurations(object):
         Note:
             if that method is used to define the exciation index
             permutation must be accounted for when  computing
-            the determinant as 
+            the determinant as
             det(A[:,[0,1,2,3]]) = -det(A[:,[0,1,3,2]])
             see : ExcitationMask.get_index_unique_single()
                   in oribtal_projector.py

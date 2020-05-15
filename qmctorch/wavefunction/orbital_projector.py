@@ -126,46 +126,6 @@ class ExcitationMask(object):
         self.nelec = mol.nelec
         self.max_orb = max_orb
 
-    def get_mask(self):
-        """Get the masks associated with the excitations."""
-
-        mask_up = torch.zeros(
-            self.num_unique_exc, self.nup, self.nmo).type(torch.bool)
-        mask_down = torch.zeros(
-            self.num_unique_exc, self.ndown, self.nmo).type(torch.bool)
-
-        for ix, (exc_up, exc_down) in enumerate(
-                zip(self.unique_excitations[0], self.unique_excitations[1])):
-
-            mask_up[ix][np.ix_(exc_up[0], exc_up[1])] = True
-            mask_down[ix][np.ix_(exc_down[0], exc_down[1])] = True
-
-        return mask_up, mask_down
-
-    def get_mask_unique_single(self):
-        """Computes the boolean masks for the unique singles."""
-
-        ncol_up = self.max_orb[0]-self.nup
-        ncol_down = self.max_orb[1]-self.ndown
-
-        self.mask_unique_single_up = torch.zeros(
-            self.nup, ncol_up).type(torch.bool)
-        self.mask_unique_single_down = torch.zeros(
-            self.ndown, ncol_down).type(torch.bool)
-
-        for exc_up, exc_down in zip(self.unique_excitations[0],
-                                    self.unique_excitations[1]):
-
-            if len(exc_up[0]) == 1:
-                ielec, iorb = exc_up[0][0], exc_up[1][0]
-                icol = iorb-self.nup
-                self.mask_unique_single_up[ielec, icol] = True
-
-            if len(exc_down[1]) == 1:
-                ielec, iorb = exc_down[0][0], exc_down[1][0]
-                icol = iorb-self.ndown
-                self.mask_unique_single_down[ielec, icol] = True
-
     def get_index_unique_single(self):
         """Computes the 1D index and permutation 
            for the unique singles."""
@@ -220,15 +180,15 @@ class ExcitationMask(object):
                                     self.unique_excitations[1]):
 
             if len(exc_up[0]) == 2:
-                for ii in range(2):
-                    ielec, iorb = exc_up[0][ii], exc_up[1][ii]
-                    icol = iorb-self.nup
-                    self.index_unique_double_up.append(
-                        ielec*ncol_up + icol)
+                for ielec in exc_up[0]:
+                    for iorb in exc_up[1]:
+                        icol = iorb-self.nup
+                        self.index_unique_double_up.append(
+                            ielec*ncol_up + icol)
 
             if len(exc_down[1]) == 2:
-                for ii in range(2):
-                    ielec, iorb = exc_down[0][ii], exc_down[1][ii]
-                    icol = iorb-self.ndown
-                    self.index_unique_double_down.append(
-                        ielec*ncol_down + icol)
+                for ielec in exc_up[0]:
+                    for iorb in exc_up[1]:
+                        icol = iorb-self.ndown
+                        self.index_unique_double_down.append(
+                            ielec*ncol_down + icol)

@@ -171,6 +171,24 @@ class SlaterPooling(nn.Module):
         return (det_unique_up[:, self.index_unique_excitation[0]] *
                 det_unique_down[:, self.index_unique_excitation[1]])
 
+    def det_single_double(self, input):
+        """Computes the determinant of ground state + single + double
+
+        Args:
+            input (torch.tensor): MO matrices nbatch x nelec x nmo
+
+        Returns:
+            torch.tensor: slater determinants
+        """
+
+        # compute the determinant of the unique single excitation
+        det_unique_up, det_unique_down = self.det_unique_single_double(
+            input)
+
+        # returns the product of spin up/down required by each excitation
+        return (det_unique_up[:, self.index_unique_excitation[0]] *
+                det_unique_down[:, self.index_unique_excitation[1]])
+
     def get_slater_matrices(self, input):
         """Computes the slater matrices
 
@@ -264,19 +282,19 @@ class SlaterPooling(nn.Module):
         return torch.cat((detAup.unsqueeze(-1), det_up), dim=1),\
             torch.cat((detAdown.unsqueeze(-1), det_down), dim=1)
 
-    def det_excitation(self, input):
-        """Computes the values of the determinants from the slater matrices
+    # def det_excitation(self, input):
+    #     """Computes the values of the determinants from the slater matrices
 
-        Args:
-            input (torch.tensor): MO matrices nbatch x nelec x nmo
+    #     Args:
+    #         input (torch.tensor): MO matrices nbatch x nelec x nmo
 
-        Returns:
-            torch.tensor: slater determinants
-        """
-        detAup = torch.det(input[:, self.nup, :self.nup])
-        invAup = torch.inverse(input[:, self.nup, :self.nup])
-        xcup = (invAup @ input[:, :self.nup, :]
-                ).masked_select(self.exc_mask.mask_up)
+    #     Returns:
+    #         torch.tensor: slater determinants
+    #     """
+    #     detAup = torch.det(input[:, self.nup, :self.nup])
+    #     invAup = torch.inverse(input[:, self.nup, :self.nup])
+    #     xcup = (invAup @ input[:, :self.nup, :]
+    #             ).masked_select(self.exc_mask.mask_up)
 
     def det_unique_single_double(self, input):
         """Computes the SD of single/double excitations
