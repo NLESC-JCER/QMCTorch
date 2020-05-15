@@ -167,7 +167,8 @@ class ExcitationMask(object):
                 self.mask_unique_single_down[ielec, icol] = True
 
     def get_index_unique_single(self):
-        """Computes the 1D index and permutation for the unique singles."""
+        """Computes the 1D index and permutation 
+           for the unique singles."""
 
         ncol_up = self.max_orb[0]-self.nup
         ncol_down = self.max_orb[1]-self.ndown
@@ -205,3 +206,29 @@ class ExcitationMask(object):
             self.sign_unique_single_up)
         self.sign_unique_single_down = torch.tensor(
             self.sign_unique_single_down)
+
+    def get_index_unique_double(self):
+        """Computes the 1D index of the double excitation matrices."""
+
+        ncol_up = self.max_orb[0]-self.nup
+        ncol_down = self.max_orb[1]-self.ndown
+
+        self.index_unique_double_up = []
+        self.index_unique_double_down = []
+
+        for exc_up, exc_down in zip(self.unique_excitations[0],
+                                    self.unique_excitations[1]):
+
+            if len(exc_up[0]) == 2:
+                for ii in range(2):
+                    ielec, iorb = exc_up[0][ii], exc_up[1][ii]
+                    icol = iorb-self.nup
+                    self.index_unique_double_up.append(
+                        ielec*ncol_up + icol)
+
+            if len(exc_down[1]) == 2:
+                for ii in range(2):
+                    ielec, iorb = exc_down[0][ii], exc_down[1][ii]
+                    icol = iorb-self.ndown
+                    self.index_unique_double_down.append(
+                        ielec*ncol_down + icol)

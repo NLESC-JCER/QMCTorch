@@ -14,40 +14,39 @@ class TestSlater(unittest.TestCase):
     def setUp(self):
 
         # molecule
-        self.mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
-            unit='bohr',
-            calculator='pyscf',
-            basis='dzp')
+        # self.mol = Molecule(
+        #     atom='H 0 0 -0.69; H 0 0 0.69',
+        #     unit='bohr',
+        #     calculator='pyscf',
+        #     basis='dzp')
 
-        npts = 51
-        self.pos = torch.zeros(npts, 6)
-        self.pos[:, 2] = torch.linspace(-2, 2, npts)
+        self.mol = Molecule(atom='C 0 0 0; O 0 0 2.173; O 0 0 -2.173',
+                            calculator='pyscf',
+                            basis='dzp',
+                            unit='bohr')
 
     def test_single(self):
 
         wf = Orbital(self.mol, kinetic='jacobi',
-                     configs='single(2,2)',
+                     configs='single(6,6)',
                      use_jastrow=True,
                      include_all_mo=False)
 
-        mo = wf.mo(wf.mo_scf(wf.ao(self.pos)))
+        mo = torch.rand(10, 22, 45)
         det_explicit = wf.pool.det_explicit(mo)
         det_single = wf.pool.det_single(mo)
-
         assert(torch.allclose(det_explicit, det_single))
 
     def test_single_all_mo(self):
 
         wf = Orbital(self.mol, kinetic='jacobi',
-                     configs='single(2,2)',
+                     configs='single(6,6)',
                      use_jastrow=True,
                      include_all_mo=True)
 
-        mo = wf.mo(wf.mo_scf(wf.ao(self.pos)))
+        mo = torch.rand(10, 22, 45)
         det_explicit = wf.pool.det_explicit(mo)
         det_single = wf.pool.det_single(mo)
-
         assert(torch.allclose(det_explicit, det_single))
 
 

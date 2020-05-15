@@ -176,8 +176,11 @@ class OrbitalConfigurations(object):
         nvirt = norb - nocc
         return nocc, nvirt
 
+    def _create_excitation(self, conf, iocc, ivirt):
+        return self._create_excitation_replace(conf, iocc, ivirt)
+
     @staticmethod
-    def _create_excitation(conf, iocc, ivirt):
+    def _create_excitation_ordered(conf, iocc, ivirt):
         """promote an electron from iocc to ivirt
 
         Args:
@@ -186,10 +189,34 @@ class OrbitalConfigurations(object):
             ivirt (int): index of the virtual orbital
 
         Returns:
-            list: new configuration
+            list: new configuration by increasing order
+                  e.g: 4->6 leads to : [0,1,2,3,5,6]
+        Note:
+            if that method is used to define the exciation index
+            permutation must be accounted for when  computing
+            the determinant as 
+            det(A[:,[0,1,2,3]]) = -det(A[:,[0,1,3,2]])
+            see : ExcitationMask.get_index_unique_single()
+                  in oribtal_projector.py
         """
         conf.pop(iocc)
         conf += [ivirt]
+        return conf
+
+    @staticmethod
+    def _create_excitation_replace(conf, iocc, ivirt):
+        """promote an electron from iocc to ivirt
+
+        Args:
+            conf (list): index of the occupied orbitals
+            iocc (int): index of the occupied orbital
+            ivirt (int): index of the virtual orbital
+
+        Returns:
+            list: new configuration not ordered
+                e.g.: 4->6 leads tpo : [0,1,2,3,6,5]
+        """
+        conf[iocc] = ivirt
         return conf
 
     @staticmethod
