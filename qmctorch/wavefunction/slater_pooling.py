@@ -136,10 +136,10 @@ class SlaterPooling(nn.Module):
         Returns:
             torch.tensor: slater determinants
         """
-        if self.config_method.startswith('single'):
-            return self.det_single(input)
-        else:
+        if self.config_method.startswith('cas('):
             return self.det_explicit(input)
+        else:
+            return self.det_single_double(input)
 
     def det_explicit(self, input):
         """Computes the values of the determinants from the slater matrices
@@ -154,22 +154,22 @@ class SlaterPooling(nn.Module):
         mo_up, mo_down = self.get_slater_matrices(input)
         return (torch.det(mo_up) * torch.det(mo_down)).transpose(0, 1)
 
-    def det_single(self, input):
-        """Computes the determinant of ground state + single
+    # def det_single(self, input):
+    #     """Computes the determinant of ground state + single
 
-        Args:
-            input (torch.tensor): MO matrices nbatch x nelec x nmo
+    #     Args:
+    #         input (torch.tensor): MO matrices nbatch x nelec x nmo
 
-        Returns:
-            torch.tensor: slater determinants
-        """
+    #     Returns:
+    #         torch.tensor: slater determinants
+    #     """
 
-        # compute the determinant of the unique single excitation
-        det_unique_up, det_unique_down = self.det_unique_single(input)
+    #     # compute the determinant of the unique single excitation
+    #     det_unique_up, det_unique_down = self.det_unique_single(input)
 
-        # returns the product of spin up/down required by each excitation
-        return (det_unique_up[:, self.index_unique_excitation[0]] *
-                det_unique_down[:, self.index_unique_excitation[1]])
+    #     # returns the product of spin up/down required by each excitation
+    #     return (det_unique_up[:, self.index_unique_excitation[0]] *
+    #             det_unique_down[:, self.index_unique_excitation[1]])
 
     def det_single_double(self, input):
         """Computes the determinant of ground state + single + double
@@ -214,73 +214,73 @@ class SlaterPooling(nn.Module):
         return (torch.det(input[:, :self.nup, :self.nup]),
                 torch.det(input[:, self.nup:, :self.ndown]))
 
-    def det_unique_single(self, input):
-        """Computes the SD of single excitations
+    # def det_unique_single(self, input):
+    #     """Computes the SD of single excitations
 
-        .. note:: The determinants of the single excitations 
-        are calculated from the ground state determinant and 
-        the ground state Slater matrices whith one column modified.
-        See : Monte Carlo Methods in ab initio quantum chemistry 
-              B.L. Hammond, appendix B1
+    #     .. note:: The determinants of the single excitations
+    #     are calculated from the ground state determinant and
+    #     the ground state Slater matrices whith one column modified.
+    #     See : Monte Carlo Methods in ab initio quantum chemistry
+    #           B.L. Hammond, appendix B1
 
-        Note ; if the state on coonfigs are specified in order 
-        we end up with excitations that comes from a deep orbital, the resulting
-        slater matrix has one column changed (with the new orbital) and several 
-        permutation. We therefore need to multiply the slater determinant 
-        by (-1)^nperm.
+    #     Note ; if the state on coonfigs are specified in order
+    #     we end up with excitations that comes from a deep orbital, the resulting
+    #     slater matrix has one column changed (with the new orbital) and several
+    #     permutation. We therefore need to multiply the slater determinant
+    #     by (-1)^nperm.
 
-        .. math::
-            MO = [ A | B ]
-            det(Exc_{ij}) = (det(A) * A^{-1} * B)_{i,j}
+    #     .. math::
+    #         MO = [ A | B ]
+    #         det(Exc_{ij}) = (det(A) * A^{-1} * B)_{i,j}
 
-        Args:
-            input (torch.tensor): MO matrices nbatch x nelec x nmo
+    #     Args:
+    #         input (torch.tensor): MO matrices nbatch x nelec x nmo
 
-        """
+    #     """
 
-        nbatch = input.shape[0]
+    #     nbatch = input.shape[0]
 
-        if not hasattr(self.exc_mask, 'index_unique_single_up'):
-            self.exc_mask.get_index_unique_single()
+    #     if not hasattr(self.exc_mask, 'index_unique_single_up'):
+    #         self.exc_mask.get_index_unique_single()
 
-        # occupied orbital matrix + det and inv on spin up
-        Aup = input[:, :self.nup, :self.nup]
-        detAup = torch.det(Aup)
-        invAup = torch.inverse(Aup)
+    #     # occupied orbital matrix + det and inv on spin up
+    #     Aup = input[:, :self.nup, :self.nup]
+    #     detAup = torch.det(Aup)
+    #     invAup = torch.inverse(Aup)
 
-        # occupied orbital matrix + det and inv on spin down
-        Adown = input[:, self.nup:, :self.ndown]
-        detAdown = torch.det(Adown)
-        invAdown = torch.inverse(Adown)
+    #     # occupied orbital matrix + det and inv on spin down
+    #     Adown = input[:, self.nup:, :self.ndown]
+    #     detAdown = torch.det(Adown)
+    #     invAdown = torch.inverse(Adown)
 
-        # virtual orbital matrices spin up/down
-        Bup = input[:, :self.nup, self.nup:self.index_max_orb_up]
-        Bdown = input[:, self.nup:,
-                      self.ndown: self.index_max_orb_down]
+    #     # virtual orbital matrices spin up/down
+    #     Bup = input[:, :self.nup, self.nup:self.index_max_orb_up]
+    #     Bdown = input[:, self.nup:,
+    #                   self.ndown: self.index_max_orb_down]
 
-        # determinant of the unique excitation spin up
-        det_up = (invAup @ Bup).view(
-            nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+    #     # determinant of the unique excitation spin up
+    #     det_up = (invAup @ Bup).view(
+    #         nbatch, -1)[:, self.exc_mask.index_unique_single_up]
 
-        # determinant of the unique excitation spin down
-        det_down = (invAdown @ Bdown).view(
-            nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+    #     # determinant of the unique excitation spin down
+    #     det_down = (invAdown @ Bdown).view(
+    #         nbatch, -1)[:, self.exc_mask.index_unique_single_down]
 
-        # multiply with ground state determinant
-        # and account for permutation for deep excitation
-        det_up = detAup.unsqueeze(-1) * det_up.view(nbatch, -1)
+    #     # multiply with ground state determinant
+    #     # and account for permutation for deep excitation
+    #     det_up = detAup.unsqueeze(-1) * det_up.view(nbatch, -1)
 
-        # multiply with ground state determinant
-        # and account for permutation for deep excitation
-        det_down = detAdown.unsqueeze(-1) * det_down.view(nbatch, -1)
+    #     # multiply with ground state determinant
+    #     # and account for permutation for deep excitation
+    #     det_down = detAdown.unsqueeze(-1) * det_down.view(nbatch, -1)
 
-        # if the orbital in configs are in increasing order
-        # we should deal with that better ...
-        # det_up *= self.exc_mask.sign_unique_single_up
-        # det_down *= self.exc_mask.sign_unique_single_down
+    #     # if the orbital in configs are in increasing order
+    #     # we should deal with that better ...
+    #     # det_up *= self.exc_mask.sign_unique_single_up
+    #     # det_down *= self.exc_mask.sign_unique_single_down
 
-        return torch.cat((detAup.unsqueeze(-1), det_up), dim=1),\
-            torch.cat((detAdown.unsqueeze(-1), det_down), dim=1)
+    #     return torch.cat((detAup.unsqueeze(-1), det_up), dim=1),\
+    #         torch.cat((detAdown.unsqueeze(-1), det_down), dim=1)
 
     # def det_excitation(self, input):
     #     """Computes the values of the determinants from the slater matrices
@@ -328,14 +328,23 @@ class SlaterPooling(nn.Module):
         if not hasattr(self.exc_mask, 'index_unique_double_up'):
             self.exc_mask.get_index_unique_double()
 
+        do_single = len(self.exc_mask.index_unique_single_up) != 0
+        do_double = len(self.exc_mask.index_unique_double_up) != 0
+
         # occupied orbital matrix + det and inv on spin up
         Aup = input[:, :self.nup, :self.nup]
         detAup = torch.det(Aup)
-        invAup = torch.inverse(Aup)
 
         # occupied orbital matrix + det and inv on spin down
         Adown = input[:, self.nup:, :self.ndown]
         detAdown = torch.det(Adown)
+
+        # return the ground state
+        if self.config_method == 'ground_state':
+            return detAup.unsqueeze(-1), detAdown.unsqueeze(-1)
+
+        # inverse of the
+        invAup = torch.inverse(Aup)
         invAdown = torch.inverse(Adown)
 
         # virtual orbital matrices spin up/down
@@ -347,45 +356,59 @@ class SlaterPooling(nn.Module):
         mat_exc_up = (invAup @ Bup)
         mat_exc_down = (invAdown @ Bdown)
 
-        # determinant of the unique excitation spin up
-        det_single_up = mat_exc_up.view(
-            nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+        if do_single:
 
-        # determinant of the unique excitation spin down
-        det_single_down = mat_exc_down.view(
-            nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+            # determinant of the unique excitation spin up
+            det_single_up = mat_exc_up.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_single_up]
 
-        # multiply with ground state determinant
-        # and account for permutation for deep excitation
-        det_single_up = detAup.unsqueeze(-1) * \
-            det_single_up.view(nbatch, -1)
+            # determinant of the unique excitation spin down
+            det_single_down = mat_exc_down.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_single_down]
 
-        # multiply with ground state determinant
-        # and account for permutation for deep excitation
-        det_single_down = detAdown.unsqueeze(-1) * \
-            det_single_down.view(nbatch, -1)
+            # multiply with ground state determinant
+            # and account for permutation for deep excitation
+            det_single_up = detAup.unsqueeze(-1) * \
+                det_single_up.view(nbatch, -1)
 
-        # if the orbital in configs are in increasing order
-        # we should deal with that better ...
-        # det_up *= self.exc_mask.sign_unique_single_up
-        # det_down *= self.exc_mask.sign_unique_single_down
+            # multiply with ground state determinant
+            # and account for permutation for deep excitation
+            det_single_down = detAdown.unsqueeze(-1) * \
+                det_single_down.view(nbatch, -1)
 
-        det_double_up = mat_exc_up.view(
-            nbatch, -1)[:, self.exc_mask.index_unique_double_up]
+            # if the orbital in configs are in increasing order
+            # we should deal with that better ...
+            # det_up *= self.exc_mask.sign_unique_single_up
+            # det_down *= self.exc_mask.sign_unique_single_down
 
-        det_double_up = torch.det(
-            det_double_up.view(nbatch, -1, 2, 2))
+        if do_double:
 
-        det_double_up = detAup.unsqueeze(-1) * det_double_up
+            # det of unique spin up double exc
+            det_double_up = mat_exc_up.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_up]
 
-        det_double_down = mat_exc_down.view(
-            nbatch, -1)[:, self.exc_mask.index_unique_double_down]
+            det_double_up = torch.det(
+                det_double_up.view(nbatch, -1, 2, 2))
 
-        det_double_down = torch.det(
-            det_double_down.view(nbatch, -1, 2, 2))
+            det_double_up = detAup.unsqueeze(-1) * det_double_up
 
-        det_double_down = detAdown.unsqueeze(-1) * det_double_down
+            # det of unique spin down double exc
+            det_double_down = mat_exc_down.view(
+                nbatch, -1)[:, self.exc_mask.index_unique_double_down]
 
-        return torch.cat((detAup.unsqueeze(-1), det_single_up, det_double_up), dim=1),\
-            torch.cat((detAdown.unsqueeze(-1),
-                       det_single_down, det_double_down), dim=1)
+            det_double_down = torch.det(
+                det_double_down.view(nbatch, -1, 2, 2))
+
+            det_double_down = detAdown.unsqueeze(-1) * det_double_down
+
+        if self.config_method.startswith('single('):
+
+            return torch.cat((detAup.unsqueeze(-1), det_single_up), dim=1),\
+                torch.cat((detAdown.unsqueeze(-1),
+                           det_single_down), dim=1)
+
+        elif self.config_method.startswith('single_double('):
+
+            return torch.cat((detAup.unsqueeze(-1), det_single_up, det_double_up), dim=1),\
+                torch.cat((detAdown.unsqueeze(-1),
+                           det_single_down, det_double_down), dim=1)
