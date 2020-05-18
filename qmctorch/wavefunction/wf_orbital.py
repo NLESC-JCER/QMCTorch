@@ -219,7 +219,26 @@ class Orbital(WaveFunction):
         """
 
         mo = self._get_mo_vals(x)
-        d2mo = self._get_mo_vals(x, derivative=2)
+        bkin = self.get_kinetic_operator(x, mo=mo)
+
+        kin, psi = self.pool.kinetic(mo, bkin)
+
+        return self.fc(kin) / self.fc(psi)
+
+    def get_kinetic_operator(self, x, mo=None):
+        """Compute the Bkin matrix
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: matrix of the kinetic operator
+        """
+
+        if mo is None:
+            mo = self._get_mo_vals(x)
+
+        bkin = self._get_mo_vals(x, derivative=2)
         djast_dmo, d2jast_mo = None, None
 
         if self.use_jastrow:
@@ -236,9 +255,9 @@ class Orbital(WaveFunction):
             d2jast = self.jastrow(x, derivative=2) / jast
             d2jast_mo = d2jast.unsqueeze(-1) * mo
 
-        kin, psi = self.kinpool(mo, d2mo, djast_dmo, d2jast_mo)
+            bkin += 2 * djast_dmo + d2jast_mo
 
-        return self.fc(kin) / self.fc(psi)
+        return bkin
 
     def nuclear_potential(self, pos):
         """Computes the electron-nuclear term

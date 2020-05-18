@@ -7,7 +7,8 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'register_extra_attributes',
            'fast_power',
            'InterpolateMolecularOrbitals',
-           'InterpolateAtomicOribtals']
+           'InterpolateAtomicOribtals',
+           'btrace', 'bdet2', 'bproj']
 
 from .plot_data import (plot_energy, plot_data, plot_block,
                         plot_walkers_traj)
@@ -22,3 +23,5 @@ from .hdf5_utils import (dump_to_hdf5, load_from_hdf5,
 
 from .interpolate import (InterpolateMolecularOrbitals,
                           InterpolateAtomicOribtals)
+
+from .algebra_utils import (btrace, bproj, bdet2)

@@ -1,15 +1,7 @@
 import torch
 from torch import nn
-
+from ..utils import btrace
 from .orbital_projector import OrbitalProjector
-
-
-def btrace(M):
-    return torch.diagonal(M, dim1=-2, dim2=-1).sum(-1)
-
-
-def bproj(M, P):
-    return P.transpose(1, 2) @ M @ P
 
 
 class KineticPooling(nn.Module):
