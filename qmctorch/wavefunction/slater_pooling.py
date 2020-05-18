@@ -38,15 +38,17 @@ class SlaterPooling(nn.Module):
         self.ndown = mol.ndown
         self.nelec = self.nup + self.ndown
 
-        self.orb_proj = OrbitalProjector(configs, mol)
+        self.orb_proj = OrbitalProjector(configs, mol, cuda=cuda)
         self.exc_mask = ExcitationMask(self.unique_excitation, mol,
-                                       (self.index_max_orb_up, self.index_max_orb_down))
+                                       (self.index_max_orb_up,
+                                        self.index_max_orb_down),
+                                       cuda=cuda)
 
         self.device = torch.device('cpu')
         if cuda:
             self.device = torch.device('cuda')
-            self.orb_proj.Pup = self.orb_proj.Pup.to(self.device)
-            self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
+            # self.orb_proj.Pup = self.orb_proj.Pup.to(self.device)
+            # self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, input):
         """Computes the values of the determinats
@@ -240,6 +242,22 @@ class SlaterPooling(nn.Module):
                            det_single_down, det_double_down), dim=1)
 
     def kinetic(self, mo, bkin):
+        """Computes the values of the kinetic energy
+
+        Args:
+            mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
+            bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
+
+        Returns:
+            torch.tensor: kinetic energy
+        """
+
+        if self.config_method.startswith('cas('):
+            return self.kinetic_explicit(mo, bkin)
+        else:
+            return self.kinetic_single_double(mo, bkin)
+
+    def kinetic_explicit(self, mo, bkin):
         """Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
 
         .. math::

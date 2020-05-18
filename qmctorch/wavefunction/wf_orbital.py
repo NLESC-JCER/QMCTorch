@@ -204,7 +204,7 @@ class Orbital(WaveFunction):
             + self.electronic_potential(pos) \
             + self.nuclear_repulsion()
 
-    def kinetic_energy_jacobi(self, x, **kwargs):
+    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
         """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -221,9 +221,14 @@ class Orbital(WaveFunction):
         mo = self._get_mo_vals(x)
         bkin = self.get_kinetic_operator(x, mo=mo)
 
-        kin, psi = self.pool.kinetic(mo, bkin)
+        if kinpool:
+            kin, psi = self.kinpool(mo, bkin)
+            return self.fc(kin) / self.fc(psi)
 
-        return self.fc(kin) / self.fc(psi)
+        else:
+            kin = self.pool.kinetic(mo, bkin)
+            psi = self.pool(mo)
+            return self.fc(kin * psi) / self.fc(psi)
 
     def get_kinetic_operator(self, x, mo=None):
         """Compute the Bkin matrix
@@ -234,25 +239,35 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: matrix of the kinetic operator
         """
+        from time import time
 
         if mo is None:
             mo = self._get_mo_vals(x)
 
+        t0 = time()
         bkin = self._get_mo_vals(x, derivative=2)
+        print('d2mo : ', time()-t0)
+
         djast_dmo, d2jast_mo = None, None
 
         if self.use_jastrow:
 
+            t0 = time()
             jast = self.jastrow(x)
             djast = self.jastrow(x, derivative=1, jacobian=False)
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
+            print('djast', time()-t0)
 
+            t0 = time()
             dao = self.ao(x, derivative=1,
                           jacobian=False).transpose(2, 3)
             dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
-            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
+            print('dmo', time()-t0)
 
+            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
+            t0 = time()
             d2jast = self.jastrow(x, derivative=2) / jast
+            print('d2jast', time()-t0)
             d2jast_mo = d2jast.unsqueeze(-1) * mo
 
             bkin += 2 * djast_dmo + d2jast_mo

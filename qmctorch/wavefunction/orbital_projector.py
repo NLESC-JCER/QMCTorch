@@ -4,7 +4,7 @@ import numpy as np
 
 class OrbitalProjector(object):
 
-    def __init__(self, configs, mol):
+    def __init__(self, configs, mol, cuda=False):
         """Project the MO matrix in Slater Matrices
 
         Args:
@@ -17,8 +17,9 @@ class OrbitalProjector(object):
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
         self.ndown = mol.ndown
-
-        self.Pup, self.Pdown = self.get_projectors()
+        self.device = torch.device('cpu')
+        if cuda:
+            self.device = torch.device('cuda')
 
     def get_projectors(self):
         """Get the projectors of the conf in the CI expansion
@@ -39,7 +40,7 @@ class OrbitalProjector(object):
             for _id, imo in enumerate(cdown):
                 Pdown[ic][imo, _id] = 1.
 
-        return Pup.unsqueeze(1), Pdown.unsqueeze(1)
+        return Pup.unsqueeze(1).to(self.device), Pdown.unsqueeze(1).to(self.device)
 
     def split_orbitals(self, mo):
         """Split the orbital  matrix in multiple slater matrices
@@ -50,66 +51,16 @@ class OrbitalProjector(object):
         Returns:
             torch.tensor: all slater matrices
         """
+        if not hasattr(self, 'Pup'):
+            self.Pup, self.Pdown = self.get_projectors()
+
         return mo[:, :self.nup, :] @ self.Pup, mo[:,
                                                   self.nup:, :] @ self.Pdown
 
 
-class OrbitalMask(object):
-
-    def __init__(self, configs, mol):
-        """Select the occupied MOs of Slater determinant using masks
-
-        Args:
-            configs (list): configurations of the slater determinants
-            mol (Molecule): Molecule object
-        """
-
-        self.configs = configs
-        self.nconfs = len(configs[0])
-        self.nmo = mol.basis.nmo
-        self.nup = mol.nup
-        self.ndown = mol.ndown
-        self.nelec = mol.nelec
-
-        self.masks = self.get_masks()
-
-    def get_masks(self):
-        """Get the Boolean mask to extract the orbitals."""
-
-        mask_up = torch.zeros(
-            self.nconfs, self.nelec, self.nmo).type(torch.bool)
-        mask_down = torch.zeros(
-            self.nconfs, self.nelec, self.nmo).type(torch.bool)
-
-        for ic, (cup, cdown) in enumerate(
-                zip(self.configs[0], self.configs[1])):
-
-            mask_up[ic][np.ix_(range(self.nup), cup)] = True
-            mask_down[ic][np.ix_(
-                range(self.nup, self.nelec), cdown)] = True
-
-        return torch.cat(mask_up, mask_down)
-
-    def split_orbitals(self, mo):
-        """Split the orbital  matrix in multiple slater matrices
-
-        Args:
-            mo (torch.tensor): molecular orbital matrix
-
-        Returns:
-            torch.tensor: all slater matrices
-        """
-        nbatch = mo.shape[0]
-        len_up = nbatch * self.nup * self.nup
-        _tmp = mo.masked_select(self.masks)
-
-        return _tmp[:len_up].view(nbatch, self.nup, self.nup), \
-            _tmp[len_up:].view(nbatch, self.ndown, self.ndown)
-
-
 class ExcitationMask(object):
 
-    def __init__(self, unique_excitations, mol, max_orb):
+    def __init__(self, unique_excitations, mol, max_orb, cuda=False):
         """Select the occupied MOs of Slater determinant using masks
 
         Args:
@@ -126,8 +77,12 @@ class ExcitationMask(object):
         self.nelec = mol.nelec
         self.max_orb = max_orb
 
+        self.device = torch.device('cpu')
+        if cuda:
+            self.device = torch.device('cuda')
+
     def get_index_unique_single(self):
-        """Computes the 1D index and permutation 
+        """Computes the 1D index and permutation
            for the unique singles."""
 
         ncol_up = self.max_orb[0]-self.nup
@@ -163,9 +118,9 @@ class ExcitationMask(object):
                 self.sign_unique_single_down.append((-1)**(npermut))
 
         self.sign_unique_single_up = torch.tensor(
-            self.sign_unique_single_up)
+            self.sign_unique_single_up).to(self.device)
         self.sign_unique_single_down = torch.tensor(
-            self.sign_unique_single_down)
+            self.sign_unique_single_down).to(self.device)
 
     def get_index_unique_double(self):
         """Computes the 1D index of the double excitation matrices."""
