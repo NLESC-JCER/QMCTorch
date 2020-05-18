@@ -4,7 +4,7 @@ from .electron_distance import ElectronDistance
 from ..utils import register_extra_attributes
 
 
-class TwoBodyJastrowFactor(nn.Module):
+class FastTwoBodyJastrowFactor(nn.Module):
 
     def __init__(self, nup, ndown, w=1., cuda=False):
         """Computes the Pade-Jastrow factor
@@ -20,7 +20,7 @@ class TwoBodyJastrowFactor(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(TwoBodyJastrowFactor, self).__init__()
+        super(FastTwoBodyJastrowFactor, self).__init__()
 
         self.nup = nup
         self.ndown = ndown
@@ -34,20 +34,62 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.weight = nn.Parameter(torch.tensor([w]))
         self.weight.requires_grad = True
+        register_extra_attributes(self, ['weight'])
 
-        bup = torch.cat((0.25 * torch.ones(nup, nup), 0.5 *
-                         torch.ones(nup, ndown)), dim=1)
-
-        bdown = torch.cat((0.5 * torch.ones(ndown, nup), 0.25 *
-                           torch.ones(ndown, ndown)), dim=1)
-
-        self.static_weight = torch.cat(
-            (bup, bdown), dim=0).to(
-            self.device)
+        self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
-        register_extra_attributes(self, ['weight'])
+        self.static_weight = self.get_static_weight()
+
+    def get_mask_tri_up(self):
+        """Get the mask to select the triangular up matrix
+
+        Returns:
+            torch.tensor: mask of the tri up matrix
+        """
+        mask = torch.zeros(self.nelec, self.nelec).type(
+            torch.bool).to(self.device)
+        index_col, index_row = [], []
+        for i in range(self.nelec-1):
+            for j in range(i+1, self.nelec):
+                index_row.append(i)
+                index_col.append(j)
+                mask[i, j] = True
+
+        index_col = torch.LongTensor(index_col).to(self.device)
+        index_row = torch.LongTensor(index_row).to(self.device)
+        return mask, index_col, index_row
+
+    def extract_tri_up(self, input):
+        """extract the upper triangular elements
+
+        Args:
+            input (torch.tensor): input matrices (nbatch, n, n)
+
+        Returns:
+            torch.tensor: triangular up element (nbatch, -1)
+        """
+        nbatch = input.shape[0]
+        return input.masked_select(self.mask_tri_up).view(nbatch, -1)
+
+    def get_static_weight(self):
+        """Get the matrix of static weights
+
+        Returns:
+            torch.tensor: static weight (0.5 (0.25)for parallel(anti) spins
+        """
+
+        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
+                         torch.ones(self.nup, self.ndown)), dim=1)
+
+        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
+                           torch.ones(self.ndown, self.ndown)), dim=1)
+
+        static_weight = torch.cat((bup, bdown), dim=0)
+        static_weight = static_weight.masked_select(self.mask_tri_up)
+
+        return static_weight.to(self.device)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -81,16 +123,17 @@ class TwoBodyJastrowFactor(nn.Module):
 
         size = pos.shape
         assert size[1] == self.nelec * self.ndim
+        nbatch = size[0]
 
-        r = self.edist(pos)
+        r = self.extract_tri_up(self.edist(pos))
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-
-            return self._prod_unique_pairs(jast)
+            return jast.prod(1).view(nbatch, 1)
 
         elif derivative == 1:
-            dr = self.edist(pos, derivative=1)
+            dr = self.extract_tri_up(self.edist(
+                pos, derivative=1)).view(nbatch, 3, -1)
             return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
@@ -111,18 +154,23 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
+        nbatch = r.shape[0]
         if jacobian:
             djast = self._get_der_jastrow_elements(r, dr).sum(1)
-            prod_val = self._prod_unique_pairs(jast)
+            prod_val = jast.prod(1).unsqueeze(-1)
 
         else:
             djast = self._get_der_jastrow_elements(r, dr)
-            prod_val = self._prod_unique_pairs(jast).unsqueeze(-1)
+            prod_val = jast.prod(1).unsqueeze(-1)
 
-        out = (self._sum_unique_pairs(djast, axis=-1) -
-               self._sum_unique_pairs(djast, axis=-2)) * prod_val
+        z = djast * prod_val / jast
+        out = torch.zeros(nbatch, self.nelec)
+        out = out.index_add(1, self.index_col, z)
+        out -= out.index_add(1, self.index_row, z)
         print(out)
         return out
+        # return (self._sum_unique_pairs(djast, axis=-1) -
+        #         self._sum_unique_pairs(djast, axis=-2)) * prod_val
 
     def _jastrow_second_derivative(self, r, dr, d2r, jast):
         """Compute the value of the pure 2nd derivative of the Jastrow factor
