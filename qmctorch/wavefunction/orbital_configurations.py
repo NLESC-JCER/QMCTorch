@@ -258,3 +258,79 @@ class OrbitalConfigurations(object):
         cup.append(new_cup)
         cdown.append(new_cdown)
         return cup, cdown
+
+
+def get_excitation(configs):
+    """get the excitation data
+
+    Args:
+        configs (tuple): configuratin of the electrons
+
+    Returns:
+        exc_up, exc_down : index of the obitals in the excitaitons
+                            [i,j],[l,m] : excitation i -> l, j -> l
+    """
+    exc_up, exc_down = [], []
+    for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
+
+        set_cup = set(tuple(cup.tolist()))
+        set_cdown = set(tuple(cdown.tolist()))
+
+        if ic == 0:
+            set_gs_up = set_cup
+            set_gs_down = set_cdown
+
+        else:
+            exc_up.append([list(set_gs_up.difference(set_cup)),
+                           list(set_cup.difference(set_gs_up))])
+
+            exc_down.append([list(set_gs_down.difference(set_cdown)),
+                             list(set_cdown.difference(set_gs_down))])
+
+    return (exc_up, exc_down)
+
+
+def get_unique_excitation(configs):
+    """get the unique excitation data
+
+    Args:
+        configs (tuple): configuratin of the electrons
+
+    Returns:
+        exc_up, exc_down : index of the obitals in the excitaitons
+                            [i,j],[l,m] : excitation i -> l, j -> l
+        index_up, index_down : index map for the unique exc
+                                [0,0,...], [0,1,...] means that
+                                1st : excitation is composed of unique_up[0]*unique_down[0]
+                                2nd : excitation is composed of unique_up[0]*unique_down[1]
+                                ....
+
+    """
+    uniq_exc_up, uniq_exc_down = [], []
+    index_uniq_exc_up, index_uniq_exc_down = [], []
+    for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
+
+        set_cup = set(tuple(cup.tolist()))
+        set_cdown = set(tuple(cdown.tolist()))
+
+        if ic == 0:
+            set_gs_up = set_cup
+            set_gs_down = set_cdown
+
+        exc_up = [list(set_gs_up.difference(set_cup)),
+                  list(set_cup.difference(set_gs_up))]
+
+        exc_down = [list(set_gs_down.difference(set_cdown)),
+                    list(set_cdown.difference(set_gs_down))]
+
+        if exc_up not in uniq_exc_up:
+            uniq_exc_up.append(exc_up)
+
+        if exc_down not in uniq_exc_down:
+            uniq_exc_down.append(exc_down)
+
+        index_uniq_exc_up.append(uniq_exc_up.index(exc_up))
+        index_uniq_exc_down.append(
+            uniq_exc_down.index(exc_down))
+
+    return (uniq_exc_up, uniq_exc_down), (index_uniq_exc_up, index_uniq_exc_down)

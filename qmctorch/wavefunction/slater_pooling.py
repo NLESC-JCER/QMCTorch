@@ -1,6 +1,7 @@
 
 import torch
 from torch import nn
+from .orbital_configurations import get_excitation, get_unique_excitation
 from .orbital_projector import OrbitalProjector, ExcitationMask
 from ..utils import btrace, bdet2
 
@@ -22,7 +23,15 @@ class SlaterPooling(nn.Module):
         super(SlaterPooling, self).__init__()
 
         self.config_method = config_method
-        self.process_configs(configs)
+
+        self.configs = configs
+        self.nconfs = len(configs[0])
+        self.index_max_orb_up = self.configs[0].max().item() + 1
+        self.index_max_orb_down = self.configs[1].max().item() + 1
+
+        self.excitation_index = get_excitation(configs)
+        self.unique_excitation, self.index_unique_excitation = get_unique_excitation(
+            configs)
 
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
@@ -52,97 +61,6 @@ class SlaterPooling(nn.Module):
             return self.det_explicit(input)
         else:
             return self.det_single_double(input)
-
-    def process_configs(self, configs):
-        """Extract all necessary info from configs.
-
-        Args:
-            configs (tuple): configuratin of the electrons
-
-        """
-
-        self.configs = configs
-        self.nconfs = len(configs[0])
-        self.index_max_orb_up = self.configs[0].max().item() + 1
-        self.index_max_orb_down = self.configs[1].max().item() + 1
-
-        self.excitation_index = self.get_excitation(configs)
-        self.unique_excitation, self.index_unique_excitation = self.get_unique_excitation(
-            configs)
-
-    def get_excitation(self, configs):
-        """get the excitation data
-
-        Args:
-            configs (tuple): configuratin of the electrons
-
-        Returns:
-            exc_up, exc_down : index of the obitals in the excitaitons
-                               [i,j],[l,m] : excitation i -> l, j -> l
-        """
-        exc_up, exc_down = [], []
-        for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
-
-            set_cup = set(tuple(cup.tolist()))
-            set_cdown = set(tuple(cdown.tolist()))
-
-            if ic == 0:
-                set_gs_up = set_cup
-                set_gs_down = set_cdown
-
-            else:
-                exc_up.append([list(set_gs_up.difference(set_cup)),
-                               list(set_cup.difference(set_gs_up))])
-
-                exc_down.append([list(set_gs_down.difference(set_cdown)),
-                                 list(set_cdown.difference(set_gs_down))])
-
-        return (exc_up, exc_down)
-
-    def get_unique_excitation(self, configs):
-        """get the unique excitation data
-
-        Args:
-            configs (tuple): configuratin of the electrons
-
-        Returns:
-            exc_up, exc_down : index of the obitals in the excitaitons
-                               [i,j],[l,m] : excitation i -> l, j -> l
-            index_up, index_down : index map for the unique exc
-                                 [0,0,...], [0,1,...] means that
-                                 1st : excitation is composed of unique_up[0]*unique_down[0]
-                                 2nd : excitation is composed of unique_up[0]*unique_down[1]
-                                 ....
-
-        """
-        uniq_exc_up, uniq_exc_down = [], []
-        index_uniq_exc_up, index_uniq_exc_down = [], []
-        for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
-
-            set_cup = set(tuple(cup.tolist()))
-            set_cdown = set(tuple(cdown.tolist()))
-
-            if ic == 0:
-                set_gs_up = set_cup
-                set_gs_down = set_cdown
-
-            exc_up = [list(set_gs_up.difference(set_cup)),
-                      list(set_cup.difference(set_gs_up))]
-
-            exc_down = [list(set_gs_down.difference(set_cdown)),
-                        list(set_cdown.difference(set_gs_down))]
-
-            if exc_up not in uniq_exc_up:
-                uniq_exc_up.append(exc_up)
-
-            if exc_down not in uniq_exc_down:
-                uniq_exc_down.append(exc_down)
-
-            index_uniq_exc_up.append(uniq_exc_up.index(exc_up))
-            index_uniq_exc_down.append(
-                uniq_exc_down.index(exc_down))
-
-        return (uniq_exc_up, uniq_exc_down), (index_uniq_exc_up, index_uniq_exc_down)
 
     def get_slater_matrices(self, input):
         """Computes the slater matrices
@@ -321,7 +239,7 @@ class SlaterPooling(nn.Module):
                 torch.cat((detAdown.unsqueeze(-1),
                            det_single_down, det_double_down), dim=1)
 
-    def kinetic(self, MO, Bkin):
+    def kinetic(self, mo, bkin):
         """Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
 
         .. math::
@@ -329,16 +247,16 @@ class SlaterPooling(nn.Module):
             ( \Delta_{up} D_{up}  + \Delta_{down} D_{down} )
 
         Args:
-            MO (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
-            Bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
+            mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
+            bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
 
         Returns:
             torch.tensor: kinetic energy
         """
 
         # shortcut up/down matrices
-        Aup, Adown = self.orb_proj.split_orbitals(MO)
-        Bup, Bdown = self.orb_proj.split_orbitals(Bkin)
+        Aup, Adown = self.orb_proj.split_orbitals(mo)
+        Bup, Bdown = self.orb_proj.split_orbitals(bkin)
 
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
@@ -349,13 +267,13 @@ class SlaterPooling(nn.Module):
 
         # kinetic terms
         kinetic = -0.5 * (btrace(iAup@Bup) +
-                          btrace(iAdown@Bdown)) * det_prod
+                          btrace(iAdown@Bdown))  # * det_prod
 
         # reshape
         kinetic = kinetic.transpose(0, 1)
-        det_prod = det_prod.transpose(0, 1)
-
-        return kinetic, det_prod
+        #det_prod = det_prod.transpose(0, 1)
+        return kinetic
+        # return kinetic, det_prod
 
     def kinetic_single_double(self, mo, bkin):
         """Computes the kinetic energy of gs + single + double
@@ -372,12 +290,12 @@ class SlaterPooling(nn.Module):
         return (kin_up[:, self.index_unique_excitation[0]] +
                 kin_down[:, self.index_unique_excitation[1]])
 
-    def kinetic_unique_single_double(self, mo, Bkin):
+    def kinetic_unique_single_double(self, mo, bkin):
         """Compute the kinetic energy of the unique single/double conformation
 
         Args:
             mo ([type]): [description]
-            Bkin ([type]): [description]
+            bkin ([type]): [description]
         """
 
         nbatch = mo.shape[0]
@@ -405,9 +323,9 @@ class SlaterPooling(nn.Module):
 
         # ground state kinetic
         kin_ground_up = -0.5 * \
-            btrace(invAup @ Bkin[:, :self.nup, :self.nup])
+            btrace(invAup @ bkin[:, :self.nup, :self.nup])
         kin_ground_down = -0.5 * \
-            btrace(invAdown @ Bkin[:, self.nup:, :self.ndown])
+            btrace(invAdown @ bkin[:, self.nup:, :self.ndown])
         kin_ground_up.unsqueeze_(-1)
         kin_ground_down.unsqueeze_(-1)
 
@@ -423,21 +341,22 @@ class SlaterPooling(nn.Module):
         mat_exc_up = (invAup @ Avirt_up)
         mat_exc_down = (invAdown @ Avirt_down)
 
-        Bkin_up = Bkin[:, :self.nup, :self.index_max_orb_up]
-        Bkin_occ_up = Bkin[:, :self.nup, :self.nup]
-        Bkin_virt_up = Bkin[:, :self.nup,
+        bkin_up = bkin[:, :self.nup, :self.index_max_orb_up]
+        bkin_occ_up = bkin[:, :self.nup, :self.nup]
+        bkin_virt_up = bkin[:, :self.nup,
                             self.nup:self.index_max_orb_up]
 
-        Bkin_down = Bkin[:, self.nup:, :self.index_max_orb_down]
-        Bkin_occ_down = Bkin[:, self.nup:, :self.ndown]
-        Bkin_virt_down = Bkin[:, self.nup:,
+        bkin_down = bkin[:, self.nup:, :self.index_max_orb_down]
+        bkin_occ_down = bkin[:, self.nup:, :self.ndown]
+        bkin_virt_down = bkin[:, self.nup:,
                               self.ndown:self.index_max_orb_down]
 
-        Mup = invAup @ Bkin_virt_up - invAup @ Bkin_occ_up @ invAup @ Avirt_up
-        Mdown = invAdown @ Bkin_virt_down - \
-            invAdown @ Bkin_occ_down @ invAdown @ Avirt_down
+        Mup = invAup @ bkin_virt_up - invAup @ bkin_occ_up @ invAup @ Avirt_up
+        Mdown = invAdown @ bkin_virt_down - \
+            invAdown @ bkin_occ_down @ invAdown @ Avirt_down
 
         if do_single:
+
             ksin_up = (1. / mat_exc_up.view(nbatch, -1)[:, self.exc_mask.index_unique_single_up]) * \
                 Mup.view(
                     nbatch, -1)[:, self.exc_mask.index_unique_single_up]
@@ -461,7 +380,7 @@ class SlaterPooling(nn.Module):
             kdbl_up *= -0.5
             kdbl_up += kin_ground_up
 
-            kdbl_down = mat_exc_up.view(
+            kdbl_down = mat_exc_down.view(
                 nbatch, -1)[:, self.exc_mask.index_unique_double_down]
             kdbl_down = torch.inverse(
                 kdbl_down.view(nbatch, -1, 2, 2))
