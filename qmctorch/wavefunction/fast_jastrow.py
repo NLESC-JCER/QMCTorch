@@ -138,8 +138,8 @@ class FastTwoBodyJastrowFactor(nn.Module):
 
         elif derivative == 2:
 
-            dr = self.edist(pos, derivative=1)
-            d2r = self.edist(pos, derivative=2)
+            dr = self.extract_tri_up(self.edist(pos, derivative=1))
+            d2r = self.extract_tri_up(self.edist(pos, derivative=2))
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
     def _jastrow_derivative(self, r, dr, jast, jacobian):
@@ -156,21 +156,28 @@ class FastTwoBodyJastrowFactor(nn.Module):
         """
         nbatch = r.shape[0]
         if jacobian:
-            djast = self._get_der_jastrow_elements(r, dr).sum(1)
+
             prod_val = jast.prod(1).unsqueeze(-1)
+            djast = self._get_der_jastrow_elements(r, dr).sum(1)
+            djast = djast * prod_val
+
+            # might cause problems with backward cause in place operation
+            out = torch.zeros(nbatch, self.nelec)
+            out.index_add_(1, self.index_row, djast)
+            out.index_add_(1, self.index_col, -djast)
 
         else:
-            djast = self._get_der_jastrow_elements(r, dr)
-            prod_val = jast.prod(1).unsqueeze(-1)
 
-        z = djast * prod_val / jast
-        out = torch.zeros(nbatch, self.nelec)
-        out = out.index_add(1, self.index_col, z)
-        out -= out.index_add(1, self.index_row, z)
-        print(out)
+            prod_val = jast.prod(1).unsqueeze(-1).unsqueeze(-1)
+            djast = self._get_der_jastrow_elements(r, dr)
+            djast = djast * prod_val
+
+            # might cause problems with backward cause in place operation
+            out = torch.zeros(nbatch, 3, self.nelec)
+            out.index_add_(2, self.index_row, djast)
+            out.index_add_(2, self.index_col, -djast)
+
         return out
-        # return (self._sum_unique_pairs(djast, axis=-1) -
-        #         self._sum_unique_pairs(djast, axis=-2)) * prod_val
 
     def _jastrow_second_derivative(self, r, dr, d2r, jast):
         """Compute the value of the pure 2nd derivative of the Jastrow factor
@@ -186,7 +193,7 @@ class FastTwoBodyJastrowFactor(nn.Module):
         """
 
         # pure second derivative terms
-        prod_val = self._prod_unique_pairs(jast)
+        prod_val = jast.prod(1).unsqueeze(-1)
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
         hess_jast = 0.5 * (self._sum_unique_pairs(d2jast, axis=-1)

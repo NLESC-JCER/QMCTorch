@@ -119,9 +119,10 @@ class TwoBodyJastrowFactor(nn.Module):
             djast = self._get_der_jastrow_elements(r, dr)
             prod_val = self._prod_unique_pairs(jast).unsqueeze(-1)
 
+        #print(self._sum_unique_pairs(djast, axis=-2)*prod_val)
         out = (self._sum_unique_pairs(djast, axis=-1) -
                self._sum_unique_pairs(djast, axis=-2)) * prod_val
-        print(out)
+
         return out
 
     def _jastrow_second_derivative(self, r, dr, d2r, jast):
