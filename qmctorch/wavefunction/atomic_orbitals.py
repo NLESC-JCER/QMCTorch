@@ -196,8 +196,10 @@ class AtomicOrbitals(nn.Module):
 
             # return the jacobian
             if jacobian:
+
                 dR = self.radial(
                     r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1)
+
                 dY = self.harmonics(xyz, derivative=1)
 
                 # -> (Nbatch,Nelec,Nbas)
@@ -216,10 +218,12 @@ class AtomicOrbitals(nn.Module):
 
             dR = self.radial(r, self.bas_n, self.bas_exp,
                              xyz=xyz, derivative=1, jacobian=False)
+
             dY = self.harmonics(xyz, derivative=1, jacobian=False)
 
             d2R = self.radial(
                 r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2)
+
             d2Y = self.harmonics(xyz, derivative=2)
 
             bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y

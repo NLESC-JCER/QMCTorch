@@ -163,9 +163,13 @@ class SlaterPooling(nn.Module):
         Adown = input[:, self.nup:, :self.ndown]
         detAdown = torch.det(Adown)
 
+        # store all the dets we need
+        det_out_up = detAup.unsqueeze(-1).clone()
+        det_out_down = detAdown.unsqueeze(-1).clone()
+
         # return the ground state
         if self.config_method == 'ground_state':
-            return detAup.unsqueeze(-1), detAdown.unsqueeze(-1)
+            return det_out_up, det_out_down
 
         # inverse of the
         invAup = torch.inverse(Aup)
@@ -205,6 +209,11 @@ class SlaterPooling(nn.Module):
             # det_up *= self.exc_mask.sign_unique_single_up
             # det_down *= self.exc_mask.sign_unique_single_down
 
+            # accumulate the dets
+            det_out_up = torch.cat((det_out_up, det_single_up), dim=1)
+            det_out_down = torch.cat(
+                (det_out_down, det_single_down), dim=1)
+
         if do_double:
 
             # det of unique spin up double exc
@@ -229,17 +238,23 @@ class SlaterPooling(nn.Module):
 
             det_double_down = detAdown.unsqueeze(-1) * det_double_down
 
-        if self.config_method.startswith('single('):
+            det_out_up = torch.cat((det_out_up, det_double_up), dim=1)
+            det_out_down = torch.cat(
+                (det_out_down, det_double_down), dim=1)
 
-            return torch.cat((detAup.unsqueeze(-1), det_single_up), dim=1),\
-                torch.cat((detAdown.unsqueeze(-1),
-                           det_single_down), dim=1)
+        return det_out_up, det_out_down
 
-        elif self.config_method.startswith('single_double('):
+        # if self.config_method.startswith('single('):
 
-            return torch.cat((detAup.unsqueeze(-1), det_single_up, det_double_up), dim=1),\
-                torch.cat((detAdown.unsqueeze(-1),
-                           det_single_down, det_double_down), dim=1)
+        #     return torch.cat((detAup.unsqueeze(-1), det_single_up), dim=1),\
+        #         torch.cat((detAdown.unsqueeze(-1),
+        #                    det_single_down), dim=1)
+
+        # elif self.config_method.startswith('single_double('):
+
+        #     return torch.cat((detAup.unsqueeze(-1), det_single_up, det_double_up), dim=1),\
+        #         torch.cat((detAdown.unsqueeze(-1),
+        #                    det_single_down, det_double_down), dim=1)
 
     def kinetic(self, mo, bkin):
         """Computes the values of the kinetic energy
@@ -305,6 +320,7 @@ class SlaterPooling(nn.Module):
         """
 
         kin_up, kin_down = self.kinetic_unique_single_double(mo, bkin)
+
         return (kin_up[:, self.index_unique_excitation[0]] +
                 kin_down[:, self.index_unique_excitation[1]])
 
@@ -347,8 +363,12 @@ class SlaterPooling(nn.Module):
         kin_ground_up.unsqueeze_(-1)
         kin_ground_down.unsqueeze_(-1)
 
+        # store the kin terms we need
+        kin_out_up = kin_ground_up.clone()
+        kin_out_down = kin_ground_down.clone()
+
         if self.config_method == 'ground_state':
-            return kin_ground_up, kin_ground_down
+            return kin_out_up, kin_out_down
 
         # virtual orbital matrices spin up/down
         Avirt_up = mo[:, :self.nup, self.nup:self.index_max_orb_up]
@@ -387,6 +407,11 @@ class SlaterPooling(nn.Module):
             ksin_down *= -0.5
             ksin_down += kin_ground_down
 
+            # store the terms we need
+            kin_out_up = torch.cat((kin_out_up, ksin_up), dim=1)
+            kin_out_down = torch.cat(
+                (kin_out_down, ksin_down), dim=1)
+
         if do_double:
 
             kdbl_up = mat_exc_up.view(
@@ -408,11 +433,18 @@ class SlaterPooling(nn.Module):
             kdbl_down *= -0.5
             kdbl_down += kin_ground_down
 
-        if self.config_method.startswith('single('):
-            return torch.cat((kin_ground_up, ksin_up), dim=1), \
-                torch.cat((kin_ground_down, ksin_down), dim=1)
+            # store the terms we need
+            kin_out_up = torch.cat((kin_out_up, kdbl_up), dim=1)
+            kin_out_down = torch.cat(
+                (kin_out_down, kdbl_down), dim=1)
 
-        if self.config_method.startswith('single_double('):
-            return torch.cat((kin_ground_up, ksin_up, kdbl_up), dim=1), \
-                torch.cat(
-                    (kin_ground_down, ksin_down, kdbl_down), dim=1)
+        return kin_out_up, kin_out_down
+
+        # if self.config_method.startswith('single('):
+        #     return torch.cat((kin_ground_up, ksin_up), dim=1), \
+        #         torch.cat((kin_ground_down, ksin_down), dim=1)
+
+        # if self.config_method.startswith('single_double('):
+        #     return torch.cat((kin_ground_up, ksin_up, kdbl_up), dim=1), \
+        #         torch.cat(
+        #             (kin_ground_down, ksin_down, kdbl_down), dim=1)

@@ -3,6 +3,8 @@ from torch import nn
 from .electron_distance import ElectronDistance
 from ..utils import register_extra_attributes
 
+from time import time
+
 
 class TwoBodyJastrowFactor(nn.Module):
 
@@ -342,6 +344,9 @@ class TwoBodyJastrowFactor(nn.Module):
         self.index_partial_der_to_elec = torch.LongTensor(
             self.index_partial_der_to_elec)
 
+        if self.weight_partial_der.shape[0] == 0:
+            self.weight_partial_der = 1.
+
     def _single_index(self, i, j):
         n = self.nelec
         return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
@@ -360,16 +365,17 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor:
         """
+
         nbatch = djast.shape[0]
         if out_mat is None:
             out_mat = torch.zeros(nbatch, self.nelec)
 
-        x = djast[..., self.index_partial_der]
-        x = x.prod(-1)
-        x *= self.weight_partial_der
-        x = x.sum(1)
-
-        out_mat.index_add_(1, self.index_partial_der_to_elec, x)
+        if len(self.index_partial_der) > 0:
+            x = djast[..., self.index_partial_der]
+            x = x.prod(-1)
+            x *= self.weight_partial_der
+            x = x.sum(1)
+            out_mat.index_add_(1, self.index_partial_der_to_elec, x)
 
         return out_mat
 

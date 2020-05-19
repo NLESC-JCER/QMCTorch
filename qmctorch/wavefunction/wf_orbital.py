@@ -7,6 +7,7 @@ from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
 from .fast_jastrow import TwoBodyJastrowFactor
+#from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
@@ -217,8 +218,12 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
+        from time import time
 
+        t0 = time()
         mo = self._get_mo_vals(x)
+
+        t0 = time()
         bkin = self.get_kinetic_operator(x, mo=mo)
 
         if kinpool:
@@ -226,9 +231,11 @@ class Orbital(WaveFunction):
             return self.fc(kin) / self.fc(psi)
 
         else:
+            t0 = time()
             kin = self.pool.kinetic(mo, bkin)
             psi = self.pool(mo)
-            return self.fc(kin * psi) / self.fc(psi)
+            out = self.fc(kin * psi) / self.fc(psi)
+            return out
 
     def get_kinetic_operator(self, x, mo=None):
         """Compute the Bkin matrix
@@ -239,13 +246,11 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: matrix of the kinetic operator
         """
-        from time import time
 
         if mo is None:
             mo = self._get_mo_vals(x)
 
         bkin = self._get_mo_vals(x, derivative=2)
-
         djast_dmo, d2jast_mo = None, None
 
         if self.use_jastrow:

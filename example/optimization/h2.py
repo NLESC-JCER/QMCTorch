@@ -21,14 +21,14 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='cas(2,2)',
+             configs='single_double(2,2)',
              use_jastrow=True)
 
 wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(nwalkers=2000,
-                     nstep=2000, step_size=0.2,
+sampler = Metropolis(nwalkers=200,
+                     nstep=200, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
@@ -61,7 +61,7 @@ solver.configure_resampling(mode='update',
 solver.ortho_mo = False
 obs = solver.run(250, batchsize=None,
                  loss='energy',
-                 grad='manual',
+                 grad='auto',
                  clip_loss=False)
 
 plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)

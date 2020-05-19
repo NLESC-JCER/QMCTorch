@@ -100,33 +100,70 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
     Returns:
         torch.tensor: values of the harmonics at the sampling points
     """
-
+    kmax = 3
     if derivative == 0:
 
         k = torch.stack((kx, ky, kz)).transpose(0, 1)
 
-        if k.max() < 3:
+        if k.max() < kmax:
             return fast_power(xyz, k).prod(-1)
-
         else:
             return (xyz**k).prod(-1)
 
     elif derivative == 1:
 
-        kxm1 = kx - 1
-        kxm1[kxm1 < 0] = 0
-        dx = kx * xyz[..., 0]**(kxm1) * \
-            xyz[..., 1]**ky * xyz[..., 2]**kz
+        if 0:
 
-        kym1 = ky - 1
-        kym1[kym1 < 0] = 0
-        dy = xyz[..., 0]**kx * ky * \
-            xyz[..., 1]**(kym1) * xyz[..., 2]**kz
+            kxm1 = kx - 1
+            kxm1[kxm1 < 0] = 0
 
-        kzm1 = kz - 1
-        kzm1[kzm1 < 0] = 0
-        dz = xyz[..., 0]**kx * xyz[..., 1]**ky * \
-            kz * xyz[..., 2]**(kzm1)
+            kym1 = ky - 1
+            kym1[kym1 < 0] = 0
+
+            kzm1 = kz - 1
+            kzm1[kzm1 < 0] = 0
+
+            k = torch.stack((kxm1, kym1, kzm1)).transpose(0, 1)
+            xyz_km1 = fast_power(xyz, k)
+
+            k = torch.stack((kx, ky, kz)).transpose(0, 1)
+            xyz_k = fast_power(xyz, k)
+
+            dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
+            dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
+            dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
+
+        else:
+
+            kxm1 = kx - 1
+            kxm1[kxm1 < 0] = 0
+            k = torch.stack((kxm1, ky, kz)).transpose(0, 1)
+
+            if k.max() < kmax:
+                dx = kx * fast_power(xyz, k).prod(-1)
+            else:
+                dx = kx * xyz[..., 0]**(kxm1) * \
+                    xyz[..., 1]**ky * xyz[..., 2]**kz
+
+            kym1 = ky - 1
+            kym1[kym1 < 0] = 0
+            k = torch.stack((kx, kym1, kz)).transpose(0, 1)
+
+            if k.max() < kmax:
+                dy = ky * fast_power(xyz, k).prod(-1)
+            else:
+                dy = xyz[..., 0]**kx * ky * \
+                    xyz[..., 1]**(kym1) * xyz[..., 2]**kz
+
+            kzm1 = kz - 1
+            kzm1[kzm1 < 0] = 0
+            k = torch.stack((kx, ky, kzm1)).transpose(0, 1)
+
+            if k.max() < kmax:
+                dz = kz * fast_power(xyz, k).prod(-1)
+            else:
+                dz = xyz[..., 0]**kx * xyz[..., 1]**ky * \
+                    kz * xyz[..., 2]**(kzm1)
 
         if jacobian:
             return dx + dy + dz
@@ -135,20 +172,60 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
 
     elif derivative == 2:
 
-        kxm2 = kx - 2
-        kxm2[kxm2 < 0] = 0
-        d2x = kx * (kx - 1) * xyz[..., 0]**(kxm2) * \
-            xyz[..., 1]**ky * xyz[..., 2]**kz
+        if 0:
+            # prepare the exponets
+            kxm2 = kx - 2
+            kxm2[kxm2 < 0] = 0
 
-        kym2 = ky - 2
-        kym2[kym2 < 0] = 0
-        d2y = xyz[..., 0]**kx * ky * \
-            (ky - 1) * xyz[..., 1]**(kym2) * xyz[..., 2]**kz
+            kym2 = ky - 2
+            kym2[kym2 < 0] = 0
 
-        kzm2 = kz - 2
-        kzm2[kzm2 < 0] = 0
-        d2z = xyz[..., 0]**kx * xyz[..., 1]**ky * \
-            kz * (kz - 1) * xyz[..., 2]**(kzm2)
+            kzm2 = kz - 2
+            kzm2[kzm2 < 0] = 0
+
+            k = torch.stack((kxm2, kym2, kzm2)).transpose(0, 1)
+            xyz_km2 = fast_power(xyz, k)
+
+            k = torch.stack((kx, ky, kz)).transpose(0, 1)
+            xyz_k = fast_power(xyz, k)
+
+            d2x = kx*(kx-1) * xyz_km2[..., 0] * \
+                xyz_k[..., 1] * xyz_k[..., 2]
+            d2y = ky*(ky-1) * xyz_k[..., 0] * \
+                xyz_km2[..., 1] * xyz_k[..., 2]
+            d2z = kz*(kz-1) * xyz_k[..., 0] * \
+                xyz_k[..., 1] * xyz_km2[..., 2]
+
+        else:
+
+            kxm2 = kx - 2
+            kxm2[kxm2 < 0] = 0
+            k = torch.stack((kxm2, ky, kz)).transpose(0, 1)
+
+            if k.max() < kmax:
+                d2x = kx*(kx-1)*fast_power(xyz, k).prod(-1)
+            else:
+                d2x = kx * (kx - 1) * xyz[..., 0]**(kxm2) * \
+                    xyz[..., 1]**ky * xyz[..., 2]**kz
+
+            kym2 = ky - 2
+            kym2[kym2 < 0] = 0
+            k = torch.stack((kx, kym2, kz)).transpose(0, 1)
+
+            if k.max() < kmax:
+                d2y = ky * (ky-1) * fast_power(xyz, k).prod(-1)
+            else:
+                d2y = xyz[..., 0]**kx * ky * \
+                    (ky - 1) * xyz[..., 1]**(kym2) * xyz[..., 2]**kz
+
+            kzm2 = kz - 2
+            kzm2[kzm2 < 0] = 0
+            k = torch.stack((kx, ky, kzm2)).transpose(0, 1)
+            if k.max() < kmax:
+                d2z = kz * (kz-1) * fast_power(xyz, k).prod(-1)
+            else:
+                d2z = xyz[..., 0]**kx * xyz[..., 1]**ky * \
+                    kz * (kz - 1) * xyz[..., 2]**(kzm2)
 
         return d2x + d2y + d2z
 
