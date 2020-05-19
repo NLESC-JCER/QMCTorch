@@ -140,13 +140,16 @@ class TwoBodyJastrowFactor(nn.Module):
 
         # pure second derivative terms
         prod_val = self._prod_unique_pairs(jast)
+
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
+
         hess_jast = 0.5 * (self._sum_unique_pairs(d2jast, axis=-1)
                            + self._sum_unique_pairs(d2jast, axis=-2))
 
         # mixed terms
-        djast = (self._get_der_jastrow_elements(r, dr))  # .sum(1)
+        djast = (self._get_der_jastrow_elements(r, dr))
+
         hess_jast += self._partial_derivative(
             djast, out_mat=hess_jast)
 
@@ -279,7 +282,6 @@ class TwoBodyJastrowFactor(nn.Module):
 
                     d1 = djast[..., i1, j1] * w1
                     d2 = djast[..., i2, j2] * w2
-
                     out_mat[..., idx] += (d1 * d2).sum(1)
 
         return out_mat

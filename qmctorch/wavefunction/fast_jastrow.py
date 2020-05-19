@@ -4,7 +4,7 @@ from .electron_distance import ElectronDistance
 from ..utils import register_extra_attributes
 
 
-class FastTwoBodyJastrowFactor(nn.Module):
+class TwoBodyJastrowFactor(nn.Module):
 
     def __init__(self, nup, ndown, w=1., cuda=False):
         """Computes the Pade-Jastrow factor
@@ -20,7 +20,7 @@ class FastTwoBodyJastrowFactor(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(FastTwoBodyJastrowFactor, self).__init__()
+        super(TwoBodyJastrowFactor, self).__init__()
 
         self.nup = nup
         self.ndown = ndown
@@ -41,6 +41,8 @@ class FastTwoBodyJastrowFactor(nn.Module):
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
         self.static_weight = self.get_static_weight()
+
+        self._get_index_partial_derivative()
 
     def get_mask_tri_up(self):
         """Get the mask to select the triangular up matrix
@@ -138,8 +140,10 @@ class FastTwoBodyJastrowFactor(nn.Module):
 
         elif derivative == 2:
 
-            dr = self.extract_tri_up(self.edist(pos, derivative=1))
-            d2r = self.extract_tri_up(self.edist(pos, derivative=2))
+            dr = self.extract_tri_up(self.edist(
+                pos, derivative=1)).view(nbatch, 3, -1)
+            d2r = self.extract_tri_up(self.edist(
+                pos, derivative=2)).view(nbatch, 3, -1)
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
     def _jastrow_derivative(self, r, dr, jast, jacobian):
@@ -191,16 +195,23 @@ class FastTwoBodyJastrowFactor(nn.Module):
             torch.tensor: diagonal hessian of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
+        nbatch = r.shape[0]
 
         # pure second derivative terms
         prod_val = jast.prod(1).unsqueeze(-1)
+
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
-        hess_jast = 0.5 * (self._sum_unique_pairs(d2jast, axis=-1)
-                           + self._sum_unique_pairs(d2jast, axis=-2))
+
+        # might cause problems with backward cause in place operation
+        hess_jast = torch.zeros(nbatch, self.nelec)
+        hess_jast.index_add_(1, self.index_row, d2jast)
+        hess_jast.index_add_(1, self.index_col, d2jast)
+        hess_jast *= 0.5
 
         # mixed terms
-        djast = (self._get_der_jastrow_elements(r, dr))  # .sum(1)
+        djast = (self._get_der_jastrow_elements(r, dr))
+
         hess_jast += self._partial_derivative(
             djast, out_mat=hess_jast)
 
@@ -293,6 +304,7 @@ class FastTwoBodyJastrowFactor(nn.Module):
         denom = 1. / (1.0 + self.weight * r_)
         denom2 = denom**2
         dr_square = dr**2
+
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom2
         c = - self.static_weight * self.weight * r_ * d2r * denom2
@@ -301,6 +313,38 @@ class FastTwoBodyJastrowFactor(nn.Module):
         e = self._get_der_jastrow_elements(r, dr)
 
         return a + b + c + d + e**2
+
+    def _get_index_partial_derivative(self):
+
+        self.index_partial_der = []
+        self.weight_partial_der = []
+        self.index_partial_der_to_elec = []
+
+        for idx in range(self.nelec):
+            index_pairs = [(idx, j, 1.) for j in range(
+                idx + 1, self.nelec)] + [(j, idx, -1.) for j in range(0, idx)]
+
+            for p1 in range(len(index_pairs) - 1):
+                i1, j1, w1 = index_pairs[p1]
+
+                for p2 in range(p1 + 1, len(index_pairs)):
+                    i2, j2, w2 = index_pairs[p2]
+
+                    idx1 = self._single_index(i1, j1)
+                    idx2 = self._single_index(i2, j2)
+
+                    self.index_partial_der.append([idx1, idx2])
+                    self.weight_partial_der.append(w1*w2)
+                    self.index_partial_der_to_elec.append(idx)
+
+        self.weight_partial_der = torch.tensor(
+            self.weight_partial_der)
+        self.index_partial_der_to_elec = torch.LongTensor(
+            self.index_partial_der_to_elec)
+
+    def _single_index(self, i, j):
+        n = self.nelec
+        return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
 
     def _partial_derivative(self, djast, out_mat=None):
         """Get the product of the mixed second deriative terms.
@@ -316,25 +360,16 @@ class FastTwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor:
         """
-
+        nbatch = djast.shape[0]
         if out_mat is None:
-            nbatch = djast.shape[0]
             out_mat = torch.zeros(nbatch, self.nelec)
 
-        for idx in range(self.nelec):
+        x = djast[..., self.index_partial_der]
+        x = x.prod(-1)
+        x *= self.weight_partial_der
+        x = x.sum(1)
 
-            index_pairs = [(idx, j, 1) for j in range(
-                idx + 1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
-
-            for p1 in range(len(index_pairs) - 1):
-                i1, j1, w1 = index_pairs[p1]
-                for p2 in range(p1 + 1, len(index_pairs)):
-                    i2, j2, w2 = index_pairs[p2]
-
-                    d1 = djast[..., i1, j1] * w1
-                    d2 = djast[..., i2, j2] * w2
-
-                    out_mat[..., idx] += (d1 * d2).sum(1)
+        out_mat.index_add_(1, self.index_partial_der_to_elec, x)
 
         return out_mat
 

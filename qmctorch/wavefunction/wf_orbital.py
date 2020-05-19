@@ -6,7 +6,7 @@ from .slater_pooling import SlaterPooling
 from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
-from .jastrow import TwoBodyJastrowFactor
+from .fast_jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
