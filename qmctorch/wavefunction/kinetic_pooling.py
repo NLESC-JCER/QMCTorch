@@ -24,12 +24,11 @@ class KineticPooling(nn.Module):
         self.ndown = mol.ndown
         self.nelec = self.nup + self.ndown
 
-        self.orb_proj = OrbitalProjector(configs, mol)
+        self.orb_proj = OrbitalProjector(configs, mol, cuda=cuda)
 
+        self.device = torch.device('cpu')
         if cuda:
             self.device = torch.device('cuda')
-            self.orb_proj.Pup = self.orb_proj.Pup.to(self.device)
-            self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, MO, d2MO, dJdMO=None, d2JMO=None):
         """Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
