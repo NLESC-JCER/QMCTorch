@@ -90,10 +90,10 @@ class TwoBodyJastrowFactor(nn.Module):
         bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
                            torch.ones(self.ndown, self.ndown)), dim=1)
 
-        static_weight = torch.cat((bup, bdown), dim=0)
+        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
         static_weight = static_weight.masked_select(self.mask_tri_up)
 
-        return static_weight.to(self.device)
+        return static_weight
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -340,14 +340,26 @@ class TwoBodyJastrowFactor(nn.Module):
                     self.index_partial_der_to_elec.append(idx)
 
         self.weight_partial_der = torch.tensor(
-            self.weight_partial_der)
+            self.weight_partial_der).to(self.device)
+
         self.index_partial_der_to_elec = torch.LongTensor(
-            self.index_partial_der_to_elec)
+            self.index_partial_der_to_elec).to(self.device)
 
         if self.weight_partial_der.shape[0] == 0:
             self.weight_partial_der = 1.
 
     def _single_index(self, i, j):
+        """Compute the from the i,j index of a [nelec, nelec] matrix
+        the index of a 1D array spanning the upper diagonal of the matrix.
+
+            ij                  k
+
+        00 01 02 03         . 0 1 2
+        10 11 12 13         . . 3 4
+        20 21 22 23         . . . 5    
+        31 31 32 33         . . . . 
+
+        """
         n = self.nelec
         return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
 
@@ -378,49 +390,3 @@ class TwoBodyJastrowFactor(nn.Module):
             out_mat.index_add_(1, self.index_partial_der_to_elec, x)
 
         return out_mat
-
-    def _prod_unique_pairs(self, mat, not_el=None):
-        """Compute the product of the lower mat elements
-
-        Args:
-            mat (torch.tensor): input matrix [..., N x N]
-            not_el (tuple(i,j), optional):
-                single element(s) to exclude of the product.
-                Defaults to None.
-
-        Returns:
-            torch.tensor : value of the product
-        """
-
-        mat_cpy = mat.clone()
-        if not_el is not None:
-
-            if not isinstance(not_el, list):
-                not_el = [not_el]
-
-            for _el in not_el:
-                i, j = _el
-                mat_cpy[..., i, j] = 1
-
-        return mat_cpy[..., torch.tril(torch.ones(
-            self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
-
-    def _sum_unique_pairs(self, mat, axis=None):
-        """Sum the unique pairs of the lower triangluar matrix
-
-        Args:
-            mat (torch.tensor): input matrix [..., N x N]
-            axis (int, optional): index of the axis to sum. Defaults to None.
-
-        Returns:
-            torch.tensor:
-        """
-
-        mat_cpy = mat.clone()
-        mat_cpy[..., torch.tril(torch.ones(
-            self.nelec, self.nelec)) == 1] = 0
-
-        if axis is None:
-            return mat_cpy.sum()
-        else:
-            return mat_cpy.sum(axis)
