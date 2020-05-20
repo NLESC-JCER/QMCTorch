@@ -168,7 +168,7 @@ class TwoBodyJastrowFactor(nn.Module):
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
-            out = torch.zeros(nbatch, self.nelec)
+            out = torch.zeros(nbatch, self.nelec).to(self.device)
             out.index_add_(1, self.index_row, djast)
             out.index_add_(1, self.index_col, -djast)
 
@@ -179,7 +179,7 @@ class TwoBodyJastrowFactor(nn.Module):
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
-            out = torch.zeros(nbatch, 3, self.nelec)
+            out = torch.zeros(nbatch, 3, self.nelec).to(self.device)
             out.index_add_(2, self.index_row, djast)
             out.index_add_(2, self.index_col, -djast)
 
@@ -206,7 +206,7 @@ class TwoBodyJastrowFactor(nn.Module):
             r, dr, d2r).sum(1)
 
         # might cause problems with backward cause in place operation
-        hess_jast = torch.zeros(nbatch, self.nelec)
+        hess_jast = torch.zeros(nbatch, self.nelec).to(self.device)
         hess_jast.index_add_(1, self.index_row, d2jast)
         hess_jast.index_add_(1, self.index_col, d2jast)
         hess_jast *= 0.5
@@ -380,7 +380,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
         nbatch = djast.shape[0]
         if out_mat is None:
-            out_mat = torch.zeros(nbatch, self.nelec)
+            out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
 
         if len(self.index_partial_der) > 0:
             x = djast[..., self.index_partial_der]
