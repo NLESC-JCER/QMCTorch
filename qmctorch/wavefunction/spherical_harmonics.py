@@ -119,16 +119,17 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
 
     elif derivative == 1:
 
-        km1 = k
+        km1 = k-1
         km1[km1 < 0] = 0
 
-        if k.max() < 3:
-            xyz_km1 = fast_power(xyz, km1, mask0, mask1)
-            xyz_k = fast_power(xyz, k, mask0, mask1)
+        if k.max() < 0:
+            xyz_km1 = fast_power(xyz, km1, mask0, mask2)
+            xyz_k = fast_power(xyz, k, mask0, mask2)
         else:
             xyz_km1 = (xyz**km1)
             xyz_k = (xyz**k)
 
+        kx, ky, kz = k.transpose(0, 1)
         dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
         dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
         dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
@@ -144,12 +145,14 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         km2 = k - 2
         km2[km2 < 0] = 0
 
-        if k.max() < 3:
-            xyz_km2 = fast_power(xyz, km2, mask0, mask1)
-            xyz_k = fast_power(xyz, k, mask0, mask1)
+        if k.max() < 0:
+            xyz_km2 = fast_power(xyz, km2, mask0, mask2)
+            xyz_k = fast_power(xyz, k, mask0, mask2)
         else:
             xyz_km2 = (xyz**km2)
             xyz_k = (xyz**k)
+
+        kx, ky, kz = k.transpose(0, 1)
 
         d2x = kx*(kx-1) * xyz_km2[..., 0] * \
             xyz_k[..., 1] * xyz_k[..., 2]
