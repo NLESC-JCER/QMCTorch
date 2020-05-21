@@ -122,9 +122,9 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         km1 = k-1
         km1[km1 < 0] = 0
 
-        if k.max() < 0:
-            xyz_km1 = fast_power(xyz, km1, mask0, mask2)
-            xyz_k = fast_power(xyz, k, mask0, mask2)
+        if k.max() < kmax:
+            xyz_km1 = fast_power(xyz, km1)
+            xyz_k = fast_power(xyz, k,  mask0, mask2)
         else:
             xyz_km1 = (xyz**km1)
             xyz_k = (xyz**k)
@@ -145,8 +145,8 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         km2 = k - 2
         km2[km2 < 0] = 0
 
-        if k.max() < 0:
-            xyz_km2 = fast_power(xyz, km2, mask0, mask2)
+        if k.max() < kmax:
+            xyz_km2 = fast_power(xyz, km2)
             xyz_k = fast_power(xyz, k, mask0, mask2)
         else:
             xyz_km2 = (xyz**km2)
