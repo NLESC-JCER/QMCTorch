@@ -8,7 +8,7 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'fast_power',
            'InterpolateMolecularOrbitals',
            'InterpolateAtomicOribtals',
-           'btrace', 'bdet2', 'bproj']
+           'btrace', 'bdet2', 'bproj', 'timeit', 'timeline']
 
 from .plot_data import (plot_energy, plot_data, plot_block,
                         plot_walkers_traj)
@@ -25,3 +25,5 @@ from .interpolate import (InterpolateMolecularOrbitals,
                           InterpolateAtomicOribtals)
 
 from .algebra_utils import (btrace, bproj, bdet2)
+
+from .time_utils import timeit, timeline

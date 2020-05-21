@@ -47,8 +47,6 @@ class SlaterPooling(nn.Module):
         self.device = torch.device('cpu')
         if cuda:
             self.device = torch.device('cuda')
-            # self.orb_proj.Pup = self.orb_proj.Pup.to(self.device)
-            # self.orb_proj.Pdown = self.orb_proj.Pdown.to(self.device)
 
     def forward(self, input):
         """Computes the values of the determinats

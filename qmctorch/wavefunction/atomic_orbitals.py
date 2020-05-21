@@ -7,10 +7,8 @@ from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, logspace,
                                  interpolator_reg_grid,
                                  interpolate_reg_grid)
-
-from scipy.interpolate import RegularGridInterpolator as RegInterp
 from time import time
-import numpy as np
+import logging
 
 
 class AtomicOrbitals(nn.Module):
@@ -160,36 +158,35 @@ class AtomicOrbitals(nn.Module):
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
-        # t0 = time()
+        #t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
-
-        # print('xyz : ', time()-t0)
+        #print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
+        #t0 = time()
         r = torch.sqrt((xyz*xyz).sum(3))
-        # print('r : ', time()-t0)
+        #print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
+        #t0 = time()
         R = self.radial(r, self.bas_n, self.bas_exp)
-        # print('R : ', time()-t0)
+        #print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
-        # t0 = time()
+        #t0 = time()
         Y = self.harmonics(xyz)
-        # print('Y : ', time()-t0)
+        #print('Y : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
-            # t0 = time()
+            #t0 = time()
             bas = R * Y
-            # print('bas : ', time()-t0)
+            #print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
@@ -230,21 +227,22 @@ class AtomicOrbitals(nn.Module):
 
         # product with coefficients and primitives norm
         if jacobian:
-            # t0 = time()
+            #t0 = time()
             # -> (Nbatch,Nelec,Nbas)
-            bas = self.norm_cst * self.bas_coeffs * bas
+
+            bas = self.norm_cst * bas
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
             if self.contract:
+                bas = self.bas_coeffs * bas
                 ao = torch.zeros(nbatch, self.nelec,
                                  self.norb, device=self.device).type(torch.get_default_dtype())
-
                 ao.index_add_(2, self.index_ctr, bas)
 
             else:
                 ao = bas
-            # print('add : ', time()-t0)
+            #print('add : ', time()-t0)
 
         else:
             # t0 = time()
@@ -290,67 +288,3 @@ class AtomicOrbitals(nn.Module):
         ao_new[:, idelec, :] = self.forward(
             pos[:, ids:ide], one_elec=True).squeeze(1)
         return ao_new
-
-    # def get_interpolator(self, n=6, length=2):
-    #     """evaluate the interpolation function."""
-
-    #     xpts = logspace(n, length)
-    #     nxpts = len(xpts)
-
-    #     grid = np.stack(np.meshgrid(
-    #         xpts, xpts, xpts, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
-    #     grid = torch.tensor(grid)
-
-    #     def func(x):
-    #         nbatch = x.shape[0]
-    #         xyz = x.view(-1, 1, 1, 3).expand(-1, 1, self.nbas, 3)
-    #         r = torch.sqrt((xyz**2).sum(3))
-    #         R = self.radial(r, self.bas_n, self.bas_exp)
-    #         Y = self.harmonics(xyz)
-    #         bas = R * Y
-    #         bas = self.norm_cst * self.bas_coeffs * bas
-    #         ao = torch.zeros(nbatch, self.nelec,
-    #                          self.norb, device=self.device)
-    #         ao.index_add_(2, self.index_ctr, bas)
-    #         return ao
-
-    #     data = func(grid).detach().numpy()
-    #     data = data.reshape(nxpts, nxpts, nxpts, -1)
-
-    #     self.interp_func = [RegInterp((xpts, xpts, xpts),
-    #                                   data[..., i],
-    #                                   method='linear',
-    #                                   bounds_error=False,
-    #                                   fill_value=0.) for i in range(self.norb)]
-
-    # def interpolate(self, pos):
-    #     """Interpolate the values of the ao at pos
-
-    #     Args:
-    #         pos (torch.tensor): positions of the walkers (Nbatch, 3*Nelec)
-
-    #     Returns:
-    #         torch.tensor: values of the ao (Nbatch, Nelec, Nao)
-    #     """
-
-    #     if not hasattr(self, 'interp_func'):
-    #         t0 = time()
-    #         self.get_interpolator()
-    #         print('___', time()-t0)
-
-    #     t0 = time()
-    #     bas_coords = self.atom_coords.repeat_interleave(
-    #         self.nshells, dim=0)
-    #     print('___bas ', time()-t0)
-
-    #     t0 = time()
-    #     xyz = (pos.view(-1, self.nelec, 1, self.ndim) -
-    #            bas_coords[None, ...]).detach().numpy()
-    #     print('___ xyz', time()-t0)
-
-    #     t0 = time()
-    #     data = np.array([self.interp_func[ibas](xyz[:, :, irob, :])
-    #                      for iorb in range(self.norb)])
-    #     print('___ data', time()-t0)
-
-    #     return torch.tensor(data.transpose(1, 2, 0))

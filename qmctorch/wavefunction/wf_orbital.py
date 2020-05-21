@@ -13,6 +13,7 @@ from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
                                  interpolator_reg_grid, interpolate_reg_grid,
                                  interpolator_irreg_grid, interpolate_irreg_grid)
+from qmctorch.utils import timeit
 
 
 class Orbital(WaveFunction):
@@ -138,14 +139,13 @@ class Orbital(WaveFunction):
             >>> pos = torch.rand(500,6)
             >>> vals = wf(pos)
         """
-
+        from time import time
         if self.use_jastrow:
             J = self.jastrow(x)
 
         # atomic orbital
         if ao is None:
             x = self.ao(x)
-
         else:
             x = ao
 
