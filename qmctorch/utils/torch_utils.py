@@ -25,18 +25,23 @@ def fast_power(x, k, mask0=None, mask2=None):
     Returns:
         torch.tensor: x**k
     """
+    kmax = 3
+    if k.max() < kmax:
 
-    out = x.clone()
+        out = x.clone()
 
-    if mask0 is None:
-        mask0 = k == 0
+        if mask0 is None:
+            mask0 = k == 0
 
-    out.masked_fill_(mask0, 1)
+        out.masked_fill_(mask0, 1)
 
-    if k.max() > 1:
-        if mask2 is None:
-            mask2 = k == 2
-        out[..., mask2] *= out[..., mask2]
+        if k.max() > 1:
+            if mask2 is None:
+                mask2 = k == 2
+            out[..., mask2] *= out[..., mask2]
+
+    else:
+        out = x**k
 
     return out
 
