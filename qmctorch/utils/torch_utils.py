@@ -21,9 +21,11 @@ def fast_power(x, k, mask0=None, mask2=None):
     Args:
         x (torch.tensor): input
         k (torch.tensor): exponents
+        mask0 (torch.tensor): precomputed mask of the elements of that are 0 (Defaults to None and computed here)
+        mask2 (torch.tensor): precomputed mask of the elements of that are 2 (Defaults to None and computed here)
 
     Returns:
-        torch.tensor: x**k
+        torch.tensor: values of x**k
     """
     kmax = 3
     if k.max() < kmax:

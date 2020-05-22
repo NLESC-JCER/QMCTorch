@@ -9,6 +9,7 @@ class OrbitalProjector(object):
         Args:
             configs (list): configurations of the slater determinants
             mol (Molecule): Molecule object
+            cuda (bool): use cuda or not
         """
 
         self.configs = configs
@@ -66,6 +67,7 @@ class ExcitationMask(object):
             unique_excitations (list): the list of unique excitations
             mol (Molecule): Molecule object
             max_orb (list): the max index of each orb for each spin
+            cuda (bool): use cuda or not
         """
 
         self.unique_excitations = unique_excitations

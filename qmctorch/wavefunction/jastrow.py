@@ -74,7 +74,6 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
         """
-        from time import time
 
         if not jacobian:
             assert(derivative == 1)

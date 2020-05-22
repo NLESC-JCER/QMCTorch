@@ -23,21 +23,14 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
 
     if derivative == 0:
 
-        if bas_n.max() < 3:
-            rn = fast_power(R, bas_n)
-        else:
-            rn = R**bas_n
-
+        rn = fast_power(R, bas_n)
         expr = torch.exp(-bas_exp * R)
 
         return rn * expr
 
     elif derivative > 0:
 
-        if bas_n.max() < 3:
-            rn = fast_power(R, bas_n)
-        else:
-            rn = R**bas_n
+        rn = fast_power(R, bas_n)
         nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
 
         er = torch.exp(-bas_exp * R)
@@ -92,18 +85,14 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
 
     if derivative == 0:
 
-        if bas_n.max() < 3:
-            rn = fast_power(R, bas_n)
-        else:
-            rn = R**bas_n
-
+        rn = fast_power(R, bas_n)
         expr = torch.exp(-bas_exp * R*R)
 
         return rn * expr
 
     elif derivative > 0:
 
-        rn = R**(bas_n)
+        rn = fast_power(R, bas_n)
         nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
 
         er = torch.exp(-bas_exp * R**2)

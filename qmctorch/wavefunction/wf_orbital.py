@@ -30,7 +30,8 @@ class Orbital(WaveFunction):
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
             use_jastrow (bool, optional): turn jastrow factor ON/OFF. Defaults to True.
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
-
+            include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
+                                             popualted in the configs. Defaults to False
         Examples::
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
             >>> wf = Orbital(mol, configs='cas(2,2)')
@@ -139,7 +140,7 @@ class Orbital(WaveFunction):
             >>> pos = torch.rand(500,6)
             >>> vals = wf(pos)
         """
-        from time import time
+
         if self.use_jastrow:
             J = self.jastrow(x)
 
@@ -214,16 +215,13 @@ class Orbital(WaveFunction):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
-        from time import time
 
-        t0 = time()
         mo = self._get_mo_vals(x)
-
-        t0 = time()
         bkin = self.get_kinetic_operator(x, mo=mo)
 
         if kinpool:
@@ -231,7 +229,6 @@ class Orbital(WaveFunction):
             return self.fc(kin) / self.fc(psi)
 
         else:
-            t0 = time()
             kin = self.pool.kinetic(mo, bkin)
             psi = self.pool(mo)
             out = self.fc(kin * psi) / self.fc(psi)
@@ -242,6 +239,7 @@ class Orbital(WaveFunction):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            mo (torch.tensor, optional): precomputed values of the MOs
 
         Returns:
             torch.tensor: matrix of the kinetic operator

@@ -100,34 +100,26 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
     Args:
         xyz (torch.tensor): distance between sampling points and orbital centers \n
                             size : (Nbatch, Nelec, Nbas, Ndim)
-        kx (torch.tensor): x exponents
-        ky (torch.tensor): y exponents
-        kz (torch.tensor): z exponents
+        k (torch.tensor): (kx,ky,kz) exponents
+        mask0 (torch.tensor): precomputed mask of k=0
+        mask2 (torch.tensor): precomputed mask of k=2
         derivative (int, optional): degree of the derivative. Defaults to 0.
         jacobian (bool, optional): returns the sum of the derivative if True. Defaults to True.
 
     Returns:
         torch.tensor: values of the harmonics at the sampling points
     """
-    kmax = 3
-    if derivative == 0:
 
-        if k.max() < kmax:
-            return fast_power(xyz, k, mask0, mask2).prod(-1)
-        else:
-            return (xyz**k).prod(-1)
+    if derivative == 0:
+        return fast_power(xyz, k, mask0, mask2).prod(-1)
 
     elif derivative == 1:
 
         km1 = k-1
         km1[km1 < 0] = 0
 
-        if k.max() < kmax:
-            xyz_km1 = fast_power(xyz, km1)
-            xyz_k = fast_power(xyz, k,  mask0, mask2)
-        else:
-            xyz_km1 = (xyz**km1)
-            xyz_k = (xyz**k)
+        xyz_km1 = fast_power(xyz, km1)
+        xyz_k = fast_power(xyz, k,  mask0, mask2)
 
         kx, ky, kz = k.transpose(0, 1)
         dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
@@ -145,12 +137,8 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         km2 = k - 2
         km2[km2 < 0] = 0
 
-        if k.max() < kmax:
-            xyz_km2 = fast_power(xyz, km2)
-            xyz_k = fast_power(xyz, k, mask0, mask2)
-        else:
-            xyz_km2 = (xyz**km2)
-            xyz_k = (xyz**k)
+        xyz_km2 = fast_power(xyz, km2)
+        xyz_k = fast_power(xyz, k, mask0, mask2)
 
         kx, ky, kz = k.transpose(0, 1)
 
