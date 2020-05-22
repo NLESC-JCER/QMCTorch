@@ -6,16 +6,23 @@ from .slater_pooling import SlaterPooling
 from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
-from .jastrow import TwoBodyJastrowFactor
+from .fast_jastrow import TwoBodyJastrowFactor
+#from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
+from ..utils.interpolate import (get_reg_grid, get_log_grid,
+                                 interpolator_reg_grid, interpolate_reg_grid,
+                                 interpolator_irreg_grid, interpolate_irreg_grid)
+from qmctorch.utils import timeit
 
 
 class Orbital(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi', use_jastrow=True, cuda=False):
-        """Implementation of the QMC Network. 
+                 kinetic='jacobi',
+                 use_jastrow=True, cuda=False,
+                 include_all_mo=True):
+        """Implementation of the QMC Network.
 
         Args:
             mol (qmc.wavefunction.Molecule): a molecule object
@@ -23,7 +30,8 @@ class Orbital(WaveFunction):
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
             use_jastrow (bool, optional): turn jastrow factor ON/OFF. Defaults to True.
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
-
+            include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
+                                             popualted in the configs. Defaults to False
         Examples::
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
             >>> wf = Orbital(mol, configs='cas(2,2)')
@@ -40,20 +48,30 @@ class Orbital(WaveFunction):
         self.atoms = mol.atoms
         self.natom = mol.natom
 
+        # define the SD we want
+        self.orb_confs = OrbitalConfigurations(mol)
+        self.configs_method = configs
+        self.configs = self.orb_confs.get_configs(configs)
+        self.nci = len(self.configs[0])
+        self.highest_occ_mo = torch.stack(self.configs).max()+1
+
         # define the atomic orbital layer
         self.ao = AtomicOrbitals(mol, cuda)
 
         # define the mo layer
+        self.include_all_mo = include_all_mo
+        self.nmo_opt = mol.basis.nmo if include_all_mo else self.highest_occ_mo
         self.mo_scf = nn.Linear(
-            mol.basis.nao, mol.basis.nmo, bias=False)
+            mol.basis.nao, self.nmo_opt, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
         self.mo_scf.weight.requires_grad = False
         if self.cuda:
             self.mo_scf.to(self.device)
 
         # define the mo mixing layer
-        self.mo = nn.Linear(mol.basis.nmo, mol.basis.nmo, bias=False)
-        self.mo.weight = nn.Parameter(torch.eye(mol.basis.nmo))
+        self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
+        self.mo.weight = nn.Parameter(
+            torch.eye(mol.basis.nmo, self.nmo_opt))
         if self.cuda:
             self.mo.to(self.device)
 
@@ -62,15 +80,9 @@ class Orbital(WaveFunction):
         self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
                                             w=1., cuda=cuda)
 
-        # define the SD we want
-        self.orb_confs = OrbitalConfigurations(mol)
-        self.configs_method = configs
-        self.configs = self.orb_confs.get_configs(configs)
-        self.nci = len(self.configs[0])
-
         #  define the SD pooling layer
-        self.pool = SlaterPooling(
-            self.configs, mol, cuda)
+        self.pool = SlaterPooling(self.configs_method,
+                                  self.configs, mol, cuda)
 
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula
@@ -101,6 +113,8 @@ class Orbital(WaveFunction):
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(self.mol.basis.mos).type(
             torch.get_default_dtype())
+        if not self.include_all_mo:
+            mo_coeff = mo_coeff[:, :self.highest_occ_mo]
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
@@ -133,7 +147,6 @@ class Orbital(WaveFunction):
         # atomic orbital
         if ao is None:
             x = self.ao(x)
-
         else:
             x = ao
 
@@ -193,7 +206,7 @@ class Orbital(WaveFunction):
             + self.electronic_potential(pos) \
             + self.nuclear_repulsion()
 
-    def kinetic_energy_jacobi(self, x, **kwargs):
+    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
         """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -202,13 +215,40 @@ class Orbital(WaveFunction):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
 
         mo = self._get_mo_vals(x)
-        d2mo = self._get_mo_vals(x, derivative=2)
+        bkin = self.get_kinetic_operator(x, mo=mo)
+
+        if kinpool:
+            kin, psi = self.kinpool(mo, bkin)
+            return self.fc(kin) / self.fc(psi)
+
+        else:
+            kin = self.pool.kinetic(mo, bkin)
+            psi = self.pool(mo)
+            out = self.fc(kin * psi) / self.fc(psi)
+            return out
+
+    def get_kinetic_operator(self, x, mo=None):
+        """Compute the Bkin matrix
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            mo (torch.tensor, optional): precomputed values of the MOs
+
+        Returns:
+            torch.tensor: matrix of the kinetic operator
+        """
+
+        if mo is None:
+            mo = self._get_mo_vals(x)
+
+        bkin = self._get_mo_vals(x, derivative=2)
         djast_dmo, d2jast_mo = None, None
 
         if self.use_jastrow:
@@ -220,14 +260,14 @@ class Orbital(WaveFunction):
             dao = self.ao(x, derivative=1,
                           jacobian=False).transpose(2, 3)
             dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
-            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
 
+            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
             d2jast = self.jastrow(x, derivative=2) / jast
             d2jast_mo = d2jast.unsqueeze(-1) * mo
 
-        kin, psi = self.kinpool(mo, d2mo, djast_dmo, d2jast_mo)
+            bkin += 2 * djast_dmo + d2jast_mo
 
-        return self.fc(kin) / self.fc(psi)
+        return bkin
 
     def nuclear_potential(self, pos):
         """Computes the electron-nuclear term

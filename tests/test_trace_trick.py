@@ -227,7 +227,7 @@ class TestTrace(unittest.TestCase):
 
     def setUp(self):
 
-        atom_str = 'C 0 0 -0.69; O 0 0 0.69'
+        atom_str = 'O 0 0 -0.69; C 0 0 0.69'
         self.m = gto.M(atom=atom_str, basis='sto-3g', unit='bohr')
         self.mol = Molecule(atom=atom_str, calculator='pyscf',
                             basis='sto-3g', unit='bohr')
@@ -241,12 +241,14 @@ class TestTrace(unittest.TestCase):
         """Test the values of the AO derivative."""
         dAO = self.wf.ao(self.x, derivative=1).sum()
         dAO_auto = self.wf.first_der_autograd(self.x).sum()
+        print(dAO, dAO_auto)
         assert(torch.allclose(dAO, dAO_auto))
 
     def test_ao_2der(self):
         """Test the values of the AO 2nd derivative."""
         d2AO = self.wf.ao(self.x, derivative=2).sum()
         d2AO_auto = self.wf.second_der_autograd(self.x).sum()
+        print(d2AO, d2AO_auto)
         assert(torch.allclose(d2AO, d2AO_auto))
 
     def test_mo_2der(self):

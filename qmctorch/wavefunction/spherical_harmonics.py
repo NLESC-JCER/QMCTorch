@@ -1,4 +1,5 @@
 import torch
+from ..utils import fast_power
 
 
 class Harmonics(object):
@@ -45,12 +46,18 @@ class Harmonics(object):
             self.bas_m = torch.tensor(kwargs['bas_m']).to(self.device)
 
         elif self.type == 'cart':
+
             self.bas_kx = torch.tensor(
                 kwargs['bas_kx']).to(self.device)
             self.bas_ky = torch.tensor(
                 kwargs['bas_ky']).to(self.device)
             self.bas_kz = torch.tensor(
                 kwargs['bas_kz']).to(self.device)
+
+            self.bas_k = torch.stack(
+                (self.bas_kx, self.bas_ky, self.bas_kz)).transpose(0, 1)
+            self.mask_bas_k0 = self.bas_k == 0
+            self.mask_bas_k2 = self.bas_k == 2
 
     def __call__(self, xyz, derivative=0, jacobian=True):
         """Computes the cartesian or spherical harmonics
@@ -72,7 +79,7 @@ class Harmonics(object):
         """
 
         if self.type == 'cart':
-            return CartesianHarmonics(xyz, self.bas_kx, self.bas_ky, self.bas_kz,
+            return CartesianHarmonics(xyz, self.bas_k, self.mask_bas_k0, self.mask_bas_k2,
                                       derivative, jacobian)
         elif self.type == 'sph':
             return SphericalHarmonics(
@@ -81,7 +88,7 @@ class Harmonics(object):
             raise ValueError('Harmonics type should be cart or sph')
 
 
-def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
+def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
     """Computes Real Cartesian Harmonics
 
     .. math::
@@ -90,9 +97,9 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
     Args:
         xyz (torch.tensor): distance between sampling points and orbital centers \n
                             size : (Nbatch, Nelec, Nbas, Ndim)
-        kx (torch.tensor): x exponents
-        ky (torch.tensor): y exponents
-        kz (torch.tensor): z exponents
+        k (torch.tensor): (kx,ky,kz) exponents
+        mask0 (torch.tensor): precomputed mask of k=0
+        mask2 (torch.tensor): precomputed mask of k=2
         derivative (int, optional): degree of the derivative. Defaults to 0.
         jacobian (bool, optional): returns the sum of the derivative if True. Defaults to True.
 
@@ -101,24 +108,20 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
     """
 
     if derivative == 0:
-        return xyz[..., 0]**kx * xyz[..., 1]**ky * xyz[..., 2]**kz
+        return fast_power(xyz, k, mask0, mask2).prod(-1)
 
     elif derivative == 1:
 
-        kxm1 = kx - 1
-        kxm1[kxm1 < 0] = 0
-        dx = kx * xyz[..., 0]**(kxm1) * \
-            xyz[..., 1]**ky * xyz[..., 2]**kz
+        km1 = k-1
+        km1[km1 < 0] = 0
 
-        kym1 = ky - 1
-        kym1[kym1 < 0] = 0
-        dy = xyz[..., 0]**kx * ky * \
-            xyz[..., 1]**(kym1) * xyz[..., 2]**kz
+        xyz_km1 = fast_power(xyz, km1)
+        xyz_k = fast_power(xyz, k,  mask0, mask2)
 
-        kzm1 = kz - 1
-        kzm1[kzm1 < 0] = 0
-        dz = xyz[..., 0]**kx * xyz[..., 1]**ky * \
-            kz * xyz[..., 2]**(kzm1)
+        kx, ky, kz = k.transpose(0, 1)
+        dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
+        dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
+        dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
 
         if jacobian:
             return dx + dy + dz
@@ -127,20 +130,21 @@ def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
 
     elif derivative == 2:
 
-        kxm2 = kx - 2
-        kxm2[kxm2 < 0] = 0
-        d2x = kx * (kx - 1) * xyz[..., 0]**(kxm2) * \
-            xyz[..., 1]**ky * xyz[..., 2]**kz
+        # prepare the exponets
+        km2 = k - 2
+        km2[km2 < 0] = 0
 
-        kym2 = ky - 2
-        kym2[kym2 < 0] = 0
-        d2y = xyz[..., 0]**kx * ky * \
-            (ky - 1) * xyz[..., 1]**(kym2) * xyz[..., 2]**kz
+        xyz_km2 = fast_power(xyz, km2)
+        xyz_k = fast_power(xyz, k, mask0, mask2)
 
-        kzm2 = kz - 2
-        kzm2[kzm2 < 0] = 0
-        d2z = xyz[..., 0]**kx * xyz[..., 1]**ky * \
-            kz * (kz - 1) * xyz[..., 2]**(kzm2)
+        kx, ky, kz = k.transpose(0, 1)
+
+        d2x = kx*(kx-1) * xyz_km2[..., 0] * \
+            xyz_k[..., 1] * xyz_k[..., 2]
+        d2y = ky*(ky-1) * xyz_k[..., 0] * \
+            xyz_km2[..., 1] * xyz_k[..., 2]
+        d2z = kz*(kz-1) * xyz_k[..., 0] * \
+            xyz_k[..., 1] * xyz_km2[..., 2]
 
         return d2x + d2y + d2z
 

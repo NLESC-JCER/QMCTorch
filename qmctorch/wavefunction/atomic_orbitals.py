@@ -4,6 +4,11 @@ from .radial_functions import radial_gaussian, radial_slater
 from .norm_orbital import atomic_orbital_norm
 from .spherical_harmonics import Harmonics
 from ..utils import register_extra_attributes
+from ..utils.interpolate import (get_reg_grid, logspace,
+                                 interpolator_reg_grid,
+                                 interpolate_reg_grid)
+from time import time
+import logging
 
 
 class AtomicOrbitals(nn.Module):
@@ -33,12 +38,15 @@ class AtomicOrbitals(nn.Module):
 
         # define the BAS positions.
         self.nshells = torch.tensor(mol.basis.nshells)
+        self.nao_per_atom = torch.tensor(mol.basis.nao_per_atom)
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
         self.nbas = len(self.bas_coords)
 
         # index for the contractions
         self.index_ctr = torch.tensor(mol.basis.index_ctr)
+        self.contract = not len(torch.unique(
+            self.index_ctr)) == len(self.index_ctr)
 
         # get the coeffs of the bas
         self.bas_coeffs = torch.tensor(
@@ -102,7 +110,7 @@ class AtomicOrbitals(nn.Module):
         .. math::
             \phi_i(r_j) = \sum_n c_n \\text{Rad}^{i}_n(r_j) \\text{Y}^{i}_n(r_j)
 
-        where Rad is the radial part and Y the spherical harmonics part. 
+        where Rad is the radial part and Y the spherical harmonics part.
         It is also possible to compute the first and second derivatives
 
         .. math::
@@ -150,34 +158,45 @@ class AtomicOrbitals(nn.Module):
 
         # get the x,y,z, distance component of each point from each RBF center
         # -> (Nbatch,Nelec,Nbas,Ndim)
+        #t0 = time()
         xyz = (input.view(-1, self.nelec, 1, self.ndim) -
                self.bas_coords[None, ...])
-        # print('xyz : ', time()-t0)
+        #print('xyz : ', time()-t0)
 
         # compute the distance
         # -> (Nbatch,Nelec,Nbas)
-        r = torch.sqrt((xyz**2).sum(3))
+        #t0 = time()
+        r = torch.sqrt((xyz*xyz).sum(3))
+        #print('r : ', time()-t0)
 
         # radial part
         # -> (Nbatch,Nelec,Nbas)
+        #t0 = time()
         R = self.radial(r, self.bas_n, self.bas_exp)
+        #print('R : ', time()-t0)
 
         # compute by the spherical harmonics
         # -> (Nbatch,Nelec,Nbas)
+        #t0 = time()
         Y = self.harmonics(xyz)
+        #print('Y : ', time()-t0)
 
         # values of AO
         # -> (Nbatch,Nelec,Nbas)
         if derivative == 0:
+            #t0 = time()
             bas = R * Y
+            #print('bas : ', time()-t0)
 
         # values of first derivative
         elif derivative == 1:
 
             # return the jacobian
             if jacobian:
+
                 dR = self.radial(
                     r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1)
+
                 dY = self.harmonics(xyz, derivative=1)
 
                 # -> (Nbatch,Nelec,Nbas)
@@ -196,27 +215,37 @@ class AtomicOrbitals(nn.Module):
 
             dR = self.radial(r, self.bas_n, self.bas_exp,
                              xyz=xyz, derivative=1, jacobian=False)
+
             dY = self.harmonics(xyz, derivative=1, jacobian=False)
 
             d2R = self.radial(
                 r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2)
+
             d2Y = self.harmonics(xyz, derivative=2)
 
             bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
 
         # product with coefficients and primitives norm
         if jacobian:
-
+            #t0 = time()
             # -> (Nbatch,Nelec,Nbas)
-            bas = self.norm_cst * self.bas_coeffs * bas
+
+            bas = self.norm_cst * bas
 
             # contract the basis
             # -> (Nbatch,Nelec,Norb)
-            ao = torch.zeros(nbatch, self.nelec,
-                             self.norb, device=self.device)
-            ao.index_add_(2, self.index_ctr, bas)
+            if self.contract:
+                bas = self.bas_coeffs * bas
+                ao = torch.zeros(nbatch, self.nelec,
+                                 self.norb, device=self.device).type(torch.get_default_dtype())
+                ao.index_add_(2, self.index_ctr, bas)
+
+            else:
+                ao = bas
+            #print('add : ', time()-t0)
 
         else:
+            # t0 = time()
             # -> (Nbatch,Nelec,Nbas, Ndim)
             bas = self.norm_cst.unsqueeze(-1) * \
                 self.bas_coeffs.unsqueeze(-1) * bas
@@ -224,8 +253,9 @@ class AtomicOrbitals(nn.Module):
             # contract the basis
             # -> (Nbatch,Nelec,Norb, Ndim)
             ao = torch.zeros(nbatch, self.nelec, self.norb,
-                             3, device=self.device)
+                             3, device=self.device).type(torch.get_default_dtype())
             ao.index_add_(2, self.index_ctr, bas)
+            # print('add : ', time()-t0)
 
         if one_elec:
             self.nelec = nelec_save

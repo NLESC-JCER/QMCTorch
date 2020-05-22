@@ -3,6 +3,8 @@ from torch import nn
 from .electron_distance import ElectronDistance
 from ..utils import register_extra_attributes
 
+from time import time
+
 
 class TwoBodyJastrowFactor(nn.Module):
 
@@ -34,20 +36,64 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.weight = nn.Parameter(torch.tensor([w]))
         self.weight.requires_grad = True
+        register_extra_attributes(self, ['weight'])
 
-        bup = torch.cat((0.25 * torch.ones(nup, nup), 0.5 *
-                         torch.ones(nup, ndown)), dim=1)
-
-        bdown = torch.cat((0.5 * torch.ones(ndown, nup), 0.25 *
-                           torch.ones(ndown, ndown)), dim=1)
-
-        self.static_weight = torch.cat(
-            (bup, bdown), dim=0).to(
-            self.device)
+        self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
-        register_extra_attributes(self, ['weight'])
+        self.static_weight = self.get_static_weight()
+
+        self._get_index_partial_derivative()
+
+    def get_mask_tri_up(self):
+        """Get the mask to select the triangular up matrix
+
+        Returns:
+            torch.tensor: mask of the tri up matrix
+        """
+        mask = torch.zeros(self.nelec, self.nelec).type(
+            torch.bool).to(self.device)
+        index_col, index_row = [], []
+        for i in range(self.nelec-1):
+            for j in range(i+1, self.nelec):
+                index_row.append(i)
+                index_col.append(j)
+                mask[i, j] = True
+
+        index_col = torch.LongTensor(index_col).to(self.device)
+        index_row = torch.LongTensor(index_row).to(self.device)
+        return mask, index_col, index_row
+
+    def extract_tri_up(self, input):
+        """extract the upper triangular elements
+
+        Args:
+            input (torch.tensor): input matrices (nbatch, n, n)
+
+        Returns:
+            torch.tensor: triangular up element (nbatch, -1)
+        """
+        nbatch = input.shape[0]
+        return input.masked_select(self.mask_tri_up).view(nbatch, -1)
+
+    def get_static_weight(self):
+        """Get the matrix of static weights
+
+        Returns:
+            torch.tensor: static weight (0.5 (0.25)for parallel(anti) spins
+        """
+
+        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
+                         torch.ones(self.nup, self.ndown)), dim=1)
+
+        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
+                           torch.ones(self.ndown, self.ndown)), dim=1)
+
+        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
+        static_weight = static_weight.masked_select(self.mask_tri_up)
+
+        return static_weight
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -74,28 +120,32 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
         """
+        from time import time
 
         if not jacobian:
             assert(derivative == 1)
 
         size = pos.shape
         assert size[1] == self.nelec * self.ndim
+        nbatch = size[0]
 
-        r = self.edist(pos)
+        r = self.extract_tri_up(self.edist(pos))
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-
-            return self._prod_unique_pairs(jast)
+            return jast.prod(1).view(nbatch, 1)
 
         elif derivative == 1:
-            dr = self.edist(pos, derivative=1)
+            dr = self.extract_tri_up(self.edist(
+                pos, derivative=1)).view(nbatch, 3, -1)
             return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
 
-            dr = self.edist(pos, derivative=1)
-            d2r = self.edist(pos, derivative=2)
+            dr = self.extract_tri_up(self.edist(
+                pos, derivative=1)).view(nbatch, 3, -1)
+            d2r = self.extract_tri_up(self.edist(
+                pos, derivative=2)).view(nbatch, 3, -1)
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
     def _jastrow_derivative(self, r, dr, jast, jacobian):
@@ -110,16 +160,28 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
+        nbatch = r.shape[0]
         if jacobian:
+
+            prod_val = jast.prod(1).unsqueeze(-1)
             djast = self._get_der_jastrow_elements(r, dr).sum(1)
-            prod_val = self._prod_unique_pairs(jast)
+            djast = djast * prod_val
+
+            # might cause problems with backward cause in place operation
+            out = torch.zeros(nbatch, self.nelec).to(self.device)
+            out.index_add_(1, self.index_row, djast)
+            out.index_add_(1, self.index_col, -djast)
 
         else:
-            djast = self._get_der_jastrow_elements(r, dr)
-            prod_val = self._prod_unique_pairs(jast).unsqueeze(-1)
 
-        out = (self._sum_unique_pairs(djast, axis=-1) -
-               self._sum_unique_pairs(djast, axis=-2)) * prod_val
+            prod_val = jast.prod(1).unsqueeze(-1).unsqueeze(-1)
+            djast = self._get_der_jastrow_elements(r, dr)
+            djast = djast * prod_val
+
+            # might cause problems with backward cause in place operation
+            out = torch.zeros(nbatch, 3, self.nelec).to(self.device)
+            out.index_add_(2, self.index_row, djast)
+            out.index_add_(2, self.index_col, -djast)
 
         return out
 
@@ -135,15 +197,19 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: diagonal hessian of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
+        nbatch = r.shape[0]
 
         # pure second derivative terms
-        prod_val = self._prod_unique_pairs(jast)
+        prod_val = jast.prod(1).unsqueeze(-1)
 
         d2jast = self._get_second_der_jastrow_elements(
             r, dr, d2r).sum(1)
 
-        hess_jast = 0.5 * (self._sum_unique_pairs(d2jast, axis=-1)
-                           + self._sum_unique_pairs(d2jast, axis=-2))
+        # might cause problems with backward cause in place operation
+        hess_jast = torch.zeros(nbatch, self.nelec).to(self.device)
+        hess_jast.index_add_(1, self.index_row, d2jast)
+        hess_jast.index_add_(1, self.index_col, d2jast)
+        hess_jast *= 0.5
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr))
@@ -240,6 +306,7 @@ class TwoBodyJastrowFactor(nn.Module):
         denom = 1. / (1.0 + self.weight * r_)
         denom2 = denom**2
         dr_square = dr**2
+
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom2
         c = - self.static_weight * self.weight * r_ * d2r * denom2
@@ -248,6 +315,53 @@ class TwoBodyJastrowFactor(nn.Module):
         e = self._get_der_jastrow_elements(r, dr)
 
         return a + b + c + d + e**2
+
+    def _get_index_partial_derivative(self):
+
+        self.index_partial_der = []
+        self.weight_partial_der = []
+        self.index_partial_der_to_elec = []
+
+        for idx in range(self.nelec):
+            index_pairs = [(idx, j, 1.) for j in range(
+                idx + 1, self.nelec)] + [(j, idx, -1.) for j in range(0, idx)]
+
+            for p1 in range(len(index_pairs) - 1):
+                i1, j1, w1 = index_pairs[p1]
+
+                for p2 in range(p1 + 1, len(index_pairs)):
+                    i2, j2, w2 = index_pairs[p2]
+
+                    idx1 = self._single_index(i1, j1)
+                    idx2 = self._single_index(i2, j2)
+
+                    self.index_partial_der.append([idx1, idx2])
+                    self.weight_partial_der.append(w1*w2)
+                    self.index_partial_der_to_elec.append(idx)
+
+        self.weight_partial_der = torch.tensor(
+            self.weight_partial_der).to(self.device)
+
+        self.index_partial_der_to_elec = torch.LongTensor(
+            self.index_partial_der_to_elec).to(self.device)
+
+        if self.weight_partial_der.shape[0] == 0:
+            self.weight_partial_der = 1.
+
+    def _single_index(self, i, j):
+        """Compute the from the i,j index of a [nelec, nelec] matrix
+        the index of a 1D array spanning the upper diagonal of the matrix.
+
+            ij                  k
+
+        00 01 02 03         . 0 1 2
+        10 11 12 13         . . 3 4
+        20 21 22 23         . . . 5    
+        31 31 32 33         . . . . 
+
+        """
+        n = self.nelec
+        return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
 
     def _partial_derivative(self, djast, out_mat=None):
         """Get the product of the mixed second deriative terms.
@@ -264,68 +378,15 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor:
         """
 
+        nbatch = djast.shape[0]
         if out_mat is None:
-            nbatch = djast.shape[0]
-            out_mat = torch.zeros(nbatch, self.nelec)
+            out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
 
-        for idx in range(self.nelec):
-
-            index_pairs = [(idx, j, 1) for j in range(
-                idx + 1, self.nelec)] + [(j, idx, -1) for j in range(0, idx)]
-
-            for p1 in range(len(index_pairs) - 1):
-                i1, j1, w1 = index_pairs[p1]
-                for p2 in range(p1 + 1, len(index_pairs)):
-                    i2, j2, w2 = index_pairs[p2]
-
-                    d1 = djast[..., i1, j1] * w1
-                    d2 = djast[..., i2, j2] * w2
-                    out_mat[..., idx] += (d1 * d2).sum(1)
+        if len(self.index_partial_der) > 0:
+            x = djast[..., self.index_partial_der]
+            x = x.prod(-1)
+            x *= self.weight_partial_der
+            x = x.sum(1)
+            out_mat.index_add_(1, self.index_partial_der_to_elec, x)
 
         return out_mat
-
-    def _prod_unique_pairs(self, mat, not_el=None):
-        """Compute the product of the lower mat elements
-
-        Args:
-            mat (torch.tensor): input matrix [..., N x N]
-            not_el (tuple(i,j), optional):
-                single element(s) to exclude of the product.
-                Defaults to None.
-
-        Returns:
-            torch.tensor : value of the product
-        """
-
-        mat_cpy = mat.clone()
-        if not_el is not None:
-
-            if not isinstance(not_el, list):
-                not_el = [not_el]
-
-            for _el in not_el:
-                i, j = _el
-                mat_cpy[..., i, j] = 1
-
-        return mat_cpy[..., torch.tril(torch.ones(
-            self.nelec, self.nelec)) == 0].prod(1).view(-1, 1)
-
-    def _sum_unique_pairs(self, mat, axis=None):
-        """Sum the unique pairs of the lower triangluar matrix
-
-        Args:
-            mat (torch.tensor): input matrix [..., N x N]
-            axis (int, optional): index of the axis to sum. Defaults to None.
-
-        Returns:
-            torch.tensor:
-        """
-
-        mat_cpy = mat.clone()
-        mat_cpy[..., torch.tril(torch.ones(
-            self.nelec, self.nelec)) == 1] = 0
-
-        if axis is None:
-            return mat_cpy.sum()
-        else:
-            return mat_cpy.sum(axis)

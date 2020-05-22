@@ -7,6 +7,7 @@ class OrbitalConfigurations(object):
         # self.mol = mol
         self.nup = mol.nup
         self.ndown = mol.ndown
+        self.norb = mol.basis.nmo
 
     def get_configs(self, configs):
         """Get the configuratio in the CI expansion
@@ -96,7 +97,7 @@ class OrbitalConfigurations(object):
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
     def _get_single_double_config(self, nocc, nvirt):
-        """Get the confs of the singlet + double
+        """Get the confs of the single + double
 
         Args:
             nelec (int): number of electrons in the active space
@@ -109,15 +110,20 @@ class OrbitalConfigurations(object):
         cup = cup.tolist()
         cdown = cdown.tolist()
 
-        for iocc_up in range(
-                self.nup - 1, self.nup - 1 - nocc, -1):
-            for ivirt_up in range(
-                    self.nup, self.nup + nvirt, 1):
+        idx_occ_up = list(
+            range(self.nup - 1, self.nup - 1 - nocc, -1))
+        idx_vrt_up = list(range(self.nup, self.nup + nvirt, 1))
 
-                for iocc_down in range(
-                        self.ndown - 1, self.ndown - 1 - nocc, -1):
-                    for ivirt_down in range(
-                            self.ndown, self.ndown + nvirt, 1):
+        idx_occ_down = list(range(
+            self.ndown - 1, self.ndown - 1 - nocc, -1))
+        idx_vrt_down = list(range(self.ndown, self.ndown + nvirt, 1))
+
+        # ground, single and double with 1 elec excited per spin
+        for iocc_up in idx_occ_up:
+            for ivirt_up in idx_vrt_up:
+
+                for iocc_down in idx_occ_down:
+                    for ivirt_down in idx_vrt_down:
 
                         _xt_up = self._create_excitation(
                             _gs_up.copy(), iocc_up, ivirt_up)
@@ -125,6 +131,26 @@ class OrbitalConfigurations(object):
                             _gs_down.copy(), iocc_down, ivirt_down)
                         cup, cdown = self._append_excitations(
                             cup, cdown, _xt_up, _xt_down)
+
+        # double with 2elec excited on spin up
+        for occ1, occ2 in torch.combinations(torch.tensor(idx_occ_up), r=2):
+            for vrt1, vrt2 in torch.combinations(torch.tensor(idx_vrt_up), r=2):
+                _xt_up = self._create_excitation(
+                    _gs_up.copy(), occ1, vrt2)
+                _xt_up = self._create_excitation(_xt_up, occ2, vrt1)
+                cup, cdown = self._append_excitations(
+                    cup, cdown, _xt_up, _gs_down)
+
+        # double with 2elec excited per spin
+        for occ1, occ2 in torch.combinations(torch.tensor(idx_occ_down), r=2):
+            for vrt1, vrt2 in torch.combinations(torch.tensor(idx_vrt_down), r=2):
+
+                _xt_down = self._create_excitation(
+                    _gs_down.copy(), occ1, vrt2)
+                _xt_down = self._create_excitation(
+                    _xt_down, occ2, vrt1)
+                cup, cdown = self._append_excitations(
+                    cup, cdown, _gs_up, _xt_down)
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
@@ -175,8 +201,11 @@ class OrbitalConfigurations(object):
         nvirt = norb - nocc
         return nocc, nvirt
 
+    def _create_excitation(self, conf, iocc, ivirt):
+        return self._create_excitation_replace(conf, iocc, ivirt)
+
     @staticmethod
-    def _create_excitation(conf, iocc, ivirt):
+    def _create_excitation_ordered(conf, iocc, ivirt):
         """promote an electron from iocc to ivirt
 
         Args:
@@ -185,10 +214,34 @@ class OrbitalConfigurations(object):
             ivirt (int): index of the virtual orbital
 
         Returns:
-            list: new configuration
+            list: new configuration by increasing order
+                  e.g: 4->6 leads to : [0,1,2,3,5,6]
+        Note:
+            if that method is used to define the exciation index
+            permutation must be accounted for when  computing
+            the determinant as
+            det(A[:,[0,1,2,3]]) = -det(A[:,[0,1,3,2]])
+            see : ExcitationMask.get_index_unique_single()
+                  in oribtal_projector.py
         """
         conf.pop(iocc)
         conf += [ivirt]
+        return conf
+
+    @staticmethod
+    def _create_excitation_replace(conf, iocc, ivirt):
+        """promote an electron from iocc to ivirt
+
+        Args:
+            conf (list): index of the occupied orbitals
+            iocc (int): index of the occupied orbital
+            ivirt (int): index of the virtual orbital
+
+        Returns:
+            list: new configuration not ordered
+                e.g.: 4->6 leads tpo : [0,1,2,3,6,5]
+        """
+        conf[iocc] = ivirt
         return conf
 
     @staticmethod
@@ -205,3 +258,79 @@ class OrbitalConfigurations(object):
         cup.append(new_cup)
         cdown.append(new_cdown)
         return cup, cdown
+
+
+def get_excitation(configs):
+    """get the excitation data
+
+    Args:
+        configs (tuple): configuratin of the electrons
+
+    Returns:
+        exc_up, exc_down : index of the obitals in the excitaitons
+                            [i,j],[l,m] : excitation i -> l, j -> l
+    """
+    exc_up, exc_down = [], []
+    for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
+
+        set_cup = set(tuple(cup.tolist()))
+        set_cdown = set(tuple(cdown.tolist()))
+
+        if ic == 0:
+            set_gs_up = set_cup
+            set_gs_down = set_cdown
+
+        else:
+            exc_up.append([list(set_gs_up.difference(set_cup)),
+                           list(set_cup.difference(set_gs_up))])
+
+            exc_down.append([list(set_gs_down.difference(set_cdown)),
+                             list(set_cdown.difference(set_gs_down))])
+
+    return (exc_up, exc_down)
+
+
+def get_unique_excitation(configs):
+    """get the unique excitation data
+
+    Args:
+        configs (tuple): configuratin of the electrons
+
+    Returns:
+        exc_up, exc_down : index of the obitals in the excitaitons
+                            [i,j],[l,m] : excitation i -> l, j -> l
+        index_up, index_down : index map for the unique exc
+                                [0,0,...], [0,1,...] means that
+                                1st : excitation is composed of unique_up[0]*unique_down[0]
+                                2nd : excitation is composed of unique_up[0]*unique_down[1]
+                                ....
+
+    """
+    uniq_exc_up, uniq_exc_down = [], []
+    index_uniq_exc_up, index_uniq_exc_down = [], []
+    for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
+
+        set_cup = set(tuple(cup.tolist()))
+        set_cdown = set(tuple(cdown.tolist()))
+
+        if ic == 0:
+            set_gs_up = set_cup
+            set_gs_down = set_cdown
+
+        exc_up = [list(set_gs_up.difference(set_cup)),
+                  list(set_cup.difference(set_gs_up))]
+
+        exc_down = [list(set_gs_down.difference(set_cdown)),
+                    list(set_cdown.difference(set_gs_down))]
+
+        if exc_up not in uniq_exc_up:
+            uniq_exc_up.append(exc_up)
+
+        if exc_down not in uniq_exc_down:
+            uniq_exc_down.append(exc_down)
+
+        index_uniq_exc_up.append(uniq_exc_up.index(exc_up))
+        index_uniq_exc_down.append(
+            uniq_exc_down.index(exc_down))
+
+    return (uniq_exc_up, uniq_exc_down), (index_uniq_exc_up, index_uniq_exc_down)

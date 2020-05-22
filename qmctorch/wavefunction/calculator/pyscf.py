@@ -28,7 +28,7 @@ class CalculatorPySCF(CalculatorBase):
             unit=self.units)
         rhf = scf.RHF(mol).run()
 
-        #self.save_data(mol, rhf)
+        # self.save_data(mol, rhf)
         basis = self.get_basis_data(mol, rhf)
         return basis
 
@@ -118,6 +118,13 @@ class CalculatorPySCF(CalculatorBase):
 
         basis.nshells = nshells
         basis.index_ctr = index_ctr
+        intervals = np.concatenate(([0], np.cumsum(nshells)))
+
+        basis.nao_per_atom = []
+        for i in range(len(intervals)-1):
+            s, e = intervals[i], intervals[i+1]
+            nao = len(np.unique(basis.index_ctr[s:e]))
+            basis.nao_per_atom.append(nao)
 
         basis.bas_coeffs = np.array(bas_coeff)
         basis.bas_exp = np.array(bas_exp)

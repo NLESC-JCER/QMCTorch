@@ -133,6 +133,7 @@ class CalculatorADF(CalculatorBase):
                 bas_norm[idx_bos]) * number_copy
 
         basis.nshells = basis_nshells
+        basis.nao_per_atom = basis_nshells
         basis.index_ctr = np.arange(nao)
 
         basis.bas_kx = np.array(basis_bas_kx)

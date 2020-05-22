@@ -1,4 +1,5 @@
 import torch
+from ..utils import fast_power
 
 
 def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
@@ -21,11 +22,15 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """
 
     if derivative == 0:
-        return R**bas_n * torch.exp(-bas_exp * R)
+
+        rn = fast_power(R, bas_n)
+        expr = torch.exp(-bas_exp * R)
+
+        return rn * expr
 
     elif derivative > 0:
 
-        rn = R**(bas_n)
+        rn = fast_power(R, bas_n)
         nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
 
         er = torch.exp(-bas_exp * R)
@@ -44,13 +49,16 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
 
         elif derivative == 2:
 
-            sum_xyz2 = (xyz**2).sum(3)
+            sum_xyz2 = (xyz*xyz).sum(3)
+
+            R2 = R*R
+            R3 = R2*R
 
             lap_rn = bas_n * (3 * R**(bas_n - 2) +
                               sum_xyz2 * (bas_n - 2) * R**(bas_n - 4))
 
-            lap_er = bas_exp**2 * er * sum_xyz2 / R**2 \
-                - 2 * bas_exp * er * sum_xyz2 / R**3
+            lap_er = bas_exp**2 * er * sum_xyz2 / R2 \
+                - 2 * bas_exp * er * sum_xyz2 / R3
 
             return lap_rn * er + 2 * \
                 (nabla_rn * nabla_er).sum(3) + rn * lap_er
@@ -74,12 +82,17 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     Returns:
         torch.tensor: values of each orbital radial part at each position
     """
+
     if derivative == 0:
-        return R**bas_n * torch.exp(-bas_exp * R**2)
+
+        rn = fast_power(R, bas_n)
+        expr = torch.exp(-bas_exp * R*R)
+
+        return rn * expr
 
     elif derivative > 0:
 
-        rn = R**(bas_n)
+        rn = fast_power(R, bas_n)
         nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
 
         er = torch.exp(-bas_exp * R**2)

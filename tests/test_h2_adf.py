@@ -17,11 +17,7 @@ class TestH2ADF(unittest.TestCase):
         torch.manual_seed(0)
 
         # molecule
-        self.mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
-            unit='bohr',
-            calculator='adf',
-            basis='dzp')
+        self.mol = Molecule(load='hdf5/H2_adf_dzp.hdf5')
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='auto',
@@ -85,4 +81,6 @@ class TestH2ADF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    t = TestH2ADF()
+    # t.test_single_point()

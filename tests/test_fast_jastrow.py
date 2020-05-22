@@ -1,6 +1,7 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrow import TwoBodyJastrowFactor
+from qmctorch.wavefunction.fast_jastrow import TwoBodyJastrowFactor
+from qmctorch.wavefunction.jastrow import TwoBodyJastrowFactor as RefJastrowFactor
 import unittest
 
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -30,12 +31,14 @@ def hess(out, pos):
     return hess
 
 
-class TestJastrow(unittest.TestCase):
+class TestFastJastrow(unittest.TestCase):
 
     def setUp(self):
+
         self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
         self.jastrow = TwoBodyJastrowFactor(self.nup, self.ndown)
+        self.ref_jastrow = RefJastrowFactor(self.nup, self.ndown)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
@@ -76,6 +79,25 @@ class TestJastrow(unittest.TestCase):
         assert torch.allclose(d2val, d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+
+    def test_compare(self):
+        j = self.jastrow(self.pos)
+        refj = self.ref_jastrow(self.pos)
+        assert(torch.allclose(j, refj))
+
+        dj = self.jastrow(self.pos, derivative=1, jacobian=True)
+        refdj = self.ref_jastrow(
+            self.pos, derivative=1, jacobian=True)
+        assert(torch.allclose(refdj, dj))
+
+        dj = self.jastrow(self.pos, derivative=1, jacobian=False)
+        refdj = self.ref_jastrow(
+            self.pos, derivative=1, jacobian=False)
+        assert(torch.allclose(dj, refdj))
+
+        d2j = self.jastrow(self.pos, derivative=2)
+        refd2j = self.ref_jastrow(self.pos, derivative=2)
+        assert(torch.allclose(d2j, refd2j))
 
 
 if __name__ == "__main__":
