@@ -79,8 +79,6 @@ class Harmonics(object):
         """
 
         if self.type == 'cart':
-            # return CartesianHarmonics(xyz, self.bas_kx, self.bas_ky, self.bas_kz,
-            #                           derivative, jacobian)
             return CartesianHarmonics(xyz, self.bas_k, self.mask_bas_k0, self.mask_bas_k2,
                                       derivative, jacobian)
         elif self.type == 'sph':
@@ -90,7 +88,6 @@ class Harmonics(object):
             raise ValueError('Harmonics type should be cart or sph')
 
 
-# def CartesianHarmonics(xyz, kx, ky, kz, derivative=0, jacobian=True):
 def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
     """Computes Real Cartesian Harmonics
 
