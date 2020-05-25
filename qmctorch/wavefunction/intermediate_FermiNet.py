@@ -6,7 +6,7 @@ class IntermediateLayers(nn.Module):
 
     """ Creates the intermediate layers of the Fermi net with required concatenations."""
     
-    def __init__(self, mol, nspin, hidden_nodes_e, hidden_nodes_ee, L_layers, ndim=3 ,cuda=False):
+    def __init__(self, mol, hidden_nodes_e, hidden_nodes_ee, L_layers, ndim=3 ,cuda=False):
         """Computes the intermediate layers of the Fermi Net.
          
         Args:
@@ -23,6 +23,7 @@ class IntermediateLayers(nn.Module):
 
         # molecule instance contains the required molecule information such as:
         # number of electrons
+        # number of spin up and spin down electrons
         # number of atoms
         # atomic nuclei coordinates
 
@@ -33,7 +34,7 @@ class IntermediateLayers(nn.Module):
         self.nelec = mol.nelec
 
         # spin orientation of electrons 
-        self.nspin = nspin
+        self.nspin = [mol.nup,mol.ndown]
 
         # number of hidden layers 
         self.L_layers = L_layers
@@ -62,9 +63,8 @@ class IntermediateLayers(nn.Module):
             pos (float): electron coordinates
         """ 
         # input of electron and nuclei positions
-        r_electrons = pos
-        R_Nuclei = torch.tensor(self.mol.atom_coords).clone().detach()
-
+        r_electrons = torch.tensor(pos)
+        R_Nuclei = torch.tensor(self.mol.atom_coords)
         # Look at the electron nuclei distances
         h_i = self.electron_nuclei_input(r_electrons, R_Nuclei)
 
@@ -98,10 +98,10 @@ class IntermediateLayers(nn.Module):
         '''Function to concatenate the desired information to get the input for each new layer.
         With as input the one electron and two electron stream output of the previous layer and
         the spin assignment of the electrons.'''
-        g_down = torch.mean(h_i[:N_spin[0]], axis=0).repeat(h_i.shape[0], 1)
-        g_up = torch.mean(h_i[N_spin[0]:], axis=0).repeat(h_i.shape[0], 1)
-        g_down_i = torch.mean(h_ij[:N_spin[0]], axis=0)
-        g_up_i = torch.mean(h_ij[N_spin[0]:], axis=0)
+        g_down = torch.mean(h_i[:N_spin[0]], axis=0,dtype=torch.float64).repeat(h_i.shape[0], 1)
+        g_up = torch.mean(h_i[N_spin[0]:], axis=0,dtype=torch.float64).repeat(h_i.shape[0], 1)
+        g_down_i = torch.mean(h_ij[:N_spin[0]], axis=0,dtype=torch.float64)
+        g_up_i = torch.mean(h_ij[N_spin[0]:], axis=0,dtype=torch.float64)
         f_i = torch.cat((h_i, g_down, g_up, g_down_i, g_up_i), axis=1)
         # outputs a array f_i where the first dimension are the electrons i
         return f_i
@@ -115,13 +115,16 @@ class IntermediateLayers(nn.Module):
     def electron_nuclei_input(r_electrons, R_Nuclei):
         '''Function to create intial input of electron-nuclei distances.'''
         # input of electron and nuclei positions
-        h_0_i = torch.tensor([])
+        h_0_i = torch.tensor([],dtype=torch.float64)
         # measure the distances between electrons and the nuclei,
         # and determine the input for the single electron stream
+        print(h_0_i)
         for l in range(R_Nuclei.shape[0]):
-            r_il = (r_electrons-R_Nuclei[l])
+            r_il = (r_electrons-R_Nuclei[l]).clone().detach()
+            print(r_il)
             r_il_len = torch.norm(r_il, dim=1).reshape(r_electrons.shape[0], 1)
             h_0_il = torch.cat((r_il, r_il_len), axis=1)
+            print(h_0_il)
             h_0_i = torch.cat(
                 (h_0_i, h_0_il), axis=1) if h_0_i.size else h_0_il
         return h_0_i

@@ -3,6 +3,7 @@ from torch import nn
 
 from qmctorch.wavefunction import Molecule
 from qmctorch.wavefunction.intermediate_FermiNet import IntermediateLayers
+from qmctorch.wavefunction.orbital_ferminet import Orbital_FermiNet
 
 import numpy as np 
 import unittest
@@ -10,16 +11,15 @@ import unittest
 class TestFermiNet(unittest.TestCase):
 
     def __init__(self):
-                # for this initial example I will start with a smaller 4 particle system with 2 spin up and 2 spin down particles.
-        self.N_spin = [2, 2]
-        self.N_electrons = np.sum(self.N_spin)
         # with a system in 3 dimensional space
         self.N_dim = 3
 
-        self.mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='pyscf',
-               basis='sto-3g',
-               unit='bohr')
+
+        # define the molecule
+        # self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
+        #         unit='bohr', calculator='pyscf', name='water')   
+        filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
+        self.mol = Molecule(load=filename[2])
 
         # network hyperparameters: 
         self.hidden_nodes_e = 256
@@ -31,54 +31,63 @@ class TestFermiNet(unittest.TestCase):
         torch.random.manual_seed(321)
 
         # initiaite a random configuration of particle positions
-        self.r = torch.randn(self.N_electrons, self.N_dim, device="cpu")
+        self.r = torch.randn(self.mol.nelec, self.N_dim, device="cpu")
+
 
 
     def test_intermediate(self):
                         
         # test the intermediate layers .
-        FN = IntermediateLayers(self.mol, self.N_spin, self.hidden_nodes_e, self.hidden_nodes_ee, self.L_layers)
-        print(FN)
-        # check the number of parameters and layers of the intermediate layers:
+        FN = IntermediateLayers(self.mol, self.hidden_nodes_e, self.hidden_nodes_ee, self.L_layers)
+        # print(FN)
+        # # check the number of parameters and layers of the intermediate layers:
 
-        for name, param in FN.named_parameters():
-            print(name, param.size())
+        # for name, param in FN.named_parameters():
+        #     print(name, param.size())
 
-        print(self.getNumParams(FN.parameters()))
+        # print(self.getNumParams(FN.parameters()))
 
         print(FN.forward(self.r))
     
     def test_orbital(self):
 
         # test the orbital
-        Orbital = Orbital_k_i()
-        print(Orbital)
-        print(Orbital.forward(self.r))
+        
+        FN = IntermediateLayers(self.mol, self.hidden_nodes_e, 
+                self.hidden_nodes_ee, self.L_layers)
 
+        Orbital = Orbital_FermiNet(self.mol,self.hidden_nodes_e)
+        print(Orbital)
+        # check the number of parameters and layers of the network:
+        for name, param in Orbital.named_parameters():
+            print(name, param.size())
+
+        print(self.getNumParams(Orbital.parameters()))
+
+        # check the output of the network:
+        h_i, h_ij = FN.forward(self.r)
+        print("h_i is given by: \n {}".format(h_i))
+        # and the output for the orbital
+        print(Orbital.forward(h_i[0], r[0]))
+  
 
     @staticmethod
     def getNumParams(params):
-        '''function to get the variable count'''
+        '''function to get the variable count
+        from https://discuss.pytorch.org/t/when-should-i-use-nn-modulelist-and-when-should-i-use-nn-sequential/5463/12'''
         numParams, numTrainable = 0, 0
         for param in params:
             npParamCount = np.prod(param.data.shape)
             numParams += npParamCount
             if param.requires_grad:
                 numTrainable += npParamCount
-        return numParams, numTrainable
-
-#from https://discuss.pytorch.org/t/when-should-i-use-nn-modulelist-and-when-should-i-use-nn-sequential/5463/12
-
-
-        
-
-
+        return numParams, numTrainable      
 
 if __name__ == "__main__":
     # unittest.main()
     t = TestFermiNet()
     t.test_intermediate()
-    t.test_orbital()
+    # t.test_orbital()
 
 
 
