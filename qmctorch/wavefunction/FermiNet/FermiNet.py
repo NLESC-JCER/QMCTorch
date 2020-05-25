@@ -1,11 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # python import 
-
-# In[1]:
-
-
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -20,10 +12,6 @@ from tqdm import tqdm_notebook
 import math
 from numpy import sqrt, exp, sum, random
 from numpy.linalg import norm
-
-
-# In[2]:
-
 
 CUDA_LAUNCH_BLOCKING = 1
 use_cuda = True
@@ -170,23 +158,23 @@ class one_electron_layer(nn.Module):
         return h_i
 
 
-class two_electron_layer(nn.Module):
-    def __init__(self, input_size, hidden_nodes, N_electrons):
-        super().__init__()
-        self.hidden_nodes = hidden_nodes
-        '''Create a concatenation of linear layers for each electron i'''
-        self.list_linear = nn.ModuleList()
-        for i in range(N_electrons^2):
-            self.list_linear.append(
-                nn.Linear(input_size, self.hidden_nodes, bias=True))
+# class two_electron_layer(nn.Module):
+#     def __init__(self, input_size, hidden_nodes, N_electrons):
+#         super().__init__()
+#         self.hidden_nodes = hidden_nodes
+#         '''Create a concatenation of linear layers for each electron i'''
+#         self.list_linear = nn.ModuleList()
+#         for i in range(N_electrons^2):
+#             self.list_linear.append(
+#                 nn.Linear(input_size, self.hidden_nodes, bias=True))
 
-    def forward(self, h_ij):
+#     def forward(self, h_ij):
 
-        h_ij = torch.zeros((h_ij.shape[0], h_ij.shape[1],self.hidden_nodes))
-        for i in range(h_ij.shape[0]):
-            h_i[i] = self.list_linear[i](f_i[i])
+#         h_ij = torch.zeros((h_ij.shape[0], h_ij.shape[1],self.hidden_nodes))
+#         for i in range(h_ij.shape[0]):
+#             h_i[i] = self.list_linear[i](h_i[i])
 
-        return h_i
+#         return h_i
 
 
 class Intermediate_Layers_v2(nn.Module):

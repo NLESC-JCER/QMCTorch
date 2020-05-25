@@ -2,12 +2,10 @@ import torch
 from torch import nn
 
 from .atomic_orbitals import AtomicOrbitals
-from .slater_pooling import SlaterPooling
-from .kinetic_pooling import KineticPooling
-from .orbital_configurations import OrbitalConfigurations
+
 from .wf_base import WaveFunction
 from .intermediate_FermiNet import IntermediateLayers
-#from .jastrow import TwoBodyJastrowFactor
+
 
 from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
@@ -55,30 +53,6 @@ class FermiNet_Orbital(WaveFunction):
         self.nci = len(self.configs[0])
         self.highest_occ_mo = torch.stack(self.configs).max()+1
 
-        # define the atomic orbital layer
-        self.ao = AtomicOrbitals(mol, cuda)
-
-        # define the mo layer
-        self.include_all_mo = include_all_mo
-        self.nmo_opt = mol.basis.nmo if include_all_mo else self.highest_occ_mo
-        self.mo_scf = nn.Linear(
-            mol.basis.nao, self.nmo_opt, bias=False)
-        self.mo_scf.weight = self.get_mo_coeffs()
-        self.mo_scf.weight.requires_grad = False
-        if self.cuda:
-            self.mo_scf.to(self.device)
-
-        # define the mo mixing layer
-        self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
-        self.mo.weight = nn.Parameter(
-            torch.eye(mol.basis.nmo, self.nmo_opt))
-        if self.cuda:
-            self.mo.to(self.device)
-
-        # jastrow
-        self.use_jastrow = use_jastrow
-        self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
-                                            w=1., cuda=cuda)
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs_method,
@@ -104,22 +78,7 @@ class FermiNet_Orbital(WaveFunction):
             self.device = torch.device('cuda')
             self.to(self.device)
 
-        # register the callable for hdf5 dump
-        register_extra_attributes(self,
-                                  ['ao', 'mo_scf',
-                                   'mo', 'jastrow',
-                                   'pool', 'kinpool', 'fc'])
 
-    def get_mo_coeffs(self):
-        mo_coeff = torch.tensor(self.mol.basis.mos).type(
-            torch.get_default_dtype())
-        if not self.include_all_mo:
-            mo_coeff = mo_coeff[:, :self.highest_occ_mo]
-        return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
-
-    def update_mo_coeffs(self):
-        self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
-        self.mo.weight = self.get_mo_coeffs()
 
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
