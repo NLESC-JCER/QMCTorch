@@ -1,6 +1,7 @@
 import os
 import math
 import numpy as np
+import logging
 from mendeleev import element
 from types import SimpleNamespace
 import h5py
@@ -9,6 +10,7 @@ from .calculator.adf import CalculatorADF
 from .calculator.pyscf import CalculatorPySCF
 
 from ..utils import dump_to_hdf5, load_from_hdf5
+from .. import log
 
 
 class Molecule(object):
@@ -48,9 +50,11 @@ class Molecule(object):
         self.nup = 0
         self.unit = unit
         self.basis = SimpleNamespace()
+        self.calculator_name = calculator
+        self.basis_name = basis
 
         if load is not None:
-            print('Restarting calculation from ', load)
+            log.info('Restarting calculation from {file}', file=load)
             self._load_hdf5(load)
 
         else:
@@ -64,11 +68,12 @@ class Molecule(object):
                 [self.name, calculator, basis]) + '.hdf5'
 
             if os.path.isfile(self.hdf5file):
-                print('Reusing scf calculation from ', self.hdf5file)
+                log.info(' Reusing scf calculation from {file}',
+                         file=self.hdf5file)
                 self.basis = self._load_basis()
 
             else:
-                print('Running scf calculation')
+                log.info(' Running scf calculation')
 
                 calc = {'adf': CalculatorADF,
                         'pyscf': CalculatorPySCF}[calculator]
@@ -192,7 +197,10 @@ class Molecule(object):
         mol_name = ''
         unique_atoms = list(set(atoms))
         for ua in unique_atoms:
-            mol_name += ua + str(atoms.count(ua))
+            mol_name += ua
+            nat = atoms.count(ua)
+            if nat > 1:
+                mol_name += str(nat)
         return mol_name
 
     def _load_basis(self):
@@ -235,12 +243,6 @@ class Molecule(object):
         h5.close()
         return self.basis
 
-    # def load_mo_coeffs(self):
-    #     """Get the molecule orbital coefficients."""
-
-    #     h5 = h5py.File(self.hdf5file, 'r')
-    #     return h5['molecule']['basis']['mos'][()]
-
     def print_total_energy(self):
         """Print the SCF energy of the molecule.
 
@@ -250,7 +252,7 @@ class Molecule(object):
         """
         h5 = h5py.File(self.hdf5file, 'r')
         e = h5['molecule']['basis']['TotalEnergy'][()]
-        print('== SCF Energy : ', e)
+        log.info('== SCF Energy : {e}', e=e)
         h5.close()
 
     def _check_basis(self):

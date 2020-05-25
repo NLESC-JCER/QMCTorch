@@ -2,6 +2,7 @@ from tqdm import tqdm
 import torch
 from torch.distributions import MultivariateNormal
 from .sampler_base import SamplerBase
+from .. import log
 
 
 class Metropolis(SamplerBase):
@@ -60,7 +61,7 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: positions of the walkers
         """
-
+        log.info(' Metropolis-Hasting sampling')
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
             eps = 1E-7
@@ -83,7 +84,7 @@ class Metropolis(SamplerBase):
             pos, rate, idecor = [], 0, 0
 
             if self.with_tqdm:
-                rng = tqdm(range(self.nstep))
+                rng = tqdm(range(self.nstep), desc='INFO:QMCTorch| ')
             else:
                 rng = range(self.nstep)
 
@@ -117,8 +118,8 @@ class Metropolis(SamplerBase):
                     idecor += 1
 
             if self.with_tqdm:
-                print("Acceptance rate %1.3f %%" %
-                      (rate / self.nstep * 100))
+                log.options(style='percent').info(" Acceptance rate %1.3f" %
+                                                  (rate / self.nstep * 100))
 
         return torch.cat(pos).requires_grad_()
 

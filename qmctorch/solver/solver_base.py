@@ -4,6 +4,7 @@ from tqdm import tqdm
 import numpy as np
 
 from ..utils import dump_to_hdf5, add_group_attr
+from .. import log
 
 
 class SolverBase(object):
@@ -80,6 +81,10 @@ class SolverBase(object):
         self.resampling_options.mode = mode
         self.resampling_options.resample_every = resample_every
         self.resampling_options.nstep_update = nstep_update
+
+        log.info(' Resampling mode     : {0}', mode)
+        log.info(' Resampling every    : {0}', resample_every)
+        log.info(' Resampling steps    : {0}', nstep_update)
 
     def configure(self, task='wf_opt', freeze=None):
         """Configure the optimization.
@@ -255,13 +260,16 @@ class SolverBase(object):
                 e = np.mean(eloc)
                 v = np.var(eloc)
                 err = np.sqrt(v / len(eloc))
-                print('energy   : %f +/- %f' % (e, err))
-                print('variance : %f' % np.sqrt(v))
+                log.options(style='percent').info(
+                    'energy   : %f +/- %f' % (e, err))
+                log.options(style='percent').info(
+                    'variance : %f' % np.sqrt(v))
 
             elif verbose:
-                print(
+                log.options(style='percent').info(
                     k + ' : ', self.observable.__getattribute__(k)[-1])
-                print('loss %f' % (cumulative_loss))
+                log.options(style='percent').info(
+                    'loss %f' % (cumulative_loss))
 
     def resample(self, n, pos):
         """Resample the wave function
@@ -309,6 +317,9 @@ class SolverBase(object):
             SimpleNamespace: contains the local energy, positions, ...
         """
 
+        log.info('')
+        log.info(' ==== Single Point Calculation')
+
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()
         if self.wf.kinetic == 'auto':
@@ -317,6 +328,8 @@ class SolverBase(object):
         with grad_mode:
 
             #  get the position and put to gpu if necessary
+            log.info(' Sampling the wave function {nw} walkers {ns} steps',
+                     nw=self.sampler.nwalkers, ns=self.sampler.nstep)
             pos = self.sampler(self.wf.pdf)
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
@@ -327,9 +340,10 @@ class SolverBase(object):
                 el), self.wf.sampling_error(el)
 
             # print data
-            print('Energy   : ', e.detach().item(),
-                  ' +/- ', err.detach().item())
-            print('Variance : ', s.detach().item())
+            log.options(style='percent').info(
+                ' Energy   : %f +/- %f' % (e.detach().item(), err.detach().item()))
+            log.options(style='percent').info(
+                ' Variance : %f' % s.detach().item())
 
             # dump data to hdf5
             obs = SimpleNamespace(

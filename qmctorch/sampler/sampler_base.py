@@ -1,5 +1,6 @@
 import torch
 from .walkers import Walkers
+from .. import log
 
 
 class SamplerBase(object):
@@ -38,6 +39,14 @@ class SamplerBase(object):
 
         self.walkers = Walkers(
             nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init, cuda=cuda)
+
+        log.info('')
+        log.info(' === Monte-Carlo Sampler')
+        log.info(' Number of walkers   : {0}', self.nwalkers)
+        log.info(' Number of steps     : {0}', self.nstep)
+        log.info(' Step size           : {0}', self.step_size)
+        log.info(' Thermalization steps: {0}', self.ntherm)
+        log.info(' Decorelation steps  : {0}', self.ndecor)
 
     def __call__(self, pdf, *args, **kwargs):
         raise NotImplementedError(
