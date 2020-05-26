@@ -1,6 +1,3 @@
-import sys
-sys.path.insert(0, '/home/breebaart/dev/QMCTorch')
-
 import torch
 from torch import nn 
 from torch import optim
@@ -25,7 +22,7 @@ class TestFermiNet(unittest.TestCase):
         self.N_dim = 3
         set_torch_double_precision()
         # define the molecule
-        filename = "tests/hdf5/H2_adf_dzp.hdf5"
+        filename = "/hdf5/H2_adf_dzp.hdf5"
         # self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
         #         unit='bohr', calculator='pyscf', name='water')   
         # filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
@@ -166,13 +163,14 @@ class TestFermiNet(unittest.TestCase):
         return numParams, numTrainable      
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestFermiNet()
-    t.setUp()
+    unittest.main()
+    # t = TestFermiNet()
+    # t.setUp()
     # t.test_intermediate()
     # t.test_orbital()
     # t.test_FermiNet()
+    # t.test_sampler()
     # t.test_optimization()
-    t.test_sampler()
+
 
 
