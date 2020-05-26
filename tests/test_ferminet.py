@@ -22,7 +22,7 @@ class TestFermiNet(unittest.TestCase):
         self.N_dim = 3
         set_torch_double_precision()
         # define the molecule
-        filename = "/hdf5/H2_adf_dzp.hdf5"
+        filename = "hdf5/H2_adf_dzp.hdf5"
         # self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
         #         unit='bohr', calculator='pyscf', name='water')   
         # filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
