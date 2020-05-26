@@ -154,7 +154,7 @@ class TwoBodyJastrowFactor(nn.Module):
         return hess_jast * prod_val
 
     def _get_jastrow_elements(self, r):
-        """Get the elements of the jastrow matrix :
+        r"""Get the elements of the jastrow matrix :
         .. math::
             out_{i,j} = \exp{ \frac{b r_{i,j}}{1+b'r_{i,j}} }
 
