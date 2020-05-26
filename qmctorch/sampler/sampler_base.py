@@ -1,12 +1,13 @@
 import torch
 from .walkers import Walkers
+from .. import log
 
 
 class SamplerBase(object):
 
     def __init__(self, nwalkers, nstep, step_size,
                  ntherm, ndecor, nelec, ndim, init,
-                 cuda, with_tqdm):
+                 cuda):
         """Base class for the sampler
 
         Args:
@@ -19,7 +20,6 @@ class SamplerBase(object):
             ndim (int): number of cartesian dimension
             init (dict): method to initialize the walkers
             cuda ([type]): [description]
-            with_tqdm ([type]): [description]
         """
 
         self.nwalkers = nwalkers
@@ -34,11 +34,29 @@ class SamplerBase(object):
             self.device = torch.device('cuda')
         else:
             self.device = torch.device('cpu')
-        self.with_tqdm = with_tqdm
 
         self.walkers = Walkers(
             nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init, cuda=cuda)
 
+        log.info('')
+        log.info(' Monte-Carlo Sampler')
+        log.info('  Number of walkers   : {0}', self.nwalkers)
+        log.info('  Number of steps     : {0}', self.nstep)
+        log.info('  Step size           : {0}', self.step_size)
+        log.info('  Thermalization steps: {0}', self.ntherm)
+        log.info('  Decorelation steps  : {0}', self.ndecor)
+        log.info('  Walkers init pos    : {0}', init['method'])
+
     def __call__(self, pdf, *args, **kwargs):
         raise NotImplementedError(
             "Sampler must have a __call__ method")
+
+    def __repr__(self):
+        return self.__class__.__name__ + ' sampler with  %d walkers' % self.nwalkers
+
+    def get_sampling_size(self):
+        """evaluate the number of sampling point we'll have."""
+        if self.ntherm == -1:
+            return self.nwalkers
+        else:
+            return self.walkers.nwalkers * int((self.nstep-self.ntherm)/self.ndecor)

@@ -89,7 +89,7 @@ class Harmonics(object):
 
 
 def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
-    """Computes Real Cartesian Harmonics
+    r"""Computes Real Cartesian Harmonics
 
     .. math::
         Y = x^{k_x} \\times y^{k_y} \\times z^{k_z}
@@ -150,7 +150,7 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
 
 
 def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):
-    """Compute the Real Spherical Harmonics of the AO.
+    r"""Compute the Real Spherical Harmonics of the AO.
 
     Args:
         xyz (torch.tensor): distance between sampling points and orbital centers \n
@@ -174,7 +174,7 @@ def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):
 
 
 def get_spherical_harmonics(xyz, lval, m, derivative):
-    """Compute the Real Spherical Harmonics of the AO.
+    r"""Compute the Real Spherical Harmonics of the AO.
 
     Args:
         xyz (torch.tensor): distance between sampling points and orbital centers \n
@@ -235,7 +235,7 @@ def get_spherical_harmonics(xyz, lval, m, derivative):
 
 
 def get_grad_spherical_harmonics(xyz, lval, m):
-    """Compute the gradient of the Real Spherical Harmonics of the AO.
+    r"""Compute the gradient of the Real Spherical Harmonics of the AO.
 
     Args:
         xyz (torch.tensor): distance between sampling points and orbital centers \n
@@ -281,7 +281,7 @@ def get_grad_spherical_harmonics(xyz, lval, m):
 
 
 def _spherical_harmonics_l0(xyz):
-    """Compute the l=0 Spherical Harmonics
+    r"""Compute the l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
     Returns
@@ -292,7 +292,7 @@ def _spherical_harmonics_l0(xyz):
 
 
 def _nabla_spherical_harmonics_l0(xyz):
-    """Compute the nabla of l=0 Spherical Harmonics
+    r"""Compute the nabla of l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
     Returns
@@ -302,7 +302,7 @@ def _nabla_spherical_harmonics_l0(xyz):
 
 
 def _grad_spherical_harmonics_l0(xyz):
-    """Compute the nabla of l=0 Spherical Harmonics
+    r"""Compute the nabla of l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
     Returns
@@ -312,7 +312,7 @@ def _grad_spherical_harmonics_l0(xyz):
 
 
 def _lap_spherical_harmonics_l0(xyz):
-    """Compute the laplacian of l=0 Spherical Harmonics
+    r"""Compute the laplacian of l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
     Returns
@@ -324,7 +324,7 @@ def _lap_spherical_harmonics_l0(xyz):
 
 
 def _spherical_harmonics_l1(xyz, m):
-    """Compute the 1-1 Spherical Harmonics
+    r"""Compute the 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-1,0,1)
@@ -340,7 +340,7 @@ def _spherical_harmonics_l1(xyz, m):
 
 
 def _nabla_spherical_harmonics_l1(xyz, m):
-    """Compute the nabla of 1-1 Spherical Harmonics
+    r"""Compute the nabla of 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-1,0,1)
@@ -357,7 +357,7 @@ def _nabla_spherical_harmonics_l1(xyz, m):
 
 
 def _grad_spherical_harmonics_l1(xyz, m):
-    """Compute the nabla of 1-1 Spherical Harmonics
+    r"""Compute the nabla of 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-1,0,1)
@@ -392,7 +392,7 @@ def _grad_spherical_harmonics_l1(xyz, m):
 
 
 def _lap_spherical_harmonics_l1(xyz, m):
-    """Compute the laplacian of 1-1 Spherical Harmonics
+    r"""Compute the laplacian of 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-1,0,1)
@@ -411,7 +411,7 @@ def _lap_spherical_harmonics_l1(xyz, m):
 
 
 def _spherical_harmonics_l2(xyz, m):
-    """Compute the l=2 Spherical Harmonics
+    r"""Compute the l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-2,-1,0,1,2)
@@ -440,7 +440,7 @@ def _spherical_harmonics_l2(xyz, m):
 
 
 def _nabla_spherical_harmonics_l2(xyz, m):
-    """Compute the nabla of l=2 Spherical Harmonics
+    r"""Compute the nabla of l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-2,-1,0,1,2)
@@ -473,7 +473,7 @@ def _nabla_spherical_harmonics_l2(xyz, m):
 
 
 def _grad_spherical_harmonics_l2(xyz, m):
-    """Compute the nabla of l=2 Spherical Harmonics
+    r"""Compute the nabla of l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-2,-1,0,1,2)
@@ -532,7 +532,7 @@ def _grad_spherical_harmonics_l2(xyz, m):
 
 
 def _lap_spherical_harmonics_l2(xyz, m):
-    """Compute the nabla of l=2 Spherical Harmonics
+    r"""Compute the nabla of l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
         m : second quantum number (-2,-1,0,1,2)
