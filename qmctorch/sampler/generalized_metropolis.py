@@ -5,6 +5,7 @@ from torch.distributions import MultivariateNormal
 import numpy as np
 
 from .sampler_base import SamplerBase
+from .. import log
 
 
 class GeneralizedMetropolis(SamplerBase):
@@ -90,9 +91,8 @@ class GeneralizedMetropolis(SamplerBase):
                         pos.append(xi.clone().detach())
                     idecor += 1
 
-            if self.with_tqdm:
-                print("Acceptance rate %1.3f %%" %
-                      (rate / self.nstep * 100))
+            log.options(style='percent').debug("  Acceptance rate %1.3f" %
+                                               (rate / self.nstep * 100))
 
             self.walkers.pos.data = xi.data
 

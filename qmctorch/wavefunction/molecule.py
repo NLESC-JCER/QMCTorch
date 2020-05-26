@@ -59,6 +59,7 @@ class Molecule(object):
         if load is not None:
             log.info('  Loading data from {file}', file=load)
             self._load_hdf5(load)
+            self.hdf5file = load
 
         else:
 

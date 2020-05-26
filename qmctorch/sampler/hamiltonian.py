@@ -2,6 +2,7 @@ import torch
 from tqdm import tqdm
 from torch.autograd import Variable
 from .sampler_base import SamplerBase
+from .. import log
 
 
 class Hamiltonian(SamplerBase):
