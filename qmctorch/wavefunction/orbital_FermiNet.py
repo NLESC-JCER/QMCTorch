@@ -1,4 +1,4 @@
-# This file contains the pytorch class creating the single orbital network for the Fermi Net
+# This file contains the class creating the single orbital network for the Fermi Net
 # using the output from the intermediate layers we can construct the single orbital output for orbital i of determinant k
 import torch 
 import torch.nn as nn
@@ -29,7 +29,7 @@ class Orbital_FermiNet(nn.Module):
         The input of the orbital is the one-electron stream and position of electron j and the position of the nuclei.'''
         
         # nuclei positions
-        R_Nuclei = torch.tensor(self.mol.atom_coords).clone().detach().requires_grad(True)
+        R_Nuclei = torch.tensor(self.mol.atom_coords).clone()
 
         # the output of the intermediate layers goes through the linear layer (w_i^ka h_j^La + g_i^ka)
         a_h_lin = self.final_linear(h_L_j)
@@ -38,7 +38,7 @@ class Orbital_FermiNet(nn.Module):
         anisotropic_exp = torch.zeros((self.N_nuclei))
         for m in range(self.N_nuclei):
             anisotropic_exp[m] = torch.exp(
-                -torch.norm(self.anisotropic[m](r_j-R[m])))
+                -torch.norm(self.anisotropic[m](r_j-R_Nuclei[m])))
         # the output of the exponents is fed into a linear layer with weights pi.
         a_an_lin = self.linear_anisotropic(anisotropic_exp)
         # the anisotropic term and linear electron term are multiplied

@@ -5,7 +5,7 @@ from .atomic_orbitals import AtomicOrbitals
 
 from .wf_base import WaveFunction
 from .intermediate_FermiNet import IntermediateLayers
-
+from .orbital_FermiNet import Orbital_FermiNet
 
 from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
@@ -13,12 +13,10 @@ from ..utils.interpolate import (get_reg_grid, get_log_grid,
                                  interpolator_irreg_grid, interpolate_irreg_grid)
 from qmctorch.utils import timeit
 
-class FermiNet_Orbital(WaveFunction):
+class FermiNet(WaveFunction):
 
-    def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi',
-                 use_jastrow=True, cuda=False,
-                 include_all_mo=True):
+    def __init__(self, mol, hidden_nodes_e=256, hidden_nodes_ee=32, L_layers=4, K_determinants=1, configs='ground_state',
+                 kinetic='jacobi', cuda=False):
         """Implementation of the QMC Network Fermi Net.
 
         Args:
@@ -27,14 +25,8 @@ class FermiNet_Orbital(WaveFunction):
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
             use_jastrow (bool, optional): turn jastrow factor ON/OFF. Defaults to True.
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
-            include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
-                                             popualted in the configs. Defaults to False
-        Examples::
-            >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
         """
-
-        super(FermiNet_Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
+        super(FermiNet, self).__init__(mol.nelec, 3, kinetic, cuda)
 
         # check for cuda
         if not torch.cuda.is_available and self.wf.cuda:
@@ -44,189 +36,67 @@ class FermiNet_Orbital(WaveFunction):
         self.mol = mol
         self.atoms = mol.atoms
         self.natom = mol.natom
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelecetrons = self.nup + self.ndown
+        self.ndim =3
         
+        # hyperparameters of network
+        self.hidden_nodes_e = hidden_nodes_e
+        self.hidden_nodes_ee = hidden_nodes_ee
+        self.K_determinants = K_determinants
+        self.L_layers = L_layers
+        
+       # Create the intermediate layer network:
+        self.Intermediate_layer = IntermediateLayers(
+            self.mol, self.hidden_nodes_e, self.hidden_nodes_ee, self.L_layers, self.ndim, cuda)
+        # create K*N_up "spin up" orbitals and K*N_down "spin down" orbitals with K the number of determinants.
+        self.Orbital_determinant_up = nn.ModuleList()
+        self.Orbital_determinant_down = nn.ModuleList()
+        for k in range(self.K_determinants):
+            Orbitals_up = nn.ModuleList()
+            Orbitals_down = nn.ModuleList()
+            for i in range(self.nup):
+                Orbitals_up.append(Orbital_FermiNet(self.mol, hidden_nodes_e))
 
-        # define the SD we want
-        self.orb_confs = OrbitalConfigurations(mol)
-        self.configs_method = configs
-        self.configs = self.orb_confs.get_configs(configs)
-        self.nci = len(self.configs[0])
-        self.highest_occ_mo = torch.stack(self.configs).max()+1
+            for i in range(self.ndown):
+                Orbitals_down.append(Orbital_FermiNet(self.mol, hidden_nodes_e))
 
-
-        #  define the SD pooling layer
-        self.pool = SlaterPooling(self.configs_method,
-                                  self.configs, mol, cuda)
-
-        # pooling operation to directly compute
-        # the kinetic energies via Jacobi formula
-        self.kinpool = KineticPooling(
-            self.configs, mol, cuda)
-
-        # define the linear layer
-        self.fc = nn.Linear(self.nci, 1, bias=False)
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0][0] = 1.
-
-        if self.cuda:
-            self.fc = self.fc.to(self.device)
-
-        if kinetic == 'jacobi':
-            self.local_energy = self.local_energy_jacobi
-
-        if self.cuda:
-            self.device = torch.device('cuda')
-            self.to(self.device)
+            self.Orbital_determinant_up.append(Orbitals_up)
+            self.Orbital_determinant_down.append(Orbitals_down)
+        # Create a final linear layer of weighted determinants.
+        self.weighted_sum = nn.Linear(K_determinants, 1, bias=False)
 
 
+    def forward(self, pos):
 
-    def forward(self, x, ao=None):
-        """computes the value of the wave function for the sampling points
-
-        .. math::
-            \Psi(R) = \sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
-
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            ao (torch.tensor, optional): values of the atomic orbitals (Nbatch, Nelec, Nao)
-
-        Returns:
-            torch.tensor: values of the wave functions at each sampling point (Nbatch, 1)
-
-        Examples::
-            >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
-            >>> pos = torch.rand(500,6)
-            >>> vals = wf(pos)
-        """
-
-        if self.use_jastrow:
-            J = self.jastrow(x)
-
-        # atomic orbital
-        if ao is None:
-            x = self.ao(x)
-        else:
-            x = ao
-
-        # molecular orbitals
-        x = self.mo_scf(x)
-
-        # mix the mos
-        x = self.mo(x)
-
-        # pool the mos
-        x = self.pool(x)
-
-        if self.use_jastrow:
-            return J * self.fc(x)
-
-        else:
-            return self.fc(x)
-
-    def _get_mo_vals(self, x, derivative=0):
-        """Get the values of MOs
-
-        Arguments:
-            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
-
-        Keyword Arguments:
-            derivative {int} -- order of the derivative (default: {0})
-
-        Returns:
-            torch.tensor -- MO matrix [nbatch, nelec, nmo]
-        """
-        return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
-
-    def local_energy_jacobi(self, pos):
-        """Computes the local energy using the Jacobi formula
-
-        .. math::
-            E = K(R) + V_{ee}(R) + V_{en}(R) + V_{nn}
-
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
-
-        Returns:
-            [torch.tensor]: values of the local enrgies at each sampling points
-
-        Examples::
-            >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
-            >>> pos = torch.rand(500,6)
-            >>> vals = wf.local_energy_jacobi(pos)
-
-        """
-
-        ke = self.kinetic_energy_jacobi(pos)
-
-        return ke \
-            + self.nuclear_potential(pos) \
-            + self.electronic_potential(pos) \
-            + self.nuclear_repulsion()
-
-    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
-        """Compute the value of the kinetic enery using the Jacobi Formula.
-        C. Filippi, Simple Formalism for Efficient Derivatives .
-
-        .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
-
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
-
-        Returns:
-            torch.tensor: values of the kinetic energy at each sampling points
-        """
-
-        mo = self._get_mo_vals(x)
-        bkin = self.get_kinetic_operator(x, mo=mo)
-
-        if kinpool:
-            kin, psi = self.kinpool(mo, bkin)
-            return self.fc(kin) / self.fc(psi)
-
-        else:
-            kin = self.pool.kinetic(mo, bkin)
-            psi = self.pool(mo)
-            out = self.fc(kin * psi) / self.fc(psi)
-            return out
-
-    def get_kinetic_operator(self, x, mo=None):
-        """Compute the Bkin matrix
-
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            mo (torch.tensor, optional): precomputed values of the MOs
-
-        Returns:
-            torch.tensor: matrix of the kinetic operator
-        """
-
-        if mo is None:
-            mo = self._get_mo_vals(x)
-
-        bkin = self._get_mo_vals(x, derivative=2)
-        djast_dmo, d2jast_mo = None, None
-
-        if self.use_jastrow:
-
-            jast = self.jastrow(x)
-            djast = self.jastrow(x, derivative=1, jacobian=False)
-            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
-
-            dao = self.ao(x, derivative=1,
-                          jacobian=False).transpose(2, 3)
-            dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
-
-            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
-            d2jast = self.jastrow(x, derivative=2) / jast
-            d2jast_mo = d2jast.unsqueeze(-1) * mo
-
-            bkin += 2 * djast_dmo + d2jast_mo
-
-        return bkin
+        # Go through the intermediate layers 
+        h_L_i, h_L_ij = self.Intermediate_layer(pos)
+        
+        # Create the determinants 
+        determinant = torch.zeros(self.K_determinants)
+        for k in range(self.K_determinants):
+            # for each determinant k create two slatter determinants one spin-up one spin-down
+            det_up = torch.zeros((self.nup, self.nup))
+            det_down = torch.zeros((self.ndown, self.ndown))
+            # for up:
+            for i_up in range(self.nup):
+                for j_up in range(self.nup):
+                    det_up[i_up, j_up] = self.Orbital_determinant_up[k][i_up](
+                        h_L_i[j_up], pos[j_up])
+            # for down:        
+            for i_down in range(self.ndown):
+                for j_down in range(self.ndown):
+                    j_down = j_down + self.nup
+                    det_down[i_down, j_down-self.nup] = self.Orbital_determinant_up[k][i_down](
+                        h_L_i[j_down], pos[j_down])
+            determinant[k] = torch.det(det_up)*torch.det(det_down)
+        #create make a weighted sum of the determinants
+        psi = self.weighted_sum(determinant)
+        # return psi.
+        # in the optimization log(psi) is used as output of the network
+        # return torch.log(psi)
+        return psi       
 
     def nuclear_potential(self, pos):
         """Computes the electron-nuclear term
