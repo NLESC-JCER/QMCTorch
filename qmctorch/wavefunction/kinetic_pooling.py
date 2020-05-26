@@ -31,7 +31,7 @@ class KineticPooling(nn.Module):
             self.device = torch.device('cuda')
 
     def forward(self, MO, d2MO, dJdMO=None, d2JMO=None):
-        """Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
+        r"""Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
 
         .. math::
             -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}  

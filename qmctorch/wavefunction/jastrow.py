@@ -7,7 +7,7 @@ from ..utils import register_extra_attributes
 class TwoBodyJastrowFactor(nn.Module):
 
     def __init__(self, nup, ndown, w=1., cuda=False):
-        """Computes the Pade-Jastrow factor
+        r"""Computes the Pade-Jastrow factor
 
         .. math::
             J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad

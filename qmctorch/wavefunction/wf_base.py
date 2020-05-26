@@ -32,7 +32,7 @@ class WaveFunction(torch.nn.Module):
         raise NotImplementedError()
 
     def electronic_potential(self, pos):
-        """Computes the electron-electron term
+        r"""Computes the electron-electron term
 
         .. math:
             V_{ee} = \sum_{e_1} \sum_{e_2} \\frac{1}{r_{e_1e_2}}
@@ -57,7 +57,7 @@ class WaveFunction(torch.nn.Module):
         return pot.view(-1, 1)
 
     def nuclear_potential(self, pos):
-        """Computes the electron-nuclear term
+        r"""Computes the electron-nuclear term
 
         .. math:
             V_{en} = - \sum_e \sum_n \\frac{Z_n}{r_{en}}
@@ -82,7 +82,7 @@ class WaveFunction(torch.nn.Module):
         return p.view(-1, 1)
 
     def nuclear_repulsion(self):
-        """Computes the nuclear-nuclear repulsion term
+        r"""Computes the nuclear-nuclear repulsion term
 
         .. math:
             V_{nn} = \sum_{n_1} \sum_{n_2} \\frac{Z_1Z_2}{r_{n_1n_2}}

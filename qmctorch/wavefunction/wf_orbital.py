@@ -149,7 +149,7 @@ class Orbital(WaveFunction):
         """computes the value of the wave function for the sampling points
 
         .. math::
-            \Psi(R) = \sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
+            \\Psi(R) = \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -231,7 +231,7 @@ class Orbital(WaveFunction):
             + self.nuclear_repulsion()
 
     def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
-        """Compute the value of the kinetic enery using the Jacobi Formula.
+        r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
