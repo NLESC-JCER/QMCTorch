@@ -97,6 +97,7 @@ class Orbital(WaveFunction):
         if self.cuda:
             self.fc = self.fc.to(self.device)
 
+        self.kinetic_method = kinetic
         if kinetic == 'jacobi':
             self.local_energy = self.local_energy_jacobi
 
@@ -114,24 +115,24 @@ class Orbital(WaveFunction):
 
     def log_data(self):
         log.info('')
-        log.info(' === Wave Function')
-        log.info(' Molecule name       : {0}', self.mol.name)
-        log.info(' Number of electrons : {0}', self.mol.nelec)
-        log.info(
-            ' SCF calculator      : {0}', self.mol.calculator_name)
-        log.info(' Basis set           : {0}', self.mol.basis_name)
-        log.info(' number of AOs       : {0}', self.mol.basis.nao)
-        log.info(' number of MOs       : {0}', self.mol.basis.nmo)
-        log.info(' Configurations      : {0}', self.configs_method)
-        log.info(' Number of confs     : {0}', self.nci)
+        log.info(' Wave Function')
+        log.info('  Jastrow factor      : {0}', self.use_jastrow)
+        log.info('  Highest MO included : {0}', self.highest_occ_mo)
+        log.info('  Configurations      : {0}', self.configs_method)
+        log.info('  Number of confs     : {0}', self.nci)
 
-        log.debug(' Configurations      : ')
+        log.debug('  Configurations      : ')
         for ic in range(self.nci):
             cstr = ' ' + ' '.join([str(i)
                                    for i in self.configs[0][ic].tolist()])
             cstr += ' | ' + ' '.join([str(i)
                                       for i in self.configs[1][ic].tolist()])
             log.debug(cstr)
+
+        log.info('  Kinetic energy      : {0}', self.kinetic_method)
+        log.info(
+            '  Number var  param   : {0}', self.get_number_parameters())
+        log.info('  Cuda support        : {0}', self.cuda)
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(self.mol.basis.mos).type(

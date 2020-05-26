@@ -7,7 +7,8 @@ __author__ = "Nicolas Renaud"
 __email__ = 'n.renaud@esciencecenter.nl'
 
 import twiggy
-twiggy.quick_setup()
+import sys
+twiggy.quick_setup(file=sys.stdout)
 log = twiggy.log.name('QMCTorch')
 log.min_level = twiggy.levels.INFO
 

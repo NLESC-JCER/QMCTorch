@@ -13,7 +13,7 @@ class GeneralizedMetropolis(SamplerBase):
                  ntherm=-1, ndecor=1,
                  nelec=1, ndim=1,
                  init={'type': 'uniform', 'min': -5, 'max': 5},
-                 cuda=False, with_tqdm=True):
+                 cuda=False):
         """Metroplis Hasting sampler
 
         Args:
@@ -24,9 +24,9 @@ class GeneralizedMetropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor, nelec, ndim, init,
-                             cuda, with_tqdm)
+                             cuda)
 
-    def __call__(self, pdf, pos=None):
+    def __call__(self, pdf, pos=None, with_tqdm=True):
         """Generate a series of point using MC sampling
 
         Args:
@@ -53,10 +53,9 @@ class GeneralizedMetropolis(SamplerBase):
             rhoi[rhoi == 0] = 1E-16
             pos, rate, idecor = [], 0, 0
 
-            if self.with_tqdm:
-                rng = tqdm(range(self.nstep))
-            else:
-                rng = range(self.nstep)
+            rng = tqdm(range(self.nstep),
+                       desc='INFO:QMCTorch|  Sampling',
+                       disable=not with_tqdm)
 
             for istep in rng:
 

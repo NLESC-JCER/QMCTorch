@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from .solver_base import SolverBase
 from qmctorch.utils import (
     DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+from .. import log
 
 
 class SolverOrbital(SolverBase):
@@ -42,6 +43,9 @@ class SolverOrbital(SolverBase):
             hdf5_group (str, optional): name of the hdf5 group where to store the data.
                                         Defaults to wf.task.
         """
+
+        log.info('')
+        log.info('  Optimization')
 
         # observalbe
         if not hasattr(self, 'observable'):
@@ -90,10 +94,26 @@ class SolverOrbital(SolverBase):
         # get the initial observalbe
         self.store_observable(pos)
 
+        # log data
+        """Log data for the optimization."""
+        log.info('  Task                :', self.task)
+        log.info(
+            '  Number Parameters   : {0}', self.wf.get_number_parameters())
+        log.info('  Number of epoch     : {0}', nepoch)
+        log.info('  Batch size          : {0}', batchsize)
+        log.info('  Loss function       : {0}', loss)
+        log.info('  Gardients           : {0}', grad)
+        log.info(
+            '  Resampling mode     : {0}', self.resampling_options.mode)
+        log.info(
+            '  Resampling every    : {0}', self.resampling_options.resample_every)
+        log.info(
+            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+
         # loop over the epoch
         for n in range(nepoch):
-            print('----------------------------------------')
-            print('epoch %d' % n)
+
+            log.info('epoch %d' % n)
 
             cumulative_loss = 0
 
@@ -121,7 +141,7 @@ class SolverOrbital(SolverBase):
 
             self.print_observable(cumulative_loss)
 
-            print('----------------------------------------')
+            log.info('')
 
             # resample the data
             pos = self.resample(n, pos)

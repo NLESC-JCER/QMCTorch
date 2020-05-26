@@ -231,3 +231,11 @@ class WaveFunction(torch.nn.Module):
     def pdf(self, pos):
         '''density of the wave function.'''
         return (self.forward(pos)**2).reshape(-1)
+
+    def get_number_parameters(self):
+        """Computes the total number of parameters."""
+        nparam = 0
+        for name, param in self.named_parameters():
+            if param.requires_grad:
+                nparam += param.data.numel()
+        return nparam

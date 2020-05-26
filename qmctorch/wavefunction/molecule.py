@@ -53,8 +53,11 @@ class Molecule(object):
         self.calculator_name = calculator
         self.basis_name = basis
 
+        log.info('')
+        log.info(' SCF Calculation')
+
         if load is not None:
-            log.info('Restarting calculation from {file}', file=load)
+            log.info('  Loading data from {file}', file=load)
             self._load_hdf5(load)
 
         else:
@@ -68,12 +71,12 @@ class Molecule(object):
                 [self.name, calculator, basis]) + '.hdf5'
 
             if os.path.isfile(self.hdf5file):
-                log.info(' Reusing scf calculation from {file}',
+                log.info('  Reusing scf results from {file}',
                          file=self.hdf5file)
                 self.basis = self._load_basis()
 
             else:
-                log.info(' Running scf calculation')
+                log.info('  Running scf  calculation')
 
                 calc = {'adf': CalculatorADF,
                         'pyscf': CalculatorPySCF}[calculator]
@@ -88,6 +91,19 @@ class Molecule(object):
                                  root_name='molecule')
 
         self._check_basis()
+        self.log_data()
+
+    def log_data(self):
+
+        log.info('  Molecule name       : {0}', self.name)
+        log.info('  Number of electrons : {0}', self.nelec)
+        log.info(
+            '  SCF calculator      : {0}', self.calculator_name)
+        log.info('  Basis set           : {0}', self.basis_name)
+        log.info('  Number of AOs       : {0}', self.basis.nao)
+        log.info('  Number of MOs       : {0}', self.basis.nmo)
+        log.info(
+            '  SCF Energy          : {:.3f} Hartree'.format(self.get_total_energy()))
 
     def domain(self, method):
         """Returns information to initialize the walkers
@@ -106,6 +122,7 @@ class Molecule(object):
             >>> domain = mol.domain('atomic')
         """
         domain = dict()
+        domain['method'] = method
 
         if method == 'center':
             domain['center'] = np.mean(self.atom_coords, 0)
@@ -250,10 +267,15 @@ class Molecule(object):
             >>> mol = Molecule('h2.xyz', calculator='adf', basis='sz')
             >>> mol.print_total_energy()
         """
+        e = self.get_total_energy()
+        log.info('== SCF Energy : {e}', e=e)
+
+    def get_total_energy(self):
+        """Get the value of the total energy."""
         h5 = h5py.File(self.hdf5file, 'r')
         e = h5['molecule']['basis']['TotalEnergy'][()]
-        log.info('== SCF Energy : {e}', e=e)
         h5.close()
+        return e
 
     def _check_basis(self):
         """Check if the basis contains all the necessary fields."""
