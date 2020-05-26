@@ -259,9 +259,9 @@ class SolverBase(object):
                 v = np.var(eloc)
                 err = np.sqrt(v / len(eloc))
                 log.options(style='percent').info(
-                    'energy   : %f +/- %f' % (e, err))
+                    '  energy   : %f +/- %f' % (e, err))
                 log.options(style='percent').info(
-                    'variance : %f' % np.sqrt(v))
+                    '  variance : %f' % np.sqrt(v))
 
             elif verbose:
                 log.options(style='percent').info(
@@ -399,7 +399,8 @@ class SolverBase(object):
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.nwalkers, ndim)
         el = []
-        rng = tqdm(p, desc='INFO:QMCTorch|  Energy  ', disable=not with_tqdm):
+        rng = tqdm(p, desc='INFO:QMCTorch|  Energy  ',
+                   disable=not with_tqdm)
         for ip in rng:
             el.append(self.wf.local_energy(ip).cpu().detach().numpy())
 

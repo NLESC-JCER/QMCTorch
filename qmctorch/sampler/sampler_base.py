@@ -53,3 +53,10 @@ class SamplerBase(object):
 
     def __repr__(self):
         return self.__class__.__name__ + ' sampler with  %d walkers' % self.nwalkers
+
+    def get_sampling_size(self):
+        """evaluate the number of sampling point we'll have."""
+        if self.ntherm == -1:
+            return self.nwalkers
+        else:
+            return self.walkers.nwalkers * int((self.nstep-self.ntherm)/self.ndecor)
