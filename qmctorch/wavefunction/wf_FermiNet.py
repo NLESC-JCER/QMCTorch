@@ -70,27 +70,37 @@ class FermiNet(WaveFunction):
 
     def forward(self, pos):
 
+        '''
+        forward electron position through the fermi net. 
+        First though intermediate layers then create sepearte orbitals 
+        which are combined in a slater determinand.
+
+        Args: 
+            pos (float): electron position Nbatch x [Nelec x Ndim]      
+        
+        '''
+        Nbatch = pos.shape[0]
+
         # Go through the intermediate layers 
         h_L_i, h_L_ij = self.Intermediate_layer(pos)
-        
         # Create the determinants 
-        determinant = torch.zeros(self.K_determinants)
+        determinant = torch.zeros(Nbatch, self.K_determinants)
         for k in range(self.K_determinants):
             # for each determinant k create two slatter determinants one spin-up one spin-down
-            det_up = torch.zeros((self.nup, self.nup))
-            det_down = torch.zeros((self.ndown, self.ndown))
+            det_up = torch.zeros((Nbatch, self.nup, self.nup))
+            det_down = torch.zeros((Nbatch, self.ndown, self.ndown))
             # for up:
             for i_up in range(self.nup):
                 for j_up in range(self.nup):
-                    det_up[i_up, j_up] = self.Orbital_determinant_up[k][i_up](
-                        h_L_i[j_up], pos[j_up])
+                    det_up[:, i_up, j_up] = self.Orbital_determinant_up[k][i_up](
+                        h_L_i[:,j_up], pos[:,j_up]).reshape(1, 1, Nbatch)
             # for down:        
             for i_down in range(self.ndown):
                 for j_down in range(self.ndown):
                     j_down = j_down + self.nup
-                    det_down[i_down, j_down-self.nup] = self.Orbital_determinant_up[k][i_down](
-                        h_L_i[j_down], pos[j_down])
-            determinant[k] = torch.det(det_up)*torch.det(det_down)
+                    det_down[:, i_down, j_down-self.nup] = self.Orbital_determinant_up[k][i_down](
+                        h_L_i[:,j_down,:], pos[:,j_down,:]).reshape(1,1,Nbatch)
+            determinant[:, k] = torch.det(det_up)*torch.det(det_down)
         #create make a weighted sum of the determinants
         psi = self.weighted_sum(determinant)
         # return psi.
@@ -185,3 +195,7 @@ class FermiNet(WaveFunction):
                                       :].detach().numpy().tolist()
             d.append((at, xyz))
         return d
+
+    def pdf(self, pos):
+            '''density of the wave function.'''
+            return (self.forward(pos.reshape(pos.shape[0],self.nelecetrons,self.ndim))**2).reshape(-1)

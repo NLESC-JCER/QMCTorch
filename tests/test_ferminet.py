@@ -25,10 +25,11 @@ class TestFermiNet(unittest.TestCase):
         self.N_dim = 3
         set_torch_double_precision()
         # define the molecule
-        self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
-                unit='bohr', calculator='pyscf', name='water')   
+        filename = "tests/hdf5/H2_adf_dzp.hdf5"
+        # self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
+        #         unit='bohr', calculator='pyscf', name='water')   
         # filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
-        # self.mol = Molecule(load=filename[2])
+        self.mol = Molecule(load=filename)
 
         # network hyperparameters: 
         self.hidden_nodes_e = 256
@@ -38,9 +39,10 @@ class TestFermiNet(unittest.TestCase):
 
         # set a initial seed for to make the example reproducable
         torch.random.manual_seed(321)
-
+        self.batch = 3
         # initiaite a random configuration of particle positions
-        self.r = torch.randn(self.mol.nelec, self.N_dim, device="cpu")
+        self.r = torch.randn(self.batch,self.mol.nelec, self.N_dim, device="cpu")
+        # self.r = torch.ones((self.batch,self.mol.nelec, self.N_dim), device="cpu")
 
     def test_intermediate(self):
                         
@@ -75,7 +77,10 @@ class TestFermiNet(unittest.TestCase):
         h_i, h_ij = FN.forward(self.r)
         # print("h_i is given by: \n {}".format(h_i))
         # and the output for the orbital
-        # print(Orbital.forward(h_i[0], self.r[0]))
+        det = torch.zeros(self.batch, 3, 3)
+        orbital_j = Orbital.forward(h_i[:,0], self.r[:,0]).reshape(1,1,3)
+        print(orbital_j)
+        det[:,0,0] = orbital_j
     
     def test_FermiNet(self):
         
@@ -91,6 +96,21 @@ class TestFermiNet(unittest.TestCase):
         # check the output of the network:
         psi = WF.forward(self.r)
         print(psi)
+
+    def test_sampler(self):
+        
+        WF = FermiNet(self.mol, self.hidden_nodes_e,
+                    self.hidden_nodes_ee, self.L_layers, self.K_determinants)
+        
+        # sampler
+        sampler = Metropolis(nwalkers=200,
+                            nstep=200, step_size=0.2,
+                            ntherm=-1, ndecor=100,
+                            nelec=WF.nelec, init=self.mol.domain('atomic'),
+                            move={'type': 'all-elec', 'proba': 'normal'})
+        
+        print(WF.pdf(self.r))
+        print(sampler(WF.pdf))
 
     # def test_optimization(self):
     #     WF = FermiNet(self.mol, 10, 4, 4, 
@@ -146,12 +166,13 @@ class TestFermiNet(unittest.TestCase):
         return numParams, numTrainable      
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestFermiNet()
-    # t.setUp()
+    # unittest.main()
+    t = TestFermiNet()
+    t.setUp()
     # t.test_intermediate()
     # t.test_orbital()
     # t.test_FermiNet()
     # t.test_optimization()
+    t.test_sampler()
 
 

@@ -30,15 +30,14 @@ class Orbital_FermiNet(nn.Module):
         
         # nuclei positions
         R_Nuclei = torch.tensor(self.mol.atom_coords).clone()
-
         # the output of the intermediate layers goes through the linear layer (w_i^ka h_j^La + g_i^ka)
         a_h_lin = self.final_linear(h_L_j)
         #the anisotropic exponents are determinent
         # the norm is taken from the 3 element output of the linear anisotropic output and put into the exponential 
-        anisotropic_exp = torch.zeros((self.N_nuclei))
+        anisotropic_exp = torch.zeros((r_j.shape[0], self.N_nuclei))
         for m in range(self.N_nuclei):
-            anisotropic_exp[m] = torch.exp(
-                -torch.norm(self.anisotropic[m](r_j-R_Nuclei[m])))
+            anisotropic_exp[:,m] = torch.exp(
+                -torch.norm(self.anisotropic[m](r_j-R_Nuclei[m,None]),dim=1))
         # the output of the exponents is fed into a linear layer with weights pi.
         a_an_lin = self.linear_anisotropic(anisotropic_exp)
         # the anisotropic term and linear electron term are multiplied
