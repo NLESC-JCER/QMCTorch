@@ -36,9 +36,7 @@ class FermiNet(WaveFunction):
         self.mol = mol
         self.atoms = mol.atoms
         self.natom = mol.natom
-        self.nup = mol.nup
-        self.ndown = mol.ndown
-        self.nelecetrons = self.nup + self.ndown
+        self.nelec = mol.nelec
         self.ndim =3
         
         # hyperparameters of network
@@ -56,10 +54,10 @@ class FermiNet(WaveFunction):
         for k in range(self.K_determinants):
             Orbitals_up = nn.ModuleList()
             Orbitals_down = nn.ModuleList()
-            for i in range(self.nup):
+            for i in range(self.mol.nup):
                 Orbitals_up.append(Orbital_FermiNet(self.mol, hidden_nodes_e))
 
-            for i in range(self.ndown):
+            for i in range(self.mol.ndown):
                 Orbitals_down.append(Orbital_FermiNet(self.mol, hidden_nodes_e))
 
             self.Orbital_determinant_up.append(Orbitals_up)
@@ -71,35 +69,36 @@ class FermiNet(WaveFunction):
     def forward(self, pos):
 
         '''
-        forward electron position through the fermi net. 
-        First though intermediate layers then create sepearte orbitals 
-        which are combined in a slater determinand.
+        forward electron position through the Fermi Net. 
+        First through intermediate layers then create seperate orbitals 
+        which are combined in a slater determinant.
 
         Args: 
             pos (float): electron position Nbatch x [Nelec x Ndim]      
         
         '''
-        Nbatch = pos.shape[0]
+
+        pos = pos.view(pos.shape[0],self.mol.nelec,self.ndim)
+        self.nbatch = pos.shape[0]
 
         # Go through the intermediate layers 
         h_L_i, h_L_ij = self.Intermediate_layer(pos)
         # Create the determinants 
-        determinant = torch.zeros(Nbatch, self.K_determinants)
+        determinant = torch.zeros(self.nbatch, self.K_determinants)
         for k in range(self.K_determinants):
             # for each determinant k create two slatter determinants one spin-up one spin-down
-            det_up = torch.zeros((Nbatch, self.nup, self.nup))
-            det_down = torch.zeros((Nbatch, self.ndown, self.ndown))
+            det_up = torch.zeros((self.nbatch, self.mol.nup, self.mol.nup))
+            det_down = torch.zeros((self.nbatch, self.mol.ndown, self.mol.ndown))
             # for up:
-            for i_up in range(self.nup):
-                for j_up in range(self.nup):
-                    det_up[:, i_up, j_up] = self.Orbital_determinant_up[k][i_up](
-                        h_L_i[:,j_up], pos[:,j_up]).reshape(1, 1, Nbatch)
+            for i_up in range(self.mol.nup):
+                det_up[:, i_up] = self.Orbital_determinant_up[k][i_up](
+                        h_L_i[:,:self.mol.nup].view(self.nbatch*self.mol.nup,self.hidden_nodes_e),
+                         pos[:,:self.mol.nup].view(self.nbatch*self.mol.nup,self.ndim))
             # for down:        
-            for i_down in range(self.ndown):
-                for j_down in range(self.ndown):
-                    j_down = j_down + self.nup
-                    det_down[:, i_down, j_down-self.nup] = self.Orbital_determinant_up[k][i_down](
-                        h_L_i[:,j_down,:], pos[:,j_down,:]).reshape(1,1,Nbatch)
+            for i_down in range(self.mol.ndown):
+                det_down[:, i_down] = self.Orbital_determinant_up[k][i_down](
+                        h_L_i[:,self.mol.nup:].view(self.nbatch*self.mol.ndown,self.hidden_nodes_e),
+                         pos[:,self.mol.nup].view(self.nbatch*self.mol.ndown,self.ndim))
             determinant[:, k] = torch.det(det_up)*torch.det(det_down)
         #create make a weighted sum of the determinants
         psi = self.weighted_sum(determinant)
@@ -196,6 +195,3 @@ class FermiNet(WaveFunction):
             d.append((at, xyz))
         return d
 
-    def pdf(self, pos):
-            '''density of the wave function.'''
-            return (self.forward(pos.reshape(pos.shape[0],self.nelecetrons,self.ndim))**2).reshape(-1)
