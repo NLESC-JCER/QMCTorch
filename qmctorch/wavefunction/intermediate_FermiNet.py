@@ -11,12 +11,11 @@ class IntermediateLayers(nn.Module):
          
         Args:
             mol (Molecule): Molecule instance
-            nspin (int array): Spin orientation given as [n_up,n_down]
-            ndim (int, optional): Number of dimensions.
-            cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
             hidden_nodes_e (int): Number of hidden nodes for one electron stream
             hidden_nodes_ee (int): Number of hidden nodes for two electron stream
             L_layers (int): Number of hidden layers
+            ndim (int, optional): Number of dimensions.
+            cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
         super(IntermediateLayers, self).__init__()
 
@@ -29,19 +28,12 @@ class IntermediateLayers(nn.Module):
 
         # number of atoms and electrons
         self.mol = mol 
-        self.atoms = mol.atoms
-        self.natom = mol.natom
-        self.nelec = mol.nelec
-
-        # spin orientation of electrons 
-        self.nup = mol.nup
-        self.ndown = mol.ndown
 
         # number of hidden layers 
         self.L_layers = L_layers
 
         # initial input size based on the concatenation
-        input_size = (3*self.natom+2)*(ndim+1)
+        input_size = (3*self.mol.natom+2)*(ndim+1)
 
         # linear input layer
         self.lin_layer_e = nn.ModuleList()
@@ -78,7 +70,7 @@ class IntermediateLayers(nn.Module):
         for l in range(self.L_layers):
             # for the one electron stream:
             h_i_previous = h_i
-            f = self.f_concatenate(h_i, h_ij, self.nup)
+            f = self.f_concatenate(h_i, h_ij, self.mol)
             l_e = self.lin_layer_e[l](f)
             # with a tanh activation and dependent on the hidden layers size a residual connection
             h_i = torch.tanh(l_e)
@@ -96,7 +88,7 @@ class IntermediateLayers(nn.Module):
 
 
     @staticmethod
-    def f_concatenate(h_i, h_ij, nup):
+    def f_concatenate(h_i, h_ij, mol):
         '''Function to concatenate the desired information to get the input for each new layer.
         With as input the one electron and two electron stream output of the previous layer and
         the spin assignment of the electrons.
@@ -104,16 +96,15 @@ class IntermediateLayers(nn.Module):
         Args: 
             h_i : one electron stream output of previous layer Nbatch x Nelec x hidden_nodes_e
             h_ij: two electron stream output of previous layer Nbatch x Nelec x Nelec x hidden_nodes_ee
-            nup (int) : number of spin up electrons 
+            mol : Molecule instance 
         '''
-        Nbatch = h_i.shape[0]
-        Nelec = h_i.shape[1]
+        nbatch = h_i.shape[0]
         hidden_nodes_e = h_i.shape[2]
 
-        g_down = torch.mean(h_i[:,:nup], axis=1).repeat(Nelec, 1).reshape(Nbatch, Nelec , hidden_nodes_e)
-        g_up = torch.mean(h_i[:,nup:], axis=1).repeat(Nelec, 1).reshape(Nbatch, Nelec, hidden_nodes_e)
-        g_down_i = torch.mean(h_ij[:,:nup], axis=1)
-        g_up_i = torch.mean(h_ij[:,nup:], axis=1)
+        g_down = torch.mean(h_i[:,:mol.nup], axis=1).repeat(mol.nelec, 1).reshape(nbatch, mol.nelec , hidden_nodes_e)
+        g_up = torch.mean(h_i[:,mol.nup:], axis=1).repeat(mol.nelec, 1).reshape(nbatch, mol.nelec, hidden_nodes_e)
+        g_down_i = torch.mean(h_ij[:,:mol.nup], axis=1)
+        g_up_i = torch.mean(h_ij[:,mol.nup:], axis=1)
 
         f_i = torch.cat((h_i, g_down, g_up, g_down_i, g_up_i), axis=2)
         # outputs a array f_i (N_batch x Nelec x f_size)
@@ -155,21 +146,20 @@ class IntermediateLayers(nn.Module):
             mol (object) : Molecule instance
 
         '''
-        Nbatch = pos.shape[0]
-        Nelec = mol.nelec
+        nbatch = pos.shape[0]
         # create meshgrid for indexing of electron i and j
         [i, j] = torch.meshgrid(torch.arange(
-            0, Nelec), torch.arange(0,Nelec))
-        xij = torch.zeros((Nbatch, Nelec, Nelec, 3))
+            0, mol.nelec), torch.arange(0,mol.nelec))
+        xij = torch.zeros((nbatch, mol.nelec, mol.nelec, 3))
         
         # determine electron - electron distance vector
         xij[:, :, :,:] = (pos[:, i, :]-pos[:, j, :]).reshape(
-            Nbatch, Nelec, Nelec, 3)
+            nbatch, mol.nelec, mol.nelec, 3)
         
         # determine absolute distance
         rij = torch.norm(xij, dim=3)
         h_0_ij = torch.cat(
-            (xij, rij.reshape(Nbatch, Nelec, Nelec, 1)), axis=3)
+            (xij, rij.reshape(nbatch, mol.nelec, mol.nelec, 1)), axis=3)
         # output h_0_ij Nbatch x Nelec x Nelec x Ndim+1
         return h_0_ij
 
