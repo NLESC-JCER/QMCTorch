@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import pickle
 
+from .stat_utils import blocking, correlation_coefficient, integrated_autocorrelation_time
+
 
 def plot_energy(local_energy, e0=None, show_variance=False):
     """Plot the evolution of the energy
@@ -85,7 +87,7 @@ def plot_walkers_traj(eloc, walkers='mean'):
         float :  Decorelation time
     """
 
-    #eloc = np.array(obs.local_energy).squeeze(-1)
+    # eloc = np.array(obs.local_energy).squeeze(-1)
 
     nstep, nwalkers = eloc.shape
 
@@ -125,6 +127,29 @@ def plot_walkers_traj(eloc, walkers='mean'):
     return Tc
 
 
+def plot_correlation_time(eloc):
+    """Plot the blocking thingy
+
+    Args:
+        eloc (np.array): values of the local energy
+    """
+
+    nstep, nwalkers = eloc.shape
+    max_block_size = nstep // 2
+
+    var = np.std(eloc, axis=0)
+
+    evar = []
+    for size in range(1, max_block_size):
+        eb = blocking(eloc, size)
+        evar.append(np.std(eb, axis=0) * size / var)
+
+    plt.plot(np.array(evar))
+    plt.xlabel('Blocking size')
+    plt.ylabel('Correlation steps')
+    plt.show()
+
+
 def plot_block(eloc):
     """Plot the blocking thingy
 
@@ -137,10 +162,46 @@ def plot_block(eloc):
 
     evar = []
     for size in range(1, max_block_size):
-        nblock = nstep // size
-        tmp = np.copy(eloc[:size * nblock, :])
-        tmp = tmp.reshape(nblock, size, nwalkers).mean(axis=1)
-        evar.append(np.sqrt(np.var(tmp, axis=0) / (nblock - 1)))
+        eb = blocking(eloc, size)
+        evar.append(np.sqrt(np.var(eb, axis=0) / (nblock - 1)))
 
     plt.plot(np.array(evar))
     plt.show()
+
+
+def plot_autocorrelation(eloc, size_max=100, C=5):
+
+    rho = correlation_coefficient(eloc)
+    plt.plot(rho)
+    plt.show()
+
+    tau = integrated_autocorrelation_time(rho, size_max)
+
+    tc, idx_tc = [], []
+    idx = np.arange(1, size_max)
+    for iw in range(eloc.shape[1]):
+
+        t = tau[:, iw]
+        if len(t[C*t <= idx]) > 0:
+
+            tval = t[C*t <= idx][0]
+            ii = np.where(t == tval)[0][0]
+
+            tc.append(tval)
+            idx_tc.append(ii)
+
+    plt.plot(tau)
+    plt.plot(idx_tc, tc, 'o')
+    plt.plot(idx/5, '--', c='black')
+    plt.show()
+
+    tm = tau.mean(1)
+    idx = np.arange(0, len(tm))
+    plt.plot(idx/5, '--', c='black')
+    tt = tm[tm*C <= idx][0]
+    ii = np.where(tm == tt)[0][0]
+    plt.plot(tau.mean(1))
+    plt.plot(ii, tt, 'o')
+    plt.plot(idx/5, '--', c='black')
+    plt.show()
+    return tau
