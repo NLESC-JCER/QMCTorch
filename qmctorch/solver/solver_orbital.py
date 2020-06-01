@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader
 from .solver_base import SolverBase
 from qmctorch.utils import (
     DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+from .. import log
 
 
 class SolverOrbital(SolverBase):
@@ -43,6 +44,9 @@ class SolverOrbital(SolverBase):
                                         Defaults to wf.task.
         """
 
+        log.info('')
+        log.info('  Optimization')
+
         # observalbe
         if not hasattr(self, 'observable'):
             self.track_observable(['local_energy'])
@@ -54,9 +58,6 @@ class SolverOrbital(SolverBase):
         if 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
 
-        # sample the wave function
-        pos = self.sampler(self.wf.pdf)
-
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
         self.loss.use_weight = (
@@ -65,9 +66,18 @@ class SolverOrbital(SolverBase):
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
 
+        # log data
+        self.log_data_opt(nepoch, batchsize, loss, grad)
+
+        # sample the wave function
+        pos = self.sampler(self.wf.pdf)
+
         # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
+
+        # get the initial observable
+        self.store_observable(pos)
 
         # change the number of steps/walker size
         _nstep_save = self.sampler.nstep
@@ -87,13 +97,10 @@ class SolverOrbital(SolverBase):
         cumulative_loss = []
         min_loss = 1E3
 
-        # get the initial observalbe
-        self.store_observable(pos)
-
         # loop over the epoch
         for n in range(nepoch):
-            print('----------------------------------------')
-            print('epoch %d' % n)
+
+            log.info('  epoch %d' % n)
 
             cumulative_loss = 0
 
@@ -121,7 +128,7 @@ class SolverOrbital(SolverBase):
 
             self.print_observable(cumulative_loss)
 
-            print('----------------------------------------')
+            log.info('')
 
             # resample the data
             pos = self.resample(n, pos)
@@ -209,3 +216,22 @@ class SolverOrbital(SolverBase):
         else:
             raise ValueError(
                 'Manual gradient only for energy minimization')
+
+    def log_data_opt(self, nepoch, batchsize, loss, grad):
+        """Log data for the optimization."""
+        log.info('  Task                :', self.task)
+        log.info(
+            '  Number Parameters   : {0}', self.wf.get_number_parameters())
+        log.info('  Number of epoch     : {0}', nepoch)
+        log.info(
+            '  Batch size          : {0}', self.sampler.get_sampling_size())
+        log.info('  Loss function       : {0}', self.loss.method)
+        log.info('  Clip Loss           : {0}', self.loss.clip)
+        log.info('  Gradients           : {0}', grad)
+        log.info(
+            '  Resampling mode     : {0}', self.resampling_options.mode)
+        log.info(
+            '  Resampling every    : {0}', self.resampling_options.resample_every)
+        log.info(
+            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+        log.info('')
