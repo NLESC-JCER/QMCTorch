@@ -4,7 +4,6 @@ from tqdm import tqdm
 import numpy as np
 
 from ..utils import dump_to_hdf5, add_group_attr
-from .. import log
 
 
 class SolverBase(object):
@@ -59,8 +58,6 @@ class SolverBase(object):
 
         if rank == 0:
             dump_to_hdf5(self, self.hdf5file)
-
-        self.log_data()
 
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
         """Configure the resampling
@@ -258,16 +255,13 @@ class SolverBase(object):
                 e = np.mean(eloc)
                 v = np.var(eloc)
                 err = np.sqrt(v / len(eloc))
-                log.options(style='percent').info(
-                    '  energy   : %f +/- %f' % (e, err))
-                log.options(style='percent').info(
-                    '  variance : %f' % np.sqrt(v))
+                print('energy   : %f +/- %f' % (e, err))
+                print('variance : %f' % np.sqrt(v))
 
             elif verbose:
-                log.options(style='percent').info(
+                print(
                     k + ' : ', self.observable.__getattribute__(k)[-1])
-                log.options(style='percent').info(
-                    'loss %f' % (cumulative_loss))
+                print('loss %f' % (cumulative_loss))
 
     def resample(self, n, pos):
         """Resample the wave function
@@ -295,8 +289,7 @@ class SolverBase(object):
                     pos = None
 
                 # sample and update the dataset
-                pos = self.sampler(
-                    self.wf.pdf, pos=pos, with_tqdm=False)
+                pos = self.sampler(self.wf.pdf, pos=pos)
                 self.dataloader.dataset.data = pos
 
             # update the weight of the loss if needed
@@ -305,7 +298,7 @@ class SolverBase(object):
 
         return pos
 
-    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
+    def single_point(self, hdf5_group='single_point'):
         """Performs a single point calculatin
 
         Args:
@@ -316,10 +309,6 @@ class SolverBase(object):
             SimpleNamespace: contains the local energy, positions, ...
         """
 
-        log.info('')
-        log.info('  Single Point Calculation : {nw} walkers | {ns} steps',
-                 nw=self.sampler.nwalkers, ns=self.sampler.nstep)
-
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()
         if self.wf.kinetic == 'auto':
@@ -328,7 +317,7 @@ class SolverBase(object):
         with grad_mode:
 
             #  get the position and put to gpu if necessary
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
+            pos = self.sampler(self.wf.pdf)
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 
@@ -338,10 +327,9 @@ class SolverBase(object):
                 el), self.wf.sampling_error(el)
 
             # print data
-            log.options(style='percent').info(
-                '  Energy   : %f +/- %f' % (e.detach().item(), err.detach().item()))
-            log.options(style='percent').info(
-                '  Variance : %f' % s.detach().item())
+            print('Energy   : ', e.detach().item(),
+                  ' +/- ', err.detach().item())
+            print('Variance : ', s.detach().item())
 
             # dump data to hdf5
             obs = SimpleNamespace(
@@ -380,7 +368,7 @@ class SolverBase(object):
             self.obs_dict[key] = []
         self.obs_dict[key].append(data)
 
-    def sampling_traj(self, pos=None, with_tqdm=True, hdf5_group='sampling_trajectory'):
+    def sampling_traj(self, pos, hdf5_group='sampling_trajectory'):
         """Compute the local energy along a sampling trajectory
 
         Args:
@@ -390,18 +378,10 @@ class SolverBase(object):
         Returns:
             SimpleNamespace : contains energy/positions/
         """
-        log.info('')
-        log.info('  Sampling trajectory')
-
-        if pos is None:
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
-
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.nwalkers, ndim)
         el = []
-        rng = tqdm(p, desc='INFO:QMCTorch|  Energy  ',
-                   disable=not with_tqdm)
-        for ip in rng:
+        for ip in tqdm(p):
             el.append(self.wf.local_energy(ip).cpu().detach().numpy())
 
         el = np.array(el).squeeze(-1)
@@ -457,32 +437,3 @@ class SolverBase(object):
 
     def run(self, nepoch, batchsize=None, loss='variance'):
         raise NotImplementedError()
-
-    def log_data(self):
-
-        log.info('')
-        log.info(' QMC Solver ')
-
-        if self.wf is not None:
-            log.info(
-                '  WaveFunction        : {0}', self.wf.__class__.__name__)
-            for x in self.wf.__repr__().split('\n'):
-                log.debug('   ' + x)
-
-        if self.sampler is not None:
-            log.info(
-                '  Sampler             : {0}', self.sampler.__class__.__name__)
-            for x in self.sampler.__repr__().split('\n'):
-                log.debug('   ' + x)
-
-        if self.opt is not None:
-            log.info(
-                '  Optimizer           : {0}', self.opt.__class__.__name__)
-            for x in self.opt.__repr__().split('\n'):
-                log.debug('   ' + x)
-
-        if self.scheduler is not None:
-            log.info(
-                '  Scheduler           : {0}', self.scheduler.__class__.__name__)
-            for x in self.scheduler.__repr__().split('\n'):
-                log.debug('   ' + x)

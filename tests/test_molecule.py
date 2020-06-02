@@ -27,8 +27,7 @@ class TestMolecule(unittest.TestCase):
                 np.array([0., 0., 0.5])).all()
 
         domain_uniform = mol.domain('uniform')
-        assert domain_uniform == {
-            'method': 'uniform', 'min': -0.5, 'max': 1.5}
+        assert domain_uniform == {'min': -0.5, 'max': 1.5}
 
         domain_normal = mol.domain('normal')
         assert np.all(domain_normal['mean']

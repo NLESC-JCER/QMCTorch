@@ -83,5 +83,4 @@ class TestH2ADF(unittest.TestCase):
 if __name__ == "__main__":
     # unittest.main()
     t = TestH2ADF()
-    t.setUp()
-    t.test_single_point()
+    # t.test_single_point()

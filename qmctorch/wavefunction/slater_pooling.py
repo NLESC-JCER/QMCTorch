@@ -252,7 +252,7 @@ class SlaterPooling(nn.Module):
             return self.kinetic_single_double(mo, bkin)
 
     def kinetic_explicit(self, mo, bkin):
-        r"""Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
+        """Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
 
         .. math::
             -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}
