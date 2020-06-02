@@ -5,6 +5,7 @@ import warnings
 from .calculator_base import CalculatorBase
 import h5py
 from types import SimpleNamespace
+from ... import log
 
 try:
     from scm import plams
@@ -78,7 +79,16 @@ class CalculatorADF(CalculatorBase):
     def get_basis_data(self, kffile):
         """Save the basis information needed to compute the AO values."""
 
+        if not os.path.isfile(kffile):
+            raise FileNotFoundError(
+                'File %s not found, ADF may have crashed, look into the plams_workdir directory' % kffile)
         kf = plams.KFFile(kffile)
+        status = kf.read('General', 'termination status').strip()
+        if status != 'NORMAL TERMINATION':
+            log.info(
+                '  WARNING : ADF calculation terminated with status')
+            log.info('          : %s' % status)
+            log.info('          : Proceed with caution')
 
         basis = SimpleNamespace()
 
