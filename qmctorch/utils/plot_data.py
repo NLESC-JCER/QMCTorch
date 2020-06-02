@@ -139,6 +139,11 @@ def plot_correlation_coefficient(eloc, size_max=100):
     plt.plot(fitted, '--', c='grey')
     plt.xlim([0, size_max])
     plt.ylim([-0.25, 1.5])
+    plt.xlabel('MC steps')
+    plt.ylabel('Correlation coefficient')
+    plt.text(0.5*size_max, 1.05, 'tau=%1.3f' %
+             tau_fit, {'color': 'black',  'fontsize': 15})
+    plt.grid()
     plt.show()
 
     return rho, tau_fit
@@ -182,6 +187,9 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5):
     ii = np.where(tm == tt)[0][0]
     plt.plot(ii, tt, 'o')
 
+    plt.grid()
+    plt.xlabel('MC step')
+    plt.ylabel('IAC')
     plt.show()
 
 
@@ -212,7 +220,12 @@ def plot_blocking_energy(eloc, block_size, walkers='mean'):
     else:
         raise ValueError('walkers ', walkers, ' not recognized')
 
+    plt.grid()
+    plt.xlabel('MC steps')
+    plt.ylabel('Energy')
     plt.show()
+
+    return blocking(eloc, block_size, expand=False)
 
 
 def plot_correlation_time(eloc):
