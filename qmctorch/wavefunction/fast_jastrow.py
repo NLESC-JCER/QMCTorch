@@ -146,6 +146,7 @@ class TwoBodyJastrowFactor(nn.Module):
                 pos, derivative=1)).view(nbatch, 3, -1)
             d2r = self.extract_tri_up(self.edist(
                 pos, derivative=2)).view(nbatch, 3, -1)
+
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
     def _jastrow_derivative(self, r, dr, jast, jacobian):
@@ -209,12 +210,12 @@ class TwoBodyJastrowFactor(nn.Module):
         hess_jast = torch.zeros(nbatch, self.nelec).to(self.device)
         hess_jast.index_add_(1, self.index_row, d2jast)
         hess_jast.index_add_(1, self.index_col, d2jast)
-        hess_jast *= 0.5
+        hess_jast = 0.5 * hess_jast
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr))
 
-        hess_jast += self._partial_derivative(
+        hess_jast = hess_jast + self._partial_derivative(
             djast, out_mat=hess_jast)
 
         return hess_jast * prod_val
@@ -385,7 +386,7 @@ class TwoBodyJastrowFactor(nn.Module):
         if len(self.index_partial_der) > 0:
             x = djast[..., self.index_partial_der]
             x = x.prod(-1)
-            x *= self.weight_partial_der
+            x = x * self.weight_partial_der
             x = x.sum(1)
             out_mat.index_add_(1, self.index_partial_der_to_elec, x)
 
