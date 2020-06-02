@@ -8,7 +8,7 @@ from .stat_utils import (blocking, correlation_coefficient,
                          fit_correlation_coefficient)
 
 
-def plot_energy(local_energy, e0=None, show_variance=False):
+def plot_energy(local_energy, e0=None, show_variance=False, path=None):
     """Plot the evolution of the energy
 
     Args:
@@ -49,10 +49,13 @@ def plot_energy(local_energy, e0=None, show_variance=False):
         ax2.tick_params(axis='y', labelcolor='blue')
         fig.tight_layout()
 
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
-def plot_data(observable, obsname):
+def plot_data(observable, obsname, path=None):
     """Plot the evolution a given data
 
     Args:
@@ -75,10 +78,13 @@ def plot_data(observable, obsname):
         ax2.set_ylabel('gradient', color='blue')
         ax2.tick_params(axis='y', labelcolor='blue')
 
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
-def plot_walkers_traj(eloc, walkers='mean'):
+def plot_walkers_traj(eloc, walkers='mean', path=None):
     """Plot the trajectory of all the individual walkers
 
     Args:
@@ -114,7 +120,11 @@ def plot_walkers_traj(eloc, walkers='mean'):
         plt.xlabel('Monte Carlo Steps')
         plt.ylabel('Energy (Hartree)')
 
-    plt.show()
+    
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
 def plot_correlation_coefficient(eloc, size_max=100):
@@ -251,7 +261,7 @@ def plot_correlation_time(eloc):
     plt.show()
 
 
-def plot_block(eloc):
+def plot_block(eloc, path=None):
     """Plot the blocking thingy
 
     Args:
@@ -268,4 +278,8 @@ def plot_block(eloc):
         evar.append(np.sqrt(np.var(eb, axis=0) / (nblock - 1)))
 
     plt.plot(np.array(evar))
-    plt.show()
+    
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
