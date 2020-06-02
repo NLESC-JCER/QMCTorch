@@ -3,21 +3,20 @@ import numpy as np
 import torch
 import warnings
 from types import SimpleNamespace
-from .. import log
 
 
 def print_insert_error(obj, obj_name):
-    log.critical('Issue inserting data {0} of type {type}',
-                 obj_name, type=str(type(obj)))
+    warnings.warn('Issue inserting data %s of type %s' %
+                  (obj_name, str(type(obj))))
 
 
 def print_insert_type_error(obj, obj_name):
-    log.critical('Issue inserting type of data {0}} ({type}})' %
-                 obj_name, type=str(type(obj)))
+    warnings.warn('Issue inserting type of data %s (%s)' %
+                  (obj_name, str(type(obj))))
 
 
 def print_load_error(grp):
-    log.critical('Issue loading {grp}', grp=grp)
+    warnings.warn('Issue loading %s' % grp)
 
 
 def load_from_hdf5(obj, fname, obj_name):
@@ -166,8 +165,8 @@ def insert_group(obj, parent_grp, obj_name):
             print_insert_error(obj, obj_name)
 
     else:
-        log.debug(
-            'object {obj} already exists, keeping existing version of the data', obj=obj_name)
+        print(
+            'object %s already exists, keeping existing version of the data' % obj_name)
 
 
 def insert_data(obj, parent_grp, obj_name):

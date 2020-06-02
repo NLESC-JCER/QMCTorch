@@ -2,14 +2,13 @@ import torch
 from tqdm import tqdm
 from torch.autograd import Variable
 from .sampler_base import SamplerBase
-from .. import log
 
 
 class Hamiltonian(SamplerBase):
 
     def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
                  step_size=0.1, ntherm=-1, ndecor=1, init={'min': -2, 'max': 2}, L=10,
-                 cuda=False):
+                 cuda=False, with_tqdm=True):
         """Hamiltonian Monte Carlo Sampler.
 
         Args:
@@ -27,7 +26,7 @@ class Hamiltonian(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+                             nelec, ndim, init, cuda, with_tqdm)
         self.traj_length = L
 
     @staticmethod
@@ -45,13 +44,11 @@ class Hamiltonian(SamplerBase):
     def log_func(func):
         return lambda x: -torch.log(func(x))
 
-    def __call__(self, pdf, pos=None, with_tqdm=True):
+    def __call__(self, pdf, pos=None):
         """Generate walkers followinf HMC
 
         Arguments:
             pdf {callable} -- density to sample
-            pos (torch.tensor): precalculated position to start with
-            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
 
         Keyword Arguments:
             ntherm {int} -- number of iterations needed to thermalize (default: {10})
@@ -75,9 +72,10 @@ class Hamiltonian(SamplerBase):
         rate = 0
         idecor = 0
 
-        rng = tqdm(range(self.nstep),
-                   desc='INFO:QMCTorch|  Sampling',
-                   disable=not with_tqdm)
+        if self.with_tqdm:
+            rng = tqdm(range(self.nstep))
+        else:
+            rng = range(self.nstep)
 
         for istep in rng:
 
@@ -94,8 +92,7 @@ class Hamiltonian(SamplerBase):
                 idecor += 1
 
         # print stats
-        log.options(style='percent').debug(
-            "  Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
+        print("Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
         return torch.cat(pos).requires_grad_()
 
     @staticmethod

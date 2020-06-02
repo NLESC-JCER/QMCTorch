@@ -5,7 +5,6 @@ from torch.distributions import MultivariateNormal
 import numpy as np
 
 from .sampler_base import SamplerBase
-from .. import log
 
 
 class GeneralizedMetropolis(SamplerBase):
@@ -14,7 +13,7 @@ class GeneralizedMetropolis(SamplerBase):
                  ntherm=-1, ndecor=1,
                  nelec=1, ndim=1,
                  init={'type': 'uniform', 'min': -5, 'max': 5},
-                 cuda=False):
+                 cuda=False, with_tqdm=True):
         """Metroplis Hasting sampler
 
         Args:
@@ -25,9 +24,9 @@ class GeneralizedMetropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor, nelec, ndim, init,
-                             cuda)
+                             cuda, with_tqdm)
 
-    def __call__(self, pdf, pos=None, with_tqdm=True):
+    def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
 
         Args:
@@ -54,9 +53,10 @@ class GeneralizedMetropolis(SamplerBase):
             rhoi[rhoi == 0] = 1E-16
             pos, rate, idecor = [], 0, 0
 
-            rng = tqdm(range(self.nstep),
-                       desc='INFO:QMCTorch|  Sampling',
-                       disable=not with_tqdm)
+            if self.with_tqdm:
+                rng = tqdm(range(self.nstep))
+            else:
+                rng = range(self.nstep)
 
             for istep in rng:
 
@@ -91,8 +91,9 @@ class GeneralizedMetropolis(SamplerBase):
                         pos.append(xi.clone().detach())
                     idecor += 1
 
-            log.options(style='percent').debug("  Acceptance rate %1.3f" %
-                                               (rate / self.nstep * 100))
+            if self.with_tqdm:
+                print("Acceptance rate %1.3f %%" %
+                      (rate / self.nstep * 100))
 
             self.walkers.pos.data = xi.data
 

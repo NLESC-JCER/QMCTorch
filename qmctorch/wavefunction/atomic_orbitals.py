@@ -57,7 +57,6 @@ class AtomicOrbitals(nn.Module):
         self.bas_exp.requires_grad = True
 
         # harmonics generator
-        self.harmonics_type = mol.basis.harmonics_type
         if mol.basis.harmonics_type == 'sph':
             self.bas_n = torch.tensor(mol.basis.bas_n).type(dtype)
             self.harmonics = Harmonics(
@@ -79,7 +78,6 @@ class AtomicOrbitals(nn.Module):
         radial_dict = {'sto': radial_slater,
                        'gto': radial_gaussian}
         self.radial = radial_dict[mol.basis.radial_type]
-        self.radial_type = mol.basis.radial_type
 
         # get the normalisation constants
         if hasattr(mol.basis, 'bas_norm') and False:
@@ -95,12 +93,6 @@ class AtomicOrbitals(nn.Module):
         if self.cuda:
             self._to_device()
 
-    def __repr__(self):
-        name = self.__class__.__name__
-        return name + '(%s, %s, %d -> (%d,%d) )' % (self.radial_type, self.harmonics_type,
-                                                    self.nelec*self.ndim, self.nelec,
-                                                    self.norb)
-
     def _to_device(self):
         """Export the non parameter variable to the device."""
 
@@ -112,7 +104,7 @@ class AtomicOrbitals(nn.Module):
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, input, derivative=0, jacobian=True, one_elec=False):
-        r"""Computes the values of the atomic orbitals.
+        """Computes the values of the atomic orbitals.
 
         .. math::
             \phi_i(r_j) = \sum_n c_n \\text{Rad}^{i}_n(r_j) \\text{Y}^{i}_n(r_j)

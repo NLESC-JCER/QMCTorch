@@ -9,7 +9,7 @@ from time import time
 class TwoBodyJastrowFactor(nn.Module):
 
     def __init__(self, nup, ndown, w=1., cuda=False):
-        r"""Computes the Pade-Jastrow factor
+        """Computes the Pade-Jastrow factor
 
         .. math::
             J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
@@ -47,7 +47,7 @@ class TwoBodyJastrowFactor(nn.Module):
         self._get_index_partial_derivative()
 
     def get_mask_tri_up(self):
-        r"""Get the mask to select the triangular up matrix
+        """Get the mask to select the triangular up matrix
 
         Returns:
             torch.tensor: mask of the tri up matrix
@@ -66,7 +66,7 @@ class TwoBodyJastrowFactor(nn.Module):
         return mask, index_col, index_row
 
     def extract_tri_up(self, input):
-        r"""extract the upper triangular elements
+        """extract the upper triangular elements
 
         Args:
             input (torch.tensor): input matrices (nbatch, n, n)
@@ -221,7 +221,7 @@ class TwoBodyJastrowFactor(nn.Module):
         return hess_jast * prod_val
 
     def _get_jastrow_elements(self, r):
-        r"""Get the elements of the jastrow matrix :
+        """Get the elements of the jastrow matrix :
         .. math::
             out_{i,j} = \exp{ \frac{b r_{i,j}}{1+b'r_{i,j}} }
 

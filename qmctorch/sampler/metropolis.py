@@ -2,7 +2,6 @@ from tqdm import tqdm
 import torch
 from torch.distributions import MultivariateNormal
 from .sampler_base import SamplerBase
-from .. import log
 
 
 class Metropolis(SamplerBase):
@@ -13,7 +12,7 @@ class Metropolis(SamplerBase):
                  nelec=1, ndim=3,
                  init={'min': -5, 'max': 5},
                  move={'type': 'all-elec', 'proba': 'normal'},
-                 cuda=False):
+                 cuda=False, with_tqdm=True):
         """Metropolis Hasting generator
 
         Args:
@@ -35,7 +34,7 @@ class Metropolis(SamplerBase):
                                         'uniform': uniform ina cube \n
                                         'normal': gussian in a sphere \n
             cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
-
+            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
 
         Examples::
             >>> mol = Molecule('h2.xyz')
@@ -46,25 +45,17 @@ class Metropolis(SamplerBase):
 
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+                             nelec, ndim, init, cuda, with_tqdm)
 
         self.configure_move(move)
-        self.log_data()
 
-    def log_data(self):
-        """log data about the sampler."""
-        log.info('  Move type           : {0}', self.movedict['type'])
-        log.info(
-            '  Move proba          : {0}', self.movedict['proba'])
-
-    def __call__(self, pdf, pos=None, with_tqdm=True):
+    def __call__(self, pdf, pos=None):
         """Generate a series of point using MC sampling
 
         Args:
             pdf (callable): probability distribution function to be sampled
             pos (torch.tensor, optional): position to start with.
                                           Defaults to None.
-            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
 
         Returns:
             torch.tensor: positions of the walkers
@@ -91,9 +82,10 @@ class Metropolis(SamplerBase):
             fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
 
-            rng = tqdm(range(self.nstep),
-                       desc='INFO:QMCTorch|  Sampling',
-                       disable=not with_tqdm)
+            if self.with_tqdm:
+                rng = tqdm(range(self.nstep))
+            else:
+                rng = range(self.nstep)
 
             for istep in rng:
 
@@ -124,8 +116,9 @@ class Metropolis(SamplerBase):
                         pos.append(self.walkers.pos.to('cpu').clone())
                     idecor += 1
 
-            log.options(style='percent').debug("  Acceptance rate %1.3f" %
-                                               (rate / self.nstep * 100))
+            if self.with_tqdm:
+                print("Acceptance rate %1.3f %%" %
+                      (rate / self.nstep * 100))
 
         return torch.cat(pos).requires_grad_()
 

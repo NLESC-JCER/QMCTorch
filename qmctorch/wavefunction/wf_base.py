@@ -32,75 +32,29 @@ class WaveFunction(torch.nn.Module):
         raise NotImplementedError()
 
     def electronic_potential(self, pos):
-        r"""Computes the electron-electron term
-
-        .. math:
-            V_{ee} = \sum_{e_1} \sum_{e_2} \\frac{1}{r_{e_1e_2}}
-
+        '''Compute the potential of the wf points
         Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            pos: position of the electron
 
-        Returns:
-            torch.tensor: values of the electon-electron energy at each sampling points
-        """
-
-        pot = torch.zeros(pos.shape[0], device=self.device)
-
-        for ielec1 in range(self.nelec - 1):
-            epos1 = pos[:, ielec1 *
-                        self.ndim:(ielec1 + 1) * self.ndim]
-            for ielec2 in range(ielec1 + 1, self.nelec):
-                epos2 = pos[:, ielec2 *
-                            self.ndim:(ielec2 + 1) * self.ndim]
-                r = torch.sqrt(((epos1 - epos2)**2).sum(1))  # + 1E-12
-                pot += (1. / r)
-        return pot.view(-1, 1)
+        Returns: values of Vee * psi
+        '''
+        raise NotImplementedError()
 
     def nuclear_potential(self, pos):
-        r"""Computes the electron-nuclear term
-
-        .. math:
-            V_{en} = - \sum_e \sum_n \\frac{Z_n}{r_{en}}
-
+        '''Compute the potential of the wf points
         Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            pos: position of the electron
 
-        Returns:
-            torch.tensor: values of the electon-nuclear energy at each sampling points
-        """
-
-        p = torch.zeros(pos.shape[0], device=self.device)
-        for ielec in range(self.nelec):
-            istart = ielec * self.ndim
-            iend = (ielec + 1) * self.ndim
-            pelec = pos[:, istart:iend]
-            for iatom in range(self.natom):
-                patom = self.ao.atom_coords[iatom, :]
-                Z = self.ao.atomic_number[iatom]
-                r = torch.sqrt(((pelec - patom)**2).sum(1))  # + 1E-12
-                p += -Z / r
-        return p.view(-1, 1)
+        Returns: values of Ven * psi
+        '''
+        raise NotImplementedError()
 
     def nuclear_repulsion(self):
-        r"""Computes the nuclear-nuclear repulsion term
+        '''Compute the nuclear repulsion term
 
-        .. math:
-            V_{nn} = \sum_{n_1} \sum_{n_2} \\frac{Z_1Z_2}{r_{n_1n_2}}
-
-        Returns:
-            torch.tensor: values of the nuclear-nuclear energy at each sampling points
-        """
-
-        vnn = 0.
-        for at1 in range(self.natom - 1):
-            c0 = self.ao.atom_coords[at1, :]
-            Z0 = self.ao.atomic_number[at1]
-            for at2 in range(at1 + 1, self.natom):
-                c1 = self.ao.atom_coords[at2, :]
-                Z1 = self.ao.atomic_number[at2]
-                rnn = torch.sqrt(((c0 - c1)**2).sum())
-                vnn += Z0 * Z1 / rnn
-        return vnn
+        Returns: values of Vnn * psi
+        '''
+        raise NotImplementedError()
 
     def kinetic_energy(self, pos):
         '''Main switch for the kinetic energy.'''
@@ -231,11 +185,3 @@ class WaveFunction(torch.nn.Module):
     def pdf(self, pos):
         '''density of the wave function.'''
         return (self.forward(pos)**2).reshape(-1)
-
-    def get_number_parameters(self):
-        """Computes the total number of parameters."""
-        nparam = 0
-        for name, param in self.named_parameters():
-            if param.requires_grad:
-                nparam += param.data.numel()
-        return nparam

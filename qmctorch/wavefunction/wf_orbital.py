@@ -13,7 +13,7 @@ from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
                                  interpolator_reg_grid, interpolate_reg_grid,
                                  interpolator_irreg_grid, interpolate_irreg_grid)
-from .. import log
+from qmctorch.utils import timeit
 
 
 class Orbital(WaveFunction):
@@ -97,7 +97,6 @@ class Orbital(WaveFunction):
         if self.cuda:
             self.fc = self.fc.to(self.device)
 
-        self.kinetic_method = kinetic
         if kinetic == 'jacobi':
             self.local_energy = self.local_energy_jacobi
 
@@ -110,29 +109,6 @@ class Orbital(WaveFunction):
                                   ['ao', 'mo_scf',
                                    'mo', 'jastrow',
                                    'pool', 'kinpool', 'fc'])
-
-        self.log_data()
-
-    def log_data(self):
-        log.info('')
-        log.info(' Wave Function')
-        log.info('  Jastrow factor      : {0}', self.use_jastrow)
-        log.info('  Highest MO included : {0}', self.highest_occ_mo)
-        log.info('  Configurations      : {0}', self.configs_method)
-        log.info('  Number of confs     : {0}', self.nci)
-
-        log.debug('  Configurations      : ')
-        for ic in range(self.nci):
-            cstr = ' ' + ' '.join([str(i)
-                                   for i in self.configs[0][ic].tolist()])
-            cstr += ' | ' + ' '.join([str(i)
-                                      for i in self.configs[1][ic].tolist()])
-            log.debug(cstr)
-
-        log.info('  Kinetic energy      : {0}', self.kinetic_method)
-        log.info(
-            '  Number var  param   : {0}', self.get_number_parameters())
-        log.info('  Cuda support        : {0}', self.cuda)
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(self.mol.basis.mos).type(
@@ -149,7 +125,7 @@ class Orbital(WaveFunction):
         """computes the value of the wave function for the sampling points
 
         .. math::
-            \\Psi(R) = \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
+            \Psi(R) = \sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -231,7 +207,7 @@ class Orbital(WaveFunction):
             + self.nuclear_repulsion()
 
     def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
@@ -292,6 +268,77 @@ class Orbital(WaveFunction):
             bkin = bkin + 2 * djast_dmo + d2jast_mo
 
         return bkin
+
+    def nuclear_potential(self, pos):
+        """Computes the electron-nuclear term
+
+        .. math:
+            V_{en} = - \sum_e \sum_n \\frac{Z_n}{r_{en}}
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: values of the electon-nuclear energy at each sampling points
+        """
+
+        p = torch.zeros(pos.shape[0], device=self.device)
+        for ielec in range(self.nelec):
+            istart = ielec * self.ndim
+            iend = (ielec + 1) * self.ndim
+            pelec = pos[:, istart:iend]
+            for iatom in range(self.natom):
+                patom = self.ao.atom_coords[iatom, :]
+                Z = self.ao.atomic_number[iatom]
+                r = torch.sqrt(((pelec - patom)**2).sum(1))  # + 1E-12
+                p += -Z / r
+        return p.view(-1, 1)
+
+    def electronic_potential(self, pos):
+        """Computes the electron-electron term
+
+        .. math:
+            V_{ee} = \sum_{e_1} \sum_{e_2} \\frac{1}{r_{e_1e_2}}
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: values of the electon-electron energy at each sampling points
+        """
+
+        pot = torch.zeros(pos.shape[0], device=self.device)
+
+        for ielec1 in range(self.nelec - 1):
+            epos1 = pos[:, ielec1 *
+                        self.ndim:(ielec1 + 1) * self.ndim]
+            for ielec2 in range(ielec1 + 1, self.nelec):
+                epos2 = pos[:, ielec2 *
+                            self.ndim:(ielec2 + 1) * self.ndim]
+                r = torch.sqrt(((epos1 - epos2)**2).sum(1))  # + 1E-12
+                pot += (1. / r)
+        return pot.view(-1, 1)
+
+    def nuclear_repulsion(self):
+        """Computes the nuclear-nuclear repulsion term
+
+        .. math:
+            V_{nn} = \sum_{n_1} \sum_{n_2} \\frac{Z_1Z_2}{r_{n_1n_2}}
+
+        Returns:
+            torch.tensor: values of the nuclear-nuclear energy at each sampling points
+        """
+
+        vnn = 0.
+        for at1 in range(self.natom - 1):
+            c0 = self.ao.atom_coords[at1, :]
+            Z0 = self.ao.atomic_number[at1]
+            for at2 in range(at1 + 1, self.natom):
+                c1 = self.ao.atom_coords[at2, :]
+                Z1 = self.ao.atomic_number[at2]
+                rnn = torch.sqrt(((c0 - c1)**2).sum())
+                vnn += Z0 * Z1 / rnn
+        return vnn
 
     def geometry(self, pos):
         """Returns the gemoetry of the system in xyz format

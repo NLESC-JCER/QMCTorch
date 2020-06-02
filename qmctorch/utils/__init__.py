@@ -32,5 +32,8 @@ from .interpolate import (InterpolateMolecularOrbitals,
 from .algebra_utils import (btrace, bproj, bdet2)
 
 from .time_utils import timeit, timeline
+<<<<<<< HEAD
 
 from .stat_utils import blocking, correlation_coefficient, integrated_autocorrelation_time
+=======
+>>>>>>> Revert "Merge branch 'master' of https://github.com/NLESC-JCER/QMCTorch into FermiNet"

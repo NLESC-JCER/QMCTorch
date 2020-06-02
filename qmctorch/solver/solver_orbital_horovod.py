@@ -90,6 +90,7 @@ class SolverOrbitalHorovod(SolverOrbital):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
+
         # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
