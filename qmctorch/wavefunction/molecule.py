@@ -151,8 +151,12 @@ class Molecule(object):
     def _process_atom_str(self):
         """Process the atom description."""
 
-        if os.path.isfile(self.atoms_str):
-            atoms = self._read_xyz_file()
+        if self.atoms_str.endswith('.xyz'):
+            if os.path.isfile(self.atoms_str):
+                atoms = self._read_xyz_file()
+            else:
+                raise FileNotFoundError(
+                    'File %s not  found' % self.atoms_str)
         else:
             atoms = self.atoms_str.split(';')
 
@@ -203,7 +207,9 @@ class Molecule(object):
         """
         with open(self.atoms_str, 'r') as f:
             data = f.readlines()
-        atoms = data[2:]
+
+        natom = int(data[0])
+        atoms = data[2:2+natom]
         self.atoms_str = ''
         for a in atoms[:-1]:
             self.atoms_str += a + '; '
