@@ -2,7 +2,6 @@ import h5py
 import numpy as np
 import torch
 import warnings
-import logging
 from types import SimpleNamespace
 from .. import log
 
