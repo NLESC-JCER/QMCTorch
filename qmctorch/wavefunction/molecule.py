@@ -1,7 +1,6 @@
 import os
 import math
 import numpy as np
-import logging
 from mendeleev import element
 from types import SimpleNamespace
 import h5py

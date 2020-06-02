@@ -2,7 +2,6 @@ import h5py
 import numpy as np
 import torch
 import warnings
-import logging
 from types import SimpleNamespace
 from .. import log
 
@@ -150,9 +149,6 @@ def insert_group(obj, parent_grp, obj_name):
         obj_name {str} -- name of the object
     """
     if obj_name.startswith('_'):
-        return
-
-    if type(obj) == logging.Logger:
         return
 
     if obj_name not in parent_grp:
