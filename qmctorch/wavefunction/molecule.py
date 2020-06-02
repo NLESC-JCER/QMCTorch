@@ -151,8 +151,12 @@ class Molecule(object):
     def _process_atom_str(self):
         """Process the atom description."""
 
-        if os.path.isfile(self.atoms_str):
-            atoms = self._read_xyz_file()
+        if self.atoms_str.endswith('.xyz'):
+            if os.path.isfile(self.atoms_str):
+                atoms = self._read_xyz_file()
+            else:
+                raise FileNotFoundError(
+                    'File %s not  found' % self.atoms_str)
         else:
             atoms = self.atoms_str.split(';')
 
