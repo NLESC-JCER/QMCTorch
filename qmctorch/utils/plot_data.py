@@ -3,7 +3,9 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import pickle
 
-from .stat_utils import blocking, correlation_coefficient, integrated_autocorrelation_time
+from .stat_utils import (blocking, correlation_coefficient,
+                         integrated_autocorrelation_time,
+                         fit_correlation_coefficient)
 
 
 def plot_energy(local_energy, e0=None, show_variance=False):
@@ -169,11 +171,27 @@ def plot_block(eloc):
     plt.show()
 
 
-def plot_autocorrelation(eloc, size_max=100, C=5):
+def plot_correlation_coefficient(eloc, size_max=100):
 
     rho = correlation_coefficient(eloc)
-    plt.plot(rho)
+
+    tau_fit, fitted = fit_correlation_coefficient(
+        rho.mean(1)[:size_max])
+
+    plt.plot(rho, alpha=0.25)
+    plt.plot(rho.mean(1), linewidth=3, c='black')
+    plt.plot(fitted, '--', c='grey')
+    plt.xlim([0, size_max])
+    plt.ylim([-0.25, 1.5])
     plt.show()
+
+    return rho, tau_fit
+
+
+def plot_integrated_autocorrelation_time(eloc=None, rho=None, size_max=100, C=5):
+
+    if rho is None:
+        rho = correlation_coefficient(eloc)
 
     tau = integrated_autocorrelation_time(rho, size_max)
 
@@ -190,18 +208,14 @@ def plot_autocorrelation(eloc, size_max=100, C=5):
             tc.append(tval)
             idx_tc.append(ii)
 
-    plt.plot(tau)
-    plt.plot(idx_tc, tc, 'o')
-    plt.plot(idx/5, '--', c='black')
-    plt.show()
-
+    plt.plot(tau, alpha=0.25)
     tm = tau.mean(1)
-    idx = np.arange(0, len(tm))
-    plt.plot(idx/5, '--', c='black')
+    plt.plot(tm, c='black')
+    plt.plot(idx/C, '--', c='grey')
+
+    plt.plot(idx_tc, tc, 'o', alpha=0.25)
     tt = tm[tm*C <= idx][0]
     ii = np.where(tm == tt)[0][0]
-    plt.plot(tau.mean(1))
     plt.plot(ii, tt, 'o')
-    plt.plot(idx/5, '--', c='black')
+
     plt.show()
-    return tau

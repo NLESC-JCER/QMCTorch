@@ -1,4 +1,5 @@
 import numpy as np
+from scipy.optimize import curve_fit
 
 
 def blocking(x, block_size, expand=False):
@@ -49,3 +50,24 @@ def integrated_autocorrelation_time(correlation_coeff, size_max):
         size_max (int): max size 
     """
     return 1. + 2. * np.cumsum(correlation_coeff[1:size_max], 0)
+
+
+def fit_correlation_coefficient(coeff):
+    """Fit the correlation coefficient 
+       to get the correlation time.
+
+    Args:
+        coeff (np.ndarray): correlation coefficient
+
+    Returns:
+        float, np.ndarray: correlation time, fitted curve
+    """
+
+    def fit_exp(x, y):
+        """Fit an exponential to the data."""
+        def func(x, tau):
+            return np.exp(-x/tau)
+        popt, pcov = curve_fit(func, x, y, p0=(1.))
+        return popt[0], func(x, popt)
+
+    return fit_exp(np.arange(len(coeff)), coeff)

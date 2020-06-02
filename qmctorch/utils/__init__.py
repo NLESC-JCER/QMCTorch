@@ -14,7 +14,7 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
 
 from .plot_data import (plot_energy, plot_data, plot_block,
                         plot_walkers_traj, plot_correlation_time,
-                        plot_autocorrelation)
+                        plot_correlation_coefficient, plot_integrated_autocorrelation_time)
 
 from .torch_utils import (set_torch_double_precision,
                           set_torch_single_precision,

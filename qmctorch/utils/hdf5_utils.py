@@ -151,9 +151,6 @@ def insert_group(obj, parent_grp, obj_name):
     if obj_name.startswith('_'):
         return
 
-    if type(obj) == logging.Logger:
-        return
-
     if obj_name not in parent_grp:
 
         try:
