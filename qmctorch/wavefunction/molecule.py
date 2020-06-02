@@ -203,7 +203,9 @@ class Molecule(object):
         """
         with open(self.atoms_str, 'r') as f:
             data = f.readlines()
-        atoms = data[2:]
+
+        natom = int(data[0])
+        atoms = data[2:2+natom]
         self.atoms_str = ''
         for a in atoms[:-1]:
             self.atoms_str += a + '; '
