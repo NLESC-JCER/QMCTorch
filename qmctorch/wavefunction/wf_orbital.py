@@ -289,7 +289,7 @@ class Orbital(WaveFunction):
             d2jast = self.jastrow(x, derivative=2) / jast
             d2jast_mo = d2jast.unsqueeze(-1) * mo
 
-            bkin += 2 * djast_dmo + d2jast_mo
+            bkin = bkin + 2 * djast_dmo + d2jast_mo
 
         return bkin
 
