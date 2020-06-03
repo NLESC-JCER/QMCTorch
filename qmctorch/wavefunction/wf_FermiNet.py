@@ -13,7 +13,7 @@ from ..utils.interpolate import (get_reg_grid, get_log_grid,
                                  interpolator_irreg_grid, interpolate_irreg_grid)
 from qmctorch.utils import timeit
 
-class FermiNet(WaveFunction)
+class FermiNet(WaveFunction):
 
     def __init__(self, mol, hidden_nodes_e=256, hidden_nodes_ee=32, L_layers=4, K_determinants=1, configs='ground_state',
                  kinetic='jacobi', cuda=False)
