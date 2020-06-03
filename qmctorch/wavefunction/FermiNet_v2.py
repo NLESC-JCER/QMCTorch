@@ -169,19 +169,19 @@ class FermiOrbital(nn.Module):
         
         Rnuclei = torch.tensor(self.mol.atom_coords)
         
-        print("R_m:",Rnuclei.shape)
-        print("r:",r_i.shape)
-        print("W:",self.W.shape)
-        print("G:",self.G.shape)
+        # print("R_m:",Rnuclei.shape)
+        # print("r:",r_i.shape)
+        # print("W:",self.W.shape)
+        # print("G:",self.G.shape)
 
 
         # input h_i: nbatch x hidden_nodes_e 
         out = h_i @ self.W  + self.G # outputs shape: nbatch x kdet
-        print("initial linear:",out.shape)
+        # print("initial linear:",out.shape)
         rim = -Rnuclei[None,:,:] - r_i[:,None,:] #shape: nbatch x natom x ndim
 
-        print("R_im:",rim.shape)
-        print("Sigma:",self.Sigma.shape)
+        # print("R_im:",rim.shape)
+        # print("Sigma:",self.Sigma.shape)
 
         expterm = torch.zeros(self.nbatch,self.Kdet,self.mol.natom,self.ndim)
 
@@ -189,17 +189,17 @@ class FermiOrbital(nn.Module):
             #input rim: nbatch x 1 x ndim  
             # weight shape: kdet x ndim x ndim 
             expterm[:,:,m,:] = (rim[:,m] @ self.Sigma[:,m]).transpose(0,1) #output shape: nbatch x kdet x 1 x ndim     
-        print("expterm:",expterm.shape)
+        # print("expterm:",expterm.shape)
         # output exterm shape: nbatch x kdet x natom x ndim        
         expnorm = torch.norm(expterm,dim=3)
 
-        print("expnorm:",expnorm.shape)
-        print("pi:",self.pi.shape)
+        # print("expnorm:",expnorm.shape)
+        # print("pi:",self.pi.shape)
 
         # output norm shape: nbatch x kdet x natom        
         Exponential = torch.sum(torch.exp(-expnorm) * self.pi[None,:,:],axis=2)
 
-        print("Expstuff:",Exponential.shape)
+        # print("Expstuff:",Exponential.shape)
 
 
         #output shape: nbatch x kdet
@@ -247,7 +247,16 @@ class FermiNet(WaveFunction):
 
     def forward_det(self, pos):
         
+        
         self.nbatch = pos.shape[0]
+        if pos.shape[-1] == self.mol.nelec*self.ndim:
+            pos = pos.reshape(self.nbatch,self.mol.nelec,self.ndim)
+        elif pos.shape[-1] == self.ndim:
+            pos = pos
+        else: 
+            AttributeError("Input position wrong shape")
+
+
         
         # Using these inputs the distance between electron and nuclei and electron electron are computed
         # r_i-R_I, |r_i-R_I| and r_i-r_j, |r_i-r_j|.

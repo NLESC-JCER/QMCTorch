@@ -1,7 +1,9 @@
 import torch
 from torch import nn 
 from torch import optim
-
+import sys 
+sys.path.insert(0,'/home/breebaart/dev/QMCTorch/')
+sys.path.insert(0,'/home/breebaart/dev/QMCTorch/tests/')
 
 from qmctorch.wavefunction import Molecule
 from qmctorch.wavefunction.intermediate_FermiNet import IntermediateLayers
@@ -11,7 +13,7 @@ from qmctorch.utils import set_torch_double_precision
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import (plot_energy, plot_data)
-
+# from qmctorch.wavefunction.FermiNet_v2 import FermiNet
 import numpy as np 
 import unittest
 
@@ -22,11 +24,11 @@ class TestFermiNet(unittest.TestCase):
         self.N_dim = 3
         set_torch_double_precision()
         # define the molecule
-        filename = "hdf5/H2_adf_dzp.hdf5"
-        # self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
-        #         unit='bohr', calculator='pyscf', name='water')   
-        # filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
-        self.mol = Molecule(load=filename)
+        # filename = "hdf5/H2_adf_dzp.hdf5"
+        self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
+                unit='bohr', calculator='pyscf', name='water')   
+        # # filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
+        # self.mol = Molecule(load=filename)
 
         # network hyperparameters: 
         self.hidden_nodes_e = 256
@@ -63,21 +65,21 @@ class TestFermiNet(unittest.TestCase):
                 self.hidden_nodes_ee, self.L_layers)
 
         Orbital = Orbital_FermiNet(self.mol,self.hidden_nodes_e)
-        print(Orbital)
-        # check the number of parameters and layers of the network:
-        for name, param in Orbital.named_parameters():
-            print(name, param.size())
+        # print(Orbital)
+        # # check the number of parameters and layers of the network:
+        # for name, param in Orbital.named_parameters():
+        #     print(name, param.size())
 
-        print(self.getNumParams(Orbital.parameters()))
+        # print(self.getNumParams(Orbital.parameters()))
 
-        # check the output of the network:
-        h_i, h_ij = FN.forward(self.r)
-        # print("h_i is given by: \n {}".format(h_i))
-        # and the output for the orbital
-        det = torch.zeros(self.batch, 3, 3)
-        orbital_j = Orbital.forward(h_i[:,0], self.r[:,0]).reshape(1,1,3)
-        print(orbital_j)
-        det[:,0,0] = orbital_j
+        # # check the output of the network:
+        # h_i, h_ij = FN.forward(self.r)
+        # # print("h_i is given by: \n {}".format(h_i))
+        # # and the output for the orbital
+        # det = torch.zeros(self.batch, 3, 3)
+        # orbital_j = Orbital.forward(h_i[:,0], self.r[:,0]).reshape(1,1,3)
+        # print(orbital_j)
+        # det[:,0,0] = orbital_j
     
     def test_FermiNet(self):
         
@@ -85,14 +87,14 @@ class TestFermiNet(unittest.TestCase):
                     self.hidden_nodes_ee, self.L_layers, self.K_determinants)
 
         # check the number of parameters and layers of the intermediate layers:
-        for name, param in WF.named_parameters():
-            print(name, param.size())
+        # for name, param in WF.named_parameters():
+        #     print(name, param.size())
 
-        print(self.getNumParams(WF.parameters()))
+        # print(self.getNumParams(WF.parameters()))
 
-        # check the output of the network:
-        psi = WF.forward(self.r)
-        print(psi)
+        # # check the output of the network:
+        # psi = WF.forward(self.r)
+        # print(psi)
 
     def test_sampler(self):
         

@@ -91,14 +91,14 @@ class FermiNet(WaveFunction):
             det_down = torch.zeros((self.nbatch, self.mol.ndown, self.mol.ndown))
             # for up:
             for i_up in range(self.mol.nup):
-                det_up[:, i_up] = self.Orbital_determinant_up[k][i_up](
-                        h_L_i[:,:self.mol.nup].view(self.nbatch*self.mol.nup,self.hidden_nodes_e),
-                         pos[:,:self.mol.nup].view(self.nbatch*self.mol.nup,self.ndim))
+                det_up[:, i_up, :] = self.Orbital_determinant_up[k][i_up](
+                    h_L_i[:,:self.mol.nup].reshape((self.nbatch*self.mol.nup,self.hidden_nodes_e)),
+                    pos[:,:self.mol.nup].reshape((self.nbatch*self.mol.nup,self.ndim))).reshape((self.nbatch,self.mol.nup))
             # for down:        
             for i_down in range(self.mol.ndown):
-                det_down[:, i_down] = self.Orbital_determinant_up[k][i_down](
-                        h_L_i[:,self.mol.nup:].view(self.nbatch*self.mol.ndown,self.hidden_nodes_e),
-                         pos[:,self.mol.nup].view(self.nbatch*self.mol.ndown,self.ndim))
+                det_down[:, i_down,:] = self.Orbital_determinant_up[k][i_down](
+                    h_L_i[:,self.mol.nup:].reshape((self.nbatch*self.mol.ndown,self.hidden_nodes_e)),
+                    pos[:,self.mol.nup:].reshape((self.nbatch*self.mol.ndown,self.ndim))).reshape((self.nbatch,self.mol.ndown))
             determinant[:, k] = torch.det(det_up)*torch.det(det_down)
         #create make a weighted sum of the determinants
         psi = self.weighted_sum(determinant)
