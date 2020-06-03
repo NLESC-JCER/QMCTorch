@@ -1,9 +1,6 @@
 import torch
 from torch import nn 
 from torch import optim
-import sys 
-sys.path.insert(0,'/home/breebaart/dev/QMCTorch/')
-sys.path.insert(0,'/home/breebaart/dev/QMCTorch/tests/')
 
 from qmctorch.wavefunction import Molecule
 from qmctorch.wavefunction.intermediate_FermiNet import IntermediateLayers
