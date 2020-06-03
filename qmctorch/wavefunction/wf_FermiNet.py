@@ -16,20 +16,20 @@ from qmctorch.utils import timeit
 class FermiNet(WaveFunction):
 
     def __init__(self, mol, hidden_nodes_e=256, hidden_nodes_ee=32, L_layers=4, K_determinants=1, configs='ground_state',
-                 kinetic='jacobi', cuda=False)
-        Implementation of the QMC Network Fermi Net.
+                 kinetic='jacobi', cuda=False):
+        """Implementation of the QMC Network Fermi Net.
 
         Args
             mol (qmc.wavefunction.Molecule) a molecule object 
             configs (str, optional) defines the CI configurations to be used. Defaults to 'ground_state'.
             kinetic (str, optional) method to compute the kinetic energy. Defaults to 'jacobi'.
             use_jastrow (bool, optional) turn jastrow factor ONOFF. Defaults to True.
-            cuda (bool, optional) turns GPU ONOFF  Defaults to False.
+            cuda (bool, optional) turns GPU ONOFF  Defaults to False."""
         
         super(FermiNet, self).__init__(mol.nelec, 3, kinetic, cuda)
 
         # check for cuda
-        if not torch.cuda.is_available and self.wf.cuda
+        if not torch.cuda.is_available and self.wf.cuda:
             raise ValueError('Cuda not available, use cuda=False')
 
         # number of atoms
