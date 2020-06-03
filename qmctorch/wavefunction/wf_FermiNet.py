@@ -51,13 +51,13 @@ class FermiNet(WaveFunction):
         # create KN_up spin up orbitals and KN_down spin down orbitals with K the number of determinants.
         self.Orbital_determinant_up = nn.ModuleList()
         self.Orbital_determinant_down = nn.ModuleList()
-        for k in range(self.K_determinants)
+        for k in range(self.K_determinants):
             Orbitals_up = nn.ModuleList()
             Orbitals_down = nn.ModuleList()
-            for i in range(self.mol.nup)
+            for i in range(self.mol.nup):
                 Orbitals_up.append(Orbital_FermiNet(self.mol, hidden_nodes_e))
 
-            for i in range(self.mol.ndown)
+            for i in range(self.mol.ndown):
                 Orbitals_down.append(Orbital_FermiNet(self.mol, hidden_nodes_e))
 
             self.Orbital_determinant_up.append(Orbitals_up)
@@ -66,7 +66,7 @@ class FermiNet(WaveFunction):
         self.weighted_sum = nn.Linear(K_determinants, 1, bias=False)
 
 
-    def forward(self, pos)
+    def forward(self, pos):
 
         '''
         forward electron position through the Fermi Net. 
@@ -85,17 +85,17 @@ class FermiNet(WaveFunction):
         h_L_i, h_L_ij = self.Intermediate_layer(pos)
         # Create the determinants 
         determinant = torch.zeros(self.nbatch, self.K_determinants)
-        for k in range(self.K_determinants)
+        for k in range(self.K_determinants):
             # for each determinant k create two slatter determinants one spin-up one spin-down
             det_up = torch.zeros((self.nbatch, self.mol.nup, self.mol.nup))
             det_down = torch.zeros((self.nbatch, self.mol.ndown, self.mol.ndown))
             # for up
-            for i_up in range(self.mol.nup)
+            for i_up in range(self.mol.nup):
                 det_up[, i_up, ] = self.Orbital_determinant_up[k][i_up](
                     h_L_i[,self.mol.nup].reshape((self.nbatchself.mol.nup,self.hidden_nodes_e)),
                     pos[,self.mol.nup].reshape((self.nbatchself.mol.nup,self.ndim))).reshape((self.nbatch,self.mol.nup))
             # for down        
-            for i_down in range(self.mol.ndown)
+            for i_down in range(self.mol.ndown):
                 det_down[, i_down,] = self.Orbital_determinant_up[k][i_down](
                     h_L_i[,self.mol.nup].reshape((self.nbatchself.mol.ndown,self.hidden_nodes_e)),
                     pos[,self.mol.nup].reshape((self.nbatchself.mol.ndown,self.ndim))).reshape((self.nbatch,self.mol.ndown))
@@ -107,8 +107,8 @@ class FermiNet(WaveFunction):
         # return torch.log(psi)
         return psi       
 
-    def nuclear_potential(self, pos)
-        Computes the electron-nuclear term
+    def nuclear_potential(self, pos):
+        """Computes the electron-nuclear term
 
         .. math
             V_{en} = - sum_e sum_n frac{Z_n}{r_{en}}
@@ -118,10 +118,10 @@ class FermiNet(WaveFunction):
 
         Returns
             torch.tensor values of the electon-nuclear energy at each sampling points
-        
+        """
 
         p = torch.zeros(pos.shape[0], device=self.device)
-        for ielec in range(self.nelec)
+        for ielec in range(self.nelec): 
             istart = ielec  self.ndim
             iend = (ielec + 1)  self.ndim
             pelec = pos[, istartiend]
@@ -132,8 +132,8 @@ class FermiNet(WaveFunction):
                 p += -Z  r
         return p.view(-1, 1)
 
-    def electronic_potential(self, pos)
-        Computes the electron-electron term
+    def electronic_potential(self, pos): 
+        """Computes the electron-electron term
 
         .. math
             V_{ee} = sum_{e_1} sum_{e_2} frac{1}{r_{e_1e_2}}
@@ -143,52 +143,52 @@ class FermiNet(WaveFunction):
 
         Returns
             torch.tensor values of the electon-electron energy at each sampling points
-        
+        """
 
         pot = torch.zeros(pos.shape[0], device=self.device)
 
-        for ielec1 in range(self.nelec - 1)
+        for ielec1 in range(self.nelec - 1): 
             epos1 = pos[, ielec1 
                         self.ndim(ielec1 + 1)  self.ndim]
-            for ielec2 in range(ielec1 + 1, self.nelec)
+            for ielec2 in range(ielec1 + 1, self.nelec):
                 epos2 = pos[, ielec2 
                             self.ndim(ielec2 + 1)  self.ndim]
                 r = torch.sqrt(((epos1 - epos2)2).sum(1))  # + 1E-12
                 pot += (1.  r)
         return pot.view(-1, 1)
 
-    def nuclear_repulsion(self)
-        Computes the nuclear-nuclear repulsion term
+    def nuclear_repulsion(self):
+        """Computes the nuclear-nuclear repulsion term
 
         .. math
             V_{nn} = sum_{n_1} sum_{n_2} frac{Z_1Z_2}{r_{n_1n_2}}
 
         Returns
             torch.tensor values of the nuclear-nuclear energy at each sampling points
-        
+        """
 
         vnn = 0.
-        for at1 in range(self.natom - 1)
+        for at1 in range(self.natom - 1):
             c0 = self.ao.atom_coords[at1, ]
             Z0 = self.ao.atomic_number[at1]
-            for at2 in range(at1 + 1, self.natom)
+            for at2 in range(at1 + 1, self.natom):
                 c1 = self.ao.atom_coords[at2, ]
                 Z1 = self.ao.atomic_number[at2]
                 rnn = torch.sqrt(((c0 - c1)2).sum())
                 vnn += Z0  Z1  rnn
         return vnn
 
-    def geometry(self, pos)
-        Returns the gemoetry of the system in xyz format
+    def geometry(self, pos):
+        """Returns the gemoetry of the system in xyz format
 
         Args
             pos (torch.tensor) sampling points (Nbatch, 3Nelec)
 
         Returns
             list list where each element is one line of the xyz file
-        
+        """
         d = []
-        for iat in range(self.natom)
+        for iat in range(self.natom):
             at = self.atoms[iat]
             xyz = self.ao.atom_coords[iat,
                                       ].detach().numpy().tolist()
