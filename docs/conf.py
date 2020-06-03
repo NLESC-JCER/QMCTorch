@@ -77,7 +77,9 @@ autodoc_mock_imports = [
     'pandas',
     'pyscf',
     'adf',
-    'tqdm']
+    'tqdm',
+    'ase',
+    'horovod']
 
 sys.path.insert(0, os.path.abspath('../'))
 

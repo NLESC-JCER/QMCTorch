@@ -8,7 +8,6 @@ from ..utils.interpolate import (get_reg_grid, logspace,
                                  interpolator_reg_grid,
                                  interpolate_reg_grid)
 from time import time
-import logging
 
 
 class AtomicOrbitals(nn.Module):

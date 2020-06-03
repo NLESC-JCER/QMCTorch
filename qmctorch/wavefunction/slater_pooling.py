@@ -118,19 +118,22 @@ class SlaterPooling(nn.Module):
     def det_unique_single_double(self, input):
         """Computes the SD of single/double excitations
 
-        .. note:: The determinants of the single excitations
+        The determinants of the single excitations
         are calculated from the ground state determinant and
         the ground state Slater matrices whith one column modified.
         See : Monte Carlo Methods in ab initio quantum chemistry
-              B.L. Hammond, appendix B1
+        B.L. Hammond, appendix B1
 
-        Note ; if the state on coonfigs are specified in order
+
+        Note : if the state on coonfigs are specified in order
         we end up with excitations that comes from a deep orbital, the resulting
         slater matrix has one column changed (with the new orbital) and several
         permutation. We therefore need to multiply the slater determinant
         by (-1)^nperm.
 
+
         .. math::
+
             MO = [ A | B ]
             det(Exc_{ij}) = (det(A) * A^{-1} * B)_{i,j}
 

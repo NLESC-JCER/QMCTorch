@@ -19,6 +19,7 @@ Quantum Monte Carlo with Pytorch
    :caption: Tutorial
 
    tutorial_sampling_traj
+   tutorial_correlation
    tutorial_wf_opt
    tutorial_geo_opt
    tutorial_gpus
