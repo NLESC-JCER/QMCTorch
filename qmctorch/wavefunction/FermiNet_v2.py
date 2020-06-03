@@ -1,8 +1,6 @@
 # Fermi Orbital with own Parameter matrices 
 import torch 
 from torch import nn 
-import sys
-sys.path.insert(0,'/home/breebaart/dev/QMCTorch/')
 
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
