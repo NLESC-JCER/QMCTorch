@@ -171,7 +171,7 @@ class AtomicOrbitals(nn.Module):
             ao = self._compute_laplacian_ao_values(pos)
 
         elif derivative == [0, 1, 2]:
-            ao = self._compute_all_ao_values(pos, jacobian)
+            ao = self._compute_all_ao_values(pos)
 
         else:
             raise ValueError(
@@ -360,7 +360,7 @@ class AtomicOrbitals(nn.Module):
             d2ao = self._contract(d2ao)
         return d2ao
 
-    def _compute_all_ao_values(self, pos, jacobian):
+    def _compute_all_ao_values(self, pos):
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
 
         Args:
@@ -377,18 +377,15 @@ class AtomicOrbitals(nn.Module):
         xyz, r = self._process_position(pos)
 
         R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
-                                 xyz=xyz, derivative=[0, 1, 2], jacobian=jacobian)
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 jacobian=False)
 
-        Y, dY, d2Y = self.harmonics(
-            xyz, derivative=[0, 1, 2], jacobian=False)
-
-        if jacobian:
-            dao_kernel = self._jacobian_kernel
-        else:
-            dao_kernel = self._gradient_kernel
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    jacobian=False)
 
         return (self._ao_kernel(R, Y),
-                dao_kernel(R, dR, Y, dY),
+                self._gradient_kernel(R, dR, Y, dY),
                 self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y))
 
     def _contract(self, bas):
