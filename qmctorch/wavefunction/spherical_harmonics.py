@@ -88,7 +88,7 @@ class Harmonics(object):
             raise ValueError('Harmonics type should be cart or sph')
 
 
-def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
+def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], jacobian=True):
     r"""Computes Real Cartesian Harmonics
 
     .. math::
@@ -107,16 +107,17 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         torch.tensor: values of the harmonics at the sampling points
     """
 
-    if derivative == 0:
-        return fast_power(xyz, k, mask0, mask2).prod(-1)
+    if not isinstance(derivative, list):
+        derivative = [derivative]
 
-    elif derivative == 1:
+    def _kernel():
+        return xyz_k.prod(-1)
 
+    def _first_derivative_kernel():
         km1 = k-1
         km1[km1 < 0] = 0
 
         xyz_km1 = fast_power(xyz, km1)
-        xyz_k = fast_power(xyz, k,  mask0, mask2)
 
         kx, ky, kz = k.transpose(0, 1)
         dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
@@ -128,14 +129,12 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         else:
             return torch.stack((dx, dy, dz), dim=-1)
 
-    elif derivative == 2:
-
+    def _second_derivative_kernel():
         # prepare the exponets
         km2 = k - 2
         km2[km2 < 0] = 0
 
         xyz_km2 = fast_power(xyz, km2)
-        xyz_k = fast_power(xyz, k, mask0, mask2)
 
         kx, ky, kz = k.transpose(0, 1)
 
@@ -148,77 +147,21 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
 
         return d2x + d2y + d2z
 
-# def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], jacobian=True):
-#     r"""Computes Real Cartesian Harmonics
+    # computes the power of the xyz
+    xyz_k = fast_power(xyz, k,  mask0, mask2)
 
-#     .. math::
-#         Y = x^{k_x} \\times y^{k_y} \\times z^{k_z}
+    # compute the outputs
+    fns = [_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel]
+    output = []
+    for d in derivative:
+        output.append(fns[d]())
 
-#     Args:
-#         xyz (torch.tensor): distance between sampling points and orbital centers \n
-#                             size : (Nbatch, Nelec, Nbas, Ndim)
-#         k (torch.tensor): (kx,ky,kz) exponents
-#         mask0 (torch.tensor): precomputed mask of k=0
-#         mask2 (torch.tensor): precomputed mask of k=2
-#         derivative (int, optional): degree of the derivative. Defaults to 0.
-#         jacobian (bool, optional): returns the sum of the derivative if True. Defaults to True.
-
-#     Returns:
-#         torch.tensor: values of the harmonics at the sampling points
-#     """
-
-#     def _kernel():
-#         return xyz_k.prod(-1)
-
-#     def _first_derivative_kernel():
-#         km1 = k-1
-#         km1[km1 < 0] = 0
-
-#         xyz_km1 = fast_power(xyz, km1)
-
-#         kx, ky, kz = k.transpose(0, 1)
-#         dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
-#         dy = ky * xyz_k[..., 0] * xyz_km1[..., 1] * xyz_k[..., 2]
-#         dz = kz * xyz_k[..., 0] * xyz_k[..., 1] * xyz_km1[..., 2]
-
-#         if jacobian:
-#             return dx + dy + dz
-#         else:
-#             return torch.stack((dx, dy, dz), dim=-1)
-
-#     def _second_derivative_kernel():
-#         # prepare the exponets
-#         km2 = k - 2
-#         km2[km2 < 0] = 0
-
-#         xyz_km2 = fast_power(xyz, km2)
-
-#         kx, ky, kz = k.transpose(0, 1)
-
-#         d2x = kx*(kx-1) * xyz_km2[..., 0] * \
-#             xyz_k[..., 1] * xyz_k[..., 2]
-#         d2y = ky*(ky-1) * xyz_k[..., 0] * \
-#             xyz_km2[..., 1] * xyz_k[..., 2]
-#         d2z = kz*(kz-1) * xyz_k[..., 0] * \
-#             xyz_k[..., 1] * xyz_km2[..., 2]
-
-#         return d2x + d2y + d2z
-
-#     # computes the power of the xyz
-#     xyz_k = fast_power(xyz, k,  mask0, mask2)
-
-#     # compute the outputs
-#     fns = [_kernel,
-#            _first_derivative_kernel,
-#            _second_derivative_kernel]
-#     output = []
-#     for d in derivative:
-#         output.append(fns[d]())
-
-#     if len(derivative) == 1:
-#         return output[0]
-#     else:
-#         return output
+    if len(derivative) == 1:
+        return output[0]
+    else:
+        return output
 
 
 def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):

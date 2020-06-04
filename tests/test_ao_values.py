@@ -56,13 +56,16 @@ class TestAOvalues(unittest.TestCase):
                            ip_aovals_ref[:, self.iorb])
 
     def test_ao_hess(self):
-
+        import matplotlib.pyplot as plt
         i2p_aovals = self.wf.ao(
             self.pos, derivative=2).detach().numpy()
 
+        ip_aovals = self.wf.ao(
+            self.pos, derivative=1).detach().numpy()
+
         path = os.path.dirname(os.path.realpath(__file__))
         i2p_aovals_ref = np.loadtxt(path + '/hess_ao_h2.dat')
-        print(i2p_aovals[:, 0, self.iorb]-i2p_aovals_ref)
+
         assert np.allclose(
             i2p_aovals[:, 0, self.iorb], i2p_aovals_ref)
 

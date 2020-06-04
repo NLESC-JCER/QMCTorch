@@ -170,8 +170,8 @@ class AtomicOrbitals(nn.Module):
         elif derivative == [2]:
             ao = self._compute_laplacian_ao_values(pos)
 
-        # elif derivative == [0, 1, 2]:
-        #     ao = self._compute_all_ao_values(pos, jacobian)
+        elif derivative == [0, 1, 2]:
+            ao = self._compute_all_ao_values(pos, jacobian)
 
         else:
             raise ValueError(
@@ -208,6 +208,7 @@ class AtomicOrbitals(nn.Module):
         Returns:
             torch.tensor: values of the AOs (with contraction)
         """
+
         ao = self.norm_cst * R * Y
         if self.contract:
             ao = self._contract(ao)
@@ -243,18 +244,12 @@ class AtomicOrbitals(nn.Module):
         """
 
         xyz, r = self._process_position(pos)
-        R = self.radial(r, self.bas_n, self.bas_exp)
-        dR = self.radial(r, self.bas_n, self.bas_exp,
-                         xyz=xyz, derivative=1)
 
-        Y = self.harmonics(xyz)
-        dY = self.harmonics(xyz, derivative=1)
+        R, dR = self.radial(r, self.bas_n,
+                            self.bas_exp, xyz=xyz,
+                            derivative=[0, 1])
 
-        # R, dR = self.radial(r, self.bas_n,
-        #                     self.bas_exp, xyz=xyz,
-        #                     derivative=[0, 1])
-
-        # Y, dY = self.harmonics(xyz, derivative=[0, 1])
+        Y, dY = self.harmonics(xyz, derivative=[0, 1])
 
         return self._jacobian_kernel(R, dR, Y, dY)
 
@@ -271,19 +266,12 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R = self.radial(r, self.bas_n, self.bas_exp)
-        dR = self.radial(r, self.bas_n, self.bas_exp,
-                         xyz=xyz, derivative=1, jacobian=False)
+        R, dR = self.radial(r, self.bas_n,
+                            self.bas_exp, xyz=xyz,
+                            derivative=[0, 1],
+                            jacobian=False)
 
-        Y = self.harmonics(xyz)
-        dY = self.harmonics(xyz, derivative=1, jacobian=False)
-
-        # R, dR = self.radial(r, self.bas_n,
-        #                     self.bas_exp, xyz=xyz,
-        #                     derivative=[0, 1],
-        #                     jacobian=False)
-
-        # Y, dY = self.harmonics(xyz, derivative=[0, 1], jacobian=False)
+        Y, dY = self.harmonics(xyz, derivative=[0, 1], jacobian=False)
 
         return self._gradient_kernel(R, dR, Y, dY)
 
@@ -342,23 +330,13 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R = self.radial(r, self.bas_n, self.bas_exp)
-        dR = self.radial(r, self.bas_n, self.bas_exp,
-                         xyz=xyz, derivative=1, jacobian=False)
-        d2R = self.radial(r, self.bas_n, self.bas_exp,
-                          xyz=xyz, derivative=2)
+        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 jacobian=False)
 
-        Y = self.harmonics(xyz)
-        dY = self.harmonics(xyz, derivative=1, jacobian=False)
-        d2Y = self.harmonics(xyz, derivative=2)
-
-        # R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
-        #                          xyz=xyz, derivative=[0, 1, 2],
-        #                          jacobian=False)
-
-        # Y, dY, d2Y = self.harmonics(xyz,
-        #                             derivative=[0, 1, 2],
-        #                             jacobian=False)
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    jacobian=False)
         return self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y)
 
     def _laplacian_kernel(self, R, dR, d2R, Y, dY, d2Y):
@@ -378,7 +356,7 @@ class AtomicOrbitals(nn.Module):
         d2ao = self.norm_cst * \
             (d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y)
         if self.contract:
-            self._contract(d2ao)
+            d2ao = self._contract(d2ao)
         return d2ao
 
     def _compute_all_ao_values(self, pos, jacobian):
@@ -450,6 +428,23 @@ class AtomicOrbitals(nn.Module):
         r = torch.sqrt((xyz*xyz).sum(3))
 
         return xyz, r
+
+    def _contract(self, bas):
+        """Contrat the basis set to form the atomic orbitals
+
+        Args:
+            bas (torch.tensor): values of the basis function
+
+        Returns:
+            torch.tensor: values of the contraction
+        """
+        nbatch = bas.shape[0]
+        bas = self.bas_coeffs * bas
+        cbas = torch.zeros(nbatch, self.nelec,
+                           self.norb, device=self.device
+                           ).type(torch.get_default_dtype())
+        cbas.index_add_(2, self.index_ctr, bas)
+        return cbas
 
     def update(self, ao, pos, idelec):
         """Update an AO matrix with the new positions of one electron
