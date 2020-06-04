@@ -225,8 +225,10 @@ class Orbital(WaveFunction):
             >>> vals = wf.local_energy_jacobi(pos)
 
         """
-
+        from time import time
+        t0 = time()
         ke = self.kinetic_energy_jacobi(pos)
+        print('KE : ', time()-t0)
 
         return ke \
             + self.nuclear_potential(pos) \
@@ -272,15 +274,16 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: matrix of the kinetic operator
         """
-
+        from time import time
         bkin = self.ao2mo(d2ao)
 
         if self.use_jastrow:
 
+            t0 = time()
             jast, djast, d2jast = self.jastrow(x,
                                                derivative=[0, 1, 2],
                                                jacobian=False)
-
+            print('__ jast : ', time()-t0)
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
             d2jast = d2jast / jast
 
