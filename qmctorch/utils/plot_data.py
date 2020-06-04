@@ -8,7 +8,7 @@ from .stat_utils import (blocking, correlation_coefficient,
                          fit_correlation_coefficient)
 
 
-def plot_energy(local_energy, e0=None, show_variance=False):
+def plot_energy(local_energy, e0=None, show_variance=False, path=None):
     """Plot the evolution of the energy
 
     Args:
@@ -49,10 +49,13 @@ def plot_energy(local_energy, e0=None, show_variance=False):
         ax2.tick_params(axis='y', labelcolor='blue')
         fig.tight_layout()
 
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
-def plot_data(observable, obsname):
+def plot_data(observable, obsname, path=None):
     """Plot the evolution a given data
 
     Args:
@@ -75,10 +78,13 @@ def plot_data(observable, obsname):
         ax2.set_ylabel('gradient', color='blue')
         ax2.tick_params(axis='y', labelcolor='blue')
 
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
-def plot_walkers_traj(eloc, walkers='mean'):
+def plot_walkers_traj(eloc, walkers='mean', path=None):
     """Plot the trajectory of all the individual walkers
 
     Args:
@@ -114,10 +120,13 @@ def plot_walkers_traj(eloc, walkers='mean'):
         plt.xlabel('Monte Carlo Steps')
         plt.ylabel('Energy (Hartree)')
 
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
-def plot_correlation_coefficient(eloc, size_max=100):
+def plot_correlation_coefficient(eloc, size_max=100, path = None):
     """Plot the correlation coefficient of the local energy
        and fit the curve to an exp to extract the correlation time.
 
@@ -144,12 +153,15 @@ def plot_correlation_coefficient(eloc, size_max=100):
     plt.text(0.5*size_max, 1.05, 'tau=%1.3f' %
              tau_fit, {'color': 'black',  'fontsize': 15})
     plt.grid()
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
     return rho, tau_fit
 
 
-def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5):
+def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5, path=None):
     """compute/plot the integrated autocorrelation time
 
     Args:
@@ -190,7 +202,10 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5):
     plt.grid()
     plt.xlabel('MC step')
     plt.ylabel('IAC')
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
 def plot_blocking_energy(eloc, block_size, walkers='mean'):
@@ -223,12 +238,15 @@ def plot_blocking_energy(eloc, block_size, walkers='mean'):
     plt.grid()
     plt.xlabel('MC steps')
     plt.ylabel('Energy')
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
     return blocking(eloc, block_size, expand=False)
 
 
-def plot_correlation_time(eloc):
+def plot_correlation_time(eloc, path=None):
     """Plot the blocking thingy
 
     Args:
@@ -248,7 +266,10 @@ def plot_correlation_time(eloc):
     plt.plot(np.array(evar))
     plt.xlabel('Blocking size')
     plt.ylabel('Correlation steps')
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()
 
 
 def plot_block(eloc):
@@ -268,4 +289,7 @@ def plot_block(eloc):
         evar.append(np.sqrt(np.var(eb, axis=0) / (nblock - 1)))
 
     plt.plot(np.array(evar))
-    plt.show()
+    if path is not None:
+        plt.savefig(path)
+    else:
+        plt.show()

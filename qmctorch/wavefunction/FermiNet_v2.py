@@ -1,8 +1,6 @@
 # Fermi Orbital with own Parameter matrices 
 import torch 
 from torch import nn 
-import sys
-sys.path.insert(0,'/home/breebaart/dev/QMCTorch/')
 
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
@@ -11,9 +9,8 @@ from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
 from qmctorch.wavefunction import WaveFunction
 
-
-
 import numpy as np 
+from .. import log
 
 
 class FermiPrepocess(nn.Module):
@@ -244,6 +241,18 @@ class FermiNet(WaveFunction):
             self.Orb_down.append(FermiOrbital(mol,Kdet, self.hidden_nodes_e))
         
         self.weighted_sum = nn.Linear(self.Kdet,1,bias=False)
+
+        self.log_data()
+    
+    def log_data(self):
+        log.info('')
+        log.info(' Wave Function FermiNet')
+        log.info('  Intermediate layers : {0}', self.L_layers)
+        log.info('  One electron nodes  : {0}', self.hidden_nodes_e)
+        log.info('  Two electron nodes  : {0}', self.hidden_nodes_ee)
+        log.info('  Number of det       : {0}', self.Kdet)
+        log.info('  Number var  param   : {0}', self.get_number_parameters())
+        log.info('  Cuda support        : {0}', self.cuda)
 
     def forward_det(self, pos):
         

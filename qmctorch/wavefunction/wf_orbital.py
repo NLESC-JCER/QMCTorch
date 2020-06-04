@@ -202,6 +202,20 @@ class Orbital(WaveFunction):
             torch.tensor -- MO matrix [nbatch, nelec, nmo]
         """
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
+    
+    def _get_slater_matrices(self,x):
+        """Get the slater  matrices of mo orbitals
+
+        Arguments:
+            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
+
+        Returns:
+            (torch.tensor, torch.tensor): slater matrices of spin up/down
+        """
+        mo = self._get_mo_vals(x)
+        mo_up, mo_down = self.pool.get_slater_matrices(mo)
+        return mo_up.transpose(0, 1), mo_down.transpose(0, 1)
+
 
     def local_energy_jacobi(self, pos):
         """Computes the local energy using the Jacobi formula
@@ -220,7 +234,7 @@ class Orbital(WaveFunction):
             >>> wf = Orbital(mol, configs='cas(2,2)')
             >>> pos = torch.rand(500,6)
             >>> vals = wf.local_energy_jacobi(pos)
-
+ 
         """
 
         ke = self.kinetic_energy_jacobi(pos)
