@@ -269,6 +269,9 @@ class Orbital(WaveFunction):
             torch.tensor: matrix of the kinetic operator
         """
 
+        ao, dao, d2ao = self.ao(
+            x, derivative=[0, 1, 2], jacobian=False)
+
         if mo is None:
             mo = self._get_mo_vals(x)
 

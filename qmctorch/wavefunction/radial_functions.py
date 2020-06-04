@@ -64,7 +64,7 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
                 (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
 
-def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
+def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
     """ompute the radial part of GTOs (or its derivative).
 
     Args:
@@ -83,37 +83,46 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         torch.tensor: values of each orbital radial part at each position
     """
 
-    if derivative == 0:
+    def _kernel():
+        return rn * er
 
-        rn = fast_power(R, bas_n)
-        expr = torch.exp(-bas_exp * R*R)
+    def _first_derivative_kernel():
+        if jacobian:
+            nabla_rn_sum = nabla_rn.sum(3)
+            nabla_er_sum = nabla_er.sum(3)
+            return nabla_rn_sum * er + rn * nabla_er_sum
+        else:
+            return nabla_rn * \
+                er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-        return rn * expr
+    def _second_derivative_kernel():
+        lap_rn = bas_n * (3 * R**(bas_n - 2)
+                          + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
 
-    elif derivative > 0:
+        lap_er = 4 * bas_exp**2 * (xyz**2).sum(3) * er \
+            - 6 * bas_exp * er
 
-        rn = fast_power(R, bas_n)
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
+    # computes the basic  quantities
+    rn = fast_power(R, bas_n)
+    er = torch.exp(-bas_exp * R*R)
+
+    # computes the grads
+    if any(x in derivative for x in [1, 2]):
         nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
-
-        er = torch.exp(-bas_exp * R**2)
         nabla_er = -2 * (bas_exp * er).unsqueeze(-1) * xyz
 
-        if derivative == 1:
-            if jacobian:
-                nabla_rn = nabla_rn.sum(3)
-                nabla_er = nabla_er.sum(3)
-                return nabla_rn * er + rn * nabla_er
-            else:
-                return nabla_rn * \
-                    er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+    # compute the outputs
+    output = []
+    fns = [_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel]
+    for d in derivative:
+        output.append(fns[d]())
 
-        elif derivative == 2:
-
-            lap_rn = bas_n * (3 * R**(bas_n - 2)
-                              + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
-
-            lap_er = 4 * bas_exp**2 * (xyz**2).sum(3) * er \
-                - 6 * bas_exp * er
-
-            return lap_rn * er + 2 * \
-                (nabla_rn * nabla_er).sum(3) + rn * lap_er
+    if len(derivative) == 1:
+        return output[0]
+    else:
+        return output

@@ -62,7 +62,7 @@ class TestAOvalues(unittest.TestCase):
 
         path = os.path.dirname(os.path.realpath(__file__))
         i2p_aovals_ref = np.loadtxt(path + '/hess_ao_h2.dat')
-
+        print(i2p_aovals[:, 0, self.iorb]-i2p_aovals_ref)
         assert np.allclose(
             i2p_aovals[:, 0, self.iorb], i2p_aovals_ref)
 
