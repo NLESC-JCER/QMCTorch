@@ -189,6 +189,9 @@ class Orbital(WaveFunction):
         else:
             return self.fc(x)
 
+    def ao2mo(self, ao):
+        return self.mo(self.mo_scf(ao))
+
     def _get_mo_vals(self, x, derivative=0):
         """Get the values of MOs
 
@@ -244,9 +247,19 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
+        from time import time
 
-        mo = self._get_mo_vals(x)
-        bkin = self.get_kinetic_operator(x, mo=mo)
+        t0 = time()
+        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
+        print('ao ders : ', time()-t0)
+
+        t0 = time()
+        mo = self.ao2mo(ao)
+        print('mo : ', time()-t0)
+
+        t0 = time()
+        bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
+        print('Bk : ', time()-t0)
 
         if kinpool:
             kin, psi = self.kinpool(mo, bkin)
@@ -258,7 +271,7 @@ class Orbital(WaveFunction):
             out = self.fc(kin * psi) / self.fc(psi)
             return out
 
-    def get_kinetic_operator(self, x, mo=None):
+    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
         """Compute the Bkin matrix
 
         Args:
@@ -269,27 +282,19 @@ class Orbital(WaveFunction):
             torch.tensor: matrix of the kinetic operator
         """
 
-        ao, dao, d2ao = self.ao(
-            x, derivative=[0, 1, 2], jacobian=False)
-
-        if mo is None:
-            mo = self._get_mo_vals(x)
-
-        bkin = self._get_mo_vals(x, derivative=2)
-        djast_dmo, d2jast_mo = None, None
+        bkin = self.ao2mo(d2ao)
 
         if self.use_jastrow:
 
             jast = self.jastrow(x)
             djast = self.jastrow(x, derivative=1, jacobian=False)
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
+            d2jast = self.jastrow(x, derivative=2) / jast
 
-            dao = self.ao(x, derivative=1,
-                          jacobian=False).transpose(2, 3)
-            dmo = self.mo(self.mo_scf(dao)).transpose(2, 3)
+            dmo = self.mo(self.mo_scf(
+                dao.transpose(2, 3))).transpose(2, 3)
 
             djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
-            d2jast = self.jastrow(x, derivative=2) / jast
             d2jast_mo = d2jast.unsqueeze(-1) * mo
 
             bkin = bkin + 2 * djast_dmo + d2jast_mo
