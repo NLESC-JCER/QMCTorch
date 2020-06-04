@@ -226,9 +226,9 @@ class Orbital(WaveFunction):
 
         """
         from time import time
-        t0 = time()
+        #t0 = time()
         ke = self.kinetic_energy_jacobi(pos)
-        print('KE : ', time()-t0)
+        #print('KE : ', time()-t0)
 
         return ke \
             + self.nuclear_potential(pos) \
@@ -283,7 +283,7 @@ class Orbital(WaveFunction):
             jast, djast, d2jast = self.jastrow(x,
                                                derivative=[0, 1, 2],
                                                jacobian=False)
-            print('__ jast : ', time()-t0)
+            #print('__ jast : ', time()-t0)
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
             d2jast = d2jast / jast
 

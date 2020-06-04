@@ -165,7 +165,7 @@ class TwoBodyJastrowFactor(nn.Module):
 
         Args:
             r (torch.tensor): ee distance matrix Nbatch x Nelec x Nelec
-            jast (torch.tensor): values of the ajstrow elements
+            jast (torch.tensor): values of the jastrow elements
                                  Nbatch x Nelec x Nelec
 
         Returns:
@@ -225,12 +225,11 @@ class TwoBodyJastrowFactor(nn.Module):
         hess_jast = 0.5 * hess_jast
 
         # mixed terms
-        djast = (self._get_der_jastrow_elements(r, dr))
-
-        t0 = time()
+        djast = self._get_der_jastrow_elements(r, dr)
+        # t0 = time()
         hess_jast = hess_jast + self._partial_derivative(
             djast, out_mat=hess_jast)
-        print('__ __ __ djast', time()-t0)
+        #print('__ __ __ djast', time()-t0)
         return hess_jast * prod_val
 
     def _get_jastrow_elements(self, r):
@@ -397,7 +396,7 @@ class TwoBodyJastrowFactor(nn.Module):
             out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
 
         if len(self.index_partial_der) > 0:
-            print(self.index_partial_der)
+
             x = djast[..., self.index_partial_der]
             x = x.prod(-1)
             x = x * self.weight_partial_der
