@@ -304,6 +304,7 @@ class AtomicOrbitals(nn.Module):
         Returns:
             torch.tensor: values of the gradient of the AOs (with contraction)
         """
+        nbatch = R.shape[0]
         bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
 
         bas = self.norm_cst.unsqueeze(-1) * \
