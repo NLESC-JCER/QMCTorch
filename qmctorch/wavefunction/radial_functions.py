@@ -1,9 +1,6 @@
 import torch
 from ..utils import fast_power
 
-import torch
-from ..utils import fast_power
-
 
 def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """Compute the radial part of STOs (or its derivative).

@@ -56,7 +56,7 @@ class TestAOvalues(unittest.TestCase):
                            ip_aovals_ref[:, self.iorb])
 
     def test_ao_hess(self):
-        import matplotlib.pyplot as plt
+
         i2p_aovals = self.wf.ao(
             self.pos, derivative=2).detach().numpy()
 
@@ -68,6 +68,10 @@ class TestAOvalues(unittest.TestCase):
 
         assert np.allclose(
             i2p_aovals[:, 0, self.iorb], i2p_aovals_ref)
+
+    def test_all_der(self):
+        aovals = self.wf.ao(self.pos, derivative=[
+                            0, 1, 2])
 
 
 if __name__ == "__main__":
