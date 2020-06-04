@@ -247,19 +247,10 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
-        from time import time
 
-        t0 = time()
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
-        print('ao ders : ', time()-t0)
-
-        t0 = time()
         mo = self.ao2mo(ao)
-        print('mo : ', time()-t0)
-
-        t0 = time()
         bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
-        print('Bk : ', time()-t0)
 
         if kinpool:
             kin, psi = self.kinpool(mo, bkin)
