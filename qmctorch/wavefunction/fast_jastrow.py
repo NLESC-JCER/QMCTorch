@@ -122,8 +122,8 @@ class TwoBodyJastrowFactor(nn.Module):
         """
         from time import time
 
-        if not jacobian:
-            assert(derivative == 1)
+        # if not jacobian:
+        #     assert(derivative == 1)
 
         size = pos.shape
         assert size[1] == self.nelec * self.ndim
@@ -148,6 +148,17 @@ class TwoBodyJastrowFactor(nn.Module):
                 pos, derivative=2)).view(nbatch, 3, -1)
 
             return self._jastrow_second_derivative(r, dr, d2r, jast)
+
+        elif derivative == [0, 1, 2]:
+
+            dr = self.extract_tri_up(self.edist(
+                pos, derivative=1)).view(nbatch, 3, -1)
+            d2r = self.extract_tri_up(self.edist(
+                pos, derivative=2)).view(nbatch, 3, -1)
+
+            return(jast.prod(1).view(nbatch, 1),
+                   self._jastrow_derivative(r, dr, jast, jacobian),
+                   self._jastrow_second_derivative(r, dr, d2r, jast))
 
     def _jastrow_derivative(self, r, dr, jast, jacobian):
         """Compute the value of the derivative of the Jastrow factor

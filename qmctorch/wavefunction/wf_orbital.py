@@ -7,7 +7,7 @@ from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
 from .fast_jastrow import TwoBodyJastrowFactor
-#from .jastrow import TwoBodyJastrowFactor
+# from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
 from ..utils.interpolate import (get_reg_grid, get_log_grid,
@@ -286,13 +286,14 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
 
-            jast = self.jastrow(x)
-            djast = self.jastrow(x, derivative=1, jacobian=False)
-            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
-            d2jast = self.jastrow(x, derivative=2) / jast
+            jast, djast, d2jast = self.jastrow(x,
+                                               derivative=[0, 1, 2],
+                                               jacobian=False)
 
-            dmo = self.mo(self.mo_scf(
-                dao.transpose(2, 3))).transpose(2, 3)
+            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
+            d2jast = d2jast / jast
+
+            dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
 
             djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
             d2jast_mo = d2jast.unsqueeze(-1) * mo
