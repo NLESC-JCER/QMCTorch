@@ -202,13 +202,14 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5, path
     plt.grid()
     plt.xlabel('MC step')
     plt.ylabel('IAC')
+
     if path is not None:
         plt.savefig(path)
     else:
         plt.show()
 
 
-def plot_blocking_energy(eloc, block_size, walkers='mean'):
+def plot_blocking_energy(eloc, block_size, walkers='mean',path=None):
     """Plot the blocked energy values
 
     Args:
@@ -238,6 +239,7 @@ def plot_blocking_energy(eloc, block_size, walkers='mean'):
     plt.grid()
     plt.xlabel('MC steps')
     plt.ylabel('Energy')
+
     if path is not None:
         plt.savefig(path)
     else:
@@ -266,13 +268,14 @@ def plot_correlation_time(eloc, path=None):
     plt.plot(np.array(evar))
     plt.xlabel('Blocking size')
     plt.ylabel('Correlation steps')
+
     if path is not None:
         plt.savefig(path)
     else:
         plt.show()
 
 
-def plot_block(eloc):
+def plot_block(eloc, path=None):
     """Plot the blocking thingy
 
     Args:
@@ -289,6 +292,7 @@ def plot_block(eloc):
         evar.append(np.sqrt(np.var(eb, axis=0) / (nblock - 1)))
 
     plt.plot(np.array(evar))
+    
     if path is not None:
         plt.savefig(path)
     else:
