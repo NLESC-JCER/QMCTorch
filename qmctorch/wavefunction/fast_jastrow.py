@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from .electron_distance import ElectronDistance
 from ..utils import register_extra_attributes
-
+import itertools
 from time import time
 
 
@@ -390,17 +390,30 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor:
         """
-
+        print(djast.shape)
         nbatch = djast.shape[0]
         if out_mat is None:
             out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
 
         if len(self.index_partial_der) > 0:
-
+            print('djast', djast.shape)
             x = djast[..., self.index_partial_der]
+            print('xx', x.shape)
             x = x.prod(-1)
             x = x * self.weight_partial_der
             x = x.sum(1)
-            out_mat.index_add_(1, self.index_partial_der_to_elec, x)
 
+            out_mat.index_add_(1, self.index_partial_der_to_elec, x)
+            print('out', out_mat.shape)
         return out_mat
+
+    def _partial_derivative_fast(self, djast):
+
+        tmp = torch.zeros(nbatch, self.nelec, self.nelec-1)
+        tmp[..., self.index_row, self.index_col-1] = djast
+        tmp[..., self.index_col, self.index_row] = -djast
+
+        idx = list(itertools.combinations(range(self.nelec-1), 2))
+        vals = tmp[..., idx].prod(-1).sum(1).sum(-1)
+
+        return vals
