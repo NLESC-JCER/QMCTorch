@@ -170,8 +170,8 @@ class AtomicOrbitals(nn.Module):
         elif derivative == [2]:
             ao = self._compute_laplacian_ao_values(pos)
 
-        elif derivative == [0, 1, 2]:
-            ao = self._compute_all_ao_values(pos, jacobian)
+        # elif derivative == [0, 1, 2]:
+        #     ao = self._compute_all_ao_values(pos, jacobian)
 
         else:
             raise ValueError(
@@ -243,12 +243,18 @@ class AtomicOrbitals(nn.Module):
         """
 
         xyz, r = self._process_position(pos)
+        R = self.radial(r, self.bas_n, self.bas_exp)
+        dR = self.radial(r, self.bas_n, self.bas_exp,
+                         xyz=xyz, derivative=1)
 
-        R, dR = self.radial(r, self.bas_n,
-                            self.bas_exp, xyz=xyz,
-                            derivative=[0, 1])
+        Y = self.harmonics(xyz)
+        dY = self.harmonics(xyz, derivative=1)
 
-        Y, dY = self.harmonics(xyz, derivative=[0, 1])
+        # R, dR = self.radial(r, self.bas_n,
+        #                     self.bas_exp, xyz=xyz,
+        #                     derivative=[0, 1])
+
+        # Y, dY = self.harmonics(xyz, derivative=[0, 1])
 
         return self._jacobian_kernel(R, dR, Y, dY)
 
@@ -265,12 +271,19 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R, dR = self.radial(r, self.bas_n,
-                            self.bas_exp, xyz=xyz,
-                            derivative=[0, 1],
-                            jacobian=False)
+        R = self.radial(r, self.bas_n, self.bas_exp)
+        dR = self.radial(r, self.bas_n, self.bas_exp,
+                         xyz=xyz, derivative=1, jacobian=False)
 
-        Y, dY = self.harmonics(xyz, derivative=[0, 1], jacobian=False)
+        Y = self.harmonics(xyz)
+        dY = self.harmonics(xyz, derivative=1, jacobian=False)
+
+        # R, dR = self.radial(r, self.bas_n,
+        #                     self.bas_exp, xyz=xyz,
+        #                     derivative=[0, 1],
+        #                     jacobian=False)
+
+        # Y, dY = self.harmonics(xyz, derivative=[0, 1], jacobian=False)
 
         return self._gradient_kernel(R, dR, Y, dY)
 
@@ -329,13 +342,23 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
-                                 xyz=xyz, derivative=[0, 1, 2],
-                                 jacobian=False)
+        R = self.radial(r, self.bas_n, self.bas_exp)
+        dR = self.radial(r, self.bas_n, self.bas_exp,
+                         xyz=xyz, derivative=1, jacobian=False)
+        d2R = self.radial(r, self.bas_n, self.bas_exp,
+                          xyz=xyz, derivative=2)
 
-        Y, dY, d2Y = self.harmonics(xyz,
-                                    derivative=[0, 1, 2],
-                                    jacobian=False)
+        Y = self.harmonics(xyz)
+        dY = self.harmonics(xyz, derivative=1, jacobian=False)
+        d2Y = self.harmonics(xyz, derivative=2)
+
+        # R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+        #                          xyz=xyz, derivative=[0, 1, 2],
+        #                          jacobian=False)
+
+        # Y, dY, d2Y = self.harmonics(xyz,
+        #                             derivative=[0, 1, 2],
+        #                             jacobian=False)
         return self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y)
 
     def _laplacian_kernel(self, R, dR, d2R, Y, dY, d2Y):
