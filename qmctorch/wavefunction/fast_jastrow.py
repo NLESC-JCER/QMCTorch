@@ -226,9 +226,21 @@ class TwoBodyJastrowFactor(nn.Module):
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
-        # t0 = time()
-        hess_jast = hess_jast + self._partial_derivative(
-            djast, out_mat=hess_jast)
+
+        # benchmark method
+        t0 = time()
+        self._partial_derivative(djast)
+        print('slow', time()-t0)
+
+        t0 = time()
+        self._partial_derivative_fast(djast)
+        print('fast', time()-t0)
+
+        # hess_jast = hess_jast + self._partial_derivative(
+        #     djast, out_mat=hess_jast)
+
+        hess_jast = hess_jast + self._partial_derivative_fast(djast)
+
         #print('__ __ __ djast', time()-t0)
         return hess_jast * prod_val
 
@@ -402,14 +414,16 @@ class TwoBodyJastrowFactor(nn.Module):
             x = x.prod(-1)
             x = x * self.weight_partial_der
             x = x.sum(1)
-
             out_mat.index_add_(1, self.index_partial_der_to_elec, x)
             print('out', out_mat.shape)
+
         return out_mat
 
     def _partial_derivative_fast(self, djast):
 
-        tmp = torch.zeros(nbatch, self.nelec, self.nelec-1)
+        nbatch = djast.shape[0]
+
+        tmp = torch.zeros(nbatch, 3, self.nelec, self.nelec-1)
         tmp[..., self.index_row, self.index_col-1] = djast
         tmp[..., self.index_col, self.index_row] = -djast
 
