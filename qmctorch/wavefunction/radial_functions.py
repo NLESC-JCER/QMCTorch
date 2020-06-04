@@ -29,9 +29,9 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
 
     def _first_derivative_kernel():
         if jacobian:
-            nabla_rn = nabla_rn.sum(3)
-            nabla_er = nabla_er.sum(3)
-            return nabla_rn * er + rn * nabla_er
+            nabla_rn_sum = nabla_rn.sum(3)
+            nabla_er_sum = nabla_er.sum(3)
+            return nabla_rn_sum * er + rn * nabla_er_sum
         else:
             return nabla_rn * \
                 er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
