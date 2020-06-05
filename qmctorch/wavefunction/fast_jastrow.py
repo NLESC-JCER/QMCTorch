@@ -44,7 +44,17 @@ class TwoBodyJastrowFactor(nn.Module):
 
         self.static_weight = self.get_static_weight()
 
-        self._get_index_partial_derivative()
+        # choose the partial derivative method
+        method = 'col_perm'
+        dict_method = {'index': self._partial_derivative_index,
+                       'col_perm': self._partial_derivative_col_perm}
+        self.partial_derivative_method = dict_method[method]
+
+        if method == 'index':
+            self._get_index_partial_derivative()
+        elif method == 'col_perm':
+            self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
+                range(self.nelec-1), 2))).to(self.device)
 
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix
@@ -222,26 +232,26 @@ class TwoBodyJastrowFactor(nn.Module):
         hess_jast = torch.zeros(nbatch, self.nelec).to(self.device)
         hess_jast.index_add_(1, self.index_row, d2jast)
         hess_jast.index_add_(1, self.index_col, d2jast)
-        hess_jast = 0.5 * hess_jast
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
 
-        # benchmark method
-        t0 = time()
-        self._partial_derivative(djast)
-        print('slow', time()-t0)
-
-        t0 = time()
-        self._partial_derivative_fast(djast)
-        print('fast', time()-t0)
-
-        # hess_jast = hess_jast + self._partial_derivative(
+        # method 1
+        # hess_jast = 0.5 * hess_jast
+        # hess_jast = hess_jast + self._partial_derivative_index(
         #     djast, out_mat=hess_jast)
 
-        hess_jast = hess_jast + self._partial_derivative_fast(djast)
+        # method 2
+        # hess_jast = hess_jast + 2 * \
+        #   self._partial_derivative_index(djast)
 
-        #print('__ __ __ djast', time()-t0)
+        # method 3
+        # hess_jast = hess_jast + 2 * \
+        #     self._partial_derivative_col_perm(djast)
+
+        hess_jast = hess_jast + 2 * \
+            self.partial_derivative_method(djast)
+
         return hess_jast * prod_val
 
     def _get_jastrow_elements(self, r):
@@ -342,6 +352,9 @@ class TwoBodyJastrowFactor(nn.Module):
         return a + b + c + d + e**2
 
     def _get_index_partial_derivative(self):
+        """Computes the index of the pair of djast elements
+        that need to me multplued to get the mixed second derivatives.
+        """
 
         self.index_partial_der = []
         self.weight_partial_der = []
@@ -388,7 +401,7 @@ class TwoBodyJastrowFactor(nn.Module):
         n = self.nelec
         return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
 
-    def _partial_derivative(self, djast, out_mat=None):
+    def _partial_derivative_index(self, djast, out_mat=None):
         """Get the product of the mixed second deriative terms.
 
         .. math ::
@@ -402,24 +415,21 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor:
         """
-        print(djast.shape)
+
         nbatch = djast.shape[0]
         if out_mat is None:
             out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
 
         if len(self.index_partial_der) > 0:
-            print('djast', djast.shape)
             x = djast[..., self.index_partial_der]
-            print('xx', x.shape)
             x = x.prod(-1)
             x = x * self.weight_partial_der
             x = x.sum(1)
             out_mat.index_add_(1, self.index_partial_der_to_elec, x)
-            print('out', out_mat.shape)
 
         return out_mat
 
-    def _partial_derivative_fast(self, djast):
+    def _partial_derivative_col_perm(self, djast):
 
         nbatch = djast.shape[0]
 
@@ -427,7 +437,6 @@ class TwoBodyJastrowFactor(nn.Module):
         tmp[..., self.index_row, self.index_col-1] = djast
         tmp[..., self.index_col, self.index_row] = -djast
 
-        idx = list(itertools.combinations(range(self.nelec-1), 2))
-        vals = tmp[..., idx].prod(-1).sum(1).sum(-1)
+        vals = tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
 
         return vals
