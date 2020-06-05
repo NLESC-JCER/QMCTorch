@@ -20,7 +20,7 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     Returns:
         torch.tensor: values of each orbital radial part at each position
     """
-
+    from time import time
     if not isinstance(derivative, list):
         derivative = [derivative]
 
@@ -36,7 +36,8 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
             return nabla_rn * \
                 er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    def _second_derivative_kernel():
+    def _second_derivative_kernel_unfactorized():
+
         sum_xyz2 = (xyz*xyz).sum(3)
 
         R2 = R*R
@@ -51,14 +52,26 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         return lap_rn * er + 2 * \
             (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
+    def _second_derivative_kernel():
+
+        R2 = R*R
+        lap_rn = nRnm2 * (bas_n + 1)
+        lap_er = bexp_er * (bas_exp - 2. / R)
+
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
     # computes the basic quantities
     rn = fast_power(R, bas_n)
     er = torch.exp(-bas_exp * R)
 
     # computes the grad
     if any(x in derivative for x in [1, 2]):
-        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
-        nabla_er = -(bas_exp * er).unsqueeze(-1) * \
+        Rnm2 = R**(bas_n - 2)
+        nRnm2 = bas_n * Rnm2
+        bexp_er = bas_exp * er
+        nabla_rn = (nRnm2).unsqueeze(-1) * xyz
+        nabla_er = -(bexp_er).unsqueeze(-1) * \
             xyz / R.unsqueeze(-1)
 
     # prepare the output/kernel

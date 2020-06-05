@@ -36,7 +36,7 @@ class TestH2ADF(unittest.TestCase):
                 'type': 'all-elec',
                 'proba': 'normal'})
 
-        # optimizer
+        # optimizervi h2
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
