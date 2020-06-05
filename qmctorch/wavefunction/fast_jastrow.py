@@ -401,8 +401,8 @@ class TwoBodyJastrowFactor(nn.Module):
         n = self.nelec
         return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
 
-    def _partial_derivative_index(self, djast, out_mat=None):
-        """Get the product of the mixed second deriative terms.
+    def _partial_derivative_index(self, djast):
+        """Get the product of the mixed second deriative terms using indexing of the pairs
 
         .. math ::
 
@@ -410,15 +410,13 @@ class TwoBodyJastrowFactor(nn.Module):
 
         Args:
             djast (torch.tensor): first derivative of the jastrow kernels
-            out_mat (torch.tensor, optional): output matrix. Defaults to None.
 
         Returns:
             torch.tensor:
         """
 
         nbatch = djast.shape[0]
-        if out_mat is None:
-            out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
+        out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
 
         if len(self.index_partial_der) > 0:
             x = djast[..., self.index_partial_der]
@@ -430,13 +428,24 @@ class TwoBodyJastrowFactor(nn.Module):
         return out_mat
 
     def _partial_derivative_col_perm(self, djast):
+        """Get the product of the mixed second deriative terms using column permuatation.
+
+        .. math ::
+
+            d B_{ij} / d x_i * d B_{kl} / d x_k
+
+        Args:
+            djast (torch.tensor): first derivative of the jastrow kernels
+
+        Returns:
+            torch.tensor:
+        """
 
         nbatch = djast.shape[0]
-
-        tmp = torch.zeros(nbatch, 3, self.nelec, self.nelec-1)
-        tmp[..., self.index_row, self.index_col-1] = djast
-        tmp[..., self.index_col, self.index_row] = -djast
-
-        vals = tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
-
-        return vals
+        if len(self.idx_col_perm) > 0:
+            tmp = torch.zeros(nbatch, 3, self.nelec, self.nelec-1)
+            tmp[..., self.index_row, self.index_col-1] = djast
+            tmp[..., self.index_col, self.index_row] = -djast
+            return tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
+        else:
+            return torch.zeros(nbatch, self.nelec).to(self.device)
