@@ -121,7 +121,7 @@ class FermiIntermediate(nn.Module):
             input_size_ee, output_size_ee, bias=True)
 
     def forward(self, h_i, h_ij):
-         """Computes the output of a sinlge intermediate layer of the FermiNet.
+        """Computes the output of a sinlge intermediate layer of the FermiNet.
             The one-electron stream input is concatenated with 
        
         
@@ -133,7 +133,7 @@ class FermiIntermediate(nn.Module):
             h_i (torch.tensor): one-electron stream (Nbatch, Nelec, output_size_e)
             h_ij (torch.tensor): two electron stream (Nbatch, Nelec, Nelec, output_size_ee)         
         """
-        # for the one electron stream:
+        # for the one electron stream:\
         h_i_previous = h_i
         f = self.f_concatenate(h_i, h_ij, self.mol)
         l_e = self.lin_layer_e(f)
@@ -161,6 +161,9 @@ class FermiIntermediate(nn.Module):
             h_i (torch.tensor): one electron stream output of previous layer Nbatch x Nelec x input_size_e
             h_ij (torch.tensor): two electron stream output of previous layer Nbatch x Nelec x Nelec x input_size_ee
             mol : Molecule instance 
+        
+        Returns:
+            f_i (torch.tensor): (N_batch, Nelec, 3*input_size_e + 2*(inpute_size_ee))
         '''
         nbatch = h_i.shape[0]
         hidden_nodes_e = h_i.shape[2]

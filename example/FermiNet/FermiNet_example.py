@@ -1,6 +1,6 @@
 
 import torch
-from qmctorch.wavefunction.FermiNet_v2 import FermiNet
+from qmctorch.wavefunction.wf_FermiNet import FermiNet
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.wavefunction import Molecule
 

@@ -15,7 +15,7 @@ from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
 from qmctorch.wavefunction import WaveFunction
-from qmctorch.wavefunction.FermiNet_v2 import FermiNet
+from qmctorch.wavefunction.wf_FermiNet import FermiNet
 from qmctorch.wavefunction.slater_pooling import SlaterPooling
 from qmctorch.solver.solver_base import SolverBase
 from qmctorch import log
