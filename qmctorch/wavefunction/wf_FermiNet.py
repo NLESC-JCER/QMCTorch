@@ -51,7 +51,7 @@ class FermiPrepocess(nn.Module):
     def electron_nuclei_input(pos, mol):
         '''Function to create intial input of electron-nuclei distances.
         Args:
-            pos : electron positions Nbatch x [Nelec x Ndim]
+            pos : electron positions (Nbatch, Nelec, Ndim)
             mol (object) : Molecule instance
         
         Returns:
@@ -76,7 +76,7 @@ class FermiPrepocess(nn.Module):
     def electron_electron_input(pos, mol):
         '''Function to create intial input of electron-electron distances.
         Args:
-            pos : electron positions Nbatch x [Nelec x Ndim]
+            pos : electron positions (Nbatch, Nelec, Ndim)
             mol (object) : Molecule instance
 
         Returns:
@@ -124,7 +124,6 @@ class FermiIntermediate(nn.Module):
         """Computes the output of a sinlge intermediate layer of the FermiNet.
             The one-electron stream input is concatenated with 
        
-        
         Args:
             h_i (torch.tensor): one-electron stream (Nbatch, Nelec, input_size_e)
             h_ij (torch.tensor): two electron stream (Nbatch, Nelec, Nelec, input_size_ee)
@@ -187,8 +186,14 @@ class FermiIntermediate(nn.Module):
 class AllOrbitals(nn.Module):
 
     def __init__(self, nelec, atom_coords, Kdet, input_size):
-        """Computes all the orbitals from the output of the last layer."""
-
+        """Computes all the orbitals from the output of the last intermediate layer of the FermiNet.
+         
+        Args:
+            nelec (int): number of electrons for the mo matrix
+            atom_coords (torch.tensor): atomic coordinates (Natom Ndim)
+            Kdet (int): Number of determinants
+            input_size (int): input size of the one electron stream
+        """
         super(AllOrbitals, self).__init__()
 
         self.nelec = nelec
@@ -210,7 +215,19 @@ class AllOrbitals(nn.Module):
             torch.rand(self.Kdet, self.nelec, self.natom))
 
     def forward(self, h_i, r_i):
+        """ Computes the output of all the orbitals as a mo slater matrix
+       
+        .. math::
+            \\phi^{ka}_{i}(r_i, h_i) = (w_i^{ka}.h_j^{La} + g_i^{ka}) \\sum_m\\pi^{ka}_{im} \\exp(-|\\Sigma^{ka}_{im}(r^{a}_j-R_m)|)
 
+        Args:
+            h_i (torch.tensor): one-electron stream (Nbatch, Nelec, input_size)
+            r_i (torch.tensor): electron positions (Nbatch, Nelec, Ndim)
+  
+        Returns:
+            torch.tensor: mo matrix of orbitals (Nbatch, Ndet, Nelec, Nelec)      
+
+        """
         self.nbatch = r_i.shape[0]
 
         Rnuclei = torch.tensor(self.atom_coords)
@@ -243,7 +260,7 @@ class AllOrbitals(nn.Module):
         x = self.Pi.unsqueeze(0).unsqueeze(-2) * x
 
         # sum over the atoms
-        # Nbatch, Ndet, Nelec, Norb
+        # Nbatch, Ndet, Norb, Nelec 
         x = x.sum(-1)
 
         return out * x
@@ -253,6 +270,18 @@ class FermiNet(WaveFunction):
 
     def __init__(self, mol, hidden_nodes_e=256, hidden_nodes_ee=32, L_layers=4, Kdet=1, kinetic="auto", cuda=False):
 
+        """Wave function FermiNet as proposed by Foulkes and Deepmind [arXiv:1909.02487v2].
+         
+        Args:
+            mol (qmc.wavefunction.Molecule): a molecule object
+            input_size_e (int): input size of the one electron stream
+            output_size_e (int): output size of the one electron stream
+            input_size_ee (int): input size of the two electron stream
+            output_size_ee (int): output size of the two electron stream             
+            Kdet (int): Number of determinants
+            kinetic (str, optional): method to compute the kinetic energy. Defaults to 'auto'.
+            cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
+        """
         super(FermiNet, self).__init__(mol.nelec, 3, kinetic, cuda)
        
         self.mol= mol
@@ -303,7 +332,16 @@ class FermiNet(WaveFunction):
         log.info('  Cuda support        : {0}', self.cuda)
 
     def compute_mo(self, pos):
-        
+        """ Computes the output of the FermiNet until the mo slater matrices.   
+
+        Args:
+            pos (torch.tensor): electron positions (Nbatch, Nelec, Ndim)
+  
+        Returns:
+            mo_up (torch.tensor): mo matrix of orbitals for spin up (Nbatch, Ndet, Nup, Nup)   
+            mo_down (torch.tensor): mo matrix of orbitals for spin up (Nbatch, Ndet, Ndown, Ndown)    
+
+        """
         self.nbatch = pos.shape[0]
         if pos.shape[-1] == self.mol.nelec*self.ndim:
             pos = pos.reshape(self.nbatch,self.mol.nelec,self.ndim)
@@ -332,14 +370,32 @@ class FermiNet(WaveFunction):
 
 
     def forward(self, pos):
-        
+        """ Computes the output of the FermiNet.
+
+        Args:
+            pos (torch.tensor): electron positions (Nbatch, Nelec, Ndim)
+  
+        Returns:
+            torch.tensor : values of the wave functions at each sampling point (Nbatch, 1)   
+
+        """
         mo_up,mo_down = self.compute_mo(pos)
-        # compute the different slater determinant from the up and down determinants
+        # compute the different slater determinant from the up and down mo slater matrices
         slat_det = torch.det(mo_up)*torch.det(mo_down)
         # compute a weighted sum of the slater determinants.
         return self.weighted_sum(slat_det)
     
     def forward_log(self, pos):
+        """ Computes the log of the absolute of the output of the FermiNet.
+
+        Args:
+            pos (torch.tensor): electron positions (Nbatch, Nelec, Ndim)
+  
+        Returns:
+            torch.tensor : logarithm of the values of the wave functions at each sampling point (Nbatch, 1)  
+            sign (torch.tensor): sign of the wave function (Nbatch, 1) 
+
+        """
         # compute log output of the network
         psi = self.forward(pos)
         return torch.log(torch.abs(psi)), torch.sign(psi)
