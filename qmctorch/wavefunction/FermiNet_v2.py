@@ -10,7 +10,7 @@ from qmctorch.utils import (plot_energy, plot_data)
 from qmctorch.wavefunction import WaveFunction
 
 import numpy as np 
-from .. import log
+from qmctorch import log
 
 
 class FermiPrepocess(nn.Module):
@@ -148,17 +148,17 @@ class FermiIntermediate(nn.Module):
 
 class FermiOrbital(nn.Module):
 
-    def __init__(self, mol, Kdet,input_size):
+    def __init__(self, mol, Kdet, input_size):
         """Computes all the orbitals from the output of the last layer."""
         super(FermiOrbital, self).__init__()
         self.mol = mol
         self.Kdet = Kdet
         self.ndim = 3
 
-        self.W = nn.Parameter(torch.rand(input_size,self.Kdet )) 
+        self.W = nn.Parameter(torch.rand(input_size, self.Kdet)) 
         self.G = nn.Parameter(torch.rand(self.Kdet)) 
-        self.Sigma = nn.Parameter(torch.rand(self.Kdet,self.mol.natom,self.ndim,self.ndim))
-        self.pi = nn.Parameter(torch.rand(self.Kdet,self.mol.natom))
+        self.Sigma = nn.Parameter(torch.rand(self.Kdet, self.mol.natom, self.ndim, self.ndim))
+        self.pi = nn.Parameter(torch.rand(self.Kdet, self.mol.natom))
 
     def forward(self, h_i, r_i):
         
@@ -166,19 +166,10 @@ class FermiOrbital(nn.Module):
         
         Rnuclei = torch.tensor(self.mol.atom_coords)
         
-        # print("R_m:",Rnuclei.shape)
-        # print("r:",r_i.shape)
-        # print("W:",self.W.shape)
-        # print("G:",self.G.shape)
-
-
         # input h_i: nbatch x hidden_nodes_e 
-        out = h_i @ self.W  + self.G # outputs shape: nbatch x kdet
-        # print("initial linear:",out.shape)
-        rim = -Rnuclei[None,:,:] - r_i[:,None,:] #shape: nbatch x natom x ndim
+        out = h_i @ self.W  + self.G # outputs shape: nbatch x kdet x norb
 
-        # print("R_im:",rim.shape)
-        # print("Sigma:",self.Sigma.shape)
+        rim = -Rnuclei[None,:,:] - r_i[:,None,:] #shape: nbatch x natom x ndim
 
         expterm = torch.zeros(self.nbatch,self.Kdet,self.mol.natom,self.ndim)
 
@@ -186,23 +177,82 @@ class FermiOrbital(nn.Module):
             #input rim: nbatch x 1 x ndim  
             # weight shape: kdet x ndim x ndim 
             expterm[:,:,m,:] = (rim[:,m] @ self.Sigma[:,m]).transpose(0,1) #output shape: nbatch x kdet x 1 x ndim     
-        # print("expterm:",expterm.shape)
+
         # output exterm shape: nbatch x kdet x natom x ndim        
         expnorm = torch.norm(expterm,dim=3)
 
-        # print("expnorm:",expnorm.shape)
-        # print("pi:",self.pi.shape)
 
         # output norm shape: nbatch x kdet x natom        
         Exponential = torch.sum(torch.exp(-expnorm) * self.pi[None,:,:],axis=2)
-
-        # print("Expstuff:",Exponential.shape)
-
 
         #output shape: nbatch x kdet
         out = out * Exponential
         return out
 
+
+class AllOrbitals(nn.Module):
+
+    def __init__(self, nelec, atom_coords, Kdet, input_size):
+        """Computes all the orbitals from the output of the last layer."""
+
+        super(AllOrbitals, self).__init__()
+
+        self.nelec = nelec
+        self.atom_coords = atom_coords
+        self.natom = len(atom_coords)
+        self.Kdet = Kdet
+        self.ndim = 3
+
+        self.W = nn.Parameter(torch.rand(
+            self.Kdet, input_size, self.nelec))
+
+        self.G = nn.Parameter(torch.rand(
+            self.Kdet, self.nelec))
+
+        self.Sigma = nn.Parameter(torch.rand(
+            self.Kdet, self.nelec, self.natom, self.ndim, self.ndim))
+
+        self.Pi = nn.Parameter(
+            torch.rand(self.Kdet, self.nelec, self.natom))
+
+    def forward(self, h_i, r_i):
+
+        self.nbatch = r_i.shape[0]
+
+        Rnuclei = torch.tensor(self.atom_coords)
+
+        # compute the orbital part
+        # -> Nbatch, Ndet, Norb, Nelec
+        out = h_i.unsqueeze(1) @ self.W.unsqueeze(0) 
+        out = out.transpose(2,3)
+        out = out+ self.G.unsqueeze(2)
+
+        # position of each elec wrt each atom
+        # Nbatch, Nelec, Natom, 3
+        xyz = (r_i.view(-1, self.nelec, 1, 3) - Rnuclei[None, ...])
+
+        
+        # sigma x (r-R)
+        # Nbatch, Ndet, Norb, Nelec, Natom, Ndim, 1
+        x = xyz.unsqueeze(1).unsqueeze(2).unsqueeze(-2) @ self.Sigma.unsqueeze(0).unsqueeze(3)
+
+        # norm of the vector
+        # Nbatch, Ndet, Norb, Nelec, Natom
+        x = torch.norm(x.squeeze(-2), dim=-1)
+
+        # exponential
+        # Nbatch, Ndet, Norb, Nelec, Natom
+        x = torch.exp(-x)
+  
+        # multiply with pi (pi: Ndet Nelec Natom)
+        # Nbatch, Ndet, Norb, Nelec, Natom
+        x = self.Pi.unsqueeze(0).unsqueeze(-2) * x
+
+        # sum over the atoms
+        # Nbatch, Ndet, Nelec, Norb
+        x = x.sum(-1)
+
+        return out * x
 
 
 class FermiNet(WaveFunction):
@@ -233,13 +283,15 @@ class FermiNet(WaveFunction):
                 self.mol,self.hidden_nodes_e, self.hidden_nodes_e,
                 self.hidden_nodes_ee, self.hidden_nodes_ee))
                 
-        self.Orb_up = nn.ModuleList()
-        self.Orb_down = nn.ModuleList()
-        for i in range(self.mol.nup):
-            self.Orb_up.append(FermiOrbital(mol, Kdet, self.hidden_nodes_e))
-        for i in range(self.mol.ndown):
-            self.Orb_down.append(FermiOrbital(mol,Kdet, self.hidden_nodes_e))
-        
+        # orbital up layer
+        self.orbup = AllOrbitals(
+            mol.nup, mol.atom_coords, Kdet, self.hidden_nodes_e)
+
+        # orbital down layer
+        self.orbdown = AllOrbitals(
+            mol.ndown, mol.atom_coords, Kdet, self.hidden_nodes_e)
+
+        # ci sum
         self.weighted_sum = nn.Linear(self.Kdet,1,bias=False)
 
         self.log_data()
@@ -256,7 +308,6 @@ class FermiNet(WaveFunction):
 
     def forward_det(self, pos):
         
-        
         self.nbatch = pos.shape[0]
         if pos.shape[-1] == self.mol.nelec*self.ndim:
             pos = pos.reshape(self.nbatch,self.mol.nelec,self.ndim)
@@ -265,8 +316,6 @@ class FermiNet(WaveFunction):
         else: 
             AttributeError("Input position wrong shape")
 
-
-        
         # Using these inputs the distance between electron and nuclei and electron electron are computed
         # r_i-R_I, |r_i-R_I| and r_i-r_j, |r_i-r_j|.
         h_i, h_ij = self.prepoc(pos)
@@ -276,29 +325,14 @@ class FermiNet(WaveFunction):
         for l in range(self.L_layers):
             h_i,h_ij = self.intermediate[l](h_i,h_ij)
         
-        #determine the spin up and spin down determinants
-        det_up = torch.zeros((self.nbatch,self.mol.nup,self.mol.nup,self.Kdet))
-        det_down = torch.zeros((self.nbatch,self.mol.ndown,self.mol.ndown,self.Kdet))
-        # go through the different orbitals
-        for i in range(self.mol.nup):
-            # reshape the input to directly obtain for all electrons with the given orbital
-            # the orbital network directly computes for all K determinants.
-            det_up[:,:,i,:] = self.Orb_up[i](h_i[:,:self.mol.nup].reshape((
-                self.nbatch*self.mol.nup,self.hidden_nodes_e)),
-                            pos[:,:self.mol.nup].reshape((
-                                self.nbatch*self.mol.nup,self.ndim))).reshape((
-                                    self.nbatch,self.mol.nup,self.Kdet))
-        # now compute for spin down
-        for i in range(self.mol.ndown):
-            det_down[:,:,i,:] = self.Orb_down[i](h_i[:,self.mol.nup:].reshape((
-                self.nbatch*self.mol.ndown,self.hidden_nodes_e)),
-                            pos[:,self.mol.nup:].reshape((
-                                self.nbatch*self.mol.ndown,self.ndim))).reshape((
-                                    self.nbatch,self.mol.nup,self.Kdet))
-        # transpose the determinants dimension and the dimension over which the electrons are aligned for the slater determinant.
-        det_up = det_up.transpose(1,3)
-        det_down= det_down.transpose(1,3)
-        return det_up, det_down
+        # comute the orbital up/down from the output of the last
+        # intermediate layer
+        mo_up = self.orbup(h_i[:, :self.mol.nup, :],
+                           pos[:, :self.mol.nup, :])
+        mo_down = self.orbup(
+            h_i[:, self.mol.nup:, :], pos[:, self.mol.nup:, :])
+
+        return mo_up, mo_down
 
 
     def forward(self, pos):
@@ -334,35 +368,31 @@ if __name__ == "__main__":
     # define the molecule
     mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000', 
                 unit='bohr', calculator='pyscf')  
-
- 
     # network hyperparameters: 
     hidden_nodes_e = 256
     hidden_nodes_ee = 32
-    K_determinants = 1
+    K_determinants = 4
     L_layers = 4
 
     # set a initial seed for to make the example reproducable
     torch.random.manual_seed(321)
     nbatch =5
     # initiaite a random configuration of particle positions
-    r = torch.randn(nbatch,mol.nelec,ndim, device="cpu")
+    # r = torch.randn(nbatch,mol.nelec,ndim, device="cpu")
 
     # using identical electron positions should if everything is correct return all 0 
-    # r = torch.ones((nbatch,mol.nelec, ndim), device="cpu")   
+    r = torch.ones((nbatch,mol.nelec*ndim), device="cpu")   
 
     WF = FermiNet(mol,hidden_nodes_e,hidden_nodes_ee,L_layers,K_determinants)
-    # Int = FermiIntermediate(mol,hidden_nodes_e,hidden_nodes_e,hidden_nodes_ee,hidden_nodes_ee)
-    # Orb = FermiOrbital(mol,K_determinants,hidden_nodes_e)
-
-
-    
-    # # check the number of parameters and layers of the Network:
+    mo_up, mo_down = WF.forward_det(r)
+    print(mo_up[0,0])
+    # check the number of parameters and layers of the Network:
     # for name, param in WF.named_parameters():
     #     print(name, param.size())
-    # print(getNumParams(WF.parameters()))
+    print(getNumParams(WF.parameters()))
 
-    print(WF.forward_log(r))
+    # when using identical terms this should be close to 0
+    print(WF.forward(r))
 
 
 

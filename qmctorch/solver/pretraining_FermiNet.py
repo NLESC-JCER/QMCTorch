@@ -17,6 +17,7 @@ from qmctorch.utils import (plot_energy, plot_data)
 from qmctorch.wavefunction import WaveFunction
 from qmctorch.wavefunction.FermiNet_v2 import FermiNet
 from qmctorch.wavefunction.slater_pooling import SlaterPooling
+from qmctorch import log
 
 import numpy as np 
 import time
@@ -34,9 +35,12 @@ class SolverFermiNet():
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device('cpu')
+        self.save_model ="FermiNet_model.pth"
     
     def pretrain(self, nepoch, sampler=None, optimizer=None, load=None, with_tqdm = True):
         
+        self.task ="Pretraining of FermiNet"
+
         # optimization method:
         self.opt = optimizer
 
@@ -57,36 +61,43 @@ class SolverFermiNet():
         self.hf_train = Orbital(self.mol, configs = "ground_state", use_jastrow=False)    
         
         # #initial position of the walkers
-        # pos = self.sampler(self.wf.pdf) 
-        pos = torch.randn(self.sampler.nwalkers,self.mol.nelec*3)
-        
+        pos = self.sampler(self.wf.pdf) 
+
+        # self.log_data_opt(nepoch)
         # start pretraining    
         start = time.time()
-        # this function will run the pretrianing 
-        epochs = tqdm(range(nepoch),
-                desc='INFO:QMCTorch|  Pretraining',
-                disable=not with_tqdm)
-        for epoch in epochs:
+
+        # epochs = tqdm(range(nepoch),
+        #         desc='INFO:QMCTorch|  Pretraining',
+        #         disable=not with_tqdm)
+
+        min_loss = 1E5
+        for epoch in range(nepoch):
             # sample from both the hf and FermiNet switching every epcoch
             # take 10 Metropolis-Hastings steps
+            
+            log.info('  epoch %d' % epoch)
+
             if epoch % 2:
                 # print("FERMI NET SAMPLING")
                 pos = self.sampler(self.wf.pdf,pos,with_tqdm=False)
             else:
                 pos = self.sampler(self.hf_train.pdf,pos,with_tqdm=False) 
+            log.info(' ') 
+            self.pretraining_epoch(pos) 
 
-            self.pretraining_epoch(pos)  
-            self.Loss_list[epoch] = self.Loss.item()
+            self.Loss_list[epoch] = self.loss.item()
             
             # keep track of how much time has elapsed 
             elapsed = time.time() - start
 
-            # Show progress every 20 epoch 
-            if not epoch % 20:
-                 print(f'epoch: {epoch}, time: {elapsed:.3f}s, loss: {self.Loss.item():.3f}')
-        
-        # final result:
-        print(f'epoch: {epoch}, time: {elapsed:.3f}s, loss: {self.Loss.item():.3f}')               
+            # save the model if necessary
+            if self.loss < min_loss:
+                min_loss = self.save_checkpoint(epoch,
+                            self.loss, self.save_model) 
+
+
+                    
 
     def pretraining_epoch(self,pos):
         # optimization steps performed each epoch
@@ -97,11 +108,6 @@ class SolverFermiNet():
         # detach training values:
         MO_up, MO_down = MO_up.repeat(1, self.wf.Kdet, 1, 1).detach(), MO_down.repeat(1, self.wf.Kdet, 1, 1).detach()
 
-        # print("fermi up:",MO_up_fermi.shape)
-        # print("fermi down:",MO_down_fermi.shape)
-        # print("MO up:",MO_up.shape)
-        # print("MO down:",MO_down.shape)
-        
         # --------------------------------------------------------------------- #
         # ----------------------[ Pretrain the FermiNet ]---------------------- #
         # --------------------------------------------------------------------- #
@@ -109,13 +115,42 @@ class SolverFermiNet():
         self.opt.zero_grad()
 
         #calculate the loss and back propagate 
-        Loss_up = self.criterion(MO_up_fermi,MO_up)
-        Loss_down = self.criterion(MO_down_fermi, MO_down)
-        self.Loss = (Loss_up + Loss_down) * 0.5
-
-
-        self.Loss.backward()
+        loss_up = self.criterion(MO_up_fermi,MO_up)
+        loss_down = self.criterion(MO_down_fermi, MO_down)
+        self.loss = (loss_up + loss_down) * 0.5
+        log.options(style='percent').info(
+                    'loss %f' % (self.loss))
+        self.loss.backward()
         self.opt.step()  
+
+
+    def log_data_opt(self, nepoch):
+        """Log data for the optimization."""
+        log.info('  Task                :', self.task)
+        log.info('  Number Parameters   : {0}', self.wf.get_number_parameters())
+        log.info('  Number of epoch     : {0}', nepoch)
+        log.info('  Batch size          : {0}', self.sampler.get_sampling_size())
+        log.info('  Loss function       : {0}', self.loss.method)
+        log.info('  Clip Loss           : {0}', self.loss.clip)
+        # log.info('  Gradients           : {0}', grad)
+        # log.info('  Resampling mode     : {0}', self.resampling_options.mode)
+        # log.info(
+        #     '  Resampling every    : {0}', self.resampling_options.resample_every)
+        # log.info(
+        #     '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+        # log.info('')
+    
+    def save_checkpoint(self, epoch, loss, filename):
+        torch.save({
+            'epoch': epoch,
+            'model_state_dict': self.wf.state_dict(),
+            'optimzier_state_dict': self.opt.state_dict(),
+            'loss': loss
+        }, filename)
+        return loss
+    
+    def save_loss_list(self, filename):
+        torch.save(self.Loss_list, filename)
 
     def plot_loss(self,path=None):
         
@@ -130,7 +165,6 @@ class SolverFermiNet():
         ax.grid()
         ax.set_xlabel('Number of epoch')
         ax.set_ylabel('Loss', color='black')
-
         if path is not None:
             plt.savefig(path)
         else:
@@ -148,10 +182,10 @@ if __name__ == "__main__":
     set_torch_double_precision()
 
     ndim =3
-    nbatch =20
+    nbatch =4096
 
     # define the molecule
-    mol = Molecule(atom='O 0.000 0.000 0.000; H 0.00000 0.0000 0.69; H 0.00000 0.0000 -0.69',
+    mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000; H	-0.758602 0.58600  0.00000',
                 calculator='pyscf',
                 basis='sto-3g',
                 unit='bohr')
@@ -176,6 +210,9 @@ if __name__ == "__main__":
     solverFermi = SolverFermiNet(wf,sampler=sampler)
 
     # pretrain the FermiNet to hf orbitals
-    solverFermi.pretrain(100,optimizer=opt)
+    solverFermi.pretrain(500,optimizer=opt)
+
+    solverFermi.save_loss_list("pretrain_loss.pt")
+
     solverFermi.plot_loss(path="/home/breebaart/dev/QMCTorch/TrainingExaminig/Figures/pretraining_loss")
     
