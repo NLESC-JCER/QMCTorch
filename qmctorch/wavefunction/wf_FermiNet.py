@@ -16,7 +16,7 @@ from qmctorch import log
 class FermiPrepocess(nn.Module):
 
     def __init__(self, mol):
-        """preprocessing of the electron position to the input of the first layer.
+        """Preprocessing of the electron position to the input of the first layer.
         Args:
             mol (Molcule instance): Molecule object
         """
@@ -24,6 +24,16 @@ class FermiPrepocess(nn.Module):
         self.mol = mol
 
     def forward(self, pos):
+        """Preprocesses the electron positions for input into the FermiNet.
+            the distance between electron and nuclei and electron electron are computed
+       
+        Args:
+            pos (torch.tensor): sampling points (Nbatch, Nelec, Ndim)
+  
+        Returns:
+            h_i (torch.tensor): electron-nuclei distances for one-electron stream (Nbatch, Nelec, Natom*(Ndim+1))
+            h_ij (torch.tensor): electron-electron distances for two electron stream (Nbatch, Nelec, Nelec, Ndim+1)
+        """
 
         # input of electron and nuclei positions
         r_electrons = pos.clone().detach().requires_grad_(True)
@@ -43,6 +53,10 @@ class FermiPrepocess(nn.Module):
         Args:
             pos : electron positions Nbatch x [Nelec x Ndim]
             mol (object) : Molecule instance
+        
+        Returns:
+            h_0_i (torch.tensor): concatenated matrix for the one-electron stream (Nbatch, Nelec, (3*Natom+2)*(Ndim+1))
+
         '''
         # input of electron and molecule object for the atom positions
         h_0_i = torch.tensor([])
@@ -64,6 +78,9 @@ class FermiPrepocess(nn.Module):
         Args:
             pos : electron positions Nbatch x [Nelec x Ndim]
             mol (object) : Molecule instance
+
+        Returns:
+            h_0_ij (torch.tensor): electron-electron distances for the two electron stream (Nbatch, Nelec, Nelec, Ndim+1)  
         '''
         nbatch = pos.shape[0]
         # create meshgrid for indexing of electron i and j
@@ -86,7 +103,15 @@ class FermiPrepocess(nn.Module):
 class FermiIntermediate(nn.Module):
 
     def __init__(self, mol, input_size_e, output_size_e, input_size_ee, output_size_ee):
-        """Implementatation of a single intermediate layer."""
+        """Implementatation of a single intermediate layer of the FermiNet.
+
+        Args:
+            mol (qmc.wavefunction.Molecule): a molecule object
+            input_size_e (int): input size of the one electron stream
+            output_size_e (int): output size of the one electron stream
+            input_size_ee (int): input size of the two electron stream
+            output_size_ee (int): output size of the two electron stream             
+        """
 
         super(FermiIntermediate, self).__init__()
         self.mol = mol
@@ -96,6 +121,18 @@ class FermiIntermediate(nn.Module):
             input_size_ee, output_size_ee, bias=True)
 
     def forward(self, h_i, h_ij):
+         """Computes the output of a sinlge intermediate layer of the FermiNet.
+            The one-electron stream input is concatenated with 
+       
+        
+        Args:
+            h_i (torch.tensor): one-electron stream (Nbatch, Nelec, input_size_e)
+            h_ij (torch.tensor): two electron stream (Nbatch, Nelec, Nelec, input_size_ee)
+  
+        Returns:
+            h_i (torch.tensor): one-electron stream (Nbatch, Nelec, output_size_e)
+            h_ij (torch.tensor): two electron stream (Nbatch, Nelec, Nelec, output_size_ee)         
+        """
         # for the one electron stream:
         h_i_previous = h_i
         f = self.f_concatenate(h_i, h_ij, self.mol)
@@ -121,8 +158,8 @@ class FermiIntermediate(nn.Module):
         With as input the one electron and two electron stream output of the previous layer and
         the spin assignment of the electrons.
         Args: 
-            h_i : one electron stream output of previous layer Nbatch x Nelec x hidden_nodes_e
-            h_ij: two electron stream output of previous layer Nbatch x Nelec x Nelec x hidden_nodes_ee
+            h_i (torch.tensor): one electron stream output of previous layer Nbatch x Nelec x input_size_e
+            h_ij (torch.tensor): two electron stream output of previous layer Nbatch x Nelec x Nelec x input_size_ee
             mol : Molecule instance 
         '''
         nbatch = h_i.shape[0]
@@ -143,52 +180,6 @@ class FermiIntermediate(nn.Module):
     def f_size(hidden_nodes_e, hidden_nodes_ee):
         '''Function to get the input size for the hidden layers'''
         return 3*hidden_nodes_e + 2*(hidden_nodes_ee)
-
-
-
-class FermiOrbital(nn.Module):
-
-    def __init__(self, mol, Kdet, input_size):
-        """Computes all the orbitals from the output of the last layer."""
-        super(FermiOrbital, self).__init__()
-        self.mol = mol
-        self.Kdet = Kdet
-        self.ndim = 3
-
-        self.W = nn.Parameter(torch.rand(input_size, self.Kdet)) 
-        self.G = nn.Parameter(torch.rand(self.Kdet)) 
-        self.Sigma = nn.Parameter(torch.rand(self.Kdet, self.mol.natom, self.ndim, self.ndim))
-        self.pi = nn.Parameter(torch.rand(self.Kdet, self.mol.natom))
-
-    def forward(self, h_i, r_i):
-        
-        self.nbatch = r_i.shape[0]
-        
-        Rnuclei = torch.tensor(self.mol.atom_coords)
-        
-        # input h_i: nbatch x hidden_nodes_e 
-        out = h_i @ self.W  + self.G # outputs shape: nbatch x kdet x norb
-
-        rim = -Rnuclei[None,:,:] - r_i[:,None,:] #shape: nbatch x natom x ndim
-
-        expterm = torch.zeros(self.nbatch,self.Kdet,self.mol.natom,self.ndim)
-
-        for m in range(self.mol.natom):
-            #input rim: nbatch x 1 x ndim  
-            # weight shape: kdet x ndim x ndim 
-            expterm[:,:,m,:] = (rim[:,m] @ self.Sigma[:,m]).transpose(0,1) #output shape: nbatch x kdet x 1 x ndim     
-
-        # output exterm shape: nbatch x kdet x natom x ndim        
-        expnorm = torch.norm(expterm,dim=3)
-
-
-        # output norm shape: nbatch x kdet x natom        
-        Exponential = torch.sum(torch.exp(-expnorm) * self.pi[None,:,:],axis=2)
-
-        #output shape: nbatch x kdet
-        out = out * Exponential
-        return out
-
 
 class AllOrbitals(nn.Module):
 
@@ -257,12 +248,14 @@ class AllOrbitals(nn.Module):
 
 class FermiNet(WaveFunction):
 
-    def __init__(self, mol, hidden_nodes_e=256, hidden_nodes_ee=32, L_layers=4, Kdet=1,kinetic="jacobi",cuda=False):
+    def __init__(self, mol, hidden_nodes_e=256, hidden_nodes_ee=32, L_layers=4, Kdet=1, kinetic="auto", cuda=False):
 
         super(FermiNet, self).__init__(mol.nelec, 3, kinetic, cuda)
        
         self.mol= mol
         self.ndim = 3
+        self.natom = mol.natom
+        self.atom_coords = mol.atom_coords
 
         # input network architecutre
         self.hidden_nodes_e = hidden_nodes_e
@@ -284,11 +277,11 @@ class FermiNet(WaveFunction):
                 self.hidden_nodes_ee, self.hidden_nodes_ee))
                 
         # orbital up layer
-        self.orbup = AllOrbitals(
+        self.orb_up = AllOrbitals(
             mol.nup, mol.atom_coords, Kdet, self.hidden_nodes_e)
 
         # orbital down layer
-        self.orbdown = AllOrbitals(
+        self.orb_down = AllOrbitals(
             mol.ndown, mol.atom_coords, Kdet, self.hidden_nodes_e)
 
         # ci sum
@@ -306,7 +299,7 @@ class FermiNet(WaveFunction):
         log.info('  Number var  param   : {0}', self.get_number_parameters())
         log.info('  Cuda support        : {0}', self.cuda)
 
-    def forward_det(self, pos):
+    def compute_mo(self, pos):
         
         self.nbatch = pos.shape[0]
         if pos.shape[-1] == self.mol.nelec*self.ndim:
@@ -327,72 +320,26 @@ class FermiNet(WaveFunction):
         
         # comute the orbital up/down from the output of the last
         # intermediate layer
-        mo_up = self.orbup(h_i[:, :self.mol.nup, :],
+        mo_up = self.orb_up(h_i[:, :self.mol.nup, :],
                            pos[:, :self.mol.nup, :])
-        mo_down = self.orbup(
+        mo_down = self.orb_down(
             h_i[:, self.mol.nup:, :], pos[:, self.mol.nup:, :])
 
         return mo_up, mo_down
 
 
     def forward(self, pos):
-                
-        det_up,det_down = self.forward_det(pos)
+        
+        mo_up,mo_down = self.compute_mo(pos)
         # compute the different slater determinant from the up and down determinants
-        slat_det = torch.det(det_up)*torch.det(det_down)
+        slat_det = torch.det(mo_up)*torch.det(mo_down)
         # compute a weighted sum of the slater determinants.
-        psi = self.weighted_sum(slat_det)
-        return psi
+        return self.weighted_sum(slat_det)
     
     def forward_log(self, pos):
         # compute log output of the network
-        return torch.log(torch.abs(self.forward(pos)))
-    
-def getNumParams(params):
-    '''function to get the variable count
-    from https://discuss.pytorch.org/t/when-should-i-use-nn-modulelist-and-when-should-i-use-nn-sequential/5463/12'''
-    numParams, numTrainable = 0, 0
-    for param in params:
-        npParamCount = np.prod(param.data.shape)
-        numParams += npParamCount
-        if param.requires_grad:
-            numTrainable += npParamCount
-    return numParams, numTrainable 
-
-
-if __name__ == "__main__":
-    ndim = 3
-    
-    
-    set_torch_double_precision()
-    # define the molecule
-    mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000', 
-                unit='bohr', calculator='pyscf')  
-    # network hyperparameters: 
-    hidden_nodes_e = 256
-    hidden_nodes_ee = 32
-    K_determinants = 4
-    L_layers = 4
-
-    # set a initial seed for to make the example reproducable
-    torch.random.manual_seed(321)
-    nbatch =5
-    # initiaite a random configuration of particle positions
-    # r = torch.randn(nbatch,mol.nelec,ndim, device="cpu")
-
-    # using identical electron positions should if everything is correct return all 0 
-    r = torch.ones((nbatch,mol.nelec*ndim), device="cpu")   
-
-    WF = FermiNet(mol,hidden_nodes_e,hidden_nodes_ee,L_layers,K_determinants)
-    mo_up, mo_down = WF.forward_det(r)
-    print(mo_up[0,0])
-    # check the number of parameters and layers of the Network:
-    # for name, param in WF.named_parameters():
-    #     print(name, param.size())
-    print(getNumParams(WF.parameters()))
-
-    # when using identical terms this should be close to 0
-    print(WF.forward(r))
+        psi = self.forward(pos)
+        return torch.log(torch.abs(psi)), torch.sign(psi)
 
 
 

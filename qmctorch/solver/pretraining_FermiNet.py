@@ -17,6 +17,7 @@ from qmctorch.utils import (plot_energy, plot_data)
 from qmctorch.wavefunction import WaveFunction
 from qmctorch.wavefunction.FermiNet_v2 import FermiNet
 from qmctorch.wavefunction.slater_pooling import SlaterPooling
+from qmctorch.solver.solver_base import SolverBase
 from qmctorch import log
 
 import numpy as np 
@@ -24,17 +25,15 @@ import time
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-class SolverFermiNet():
+class SolverFermiNet(SolverBase):
     
-    def __init__(self,wf=None, sampler=None, scheduler=None):
+    def __init__(self,wf=None, sampler=None, optimizer=None, 
+                    scheduler=None, output=None, rank=0):
+
+        SolverBase.__init__(self, wf, sampler,
+                            optimizer, scheduler, output, task ="fermi_opt", rank=0)
         
-        self.wf = wf
         self.mol = self.wf.mol
-        self.sampler = sampler
-        # ADAM 
-        self.scheduler = scheduler
-        self.cuda = False
-        self.device = torch.device('cpu')
         self.save_model ="FermiNet_model.pth"
     
     def pretrain(self, nepoch, sampler=None, optimizer=None, load=None, with_tqdm = True):
@@ -96,7 +95,7 @@ class SolverFermiNet():
             
             # keep track of how much time has elapsed 
             elapsed = time.time() - start
-            log.info('  elapsed time %d s' % elapsed)
+            log.info('  elapsed time %.2f s' % elapsed)
 
 
             # save the model if necessary
@@ -111,7 +110,7 @@ class SolverFermiNet():
         # optimization steps performed each epoch
         # get the predictions of the model and the training results of the orbitals to which we will train.
         MO_up, MO_down = self.hf_train._get_slater_matrices(pos)
-        MO_up_fermi, MO_down_fermi = self.wf.forward_det(pos)
+        MO_up_fermi, MO_down_fermi = self.wf.compute_mo(pos)
 
         # detach training values:
         MO_up, MO_down = MO_up.repeat(1, self.wf.Kdet, 1, 1).detach(), MO_down.repeat(1, self.wf.Kdet, 1, 1).detach()
@@ -148,16 +147,7 @@ class SolverFermiNet():
         # log.info(
         #     '  Resampling steps    : {0}', self.resampling_options.nstep_update)
         # log.info('')
-    
-    def save_checkpoint(self, epoch, loss, filename):
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': self.wf.state_dict(),
-            'optimzier_state_dict': self.opt.state_dict(),
-            'loss': loss
-        }, filename)
-        return loss
-    
+       
     def save_loss_list(self, filename):
         torch.save(self.Loss_list, filename)
 
@@ -179,49 +169,5 @@ class SolverFermiNet():
         else:
             plt.show()
         
-
     def run(self):
         pass
-
-if __name__ == "__main__":
-        # bond distance : 0.74 A -> 1.38 a
-    # optimal H positions +0.69 and -0.69
-    # ground state energy : -31.688 eV -> -1.16 hartree
-    # bond dissociation energy 4.478 eV -> 0.16 hartree
-    set_torch_double_precision()
-
-    ndim =3
-    nbatch =4096
-    halfnbatch = int(nbatch/2)
-
-    # define the molecule
-    mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000; H	-0.758602 0.58600  0.00000',
-                calculator='pyscf',
-                basis='sto-3g',
-                unit='bohr')
-    
-    # create the network
-    wf = FermiNet(mol, hidden_nodes_e=254, hidden_nodes_ee=32, L_layers=4, Kdet=4)
-
-    # choose a sampler:
-    sampler = Metropolis(nwalkers=halfnbatch,
-                        nstep=10, step_size=0.2,
-                        ntherm=-1, ndecor=100,
-                        nelec=wf.nelec, init=mol.domain('atomic'),
-                        move={'type': 'all-elec', 'proba': 'normal'})
-    
-    # choose a optimizer
-    opt = optim.Adam(wf.parameters(), lr=1E-3)
-
-    # set a initial seed to make the example reproducable
-    torch.random.manual_seed(321)
-
-    # initialize solver
-    solverFermi = SolverFermiNet(wf,sampler=sampler)
-
-    # pretrain the FermiNet to hf orbitals
-    solverFermi.pretrain(500,optimizer=opt)
-
-    solverFermi.save_loss_list("pretrain_loss.pt")
-
-    solverFermi.plot_loss(path="/home/breebaart/dev/QMCTorch/TrainingExaminig/Figures/pretraining_loss")

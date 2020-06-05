@@ -15,6 +15,7 @@ def plot_energy(local_energy, e0=None, show_variance=False, path=None):
         local_energy (np.ndarray): local energies along the trajectory
         e0 (float, optional): Target value for the energy. Defaults to None.
         show_variance (bool, optional): show the variance if True. Defaults to False.
+        path (str, optional): path/filename to save the plot to    
     """
 
     fig = plt.figure()
@@ -61,6 +62,7 @@ def plot_data(observable, obsname, path=None):
     Args:
         obs_dict (SimpleNamespace): namespace of observable
         obsname (str): name (key) of the desired observable
+        path (str, optional): path/filename to save the plot to
     """
 
     fig = plt.figure()
@@ -90,6 +92,7 @@ def plot_walkers_traj(eloc, walkers='mean', path=None):
     Args:
         obs (SimpleNamespace): Namespace of the observables
         walkers (int, str, optional): all, mean or index of a given walker Defaults to 'all'
+        path (str, optional): path/filename to save the plot to
     """
     nstep, nwalkers = eloc.shape
 
@@ -133,6 +136,7 @@ def plot_correlation_coefficient(eloc, size_max=100, path = None):
     Args:
         eloc (np.ndarray): values of the local energy (Nstep, Nwalk)
         size_max (int, optional): maximu number of MC step to consider.Defaults to 100.
+        path (str, optional): path/filename to save the plot to
 
     Returns:
         np.ndarray, float: correlation coefficients (size_max, Nwalkers), correlation time
@@ -169,6 +173,7 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5, path
         rho (np.ndarray, optional): Correlation coefficient. Defaults to None.
         size_max (int, optional): maximu number of MC step to consider.Defaults to 100.
         C (int, optional): [description]. Defaults to 5.
+        path (str, optional): path/filename to save the plot to
     """
 
     if rho is None:
@@ -216,6 +221,7 @@ def plot_blocking_energy(eloc, block_size, walkers='mean',path=None):
         eloc (np.ndarray): values of the local energies
         block_size (int): size of the block
         walkers (str, optional): which walkers to plot (mean, all, index or list). Defaults to 'mean'.
+        path (str, optional): path/filename to save the plot to
 
     Raises:
         ValueError: [description]
@@ -253,6 +259,7 @@ def plot_correlation_time(eloc, path=None):
 
     Args:
         eloc (np.array): values of the local energy
+        path (str, optional): path/filename to save the plot to
     """
 
     nstep, nwalkers = eloc.shape
@@ -280,6 +287,7 @@ def plot_block(eloc, path=None):
 
     Args:
         eloc (np.array): values of the local energy
+        path (str, optional): path/filename to save the plot to
     """
 
     nstep, nwalkers = eloc.shape

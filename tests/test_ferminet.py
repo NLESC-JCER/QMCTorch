@@ -7,7 +7,7 @@ from qmctorch.utils import set_torch_double_precision
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import (plot_energy, plot_data)
-from qmctorch.wavefunction.FermiNet_v2 import FermiNet
+from qmctorch.wavefunction.wf_FermiNet import FermiNet
 
 import numpy as np 
 import unittest
@@ -19,11 +19,8 @@ class TestFermiNet(unittest.TestCase):
         self.N_dim = 3
         set_torch_double_precision()
         # define the molecule
-        # filename = "hdf5/H2_adf_dzp.hdf5"
         self.mol = mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000;H	-0.758602 0.58600  0.00000', 
                 unit='bohr', calculator='pyscf', name='water')   
-        # # filename = ["C1O2_adf_dzp.hdf5", "H1Li1_adf_dzp.hdf5", "H2_adf_dzp.hdf5"] 
-        # self.mol = Molecule(load=filename)
 
         # network hyperparameters: 
         self.hidden_nodes_e = 256
@@ -51,7 +48,6 @@ class TestFermiNet(unittest.TestCase):
 
         # # check the output of the network:
         psi = WF.forward(self.r)
-        # print(psi)
 
     def test_sampler(self):
         
@@ -59,14 +55,14 @@ class TestFermiNet(unittest.TestCase):
                     self.hidden_nodes_ee, self.L_layers, self.K_determinants)
         
         # sampler
-        sampler = Metropolis(nwalkers=200,
-                            nstep=200, step_size=0.2,
+        sampler = Metropolis(nwalkers=1,
+                            nstep=20000, step_size=0.2,
                             ntherm=-1, ndecor=100,
                             nelec=WF.nelec, init=self.mol.domain('atomic'),
                             move={'type': 'all-elec', 'proba': 'normal'})
         
-        print(WF.pdf(self.r))
-        print(sampler(WF.pdf))
+        WF.pdf(self.r)
+        sampler(WF.pdf)
 
     @staticmethod
     def getNumParams(params):

@@ -11,7 +11,7 @@ class SolverBase(object):
 
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
-                 output=None, rank=0):
+                 output=None, task = None, rank=0):
         """Base Class for QMC solver 
 
         Args:
@@ -29,14 +29,14 @@ class SolverBase(object):
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device('cpu')
-        self.task = None
+        self.task = task
 
         # penalty to orthogonalize the MO
         # see torch_utils.py
         self.ortho_mo = False
 
         # default task optimize the wave function
-        self.configure(task='wf_opt')
+        self.configure(task=task)
 
         # resampling
         self.configure_resampling()
@@ -103,6 +103,9 @@ class SolverBase(object):
             self.configure_wf_opt()
 
             self.freeze_parameters(freeze)
+        elif task == "fermi_opt":
+            self.configure_fermi_opt()
+            
 
     def configure_geo_opt(self):
         """Configure the solver for geometry optimization."""
@@ -123,6 +126,12 @@ class SolverBase(object):
 
         # no ci opt
         self.wf.fc.weight.requires_grad = False
+    
+    def configure_fermi_opt(self):
+        """Configure the solver for FermiNet optimization."""
+        # opt all
+        for param in self.wf.parameters():
+            param.requires_grad = False
 
     def configure_wf_opt(self):
         """Configure the solver for wf optimization."""
