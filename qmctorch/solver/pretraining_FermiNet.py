@@ -40,6 +40,7 @@ class SolverFermiNet():
     def pretrain(self, nepoch, sampler=None, optimizer=None, load=None, with_tqdm = True):
         
         self.task ="Pretraining of FermiNet"
+        loss_method= "MSE"
 
         # optimization method:
         self.opt = optimizer
@@ -61,35 +62,42 @@ class SolverFermiNet():
         self.hf_train = Orbital(self.mol, configs = "ground_state", use_jastrow=False)    
         
         # #initial position of the walkers
-        pos = self.sampler(self.wf.pdf) 
+        
+        pos = torch.cat((self.sampler(self.hf_train.pdf,
+                with_tqdm=False),
+                self.sampler(self.hf_train.pdf,
+                with_tqdm=False)),dim=0)
 
-        # self.log_data_opt(nepoch)
         # start pretraining    
-        start = time.time()
-
-        # epochs = tqdm(range(nepoch),
-        #         desc='INFO:QMCTorch|  Pretraining',
-        #         disable=not with_tqdm)
-
         min_loss = 1E5
+        self.log_data_opt(nepoch,loss_method,pos.shape[0])
+        start = time.time()
         for epoch in range(nepoch):
             # sample from both the hf and FermiNet switching every epcoch
             # take 10 Metropolis-Hastings steps
-            
+            log.info(' ') 
             log.info('  epoch %d' % epoch)
 
-            if epoch % 2:
-                # print("FERMI NET SAMPLING")
-                pos = self.sampler(self.wf.pdf,pos,with_tqdm=False)
-            else:
-                pos = self.sampler(self.hf_train.pdf,pos,with_tqdm=False) 
-            log.info(' ') 
+            # if epoch % 2:
+            #      pos = self.sampler(self.wf.pdf,pos,with_tqdm=False)
+            # else:
+            #     pos = self.sampler(self.hf_train.pdf,pos,with_tqdm=False)
+
+            pos = torch.cat((self.sampler(self.hf_train.pdf,
+                pos[:self.sampler.nwalkers],
+                with_tqdm=False),
+                self.sampler(self.wf.pdf,
+                pos[self.sampler.nwalkers:],
+                with_tqdm=False)),dim=0)
+          
             self.pretraining_epoch(pos) 
 
             self.Loss_list[epoch] = self.loss.item()
             
             # keep track of how much time has elapsed 
             elapsed = time.time() - start
+            log.info('  elapsed time %d s' % elapsed)
+
 
             # save the model if necessary
             if self.loss < min_loss:
@@ -119,19 +127,20 @@ class SolverFermiNet():
         loss_down = self.criterion(MO_down_fermi, MO_down)
         self.loss = (loss_up + loss_down) * 0.5
         log.options(style='percent').info(
-                    'loss %f' % (self.loss))
+                    '  loss %f' % (self.loss))
+
         self.loss.backward()
         self.opt.step()  
 
 
-    def log_data_opt(self, nepoch):
+    def log_data_opt(self, nepoch, loss_method, nbatch):
         """Log data for the optimization."""
         log.info('  Task                :', self.task)
         log.info('  Number Parameters   : {0}', self.wf.get_number_parameters())
         log.info('  Number of epoch     : {0}', nepoch)
-        log.info('  Batch size          : {0}', self.sampler.get_sampling_size())
-        log.info('  Loss function       : {0}', self.loss.method)
-        log.info('  Clip Loss           : {0}', self.loss.clip)
+        log.info('  Batch size          : {0}', nbatch)
+        log.info('  Loss function       : {0}', loss_method)
+        # log.info('  Clip Loss           : {0}', self.loss.clip)
         # log.info('  Gradients           : {0}', grad)
         # log.info('  Resampling mode     : {0}', self.resampling_options.mode)
         # log.info(
@@ -175,7 +184,7 @@ class SolverFermiNet():
         pass
 
 if __name__ == "__main__":
-    # bond distance : 0.74 A -> 1.38 a
+        # bond distance : 0.74 A -> 1.38 a
     # optimal H positions +0.69 and -0.69
     # ground state energy : -31.688 eV -> -1.16 hartree
     # bond dissociation energy 4.478 eV -> 0.16 hartree
@@ -183,6 +192,7 @@ if __name__ == "__main__":
 
     ndim =3
     nbatch =4096
+    halfnbatch = int(nbatch/2)
 
     # define the molecule
     mol = Molecule(atom='O	 0.000000 0.00000  0.00000; H 	 0.758602 0.58600  0.00000; H	-0.758602 0.58600  0.00000',
@@ -191,10 +201,10 @@ if __name__ == "__main__":
                 unit='bohr')
     
     # create the network
-    wf = FermiNet(mol,hidden_nodes_e=254,hidden_nodes_ee=32,L_layers=4,Kdet=4)
+    wf = FermiNet(mol, hidden_nodes_e=254, hidden_nodes_ee=32, L_layers=4, Kdet=4)
 
     # choose a sampler:
-    sampler = Metropolis(nwalkers=nbatch,
+    sampler = Metropolis(nwalkers=halfnbatch,
                         nstep=10, step_size=0.2,
                         ntherm=-1, ndecor=100,
                         nelec=wf.nelec, init=mol.domain('atomic'),
@@ -215,4 +225,3 @@ if __name__ == "__main__":
     solverFermi.save_loss_list("pretrain_loss.pt")
 
     solverFermi.plot_loss(path="/home/breebaart/dev/QMCTorch/TrainingExaminig/Figures/pretraining_loss")
-    
