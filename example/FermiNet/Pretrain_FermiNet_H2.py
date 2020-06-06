@@ -11,14 +11,14 @@ from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
 from qmctorch.wavefunction import WaveFunction
-from qmctorch.wavefunction.FermiNet_v2 import FermiNet
+from qmctorch.wavefunction.wf_FermiNet import FermiNet
 from qmctorch.solver.pretraining_FermiNet import SolverFermiNet
 
 import numpy as np 
 import time
 import matplotlib.pyplot as plt
 
-# 
+
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
 # ground state energy : -31.688 eV -> -1.16 hartree
@@ -48,14 +48,11 @@ sampler_training = Metropolis(nwalkers=halfnbatch,
 # choose a optimizer
 opt = optim.Adam(wf.parameters(), lr=1E-3)
 
-# set a initial seed to make the example reproducable
-torch.random.manual_seed(321)
-
 # initialize solver
 solverFermi = SolverFermiNet(wf,sampler=sampler_training)
 
 # pretrain the FermiNet to hf orbitals
-solverFermi.pretrain(500,optimizer=opt)
+solverFermi.pretrain(1000,optimizer=opt)
 
 solverFermi.save_loss_list("pretrain_loss.pt")
 

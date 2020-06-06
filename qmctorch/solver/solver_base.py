@@ -11,7 +11,7 @@ class SolverBase(object):
 
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
-                 output=None, task = None, rank=0):
+                 output=None, task = "wf_opt", rank=0):
         """Base Class for QMC solver 
 
         Args:
@@ -20,6 +20,8 @@ class SolverBase(object):
             optimizer (torch.optim, optional): optimizer. Defaults to None.
             scheduler (torch.optim, optional): scheduler. Defaults to None.
             output (str, optional): hdf5 filename. Defaults to None.
+            task (str, optional): Optimization task: 'wf_opt', 'geo_opt', 'fermi_opt'.
+                                  Defaults to 'wf_opt'.
             rank (int, optional): rank of he process. Defaults to 0.
         """
 
@@ -36,7 +38,7 @@ class SolverBase(object):
         self.ortho_mo = False
 
         # default task optimize the wave function
-        self.configure(task=task)
+        self.configure(task)
 
         # resampling
         self.configure_resampling()
@@ -88,7 +90,7 @@ class SolverBase(object):
         """Configure the optimization.
 
         Args:
-            task (str, optional): Optimization task: 'wf_opt', 'geo_opt'.
+            task (str, optional): Optimization task: 'wf_opt', 'geo_opt', 'fermi_opt'.
                                   Defaults to 'wf_opt'.
             freeze (list, optional): list pf layers to freeze.
                                      Defaults to None.
@@ -129,9 +131,9 @@ class SolverBase(object):
     
     def configure_fermi_opt(self):
         """Configure the solver for FermiNet optimization."""
-        # opt all
+        # opt all 
         for param in self.wf.parameters():
-            param.requires_grad = False
+            param.requires_grad = True
 
     def configure_wf_opt(self):
         """Configure the solver for wf optimization."""
