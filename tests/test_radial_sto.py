@@ -23,10 +23,7 @@ class TestRadialSlater(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
 
-        self.mol = Molecule(atom='C 0 0 0; O 0 0 2.190; O 0 0 -2.190',
-                            calculator='adf',
-                            basis='dzp',
-                            unit='bohr')
+        self.mol = Molecule(load='hdf5/CO2_adf_dzp.hdf5')
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='jacobi',
@@ -193,7 +190,7 @@ if __name__ == "__main__":
 
     # t = TestRadialSlater()
     # t.setUp()
-    # # t.test_first_derivative_x()
+    # t.test_first_derivative_x()
     # # t.test_first_derivative_y()
     # # t.test_first_derivative_z()
     # t.test_laplacian()
