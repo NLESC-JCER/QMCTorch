@@ -12,6 +12,10 @@ import numpy as np
 import unittest
 
 
+def second_derivative(xm1, x0, xp1, eps):
+    return (xm1 - 2*x0 + xp1) / eps/eps
+
+
 class TestRadialSlater(unittest.TestCase):
 
     def setUp(self):
@@ -30,12 +34,117 @@ class TestRadialSlater(unittest.TestCase):
                           use_jastrow=True,
                           include_all_mo=False)
 
+    def test_first_derivative_x(self):
+
         npts = 1000
+        self.pos = torch.zeros(npts, self.mol.nelec * 3)
+        self.pos[:, 0] = torch.linspace(-4, 4, npts)
+        self.dx = self.pos[1, 0] - self.pos[0, 0]
+
+        xyz, r = self.wf.ao._process_position(self.pos)
+        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp,
+                                  xyz=xyz,
+                                  derivative=[0, 1],
+                                  jacobian=False)
+
+        R = R.detach().numpy()
+        dR = dR.detach().numpy()
+        ielec = 0
+
+        for iorb in range(7):
+            r0 = R[:, ielec, iorb]
+            dz_r0 = dR[:, ielec, iorb, 0]
+            dz_r0_fd = np.gradient(r0, self.dx)
+            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+
+            # plt.plot(dz_r0)
+            # plt.plot(dz_r0_fd)
+            # plt.show()
+
+            assert(np.all(delta < 1E-3))
+
+    def test_first_derivative_y(self):
+
+        npts = 1000
+        self.pos = torch.zeros(npts, self.mol.nelec * 3)
+        self.pos[:, 1] = torch.linspace(-4, 4, npts)
+        self.dy = self.pos[1, 1] - self.pos[0, 1]
+
+        xyz, r = self.wf.ao._process_position(self.pos)
+        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp,
+                                  xyz=xyz,
+                                  derivative=[0, 1],
+                                  jacobian=False)
+
+        R = R.detach().numpy()
+        dR = dR.detach().numpy()
+        ielec = 0
+
+        for iorb in range(7):
+            r0 = R[:, ielec, iorb]
+            dz_r0 = dR[:, ielec, iorb, 1]
+            dz_r0_fd = np.gradient(r0, self.dy)
+            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+
+            # plt.plot(dz_r0)
+            # plt.plot(dz_r0_fd)
+            # plt.show()
+
+            assert(np.all(delta < 1E-3))
+
+    def test_first_derivative_z(self):
+
+        npts = 100
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
         self.pos[:, 2] = torch.linspace(-4, 4, npts)
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
-    def test_slater(self):
+        xyz, r = self.wf.ao._process_position(self.pos)
+        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp,
+                                  xyz=xyz,
+                                  derivative=[0, 1],
+                                  jacobian=False)
+        R = R.detach().numpy()
+        dR = dR.detach().numpy()
+        ielec = 0
+
+        for iorb in range(7):
+
+            r0 = R[:, ielec, iorb]
+            dz_r0 = dR[:, ielec, iorb, 2]
+            dz_r0_fd = np.gradient(r0, self.dz)
+            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+
+            # plt.plot(dz_r0)
+            # plt.plot(dz_r0_fd)
+            # plt.show()
+
+            assert(np.all(delta < 1E-3))
+
+    def test_laplacian(self, eps=1E-4):
+
+        npts = 1000
+
+        self.pos = torch.zeros(npts, self.mol.nelec * 3)
+        self.pos[:, 2] = torch.linspace(-4, 4, npts)
+        eps = self.pos[1, 2] - self.pos[0, 2]
+
+        self.pos[:, 2] = torch.linspace(-4, 4, npts)
+
+        self.pos[:, 3] = eps
+        self.pos[:, 5] = torch.linspace(-4, 4, npts)
+
+        self.pos[:, 6] = -eps
+        self.pos[:, 8] = torch.linspace(-4, 4, npts)
+
+        self.pos[:, 10] = eps
+        self.pos[:, 11] = torch.linspace(-4, 4, npts)
+
+        self.pos[:, 13] = -eps
+        self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
         xyz, r = self.wf.ao._process_position(self.pos)
         R, dR, d2R = self.wf.ao.radial(r, self.wf.ao.bas_n,
@@ -44,37 +153,47 @@ class TestRadialSlater(unittest.TestCase):
                                        derivative=[0, 1, 2],
                                        jacobian=False)
 
-        R = R.detach().numpy()
-        dR = dR.detach().numpy()
-        d2R = d2R.detach().numpy()
-        ielec = 0
-
         for iorb in range(7):
 
-            r0 = R[:, ielec, iorb]
+            lap_analytic = np.zeros(npts-2)
+            lap_fd = np.zeros(npts-2)
 
-            dz_r0 = dR[:, ielec, iorb, 2]
-            dz_r0_fd = np.gradient(r0, self.dz)
+            for i in range(1, npts-1):
+                lap_analytic[i-1] = d2R[i, 0, iorb]
 
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
-            assert(np.all(delta < 1E-3))
+                r0 = R[i, 0, iorb].detach().numpy()
+                rpz = R[i+1, 0, iorb].detach().numpy()
+                rmz = R[i-1, 0, iorb].detach().numpy()
+                d2z = second_derivative(rmz, r0, rpz, eps)
 
-            # plt.plot(r0)
-            # plt.plot(dz_r0)
-            # plt.plot(np.gradient(r0, self.dz))
+                r0 = R[i, 0, iorb]
+                rpx = R[i, 1, iorb]
+                rmx = R[i, 2, iorb]
+                d2x = second_derivative(rmx, r0, rpx, eps)
+
+                r0 = R[i, 0, iorb]
+                rpy = R[i, 3, iorb]
+                rmy = R[i, 4, iorb]
+                d2y = second_derivative(rmy, r0, rpy, eps)
+
+                lap_fd[i-1] = d2x + d2y + d2z
+
+            delta = np.delete(
+                np.abs(lap_analytic-lap_fd), np.s_[450:550])
+
+            assert(np.all(delta < 5E-3))
+
+            # plt.plot(lap_analytic, linewidth=2)
+            # plt.plot(lap_fd)
             # plt.show()
-
-        d2z_r0 = np.gradient(dR[:, 0, 0, 2], self.dz)
-        plt.plot(d2z_r0)
-        plt.plot(d2R[:, 0, 0])
-        plt.show()
-
-        return R, dR, d2R
 
 
 if __name__ == "__main__":
-    # unittest.main()
+    unittest.main()
 
-    t = TestRadialSlater()
-    t.setUp()
-    R, dR, d2R = t.test_slater()
+    # t = TestRadialSlater()
+    # t.setUp()
+    # # t.test_first_derivative_x()
+    # # t.test_first_derivative_y()
+    # # t.test_first_derivative_z()
+    # t.test_laplacian()
