@@ -96,7 +96,7 @@ class TestRadialSlater(unittest.TestCase):
 
     def test_first_derivative_z(self):
 
-        npts = 100
+        npts = 1000
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
         self.pos[:, 2] = torch.linspace(-4, 4, npts)
         self.dz = self.pos[1, 2] - self.pos[0, 2]

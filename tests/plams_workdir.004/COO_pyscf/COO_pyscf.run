@@ -1,0 +1,4 @@
+#!/bin/sh
+
+$ADFBIN/adf <"COO_pyscf.in"
+

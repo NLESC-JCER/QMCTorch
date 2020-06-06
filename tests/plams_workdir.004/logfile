@@ -1,0 +1,14 @@
+[22:30:08] Running PLAMS located in /home/nico/adf2019.302/scripting/scm/plams
+[22:30:08] Using Python 3.7.4 located in /home/nico/miniconda3/bin/python
+[22:30:08] PLAMS defaults were loaded from /home/nico/adf2019.302/scripting/scm/plams/plams_defaults
+[22:30:08] PLAMS environment initialized
+[22:30:08] PLAMS working folder: /home/nico/QMCTorch/tests/plams_workdir.004
+[22:30:08] JOB COO_pyscf STARTED
+[22:30:08] Starting COO_pyscf.prerun()
+[22:30:08] COO_pyscf.prerun() finished
+[22:30:08] JOB COO_pyscf RUNNING
+[22:30:08] Executing COO_pyscf.run
+[22:30:08] Execution of COO_pyscf.run finished with returncode 0
+[22:30:08] WARNING: Main KF file COO_pyscf.t21 not present in /home/nico/QMCTorch/tests/plams_workdir.004/COO_pyscf
+[22:30:08] JOB COO_pyscf FINISHED
+[22:30:08] JOB COO_pyscf FAILED
