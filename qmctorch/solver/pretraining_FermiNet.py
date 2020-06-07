@@ -49,6 +49,9 @@ class SolverFermiNet(SolverBase):
 
         # optimization criterion:
         self.criterion = nn.MSELoss()
+
+        if load is not None:
+            self.load_checkpoint(load)
         
         # sampler for pretrianing
         if sampler is not None: 
@@ -168,6 +171,83 @@ class SolverFermiNet(SolverBase):
             plt.savefig(path)
         else:
             plt.show()
+    
+    @staticmethod
+    def Display_orbital(wf, plane="z", plane_coord = 0.00, 
+                    start = -5, end = 5, step = 0.1, 
+                    wftype="Fermi", path=None, title=None):
+        """"Function in attempt to visualise the orbital behaviour of the FermiNet.
+            The function will display the first orbital of the first determinant.
+            All electrons except one will be kept at a constant position.
+            The output of the wave function will be determined over a 2D grid on a given plane.
+
+            Args:
+                wf (qmctorch.WaveFunction, optional): wave function. 
+                plane (str, optional): The axis orthogonal to the grid plane.
+                                        Default to "z": options ["x","y","z"]
+                plane_coord (float, optional): Constant coordinate on the plane axis.
+                                        Default to 0.00
+                start (float, optional): Starting grid point. Default: -5
+                end (float, optional): End grid point. Default: 5
+                step (float, optional): step size of grid. Default: 0.1
+                wftype (str, optional): wave function type: Default to "Fermi"
+                                        Options: "Fermi", "Orbital"
+                path (str, optional): path/filename to save the plot to   
+                title (str, optional): title of the plot  
+        """
+        # keep all electrons except one at a constant position to:
+        dim = ["x","y","z"]
+        if plane not in dim: 
+            ValueError("{} is not a valid plane. choose from {}.".format(plane,dim))
+        plane_index = dim.index(plane)
+        index =[0,1,2]
+        index.pop(plane_index)
+
+        grid = torch.arange(start ,end,
+                            step, device="cpu")
+
+        pos_1 = torch.zeros(len(grid), len(grid), 3)
+
+
+        grid1, grid2 = torch.meshgrid(grid,grid)
+        grid3 = plane_coord*torch.ones((grid1.shape[0],grid1.shape[1]))   
+        grid12 = torch.cat((grid1.unsqueeze(2),grid2.unsqueeze(2)),dim=2)
+        pos_1[:,:,index] = grid12
+        pos_1[:,:,plane_index] = grid3
+        pos_1 = pos_1.reshape(grid1.shape[0]**2,3)
+
+        # all other electrons at constant position (1,1,1)
+        pos = torch.ones((pos_1.shape[0],wf.mol.nelec,wf.ndim), device="cpu")  
+        pos[:,0] = pos_1
+        pos = pos.reshape((pos.shape[0],wf.mol.nelec*wf.ndim))
+
+        if wftype == "Fermi":
+            mo_up, mo_down = wf.compute_mo(pos)
+        elif wftype == "Orbital":
+            mo_up, mo_down = wf._get_slater_matrices(pos)
+        else: 
+            ValueError("The wftype {} is not a \
+                        valid wf type.".format(wftype))
+            
+        mo_up = mo_up.detach().reshape((grid1.shape[0],
+                            grid1.shape[0],mo_up.shape[1],
+                            mo_up.shape[2], mo_up.shape[3]))
+
+
+        fig = plt.figure()
+        ax = plt.axes(projection='3d')
+        ax.plot_surface(grid1.numpy(), grid2.numpy(), mo_up[:,:,0,0,0].numpy())
+        if title is not None:
+            ax.set_title(title)
+        ax.set_xlabel(dim[index[0]])
+        ax.set_ylabel(dim[index[1]])
+        ax.set_zlabel(r'$\phi({},{},{}={})$'.format(dim[index[0]], dim[index[1]], plane, plane_coord))
+
+        if path is not None:
+            fig.savefig(path)
+        else :
+            fig.show()
+
         
     def run(self):
         pass
