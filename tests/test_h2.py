@@ -165,9 +165,8 @@ class TestH2(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestH2()
-    # t.setUp()
-    # t.test1_single_point()
+    # unittest.main()
+    t = TestH2()
+    t.setUp()
+    t.test2_single_point_hmc()
     # # t.test3_wf_opt()
-

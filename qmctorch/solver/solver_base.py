@@ -11,7 +11,7 @@ class SolverBase(object):
 
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
-                 output=None, task = "wf_opt", rank=0):
+                 output=None, rank=0):
         """Base Class for QMC solver 
 
         Args:
@@ -20,8 +20,7 @@ class SolverBase(object):
             optimizer (torch.optim, optional): optimizer. Defaults to None.
             scheduler (torch.optim, optional): scheduler. Defaults to None.
             output (str, optional): hdf5 filename. Defaults to None.
-            task (str, optional): Optimization task: 'wf_opt', 'geo_opt', 'fermi_opt'.
-                                  Defaults to 'wf_opt'.
+
             rank (int, optional): rank of he process. Defaults to 0.
         """
 
@@ -31,14 +30,6 @@ class SolverBase(object):
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device('cpu')
-        self.task = task
-
-        # penalty to orthogonalize the MO
-        # see torch_utils.py
-        self.ortho_mo = False
-
-        # default task optimize the wave function
-        self.configure(task)
 
         # resampling
         self.configure_resampling()
@@ -85,99 +76,6 @@ class SolverBase(object):
         self.resampling_options.mode = mode
         self.resampling_options.resample_every = resample_every
         self.resampling_options.nstep_update = nstep_update
-
-    def configure(self, task='wf_opt', freeze=None):
-        """Configure the optimization.
-
-        Args:
-            task (str, optional): Optimization task: 'wf_opt', 'geo_opt', 'fermi_opt'.
-                                  Defaults to 'wf_opt'.
-            freeze (list, optional): list pf layers to freeze.
-                                     Defaults to None.
-        """
-
-        self.task = task
-
-        if task == 'geo_opt':
-            self.configure_geo_opt()
-
-        elif task == 'wf_opt':
-            self.configure_wf_opt()
-
-            self.freeze_parameters(freeze)
-        elif task == "fermi_opt":
-            self.configure_fermi_opt()
-            
-
-    def configure_geo_opt(self):
-        """Configure the solver for geometry optimization."""
-
-        # opt atom coordinate
-        self.wf.ao.atom_coords.requires_grad = True
-
-        # no ao opt
-        self.wf.ao.bas_coeffs.requires_grad = False
-        self.wf.ao.bas_exp.requires_grad = False
-
-        # no jastrow opt
-        self.wf.jastrow.weight.requires_grad = False
-
-        # no mo opt
-        for param in self.wf.mo.parameters():
-            param.requires_grad = False
-
-        # no ci opt
-        self.wf.fc.weight.requires_grad = False
-    
-    def configure_fermi_opt(self):
-        """Configure the solver for FermiNet optimization."""
-        # opt all 
-        for param in self.wf.parameters():
-            param.requires_grad = True
-
-    def configure_wf_opt(self):
-        """Configure the solver for wf optimization."""
-
-        # opt all wf parameters
-        self.wf.ao.bas_exp.requires_grad = True
-        self.wf.ao.bas_coeffs.requires_grad = True
-        for param in self.wf.mo.parameters():
-            param.requires_grad = True
-        self.wf.fc.weight.requires_grad = True
-        self.wf.jastrow.weight.requires_grad = True
-
-        # no opt the atom positions
-        self.wf.ao.atom_coords.requires_grad = False
-
-    def freeze_parameters(self, freeze):
-        """Freeze the optimization of specified params.
-
-        Args:
-            freeze (list): list of param to freeze
-        """
-        if freeze is not None:
-            if not isinstance(freeze, list):
-                freeze = [freeze]
-
-            for name in freeze:
-                if name.lower() == 'ci':
-                    self.wf.fc.weight.requires_grad = False
-
-                elif name.lower() == 'mo':
-                    for param in self.wf.mo.parameters():
-                        param.requires_grad = False
-
-                elif name.lower() == 'ao':
-                    self.wf.ao.bas_exp.requires_grad = False
-                    self.wf.ao.bas_coeffs.requires_grad = False
-
-                elif name.lower() == 'jastrow':
-                    self.wf.jastrow.weight.requires_grad = False
-
-                else:
-                    opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
-                    raise ValueError(
-                        'Valid arguments for freeze are :', opt_freeze)
 
     def track_observable(self, obs_name):
         """define the observalbe we want to track

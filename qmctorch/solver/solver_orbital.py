@@ -25,6 +25,9 @@ class SolverOrbital(SolverBase):
         SolverBase.__init__(self, wf, sampler,
                             optimizer, scheduler, output, rank)
 
+        self.configure('wf_opt')
+        self.ortho_mo = False
+
     def run(self, nepoch, batchsize=None, loss='energy',
             clip_loss=False, grad='manual', hdf5_group=None):
         """Run the optimization
@@ -235,3 +238,90 @@ class SolverOrbital(SolverBase):
         log.info(
             '  Resampling steps    : {0}', self.resampling_options.nstep_update)
         log.info('')
+
+    def configure(self, task='wf_opt', freeze=None):
+        """Configure the optimization.
+
+        Args:
+            task (str, optional): Optimization task: 'wf_opt', 'geo_opt', 'fermi_opt'.
+                                  Defaults to 'wf_opt'.
+            freeze (list, optional): list pf layers to freeze.
+                                     Defaults to None.
+        """
+
+        self.task = task
+
+        if task == 'geo_opt':
+            self.configure_geo_opt()
+
+        elif task == 'wf_opt':
+            self.configure_wf_opt()
+            self.freeze_parameters(freeze)
+
+        else:
+            raise ValueError(
+                'Configure can be wf_opt or geo_opt. Got ', task)
+
+    def configure_geo_opt(self):
+        """Configure the solver for geometry optimization."""
+
+        # opt atom coordinate
+        self.wf.ao.atom_coords.requires_grad = True
+
+        # no ao opt
+        self.wf.ao.bas_coeffs.requires_grad = False
+        self.wf.ao.bas_exp.requires_grad = False
+
+        # no jastrow opt
+        self.wf.jastrow.weight.requires_grad = False
+
+        # no mo opt
+        for param in self.wf.mo.parameters():
+            param.requires_grad = False
+
+        # no ci opt
+        self.wf.fc.weight.requires_grad = False
+
+    def configure_wf_opt(self):
+        """Configure the solver for wf optimization."""
+
+        # opt all wf parameters
+        self.wf.ao.bas_exp.requires_grad = True
+        self.wf.ao.bas_coeffs.requires_grad = True
+        for param in self.wf.mo.parameters():
+            param.requires_grad = True
+        self.wf.fc.weight.requires_grad = True
+        self.wf.jastrow.weight.requires_grad = True
+
+        # no opt the atom positions
+        self.wf.ao.atom_coords.requires_grad = False
+
+    def freeze_parameters(self, freeze):
+        """Freeze the optimization of specified params.
+
+        Args:
+            freeze (list): list of param to freeze
+        """
+        if freeze is not None:
+            if not isinstance(freeze, list):
+                freeze = [freeze]
+
+            for name in freeze:
+                if name.lower() == 'ci':
+                    self.wf.fc.weight.requires_grad = False
+
+                elif name.lower() == 'mo':
+                    for param in self.wf.mo.parameters():
+                        param.requires_grad = False
+
+                elif name.lower() == 'ao':
+                    self.wf.ao.bas_exp.requires_grad = False
+                    self.wf.ao.bas_coeffs.requires_grad = False
+
+                elif name.lower() == 'jastrow':
+                    self.wf.jastrow.weight.requires_grad = False
+
+                else:
+                    opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
+                    raise ValueError(
+                        'Valid arguments for freeze are :', opt_freeze)
