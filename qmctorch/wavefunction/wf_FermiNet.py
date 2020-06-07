@@ -318,7 +318,6 @@ class FermiNet(WaveFunction):
 
         # ci sum
         self.weighted_sum = nn.Linear(self.Kdet,1,bias=False)
-
         self.log_data()
     
     def log_data(self):
@@ -399,6 +398,9 @@ class FermiNet(WaveFunction):
         # compute log output of the network
         psi = self.forward(pos)
         return torch.log(torch.abs(psi)), torch.sign(psi)
+    
+
+    
 
 
 
