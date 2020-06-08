@@ -23,10 +23,7 @@ class TestRadialSlater(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
 
-        self.mol = Molecule(atom='C 0 0 0; O 0 0 2.190; O 0 0 -2.190',
-                            calculator='pyscf',
-                            basis='dzp',
-                            unit='bohr')
+        self.mol = Molecule(load='hdf5/CO2_adf_dzp.hdf5')
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='jacobi',
@@ -42,11 +39,8 @@ class TestRadialSlater(unittest.TestCase):
         self.dx = self.pos[1, 0] - self.pos[0, 0]
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                  self.wf.ao.bas_exp,
-                                  xyz=xyz,
-                                  derivative=[0, 1],
-                                  jacobian=False)
+        R, dR = self.wf.ao.harmonics(
+            xyz, derivative=[0, 1], jacobian=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -72,11 +66,8 @@ class TestRadialSlater(unittest.TestCase):
         self.dy = self.pos[1, 1] - self.pos[0, 1]
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                  self.wf.ao.bas_exp,
-                                  xyz=xyz,
-                                  derivative=[0, 1],
-                                  jacobian=False)
+        R, dR = self.wf.ao.harmonics(
+            xyz, derivative=[0, 1], jacobian=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -102,11 +93,9 @@ class TestRadialSlater(unittest.TestCase):
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                  self.wf.ao.bas_exp,
-                                  xyz=xyz,
-                                  derivative=[0, 1],
-                                  jacobian=False)
+        R, dR = self.wf.ao.harmonics(
+            xyz, derivative=[0, 1], jacobian=False)
+
         R = R.detach().numpy()
         dR = dR.detach().numpy()
         ielec = 0
@@ -118,6 +107,7 @@ class TestRadialSlater(unittest.TestCase):
             dz_r0_fd = np.gradient(r0, self.dz)
             delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
 
+            # plt.plot(r0)
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
             # plt.show()
@@ -128,29 +118,27 @@ class TestRadialSlater(unittest.TestCase):
 
         npts = 1000
 
-        z = torch.linspace(-3, 3, npts)
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
-        self.pos[:, 2] = z
+        self.pos[:, 2] = torch.linspace(-4, 4, npts)
         eps = self.pos[1, 2] - self.pos[0, 2]
 
+        self.pos[:, 2] = torch.linspace(-4, 4, npts)
+
         self.pos[:, 3] = eps
-        self.pos[:, 5] = z
+        self.pos[:, 5] = torch.linspace(-4, 4, npts)
 
         self.pos[:, 6] = -eps
-        self.pos[:, 8] = z
+        self.pos[:, 8] = torch.linspace(-4, 4, npts)
 
         self.pos[:, 10] = eps
-        self.pos[:, 11] = z
+        self.pos[:, 11] = torch.linspace(-4, 4, npts)
 
         self.pos[:, 13] = -eps
-        self.pos[:, 14] = z
+        self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR, d2R = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                       self.wf.ao.bas_exp,
-                                       xyz=xyz,
-                                       derivative=[0, 1, 2],
-                                       jacobian=False)
+        R, dR, d2R = self.wf.ao.harmonics(
+            xyz, derivative=[0, 1, 2], jacobian=False)
 
         for iorb in range(7):
 
@@ -177,11 +165,11 @@ class TestRadialSlater(unittest.TestCase):
 
                 lap_fd[i-1] = d2x + d2y + d2z
 
-            m = np.abs(lap_analytic).max()
             delta = np.delete(
-                np.abs(lap_analytic-lap_fd)/m, np.s_[450:550])
+                np.abs(lap_analytic-lap_fd), np.s_[450:550])
 
             assert(np.all(delta < 5E-3))
+
             # plt.plot(lap_analytic, linewidth=2)
             # plt.plot(lap_fd)
             # plt.show()
@@ -192,7 +180,7 @@ if __name__ == "__main__":
 
     # t = TestRadialSlater()
     # t.setUp()
-    # # t.test_first_derivative_x()
+    # t.test_first_derivative_x()
     # # t.test_first_derivative_y()
     # # t.test_first_derivative_z()
     # t.test_laplacian()

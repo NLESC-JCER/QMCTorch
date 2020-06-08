@@ -72,7 +72,6 @@ class TestFastJastrow(unittest.TestCase):
 
     def test_hess_jastrow(self):
 
-        from time import time
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)

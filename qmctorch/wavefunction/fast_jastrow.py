@@ -130,10 +130,6 @@ class TwoBodyJastrowFactor(nn.Module):
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
         """
-        from time import time
-
-        # if not jacobian:
-        #     assert(derivative == 1)
 
         size = pos.shape
         assert size[1] == self.nelec * self.ndim
@@ -219,7 +215,6 @@ class TwoBodyJastrowFactor(nn.Module):
             torch.tensor: diagonal hessian of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
-        from time import time
         nbatch = r.shape[0]
 
         # pure second derivative terms
@@ -236,19 +231,7 @@ class TwoBodyJastrowFactor(nn.Module):
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
 
-        # method 1
-        # hess_jast = 0.5 * hess_jast
-        # hess_jast = hess_jast + self._partial_derivative_index(
-        #     djast, out_mat=hess_jast)
-
-        # method 2
-        # hess_jast = hess_jast + 2 * \
-        #   self._partial_derivative_index(djast)
-
-        # method 3
-        # hess_jast = hess_jast + 2 * \
-        #     self._partial_derivative_col_perm(djast)
-
+        # add partial derivative
         hess_jast = hess_jast + 2 * \
             self.partial_derivative_method(djast)
 

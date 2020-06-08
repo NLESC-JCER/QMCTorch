@@ -124,7 +124,7 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
             return nabla_rn * \
                 er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    def _second_derivative_kernel():
+    def _second_derivative_kernel_unfactorized():
         lap_rn = bas_n * (3 * R**(bas_n - 2)
                           + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
 
@@ -134,14 +134,28 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
         return lap_rn * er + 2 * \
             (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
+    def _second_derivative_kernel():
+
+        lap_rn = nRnm2 * (bas_n + 1)
+        lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
+
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
     # computes the basic  quantities
+    R2 = R*R
     rn = fast_power(R, bas_n)
-    er = torch.exp(-bas_exp * R*R)
+    er = torch.exp(-bas_exp * R2)
 
     # computes the grads
     if any(x in derivative for x in [1, 2]):
-        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
-        nabla_er = -2 * (bas_exp * er).unsqueeze(-1) * xyz
+
+        Rnm2 = R**(bas_n - 2)
+        nRnm2 = bas_n * Rnm2
+        bexp_er = bas_exp * er
+
+        nabla_rn = (nRnm2).unsqueeze(-1) * xyz
+        nabla_er = -2 * (bexp_er).unsqueeze(-1) * xyz
 
     # prepare the output/function calls
     output = []

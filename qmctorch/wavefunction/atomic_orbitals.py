@@ -388,23 +388,6 @@ class AtomicOrbitals(nn.Module):
                 self._gradient_kernel(R, dR, Y, dY),
                 self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y))
 
-    def _contract(self, bas):
-        """Contrat the basis set to form the atomic orbitals
-
-        Args:
-            bas (torch.tensor): values of the basis function
-
-        Returns:
-            torch.tensor: values of the contraction
-        """
-        nbatch = bas.shape[0]
-        bas = self.bas_coeffs * bas
-        cbas = torch.zeros(nbatch, self.nelec,
-                           self.norb, device=self.device
-                           ).type(torch.get_default_dtype())
-        cbas.index_add_(2, self.index_ctr, bas)
-        return cbas
-
     def _process_position(self, pos):
         """Computes the positions/distance bewteen elec/orb
 

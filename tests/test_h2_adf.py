@@ -36,7 +36,7 @@ class TestH2ADF(unittest.TestCase):
                 'type': 'all-elec',
                 'proba': 'normal'})
 
-        # optimizervi h2
+        # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
@@ -72,12 +72,17 @@ class TestH2ADF(unittest.TestCase):
         # assert(e > 2 * self.ground_state_energy and e < 0.)
         # assert(v > 0 and v < 5.)
 
-    def test_wf_opt(self):
+    def test_wf_opt_auto_grad(self):
 
         self.solver.configure(task='wf_opt')
         self.solver.track_observable(['local_energy'])
         obs = self.solver.run(5, loss='energy', grad='auto')
-        plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
+
+    def test_wf_opt_manual_grad(self):
+
+        self.solver.configure(task='wf_opt')
+        self.solver.track_observable(['local_energy'])
+        obs = self.solver.run(5, loss='energy', grad='manual')
 
 
 if __name__ == "__main__":
