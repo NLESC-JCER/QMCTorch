@@ -78,12 +78,6 @@ class TestH2ADF(unittest.TestCase):
         self.solver.track_observable(['local_energy'])
         obs = self.solver.run(5, loss='energy', grad='auto')
 
-    def test_wf_opt_manual_grad(self):
-
-        self.solver.configure(task='wf_opt')
-        self.solver.track_observable(['local_energy'])
-        obs = self.solver.run(5, loss='energy', grad='manual')
-
 
 if __name__ == "__main__":
     # unittest.main()
