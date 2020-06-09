@@ -133,6 +133,8 @@ class WaveFunction(torch.nn.Module):
         out = self.forward(pos)
 
         # compute the jacobian
+        print(pos.requires_grad)
+        print(out.requires_grad)
         z = torch.ones_like(out)
         jacob = grad(out, pos,
                      grad_outputs=z,
@@ -148,9 +150,6 @@ class WaveFunction(torch.nn.Module):
             tmp = grad(jacob[:, idim], pos,
                        grad_outputs=z,
                        only_inputs=True,
-                       # create_graph is REQUIRED and
-                       # is causing memory issues
-                       # for large systems
                        create_graph=True)[0]
 
             hess += tmp[:, idim]

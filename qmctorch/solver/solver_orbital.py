@@ -189,6 +189,11 @@ class SolverOrbital(SolverBase):
             tuple: loss values and local energies
         """
 
+        # determine if we need the grad of eloc
+        no_grad_eloc = True
+        if self.wf.kinetic_method == 'auto':
+            no_grad_eloc = False
+
         if self.loss.method in ['energy', 'weighted-energy']:
 
             ''' Get the gradient of the total energy
@@ -196,7 +201,7 @@ class SolverOrbital(SolverBase):
             '''
 
             # compute local energy and wf values
-            _, eloc = self.loss(lpos, no_grad=True)
+            _, eloc = self.loss(lpos, no_grad=no_grad_eloc)
             psi = self.wf(lpos)
             norm = 1. / len(psi)
 
