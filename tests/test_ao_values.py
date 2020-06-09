@@ -60,11 +60,18 @@ class TestAOvalues(unittest.TestCase):
         i2p_aovals = self.wf.ao(
             self.pos, derivative=2).detach().numpy()
 
+        ip_aovals = self.wf.ao(
+            self.pos, derivative=1).detach().numpy()
+
         path = os.path.dirname(os.path.realpath(__file__))
         i2p_aovals_ref = np.loadtxt(path + '/hess_ao_h2.dat')
 
         assert np.allclose(
             i2p_aovals[:, 0, self.iorb], i2p_aovals_ref)
+
+    def test_all_der(self):
+        aovals = self.wf.ao(self.pos, derivative=[
+                            0, 1, 2])
 
 
 if __name__ == "__main__":

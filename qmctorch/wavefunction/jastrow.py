@@ -147,7 +147,6 @@ class TwoBodyJastrowFactor(nn.Module):
 
         # mixed terms
         djast = (self._get_der_jastrow_elements(r, dr))
-
         hess_jast += self._partial_derivative(
             djast, out_mat=hess_jast)
 

@@ -59,7 +59,7 @@ class Harmonics(object):
             self.mask_bas_k0 = self.bas_k == 0
             self.mask_bas_k2 = self.bas_k == 2
 
-    def __call__(self, xyz, derivative=0, jacobian=True):
+    def __call__(self, xyz, derivative=[0], jacobian=True):
         """Computes the cartesian or spherical harmonics
 
         Arguments:
@@ -88,7 +88,7 @@ class Harmonics(object):
             raise ValueError('Harmonics type should be cart or sph')
 
 
-def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
+def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], jacobian=True):
     r"""Computes Real Cartesian Harmonics
 
     .. math::
@@ -107,16 +107,17 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         torch.tensor: values of the harmonics at the sampling points
     """
 
-    if derivative == 0:
-        return fast_power(xyz, k, mask0, mask2).prod(-1)
+    if not isinstance(derivative, list):
+        derivative = [derivative]
 
-    elif derivative == 1:
+    def _kernel():
+        return xyz_k.prod(-1)
 
+    def _first_derivative_kernel():
         km1 = k-1
         km1[km1 < 0] = 0
 
         xyz_km1 = fast_power(xyz, km1)
-        xyz_k = fast_power(xyz, k,  mask0, mask2)
 
         kx, ky, kz = k.transpose(0, 1)
         dx = kx * xyz_km1[..., 0] * xyz_k[..., 1] * xyz_k[..., 2]
@@ -128,14 +129,12 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
         else:
             return torch.stack((dx, dy, dz), dim=-1)
 
-    elif derivative == 2:
-
+    def _second_derivative_kernel():
         # prepare the exponets
         km2 = k - 2
         km2[km2 < 0] = 0
 
         xyz_km2 = fast_power(xyz, km2)
-        xyz_k = fast_power(xyz, k, mask0, mask2)
 
         kx, ky, kz = k.transpose(0, 1)
 
@@ -147,6 +146,22 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=0, jacobian=True):
             xyz_k[..., 1] * xyz_km2[..., 2]
 
         return d2x + d2y + d2z
+
+    # computes the power of the xyz
+    xyz_k = fast_power(xyz, k,  mask0, mask2)
+
+    # compute the outputs
+    fns = [_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel]
+    output = []
+    for d in derivative:
+        output.append(fns[d]())
+
+    if len(derivative) == 1:
+        return output[0]
+    else:
+        return output
 
 
 def SphericalHarmonics(xyz, l, m, derivative=0, jacobian=True):

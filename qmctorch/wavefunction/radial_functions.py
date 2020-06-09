@@ -21,51 +21,77 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         torch.tensor: values of each orbital radial part at each position
     """
 
-    if derivative == 0:
+    if not isinstance(derivative, list):
+        derivative = [derivative]
 
-        rn = fast_power(R, bas_n)
-        expr = torch.exp(-bas_exp * R)
+    def _kernel():
+        return rn * er
 
-        return rn * expr
+    def _first_derivative_kernel():
+        if jacobian:
+            nabla_rn_sum = nabla_rn.sum(3)
+            nabla_er_sum = nabla_er.sum(3)
+            return nabla_rn_sum * er + rn * nabla_er_sum
+        else:
+            return nabla_rn * \
+                er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    elif derivative > 0:
+    def _second_derivative_kernel_unfactorized():
 
-        rn = fast_power(R, bas_n)
-        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
+        sum_xyz2 = (xyz*xyz).sum(3)
 
-        er = torch.exp(-bas_exp * R)
-        nabla_er = -(bas_exp * er).unsqueeze(-1) * \
+        R2 = R*R
+        R3 = R2*R
+
+        lap_rn = bas_n * (3 * R**(bas_n - 2) +
+                          sum_xyz2 * (bas_n - 2) * R**(bas_n - 4))
+
+        lap_er = bas_exp**2 * er * sum_xyz2 / R2 \
+            - 2 * bas_exp * er * sum_xyz2 / R3
+
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
+    def _second_derivative_kernel():
+
+        R2 = R*R
+        lap_rn = nRnm2 * (bas_n + 1)
+        lap_er = bexp_er * (bas_exp - 2. / R)
+
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
+    # computes the basic quantities
+    rn = fast_power(R, bas_n)
+    er = torch.exp(-bas_exp * R)
+
+    # computes the grad
+    if any(x in derivative for x in [1, 2]):
+        Rnm2 = R**(bas_n - 2)
+        nRnm2 = bas_n * Rnm2
+        bexp_er = bas_exp * er
+        nabla_rn = (nRnm2).unsqueeze(-1) * xyz
+        nabla_er = -(bexp_er).unsqueeze(-1) * \
             xyz / R.unsqueeze(-1)
 
-        if derivative == 1:
+    # prepare the output/kernel
+    output = []
+    fns = [_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel]
 
-            if jacobian:
-                nabla_rn = nabla_rn.sum(3)
-                nabla_er = nabla_er.sum(3)
-                return nabla_rn * er + rn * nabla_er
-            else:
-                return nabla_rn * \
-                    er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+    # compute the requested functions
+    for d in derivative:
+        output.append(fns[d]())
 
-        elif derivative == 2:
-
-            sum_xyz2 = (xyz*xyz).sum(3)
-
-            R2 = R*R
-            R3 = R2*R
-
-            lap_rn = bas_n * (3 * R**(bas_n - 2) +
-                              sum_xyz2 * (bas_n - 2) * R**(bas_n - 4))
-
-            lap_er = bas_exp**2 * er * sum_xyz2 / R2 \
-                - 2 * bas_exp * er * sum_xyz2 / R3
-
-            return lap_rn * er + 2 * \
-                (nabla_rn * nabla_er).sum(3) + rn * lap_er
+    if len(derivative) == 1:
+        return output[0]
+    else:
+        return output
 
 
-def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
-    """ompute the radial part of GTOs (or its derivative).
+def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
+    """Compute the radial part of GTOs (or its derivative).
 
     Args:
         R (torch.tensor): distance between each electron and each atom
@@ -83,37 +109,65 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         torch.tensor: values of each orbital radial part at each position
     """
 
-    if derivative == 0:
+    if not isinstance(derivative, list):
+        derivative = [derivative]
 
-        rn = fast_power(R, bas_n)
-        expr = torch.exp(-bas_exp * R*R)
+    def _kernel():
+        return rn * er
 
-        return rn * expr
+    def _first_derivative_kernel():
+        if jacobian:
+            nabla_rn_sum = nabla_rn.sum(3)
+            nabla_er_sum = nabla_er.sum(3)
+            return nabla_rn_sum * er + rn * nabla_er_sum
+        else:
+            return nabla_rn * \
+                er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    elif derivative > 0:
+    def _second_derivative_kernel_unfactorized():
+        lap_rn = bas_n * (3 * R**(bas_n - 2)
+                          + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
 
-        rn = fast_power(R, bas_n)
-        nabla_rn = (bas_n * R**(bas_n - 2)).unsqueeze(-1) * xyz
+        lap_er = 4 * bas_exp**2 * (xyz**2).sum(3) * er \
+            - 6 * bas_exp * er
 
-        er = torch.exp(-bas_exp * R**2)
-        nabla_er = -2 * (bas_exp * er).unsqueeze(-1) * xyz
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
-        if derivative == 1:
-            if jacobian:
-                nabla_rn = nabla_rn.sum(3)
-                nabla_er = nabla_er.sum(3)
-                return nabla_rn * er + rn * nabla_er
-            else:
-                return nabla_rn * \
-                    er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
+    def _second_derivative_kernel():
 
-        elif derivative == 2:
+        lap_rn = nRnm2 * (bas_n + 1)
+        lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
 
-            lap_rn = bas_n * (3 * R**(bas_n - 2)
-                              + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
+        return lap_rn * er + 2 * \
+            (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
-            lap_er = 4 * bas_exp**2 * (xyz**2).sum(3) * er \
-                - 6 * bas_exp * er
+    # computes the basic  quantities
+    R2 = R*R
+    rn = fast_power(R, bas_n)
+    er = torch.exp(-bas_exp * R2)
 
-            return lap_rn * er + 2 * \
-                (nabla_rn * nabla_er).sum(3) + rn * lap_er
+    # computes the grads
+    if any(x in derivative for x in [1, 2]):
+
+        Rnm2 = R**(bas_n - 2)
+        nRnm2 = bas_n * Rnm2
+        bexp_er = bas_exp * er
+
+        nabla_rn = (nRnm2).unsqueeze(-1) * xyz
+        nabla_er = -2 * (bexp_er).unsqueeze(-1) * xyz
+
+    # prepare the output/function calls
+    output = []
+    fns = [_kernel,
+           _first_derivative_kernel,
+           _second_derivative_kernel]
+
+    # compute the requested derivatives
+    for d in derivative:
+        output.append(fns[d]())
+
+    if len(derivative) == 1:
+        return output[0]
+    else:
+        return output

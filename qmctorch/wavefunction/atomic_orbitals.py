@@ -111,7 +111,7 @@ class AtomicOrbitals(nn.Module):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, input, derivative=0, jacobian=True, one_elec=False):
+    def forward(self, pos, derivative=[0], jacobian=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.
 
         .. math::
@@ -126,7 +126,7 @@ class AtomicOrbitals(nn.Module):
             \Delta \phi_i(r_j) = \\frac{d^2}{dx^2_j} \phi_i(r_j) + \\frac{d^2}{dy^2_j} \phi_i(r_j) + \\frac{d^2}{dz^2_j} \phi_i(r_j)
 
         Args:
-            input (torch.tensor): Positions of the electrons
+            pos (torch.tensor): Positions of the electrons
                                   Size : Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0,1,2,).
                                         Defaults to 0.
@@ -150,124 +150,282 @@ class AtomicOrbitals(nn.Module):
             >>> daovals = ao(pos,derivative=1)
         """
 
+        if not isinstance(derivative, list):
+            derivative = [derivative]
+
         if not jacobian:
-            assert(derivative == 1)
+            assert(1 in derivative)
 
         if one_elec:
             nelec_save = self.nelec
             self.nelec = 1
 
-        nbatch = input.shape[0]
+        if derivative == [0]:
+            ao = self._compute_ao_values(pos)
 
-        # get the pos of the bas
-        self.bas_coords = self.atom_coords.repeat_interleave(
-            self.nshells, dim=0)
+        elif derivative == [1]:
+            ao = self._compute_first_derivative_ao_values(
+                pos, jacobian)
 
-        # get the x,y,z, distance component of each point from each RBF center
-        # -> (Nbatch,Nelec,Nbas,Ndim)
-        #t0 = time()
-        xyz = (input.view(-1, self.nelec, 1, self.ndim) -
-               self.bas_coords[None, ...])
-        #print('xyz : ', time()-t0)
+        elif derivative == [2]:
+            ao = self._compute_laplacian_ao_values(pos)
 
-        # compute the distance
-        # -> (Nbatch,Nelec,Nbas)
-        #t0 = time()
-        r = torch.sqrt((xyz*xyz).sum(3))
-        #print('r : ', time()-t0)
-
-        # radial part
-        # -> (Nbatch,Nelec,Nbas)
-        #t0 = time()
-        R = self.radial(r, self.bas_n, self.bas_exp)
-        #print('R : ', time()-t0)
-
-        # compute by the spherical harmonics
-        # -> (Nbatch,Nelec,Nbas)
-        #t0 = time()
-        Y = self.harmonics(xyz)
-        #print('Y : ', time()-t0)
-
-        # values of AO
-        # -> (Nbatch,Nelec,Nbas)
-        if derivative == 0:
-            #t0 = time()
-            bas = R * Y
-            #print('bas : ', time()-t0)
-
-        # values of first derivative
-        elif derivative == 1:
-
-            # return the jacobian
-            if jacobian:
-
-                dR = self.radial(
-                    r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1)
-
-                dY = self.harmonics(xyz, derivative=1)
-
-                # -> (Nbatch,Nelec,Nbas)
-                bas = dR * Y + R * dY
-
-            # returm individual components
-            else:
-                dR = self.radial(
-                    r, self.bas_n, self.bas_exp, xyz=xyz, derivative=1, jacobian=False)
-                dY = self.harmonics(xyz, derivative=1, jacobian=False)
-                # -> (Nbatch,Nelec,Nbas,Ndim)
-                bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
-
-        # second derivative
-        elif derivative == 2:
-
-            dR = self.radial(r, self.bas_n, self.bas_exp,
-                             xyz=xyz, derivative=1, jacobian=False)
-
-            dY = self.harmonics(xyz, derivative=1, jacobian=False)
-
-            d2R = self.radial(
-                r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2)
-
-            d2Y = self.harmonics(xyz, derivative=2)
-
-            bas = d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y
-
-        # product with coefficients and primitives norm
-        if jacobian:
-            #t0 = time()
-            # -> (Nbatch,Nelec,Nbas)
-
-            bas = self.norm_cst * bas
-
-            # contract the basis
-            # -> (Nbatch,Nelec,Norb)
-            if self.contract:
-                bas = self.bas_coeffs * bas
-                ao = torch.zeros(nbatch, self.nelec,
-                                 self.norb, device=self.device).type(torch.get_default_dtype())
-                ao.index_add_(2, self.index_ctr, bas)
-
-            else:
-                ao = bas
-            #print('add : ', time()-t0)
+        elif derivative == [0, 1, 2]:
+            ao = self._compute_all_ao_values(pos)
 
         else:
-            # t0 = time()
-            # -> (Nbatch,Nelec,Nbas, Ndim)
-            bas = self.norm_cst.unsqueeze(-1) * \
-                self.bas_coeffs.unsqueeze(-1) * bas
-
-            # contract the basis
-            # -> (Nbatch,Nelec,Norb, Ndim)
-            ao = torch.zeros(nbatch, self.nelec, self.norb,
-                             3, device=self.device).type(torch.get_default_dtype())
-            ao.index_add_(2, self.index_ctr, bas)
-            # print('add : ', time()-t0)
+            raise ValueError(
+                'derivative must be 0, 1, 2 or [0, 1, 2], got ', derivative)
 
         if one_elec:
             self.nelec = nelec_save
 
         return ao
+
+    def _compute_ao_values(self, pos):
+        """Compute the value of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, NelexNdim
+
+        Returns:
+            torch.tensor: atomic orbital values size (Nbatch, Nelec, Norb)
+        """
+        xyz, r = self._process_position(pos)
+
+        R = self.radial(r, self.bas_n, self.bas_exp)
+
+        Y = self.harmonics(xyz)
+        return self._ao_kernel(R, Y)
+
+    def _ao_kernel(self, R, Y):
+        """Kernel for the ao values
+
+        Args:
+            R (torch.tensor): radial part of the AOs
+            Y (torch.tensor): harmonics part of the AOs
+
+        Returns:
+            torch.tensor: values of the AOs (with contraction)
+        """
+
+        ao = self.norm_cst * R * Y
+        if self.contract:
+            ao = self._contract(ao)
+        return ao
+
+    def _compute_first_derivative_ao_values(self, pos, jacobian):
+        """Compute the value of the derivative of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, NelexNdim
+            jacobian (boolean): return the jacobian (True) or gradient (False)
+
+        Returns:
+            torch.tensor: derivative of atomic orbital values
+                          size (Nbatch, Nelec, Norb) if jacobian
+                          size (Nbatch, Nelec, Norb, Ndim) if jacobian=False
+        """
+        if jacobian:
+            return self._compute_jacobian_ao_values(pos)
+        else:
+            return self._compute_gradient_ao_values(pos)
+
+    def _compute_jacobian_ao_values(self, pos):
+        """Compute the jacobian of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
+
+        Returns:
+            torch.tensor: derivative of atomic orbital values
+                          size (Nbatch, Nelec, Norb)
+
+        """
+
+        xyz, r = self._process_position(pos)
+
+        R, dR = self.radial(r, self.bas_n,
+                            self.bas_exp, xyz=xyz,
+                            derivative=[0, 1])
+
+        Y, dY = self.harmonics(xyz, derivative=[0, 1])
+
+        return self._jacobian_kernel(R, dR, Y, dY)
+
+    def _compute_gradient_ao_values(self, pos):
+        """Compute the gradient of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
+
+        Returns:
+            torch.tensor: derivative of atomic orbital values
+                          size (Nbatch, Nelec, Norb, Ndim)
+
+        """
+        xyz, r = self._process_position(pos)
+
+        R, dR = self.radial(r, self.bas_n,
+                            self.bas_exp, xyz=xyz,
+                            derivative=[0, 1],
+                            jacobian=False)
+
+        Y, dY = self.harmonics(xyz, derivative=[0, 1], jacobian=False)
+
+        return self._gradient_kernel(R, dR, Y, dY)
+
+    def _jacobian_kernel(self, R, dR, Y, dY):
+        """Kernel for the jacobian of the ao values
+
+        Args:
+            R (torch.tensor): radial part of the AOs
+            dR (torch.tensor): derivative of the radial part of the AOs
+            Y (torch.tensor): harmonics part of the AOs
+            dY (torch.tensor): derivative of the harmonics part of the AOs
+
+        Returns:
+            torch.tensor: values of the jacobian of the AOs (with contraction)
+        """
+        dao = self.norm_cst * (dR * Y + R * dY)
+        if self.contract:
+            dao = self._contract(dao)
+        return dao
+
+    def _gradient_kernel(self, R, dR, Y, dY):
+        """Kernel for the gradient of the ao values
+
+        Args:
+            R (torch.tensor): radial part of the AOs
+            dR (torch.tensor): derivative of the radial part of the AOs
+            Y (torch.tensor): harmonics part of the AOs
+            dY (torch.tensor): derivative of the harmonics part of the AOs
+
+        Returns:
+            torch.tensor: values of the gradient of the AOs (with contraction)
+        """
+        nbatch = R.shape[0]
+        bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
+
+        bas = self.norm_cst.unsqueeze(-1) * \
+            self.bas_coeffs.unsqueeze(-1) * bas
+
+        if self.contract:
+            ao = torch.zeros(nbatch, self.nelec, self.norb,
+                             3, device=self.device).type(torch.get_default_dtype())
+            ao.index_add_(2, self.index_ctr, bas)
+        else:
+            ao = bas
+        return ao
+
+    def _compute_laplacian_ao_values(self, pos):
+        """Compute the laplacian of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
+
+        Returns:
+            torch.tensor: derivative of atomic orbital values
+                          size (Nbatch, Nelec, Norb)
+
+        """
+        xyz, r = self._process_position(pos)
+
+        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 jacobian=False)
+
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    jacobian=False)
+        return self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y)
+
+    def _laplacian_kernel(self, R, dR, d2R, Y, dY, d2Y):
+        """Kernel for the laplacian of the ao values
+
+        Args:
+            R (torch.tensor): radial part of the AOs
+            dR (torch.tensor): derivative of the radial part of the AOs
+            d2R (torch.tensor): 2nd derivative of the radial part of the AOs
+            Y (torch.tensor): harmonics part of the AOs
+            dY (torch.tensor): derivative of the harmonics part of the AOs
+            d2Y (torch.tensor): 2nd derivative of the harmonics part of the AOs
+
+        Returns:
+            torch.tensor: values of the laplacian of the AOs (with contraction)
+        """
+        d2ao = self.norm_cst * \
+            (d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y)
+        if self.contract:
+            d2ao = self._contract(d2ao)
+        return d2ao
+
+    def _compute_all_ao_values(self, pos):
+        """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
+
+        Returns:
+            tuple(): (ao, grad and lapalcian) of atomic orbital values
+                     ao size (Nbatch, Nelec, Norb)
+                     dao size (Nbatch, Nelec, Norb, Ndim)
+                     d2ao size (Nbatch, Nelec, Norb)
+
+        """
+
+        xyz, r = self._process_position(pos)
+
+        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 jacobian=False)
+
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    jacobian=False)
+
+        return (self._ao_kernel(R, Y),
+                self._gradient_kernel(R, dR, Y, dY),
+                self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y))
+
+    def _process_position(self, pos):
+        """Computes the positions/distance bewteen elec/orb
+
+        Args:
+            pos (torch.tensor): positions of the walkers Nbat, NelecxNdim
+
+        Returns:
+            torch.tensor, torch.tensor: positions of the elec wrt the bas 
+                                        (nbatch, Nelec, Norn, Ndim)
+                                        distance between elec and bas 
+                                        (nbatch, Nelec, Norn)
+        """
+        self.bas_coords = self.atom_coords.repeat_interleave(
+            self.nshells, dim=0)
+
+        xyz = (pos.view(-1, self.nelec, 1, self.ndim) -
+               self.bas_coords[None, ...])
+
+        r = torch.sqrt((xyz*xyz).sum(3))
+
+        return xyz, r
+
+    def _contract(self, bas):
+        """Contrat the basis set to form the atomic orbitals
+
+        Args:
+            bas (torch.tensor): values of the basis function
+
+        Returns:
+            torch.tensor: values of the contraction
+        """
+        nbatch = bas.shape[0]
+        bas = self.bas_coeffs * bas
+        cbas = torch.zeros(nbatch, self.nelec,
+                           self.norb, device=self.device
+                           ).type(torch.get_default_dtype())
+        cbas.index_add_(2, self.index_ctr, bas)
+        return cbas
 
     def update(self, ao, pos, idelec):
         """Update an AO matrix with the new positions of one electron
