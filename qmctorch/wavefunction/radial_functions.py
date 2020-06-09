@@ -20,7 +20,7 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     Returns:
         torch.tensor: values of each orbital radial part at each position
     """
-    from time import time
+
     if not isinstance(derivative, list):
         derivative = [derivative]
 

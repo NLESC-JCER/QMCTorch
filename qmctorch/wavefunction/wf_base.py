@@ -133,8 +133,6 @@ class WaveFunction(torch.nn.Module):
         out = self.forward(pos)
 
         # compute the jacobian
-        print(pos.requires_grad)
-        print(out.requires_grad)
         z = torch.ones_like(out)
         jacob = grad(out, pos,
                      grad_outputs=z,
