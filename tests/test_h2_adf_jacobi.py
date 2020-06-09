@@ -60,7 +60,6 @@ class TestH2ADFJacobi(unittest.TestCase):
         e, v = obs.energy, obs.variance
         print(e.data.item(), v.data.item())
 
-        -1.1571345329284668 0.05087674409151077
         # vals on different archs
         # expected_energy = [-1.1571345329284668,
         #                    -1.1501641653648578]
