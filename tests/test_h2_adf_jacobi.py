@@ -61,11 +61,9 @@ class TestH2ADFJacobi(unittest.TestCase):
         print(e.data.item(), v.data.item())
 
         # vals on different archs
-        expected_energy = [-1.1571345329284668,
-                           -1.1501641653648578]
+        expected_energy = [-1.1571345329284668]
 
-        expected_variance = [0.05087674409151077,
-                             0.05094174843043177]
+        expected_variance = [0.05087674409151077]
 
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
