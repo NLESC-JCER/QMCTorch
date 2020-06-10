@@ -52,7 +52,7 @@ opt = optim.Adam(wf.parameters(), lr=1E-3)
 solverFermi = SolverFermiNet(wf,sampler=sampler_training)
 
 # pretrain the FermiNet to hf orbitals
-solverFermi.pretrain(1000,optimizer=opt)
+solverFermi.pretrain(2000,optimizer=opt)
 
 solverFermi.save_loss_list("pretrain_loss.pt")
 

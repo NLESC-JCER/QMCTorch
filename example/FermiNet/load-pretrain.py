@@ -6,9 +6,10 @@ from qmctorch.wavefunction import Molecule, Orbital
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
+from qmctorch.utils.plot_mo import Display_orbital
 from qmctorch.wavefunction import WaveFunction
 from qmctorch.wavefunction.wf_FermiNet import FermiNet
-from qmctorch.solver.pretraining_FermiNet import SolverFermiNet
+from qmctorch.solver.solver_FermiNet import SolverFermiNet
 
 import numpy as np 
 import time
@@ -26,7 +27,9 @@ nbatch = 4096
 halfnbatch = int(nbatch/2)
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+water = "example/single_point/water.xyz"
+H2= 'H 0 0 -0.69; H 0 0 0.69'
+mol = Molecule(atom=H2,
             calculator='pyscf',
             basis='sto-3g',
             unit='bohr')
@@ -47,25 +50,23 @@ opt = optim.Adam(wf.parameters(), lr=1E-3)
 # initialize solver
 solverFermi = SolverFermiNet(wf, optimizer = opt, sampler=sampler_training)
 
-# solverFermi.load_checkpoint("example/FermiNet/FermiNet_model.pth")
+solverFermi.load_checkpoint("FermiNet_model.pth")
 
 wf = solverFermi.wf
 hf = Orbital(mol, configs = "ground_state", use_jastrow=False) 
-
-solverFermi.Display_orbital(hf, plane= "x", 
-                            plane_coord=0.5,
-                            title="Harte Fock orbital up",
-                            path="example/FermiNet/test", 
-                            wftype="Orbital")
-solverFermi.Display_orbital(wf, plane="x",
-                            plane_coord=0.5,
-                            title = "Fermi Net orbital up untrained", 
-                            path="example/FermiNet/test_Fermi_untrained", 
-                            wftype="Fermi")
-
-
-
-
-
-
-
+dims = ["x","y","z"]
+spins = ["up","down"] 
+for spin in spins:
+    for dim in dims:
+        Display_orbital(hf._get_slater_matrices, hf, plane= dim, 
+                                    plane_coord=0.0,
+                                    title="Hartree Fock orbital",
+                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pyscf_H2O_"+spin+"_"+dim,
+                                    orbital_ind=[0,0],
+                                    spin = spin)
+        Display_orbital(wf.compute_mo, wf, plane=dim,
+                                    plane_coord=0.0,
+                                    title = "Pretraining Fermi Net spin {} for H2O epoch: 2000".format(spin), 
+                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pretraining_H2O_2000_"+spin+"_"+dim,
+                                    orbital_ind=[0,0],
+                                    spin = spin)

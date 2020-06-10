@@ -202,7 +202,7 @@ class Loss(nn.Module):
 
 
 class OrthoReg(nn.Module):
-    '''add a penalty to make matrice orthgonal.'''
+    '''add a penalty to make matrice orthogonal.'''
 
     def __init__(self, alpha=0.1):
         """Add a penalty loss to keep the MO orthogonalized

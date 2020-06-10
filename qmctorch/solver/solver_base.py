@@ -104,10 +104,10 @@ class SolverBase(object):
                 self.observable.__setattr__(key+'.grad', [])
 
     def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
-        """store observale in the dictionary
+        """store observable in the dictionary
 
         Args:
-            obs_dict (dict): dictionary of the observalbe
+            obs_dict (dict): dictionary of the observable
             pos (torch.tensor): positions of th walkers
             local_energy (torch.tensor, optional): precomputed values of the local
                                            energy. Defaults to None
@@ -131,8 +131,9 @@ class SolverBase(object):
 
             # store variational parameter
             elif obs in self.wf.state_dict():
-                layer, param = obs.split('.')
-                p = self.wf.__getattr__(layer).__getattr__(param)
+                p = self.wf
+                for layerparam in obs.split('.'):
+                    p = p.__getattr__(layerparam) 
                 self.observable.__getattribute__(
                     obs).append(p.data.cpu().numpy())
 
@@ -214,7 +215,7 @@ class SolverBase(object):
 
         return pos
 
-    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
+    def single_point(self, with_tqdm=True, hdf5_group='single_point', sampler=None):
         """Performs a single point calculatin
 
         Args:
@@ -224,6 +225,10 @@ class SolverBase(object):
         Returns:
             SimpleNamespace: contains the local energy, positions, ...
         """
+        if sampler is not None:
+            self.sampler = sampler
+        elif self.sampler is None:
+            TypeError("No sampler was given.")
 
         log.info('')
         log.info('  Single Point Calculation : {nw} walkers | {ns} steps',
@@ -272,10 +277,21 @@ class SolverBase(object):
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.wf.state_dict(),
-            'optimzier_state_dict': self.opt.state_dict(),
+            'optimizer_state_dict': self.opt.state_dict(),
             'loss': loss
         }, filename)
         return loss
+    
+    def load_checkpoint(self,filename):
+        checkpoint = torch.load(filename)
+        self.opt.load_state_dict(checkpoint["optimizer_state_dict"])
+        self.wf.load_state_dict(checkpoint["model_state_dict"])
+        epoch = checkpoint["epoch"]
+        loss = checkpoint["loss"]
+        return loss, epoch
+    
+    def reset_sampler(self, sampler):
+        self.sampler=sampler
 
     def _append_observable(self, key, data):
         """Append a new data point to observable key.

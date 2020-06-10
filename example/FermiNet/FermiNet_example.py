@@ -29,8 +29,8 @@ WF = FermiNet(mol,hidden_nodes_e,hidden_nodes_ee,L_layers,K_determinants)
 mo_up, mo_down = WF.compute_mo(r)
 print(mo_up[0,0])
 # check the number of parameters and layers of the Network:
-# for name, param in WF.named_parameters():
-#     print(name, param.size())
+for name, param in WF.named_parameters():
+    print(name, param.size())
 print("Number of parameters: {}".format(WF.get_number_parameters()))
 
 # when using identical terms this should be close to 0

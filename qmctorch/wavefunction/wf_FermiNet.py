@@ -287,7 +287,7 @@ class FermiNet(WaveFunction):
         self.mol= mol
         self.ndim = 3
         self.natom = mol.natom
-        self.atom_coords = mol.atom_coords
+        self.atom_coords = torch.tensor(mol.atom_coords)
 
         # input network architecutre
         self.hidden_nodes_e = hidden_nodes_e
@@ -401,6 +401,52 @@ class FermiNet(WaveFunction):
     
 
     
+    def nuclear_repulsion(self):
+        r"""Computes the nuclear-nuclear repulsion term
+
+        .. math:
+            V_{nn} = \sum_{n_1} \sum_{n_2} \\frac{Z_1Z_2}{r_{n_1n_2}}
+
+        Returns:
+            torch.tensor: values of the nuclear-nuclear energy at each sampling points
+        """
+
+        vnn = 0.
+        for at1 in range(self.natom - 1):
+            c0 = self.atom_coords[at1, :]
+            Z0 = self.mol.atomic_number[at1]
+            for at2 in range(at1 + 1, self.natom):
+                c1 = self.atom_coords[at2, :]
+                Z1 = self.mol.atomic_number[at2]
+                rnn = torch.sqrt(((c0 - c1)**2).sum())
+                vnn += Z0 * Z1 / rnn
+        return vnn
+
+    def nuclear_potential(self, pos):
+        r"""Computes the electron-nuclear term
+
+        .. math:
+            V_{en} = - \sum_e \sum_n \\frac{Z_n}{r_{en}}
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: values of the electon-nuclear energy at each sampling points
+        """
+
+        p = torch.zeros(pos.shape[0], device=self.device)
+        for ielec in range(self.nelec):
+            istart = ielec * self.ndim
+            iend = (ielec + 1) * self.ndim
+            pelec = pos[:, istart:iend]
+            for iatom in range(self.natom):
+                patom = self.atom_coords[iatom, :]
+                Z = self.mol.atomic_number[iatom]
+                r = torch.sqrt(((pelec - patom)**2).sum(1))  # + 1E-12
+                p += -Z / r
+        return p.view(-1, 1)
+
 
 
 
