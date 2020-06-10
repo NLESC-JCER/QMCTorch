@@ -94,7 +94,7 @@ class SolverFermiNet(SolverBase):
         self.log_data_opt(nepoch, loss_method, pos.shape[0])
         start = time.time()
         for epoch in range(load_epoch, nepoch+load_epoch):
-            # sample from both the hf and FermiNet switching every epoch
+            # sample from both the hf and FermiNet
             # take 10 Metropolis-Hastings steps
             log.info(' ')
             log.info('  epoch %d' % epoch)

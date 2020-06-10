@@ -282,7 +282,7 @@ class SolverBase(object):
         }, filename)
         return loss
     
-    def load_checkpoint(self,filename):
+    def load_checkpoint(self, filename):
         checkpoint = torch.load(filename)
         self.opt.load_state_dict(checkpoint["optimizer_state_dict"])
         self.wf.load_state_dict(checkpoint["model_state_dict"])

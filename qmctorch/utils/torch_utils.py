@@ -137,7 +137,7 @@ class Loss(nn.Module):
             # sampling_weight
             local_use_weight = self.use_weight * \
                 (not deactivate_weight)
-            weight = self.get_sampling_weights(local_use_weight)
+            weight = self.get_sampling_weights(pos, local_use_weight)
 
             # compute the loss
             loss = self.loss_fn((weight * local_energies)[mask])
@@ -175,7 +175,7 @@ class Loss(nn.Module):
 
         return mask
 
-    def get_sampling_weights(self, use_weight):
+    def get_sampling_weights(self, pos, use_weight):
         """Get the weight needed when resampling is not
             done at every step
         """
