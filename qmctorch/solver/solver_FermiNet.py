@@ -41,6 +41,7 @@ class SolverFermiNet(SolverBase):
         self.save_model = "FermiNet_model.pth"
         self.task = "wf_opt"
         self.configure()
+        self.loss = None
 
     def configure(self):
         """Configure the solver for FermiNet optimization."""
@@ -83,7 +84,6 @@ class SolverFermiNet(SolverBase):
             self.mol, configs="ground_state", use_jastrow=False)
 
         # initial position of the walkers
-
         pos = torch.cat((self.sampler(self.hf_train.pdf,
                                       with_tqdm=False),
                          self.sampler(self.hf_train.pdf,
@@ -94,11 +94,10 @@ class SolverFermiNet(SolverBase):
         self.log_data_opt(nepoch, loss_method, pos.shape[0])
         start = time.time()
         for epoch in range(load_epoch, nepoch+load_epoch):
-            # sample from both the hf and FermiNet
-            # take 10 Metropolis-Hastings steps
             log.info(' ')
             log.info('  epoch %d' % epoch)
-
+            # sample from both the hf and FermiNet
+            # take 10 Metropolis-Hastings steps
             pos = torch.cat((self.sampler(self.hf_train.pdf,
                                           pos[:self.sampler.nwalkers],
                                           with_tqdm=False),
@@ -124,6 +123,8 @@ class SolverFermiNet(SolverBase):
             if self.loss < min_loss:
                 min_loss = self.save_checkpoint(epoch,
                                                 self.loss, self.save_model)
+        log.info(' ')
+        log.info(' Finished pretraining FermiNet')
 
     def pretraining_epoch(self, pos):
         # optimization steps performed each epoch
@@ -160,6 +161,8 @@ class SolverFermiNet(SolverBase):
         log.info('  Number of epoch     : {0}', nepoch)
         log.info('  Batch size          : {0}', nbatch)
         log.info('  Loss function       : {0}', loss_method)
+        if hasattr(self.loss, 'clip'):
+            log.info('  Clip Loss           : {0}', self.loss.clip)
         log.info('  Gradients           : {0}', grad)
         log.info('  Resampling mode     : {0}', self.resampling_options.mode)
         log.info(
@@ -191,7 +194,7 @@ class SolverFermiNet(SolverBase):
  
    
     def run(self, nepoch, batchsize=None, loss='energy',
-            clip_loss=False, hdf5_group=None, sampler= None):
+            clip_loss=False, grad='auto', hdf5_group=None):
         """Run the optimization
 
         Args:
@@ -203,15 +206,12 @@ class SolverFermiNet(SolverBase):
                                   Defaults to 'energy'.
             clip_loss (bool, optional): Clip the loss values at +/- 5std.
                                         Defaults to False..
+            grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
+                                  Defaults to 'auto'.
             hdf5_group (str, optional): name of the hdf5 group where to store the data.
                                         Defaults to wf.task.
         """
         self.task ="wf_opt"
-
-        if sampler is not None:
-            self.sampler = sampler
-        elif self.sampler is None:
-            TypeError("No sampler was given.")
 
         log.info('')
         log.info('  {0} optimization', loss)
@@ -220,7 +220,9 @@ class SolverFermiNet(SolverBase):
         if not hasattr(self, 'observable'):
             self.track_observable(['local_energy'])
 
-        self.evaluate_gradient = self.evaluate_grad_auto
+        self.evaluate_gradient = {
+            'auto': self.evaluate_grad_auto,
+            'manual': self.evaluate_grad_manual}[grad]
 
         if 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
@@ -339,3 +341,46 @@ class SolverFermiNet(SolverBase):
         loss.backward()
 
         return loss, eloc
+    
+    
+    def evaluate_grad_manual(self, lpos):
+        """Evaluate the gradient using low variance express
+
+        Args:
+            lpos ([type]): [description]
+
+        Args:
+            lpos (torch.tensor): sampling points
+
+        Returns:
+            tuple: loss values and local energies
+        """
+
+        if self.loss.method in ['energy', 'weighted-energy']:
+
+            ''' Get the gradient of the total energy
+            dE/dk = 2 < (dpsi/dk)/psi (E_L - <E_L >) >
+            '''
+
+            # compute local energy and wf values
+            _, eloc = self.loss(lpos, no_grad=False)
+            eloc = torch.tensor(eloc.clone(), requires_grad=False)
+            psi = self.wf(lpos)
+            norm = 1. / len(psi)
+
+            # evaluate the prefactor of the grads
+            weight = eloc.clone()
+            weight -= torch.mean(eloc)
+            weight /= psi
+            weight *= 2.
+            weight *= norm
+
+            # compute the gradients
+            self.opt.zero_grad()
+            psi.backward(weight)
+
+            return torch.mean(eloc), eloc
+
+        else:
+            raise ValueError(
+                'Manual gradient only for energy minimization')

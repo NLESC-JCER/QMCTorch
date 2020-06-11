@@ -14,6 +14,7 @@ from qmctorch.solver.solver_FermiNet import SolverFermiNet
 # optimal H positions +0.69 and -0.69
 # ground state energy : -31.688 eV -> -1.16 hartree
 # bond dissociation energy 4.478 eV -> 0.16 hartree
+pathloc ="/home/breebaart/dev/QMCTorch/TrainingExaminig/Training_H2_full/"
 
 set_torch_double_precision()
 
@@ -39,7 +40,7 @@ sampler_energy_opt = Metropolis(nwalkers=nbatch,
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # sampler for pretraining
-sampler_training = Metropolis(nwalkers=halfnbatch,
+sampler_pretraining = Metropolis(nwalkers=halfnbatch,
                     nstep=10, step_size=0.2,
                     ntherm=-1, ndecor=100,
                     nelec=wf.nelec, init=mol.domain('atomic'),
@@ -52,6 +53,7 @@ sampler_observation  = Metropolis(nwalkers=200,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
 
+# optmizer
 opt = optim.Adam(wf.parameters(), lr=1E-3)
 
 # scheduler
@@ -60,12 +62,18 @@ scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 # QMC solver
 solver = SolverFermiNet(wf=wf, optimizer=opt, scheduler=scheduler)
 
+# perform a single point calculation before pretraining
+obs = solver.single_point(sampler=sampler_observation)
+
 # # pretrain the FermiNet to hf orbitals
-# solverFermi.pretrain(2000, optimizer=opt, sampler=sampler_pretrain)
+solver.pretrain(1000, optimizer=opt, sampler=sampler_pretrain)
+solver.save_loss_list("pretrain_loss.pt")
+
+solver.plot_loss(path=pathloc+ "pretraining_loss")
 
 # load from pretrained Ferminet
-load = "example/FermiNet/FermiNet_model_pretrain_H2.pth"
-solver.load_checkpoint(load)
+# load = "example/FermiNet/FermiNet_model_pretrain_H2.pth"
+# solver.load_checkpoint(load)
                     
 # perform a single point calculation
 obs = solver.single_point(sampler=sampler_observation)
@@ -77,11 +85,12 @@ solver.configure_resampling(mode='update',
                             resample_every=1,
                             nstep_update=50)
 
-obs = solver.run(2, batchsize=None,
-                 loss='variance',
-                 clip_loss=False)
+obs = solver.run(10, batchsize=None,
+                 loss='energy',
+                 clip_loss=5,
+                 grad="manual")
 
-plot_energy(obs.local_energy, e0=-1.1645, show_variance=False ,path="/home/breebaart/dev/QMCTorch/Figures_training/energy")
+plot_energy(obs.local_energy, e0=-1.1645, show_variance=False, path=pathloc+"energy_"+mol.name)
 
 wf = solver.wf
 hf = Orbital(mol, configs = "ground_state", use_jastrow=False) 
@@ -91,14 +100,14 @@ for spin in spins:
     for dim in dims:
         Display_orbital(hf._get_slater_matrices, hf, plane= dim, 
                                     plane_coord=0.0,
-                                    title="Hartree Fock orbital",
-                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pyscf_H2_"+spin+"_"+dim,
+                                    title="Basis orbital",
+                                    path=pathloc+mol.basis+"_"+ mol.name+"_"+spin+"_"+dim,
                                     orbital_ind=[0,0],
                                     spin = spin)
         Display_orbital(wf.compute_mo, wf, plane=dim,
                                     plane_coord=0.0,
-                                    title = "Fermi Net spin {} for H2".format(spin), 
-                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pretraining_H2_"+spin+"_"+dim,
+                                    title = "Fermi Net spin {} orbital for {}".format(spin, mol.name), 
+                                    path=pathloc+"FermiNet_"+mol.name+"_"+spin+"_"+dim,
                                     orbital_ind=[0,0],
                                     spin = spin)
 
