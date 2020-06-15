@@ -11,6 +11,8 @@ from qmctorch.wavefunction import WaveFunction
 
 import numpy as np 
 from qmctorch import log
+from torch.autograd import grad, Variable
+
 
 
 class FermiPrepocess(nn.Module):
@@ -397,9 +399,25 @@ class FermiNet(WaveFunction):
         """
         # compute log output of the network
         psi = self.forward(pos)
-        return torch.log(torch.abs(psi)), torch.sign(psi)
+        signlog = torch.sign(psi)
+        return torch.log(torch.abs(psi))
     
+    def kinetic_energy(self, pos):
+        '''Main switch for the kinetic energy.'''
 
+        if self.kinetic == 'auto':
+            return self.kinetic_energy_autograd(pos)
+
+        elif self.kinetic == 'fd':
+            return self.kinetic_energy_finite_difference(pos)
+        
+        elif self.kinetic == 'auto_log':
+            return self.kinetic_energy_autograd_log(pos)
+
+        else:
+            raise ValueError(
+                'kinetic %s not recognized' %
+                self.kinetic)
     
     def nuclear_repulsion(self):
         r"""Computes the nuclear-nuclear repulsion term
@@ -447,6 +465,48 @@ class FermiNet(WaveFunction):
                 p += -Z / r
         return p.view(-1, 1)
 
+    def kinetic_energy_autograd_log(self, pos):
+        '''Compute the second derivative of the network
+        output w.r.t the value of the input.
+
+        This is to compute the value of the kinetic operator.
+
+        Args:
+            pos: position of the electron
+            out : preomputed values of the wf at pos
+
+        Returns:
+            values of nabla^2 * Psi
+        '''
+        out= self.forward_log(pos)
+
+        # jacob = torch.autograd.functional.jacobian(self.forward_log, pos)
+        # hess = torch.autograd.functional.hessian(self.forward_log, pos)
+
+        # compute the jacobian
+        z = torch.ones_like(out)
+        jacob = grad(out ,pos,
+                     grad_outputs=z,
+                     only_inputs=True,
+                     create_graph=True)[0]
+
+        # compute the diagonal element of the Hessian
+        z = Variable(torch.ones(jacob.shape[0])).to(self.device)
+        hess = torch.zeros(jacob.shape[0]).to(self.device)
+
+        for idim in range(jacob.shape[1]):
+
+            tmp = grad(jacob[:, idim], pos,
+                       grad_outputs=z,
+                       only_inputs=True,
+                       # create_graph is REQUIRED and
+                       # is causing memory issues
+                       # for large systems
+                       create_graph=True)[0]
+
+            hess += tmp[:, idim]
+        jacob2 = torch.sum((jacob)**2,dim=1)
+        return -0.5 *(hess.view(-1, 1) +jacob2.view(-1,1))
 
 
 

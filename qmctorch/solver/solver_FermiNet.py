@@ -364,14 +364,14 @@ class SolverFermiNet(SolverBase):
 
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=False)
-            eloc = torch.tensor(eloc.clone(), requires_grad=False)
+            eloc = torch.tensor(eloc.clone().detach(), requires_grad=False)
             psi = self.wf(lpos)
             norm = 1. / len(psi)
 
             # evaluate the prefactor of the grads
             weight = eloc.clone()
             weight -= torch.mean(eloc)
-            weight /= psi
+            weight /= psi.clone().detach()
             weight *= 2.
             weight *= norm
 

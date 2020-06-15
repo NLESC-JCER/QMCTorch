@@ -153,7 +153,7 @@ class SolverBase(object):
                 self.observable.__getattribute__(obs).append(data)
 
     def print_observable(self, cumulative_loss, verbose=False):
-        """Print the observalbe to csreen
+        """Print the observalbe to screen
 
         Args:
             cumulative_loss (float): current loss value
@@ -236,7 +236,7 @@ class SolverBase(object):
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()
-        if self.wf.kinetic == 'auto':
+        if self.wf.kinetic == 'auto' or self.wf.kinetic=="auto_log":
             grad_mode = torch.enable_grad()
 
         with grad_mode:
