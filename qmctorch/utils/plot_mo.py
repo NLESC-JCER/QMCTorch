@@ -91,31 +91,24 @@ def Display_orbital(compute_mo, wf, plane="z", plane_coord = 0.00,
     else :
         fig.show()
 
-def save_orbital_cube_file(compute_mo, wf, start = -5, end = 5, step = 0.1, path=None, 
+def save_orbital_cube_file(compute_mo, wf, resolution = 20, path=None, 
                      orbital_ind = [0,0], spin = "up"):
     """"Function in attempt to visualise the orbital behaviour of the FermiNet.
         The function will output a cube file for VMD or pymol visualization.
 
         Args:
             compute_mo (compute mo, method): method that computes the MOs from the pos.
-            start (float, optional): Starting grid point. Default: -5
-            end (float, optional): End grid point. Default: 5
-            step (float, optional): step size of grid. Default: 0.1
+            resolution (int, optional): resolution (number of point) on each axis. Default: 20
             path (str, optional): path/filename to save the plot to   
             orbital_ind (tupple, optional): which orbital of the determinant to plot [det, orbital]
             spin (str, optional): the spin of the orbital to visualize. Default: up
     """
-    grid = torch.arange(start ,end,
-                        step, device="cpu")
-
+    pts = torch.linspace(wf.mol.domain("uniform")["min"], wf.mol.domain("uniform")["max"], steps=resolution)
     #create a 3d grid 
-    lendim = len(grid)
-    grid1, grid2= torch.meshgrid(grid,grid)
-    grid1, grid2 = grid1.reshape(lendim,lendim,1).repeat((1,1,lendim)), grid2.reshape(lendim,lendim,1).repeat((1,1,lendim))
-    grid3 = grid.reshape(1,1,lendim).repeat((lendim,lendim,1))
-    grid123 = torch.cat((grid1.unsqueeze(2),grid2.unsqueeze(2),grid3.unsqueeze(2)),dim=2)
+    gridx, gridy, gridz = torch.meshgrid(pts, pts, pts)
+    grid123 = torch.cat((gridx.unsqueeze(3),gridy.unsqueeze(3),gridz.unsqueeze(3)),dim=3)
     #get the electron posion
-    pos_1 = grid123.reshape(lendim**3,3)
+    pos_1 = grid123.reshape(resolution**3,3)
     # which electron to move:
     if spin == "up":
         elec_ind = 0
@@ -125,9 +118,9 @@ def save_orbital_cube_file(compute_mo, wf, start = -5, end = 5, step = 0.1, path
         ValueError("{} is not a valid spin. spin is either up or down.".format(spin)) 
     
     # all other electrons at constant position (1,1,1)
-    pos = torch.ones((pos_1.shape[0],wf.mol.nelec,wf.ndim), device="cpu")  
+    pos = torch.ones((pos_1.shape[0], wf.mol.nelec, wf.ndim), device="cpu")  
     pos[:,elec_ind] = pos_1
-    pos = pos.reshape((pos.shape[0],wf.mol.nelec*wf.ndim))
+    pos = pos.reshape((pos.shape[0], wf.mol.nelec*wf.ndim))
     mo_up, mo_down = compute_mo(pos)
     if spin == "up":
         mo = mo_up
@@ -135,8 +128,8 @@ def save_orbital_cube_file(compute_mo, wf, start = -5, end = 5, step = 0.1, path
         mo = mo_down
 
     det, orbital = orbital_ind
-    mo = mo[:,det,orbital,0].detach().reshape((lendim,
-                        lendim,lendim,1))
-    torch.save(mo,path)
+    mo = mo[:,det,orbital,0].detach().reshape((resolution,
+                        resolution,resolution,1))
+    torch.save(mo, path)
 
     
