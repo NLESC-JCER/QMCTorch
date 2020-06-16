@@ -426,7 +426,8 @@ class TwoBodyJastrowFactor(nn.Module):
 
         nbatch = djast.shape[0]
         if len(self.idx_col_perm) > 0:
-            tmp = torch.zeros(nbatch, 3, self.nelec, self.nelec-1)
+            tmp = torch.zeros(nbatch, 3, self.nelec,
+                              self.nelec-1).to(self.device)
             tmp[..., self.index_row, self.index_col-1] = djast
             tmp[..., self.index_col, self.index_row] = -djast
             return tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
