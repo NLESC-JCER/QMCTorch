@@ -133,6 +133,9 @@ class Orbital(WaveFunction):
         log.info(
             '  Number var  param   : {0}', self.get_number_parameters())
         log.info('  Cuda support        : {0}', self.cuda)
+        if self.cuda:
+            log.info(
+                '  GPU                 : {0}', torch.cuda.get_device_name(0))
 
     def get_mo_coeffs(self):
         mo_coeff = torch.tensor(self.mol.basis.mos).type(
