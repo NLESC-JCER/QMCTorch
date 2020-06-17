@@ -24,7 +24,6 @@ set_torch_double_precision()
 # training hyperparameters
 ndim =3
 nbatch = 4096
-halfnbatch = int(nbatch/2)
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
@@ -34,13 +33,6 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 
 # create the network
 wf = FermiNet(mol, hidden_nodes_e=254, hidden_nodes_ee=32, L_layers=4, Kdet=1)
-
-# sampler for pretraining
-sampler_pretraining = Metropolis(nwalkers=halfnbatch,
-                    nstep=10, step_size=0.2,
-                    ntherm=-1, ndecor=100,
-                    nelec=wf.nelec, init=mol.domain('atomic'),
-                    move={'type': 'all-elec', 'proba': 'normal'})
 
 # sampler for observations
 sampler_observation  = Metropolis(nwalkers=nbatch,
@@ -64,8 +56,13 @@ solver = SolverFermiNet(wf=wf, optimizer=opt,
 # perform a single point calculation before pretraining
 obs = solver.single_point(sampler=sampler_observation)
 
+#sampler for pretrianing
+solver.configure_resampling(mode='update',
+                            resample_every=1,
+                            nstep_update=50)
+
 # pretrain the FermiNet to hf orbitals
-solver.pretrain(1000, optimizer=opt, sampler=sampler_pretraining)
+solver.pretrain(10, optimizer=opt)
 
 solver.save_loss_list(pathloc+"pretrain_loss.pt")
 
@@ -80,9 +77,10 @@ obs = solver.single_point(sampler=sampler_observation)
 # optimize the wave function
 solver.track_observable(['local_energy'])
 
+#sampler for optimization
 solver.configure_resampling(mode='update',
                             resample_every=1,
-                            nstep_update=10)
+                            nstep_update=50)
 
 obs = solver.run(2000, batchsize=None,
                  loss='energy',

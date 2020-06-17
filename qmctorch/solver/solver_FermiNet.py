@@ -49,8 +49,7 @@ class SolverFermiNet(SolverBase):
         for param in self.wf.parameters():
             param.requires_grad = True
 
-    def pretrain(self, nepoch, sampler=None, 
-                 optimizer=None, load=None, 
+    def pretrain(self, nepoch, optimizer=None, load=None, 
                  with_tqdm=True, display_every=None,
                  path_figure=None):
 
@@ -71,23 +70,24 @@ class SolverFermiNet(SolverBase):
             load_epoch, _ = self.load_checkpoint(load)
             log.info(' Using loaded Network')
 
-
-        # sampler for pretraining
-        if sampler is not None:
-            self.sampler = sampler
-        elif self.sampler is None:
-            TypeError("No sampler was given.")
-
         # for the pre-trianing we will create a train orbital
         # using ground state config with a single determinant.
         self.hf_train = Orbital(
             self.mol, configs="ground_state", use_jastrow=False)
-
+        
         # initial position of the walkers
-        pos = torch.cat((self.sampler(self.hf_train.pdf,
-                                      with_tqdm=False),
-                         self.sampler(self.hf_train.pdf,
-                                      with_tqdm=False)), dim=0)
+        pos = self.sampler(self.hf_train.pdf, with_tqdm=False)
+
+        # change the number of steps/walker size
+        _nstep_save = self.sampler.nstep
+        _ntherm_save = self.sampler.ntherm
+        _nwalker_save = self.sampler.walkers.nwalkers
+        if self.resampling_options.mode == 'update':
+            self.sampler.ntherm = -1
+            self.sampler.nstep = self.resampling_options.nstep_update
+            self.sampler.walkers.nwalkers = int(pos.shape[0]/2)
+            self.sampler.nwalkers = int(pos.shape[0]/2)
+        
 
         # start pretraining
         min_loss = 1E5
@@ -98,12 +98,13 @@ class SolverFermiNet(SolverBase):
             log.info('  epoch %d' % epoch)
             # sample from both the hf and FermiNet
             # take 10 Metropolis-Hastings steps
-            pos = torch.cat((self.sampler(self.hf_train.pdf,
-                                          pos[:self.sampler.nwalkers],
-                                          with_tqdm=False),
-                             self.sampler(self.wf.pdf,
-                                          pos[self.sampler.nwalkers:],
-                                          with_tqdm=False)), dim=0)
+            if epoch % self.resampling_options.nstep_update == 0 
+                pos = torch.cat((self.sampler(self.hf_train.pdf,
+                                            pos[:self.sampler.nwalkers],
+                                            with_tqdm=False),
+                                self.sampler(self.wf.pdf,
+                                            pos[self.sampler.nwalkers:],
+                                            with_tqdm=False)), dim=0)
 
             self.pretraining_epoch(pos)
 
@@ -123,6 +124,13 @@ class SolverFermiNet(SolverBase):
             if self.loss < min_loss:
                 min_loss = self.save_checkpoint(epoch,
                                                 self.loss, self.save_model)
+        
+        # restore the sampler number of step
+        self.sampler.nstep = _nstep_save
+        self.sampler.ntherm = _ntherm_save
+        self.sampler.walkers.nwalkers = _nwalker_save
+        self.sampler.nwalkers = _nwalker_save
+
         log.info(' ')
         log.info(' Finished pretraining FermiNet')
 
@@ -364,7 +372,7 @@ class SolverFermiNet(SolverBase):
 
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=False)
-            eloc = torch.tensor(eloc.clone().detach(), requires_grad=False)
+            eloc = eloc.clone().detach().requires_grad=(False)
             psi = self.wf(lpos)
             norm = 1. / len(psi)
 
