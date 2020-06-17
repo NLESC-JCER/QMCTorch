@@ -61,12 +61,21 @@ for spin in spins:
         Display_orbital(hf._get_slater_matrices, hf, plane= dim, 
                                     plane_coord=0.0,
                                     title="Hartree Fock orbital",
-                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pyscf_H2O_"+spin+"_"+dim,
+                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pyscf_H2_"+spin+"_"+dim,
                                     orbital_ind=[0,0],
                                     spin = spin)
         Display_orbital(wf.compute_mo, wf, plane=dim,
                                     plane_coord=0.0,
-                                    title = "Pretraining Fermi Net spin {} for H2O epoch: 2000".format(spin), 
-                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pretraining_H2O_2000_"+spin+"_"+dim,
+                                    title = "Pretraining Fermi Net spin {} for H2 epoch: 2000".format(spin), 
+                                    path="/home/breebaart/dev/QMCTorch/Figures_training/pretraining_H2_2000_"+spin+"_"+dim,
                                     orbital_ind=[0,0],
                                     spin = spin)
+
+# sampler for observations
+sampler_observation  = Metropolis(nwalkers=nbatch,
+                     nstep=200, step_size=0.2,
+                     ntherm=-1, ndecor=100,
+                     nelec=wf.nelec, init=mol.domain('atomic'),
+                     move={'type': 'all-elec', 'proba': 'normal'})
+
+obs = solverFermi.single_point()

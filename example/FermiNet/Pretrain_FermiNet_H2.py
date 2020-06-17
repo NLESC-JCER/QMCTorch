@@ -51,8 +51,14 @@ opt = optim.Adam(wf.parameters(), lr=1E-3)
 # initialize solver
 solverFermi = SolverFermiNet(wf,sampler=sampler_training)
 
+# perform a single point calculation before pretraining
+obs = solver.single_point(sampler=sampler_observation)
+
 # pretrain the FermiNet to hf orbitals
 solverFermi.pretrain(2000,optimizer=opt)
+
+# perform a single point calculation after pretraining
+obs = solver.single_point(sampler=sampler_observation)
 
 solverFermi.save_loss_list("pretrain_loss.pt")
 
