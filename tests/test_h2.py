@@ -128,7 +128,7 @@ class TestH2(unittest.TestCase):
 
         self.solver.configure(task='geo_opt')
         self.solver.track_observable(
-            ['local_energy', 'atomic_distances'])
+            ['local_energy', 'geometry'])
         self.solver.run(5, loss='energy', grad='auto')
 
         # load the best model
@@ -170,4 +170,3 @@ if __name__ == "__main__":
     # t.setUp()
     # t.test1_single_point()
     # # t.test3_wf_opt()
-
