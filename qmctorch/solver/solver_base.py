@@ -176,23 +176,54 @@ class SolverBase(object):
                              Each str must correspond to a WaveFuncion method
         """
 
+        # make sure it's a list
+        if not isinstance(obs_name, list):
+            obs_name = list(obs_name)
+
+        # sanity check
+        valid_obs_name = ['energy', 'local_energy',
+                          'geometry', 'parameters', 'gradients']
+        for name in obs_name:
+            if name in valid_obs_name:
+                continue
+            elif hasattr(self.wf, name):
+                continue
+            else:
+                log.info(
+                    '   Error : Observable %s not recognized' % name)
+                log.info('         : Possible observable')
+                for n in valid_obs_name:
+                    log.info('         :  - %s' % n)
+                log.info(
+                    '         :  - or any method of the wave function')
+                raise ValueError('Observable not recognized')
+
         # reset the Namesapce
         self.observable = SimpleNamespace()
 
-        if 'local_energy' not in obs_name:
-            obs_name += ['local_energy']
+        # add the energy of the sytem
+        if 'energy' not in obs_name:
+            obs_name += ['energy']
 
         if self.task == 'geo_opt' and 'geometry' not in obs_name:
             obs_name += ['geometry']
 
         for k in obs_name:
-            self.observable.__setattr__(k, [])
 
-        for key, p in zip(self.wf.state_dict().keys(),
-                          self.wf.parameters()):
-            if p.requires_grad:
-                self.observable.__setattr__(key, [])
-                self.observable.__setattr__(key+'.grad', [])
+            if k == 'parameters':
+                for key, p in zip(self.wf.state_dict().keys(),
+                                  self.wf.parameters()):
+                    if p.requires_grad:
+                        self.observable.__setattr__(key, [])
+
+            elif k == 'gradients':
+                for key, p in zip(self.wf.state_dict().keys(),
+                                  self.wf.parameters()):
+                    if p.requires_grad:
+                        self.observable.__setattr__(key+'.grad', [])
+
+            else:
+                self.observable.__setattr__(k, [])
 
     def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
         """store observale in the dictionary
@@ -210,10 +241,19 @@ class SolverBase(object):
 
         for obs in self.observable.__dict__.keys():
 
+            # store the energy
+            if obs == 'energy' and local_energy is not None:
+                data = local_energy.cpu().detach().numpy()
+                if (ibatch is None) or (ibatch == 0):
+                    self.observable.energy.append(np.mean(data))
+                else:
+                    self.observable.energy[-1] *= ibatch/(ibatch+1)
+                    self.observable.energy[-1] += np.mean(
+                        data)/(ibatch+1)
+
             # store local energy
             if obs == 'local_energy' and local_energy is not None:
                 data = local_energy.cpu().detach().numpy()
-
                 if (ibatch is None) or (ibatch == 0):
                     self.observable.local_energy.append(data)
                 else:
@@ -227,12 +267,13 @@ class SolverBase(object):
                 self.observable.__getattribute__(
                     obs).append(p.data.cpu().numpy())
 
-                if p.grad is not None:
-                    self.observable.__getattribute__(obs +
-                                                     '.grad').append(p.grad.cpu().numpy())
-                else:
-                    self.observable.__getattribute__(obs +
-                                                     '.grad').append(torch.zeros_like(p.data).cpu().numpy())
+                if obs+'.grad' in self.observable.__dict__.keys():
+                    if p.grad is not None:
+                        self.observable.__getattribute__(obs +
+                                                         '.grad').append(p.grad.cpu().numpy())
+                    else:
+                        self.observable.__getattribute__(obs +
+                                                         '.grad').append(torch.zeros_like(p.data).cpu().numpy())
 
             # store any other defined method
             elif hasattr(self.wf, obs):
@@ -414,6 +455,11 @@ class SolverBase(object):
         return obs
 
     def print_parameters(self, grad=False):
+        """print parameter values
+
+        Args:
+            grad (bool, optional): also print the gradient. Defaults to False.
+        """
         for p in self.wf.parameters():
             if p.requires_grad:
                 if grad:
@@ -459,6 +505,7 @@ class SolverBase(object):
         raise NotImplementedError()
 
     def log_data(self):
+        """Log basi information about the sampler."""
 
         log.info('')
         log.info(' QMC Solver ')
