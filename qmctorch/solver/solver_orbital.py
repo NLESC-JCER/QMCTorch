@@ -1,6 +1,6 @@
 import torch
 from torch.utils.data import DataLoader
-
+from time import time
 from .solver_base import SolverBase
 from qmctorch.utils import (
     DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
@@ -103,6 +103,8 @@ class SolverOrbital(SolverBase):
         # loop over the epoch
         for n in range(nepoch):
 
+            tstart = time()
+            log.info('')
             log.info('  epoch %d' % n)
 
             cumulative_loss = 0
@@ -131,8 +133,6 @@ class SolverOrbital(SolverBase):
 
             self.print_observable(cumulative_loss)
 
-            log.info('')
-
             # resample the data
             pos = self.resample(n, pos)
 
@@ -141,6 +141,8 @@ class SolverOrbital(SolverBase):
 
             if self.scheduler is not None:
                 self.scheduler.step()
+
+            log.info('  epoch done in %1.2f sec.' % (time()-tstart))
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
@@ -192,6 +194,11 @@ class SolverOrbital(SolverBase):
             tuple: loss values and local energies
         """
 
+        # determine if we need the grad of eloc
+        no_grad_eloc = True
+        if self.wf.kinetic_method == 'auto':
+            no_grad_eloc = False
+
         if self.loss.method in ['energy', 'weighted-energy']:
 
             ''' Get the gradient of the total energy
@@ -199,7 +206,7 @@ class SolverOrbital(SolverBase):
             '''
 
             # compute local energy and wf values
-            _, eloc = self.loss(lpos, no_grad=True)
+            _, eloc = self.loss(lpos, no_grad=no_grad_eloc)
             psi = self.wf(lpos)
             norm = 1. / len(psi)
 

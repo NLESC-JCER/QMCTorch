@@ -28,10 +28,6 @@ def plot_energy(local_energy, e0=None, show_variance=False, path=None):
     energy = np.array([np.mean(e) for e in local_energy])
     variance = np.array([np.var(e) for e in local_energy])
 
-    # get the mean value
-    print("Energy   : %f " % np.mean(energy))
-    print("Variance : %f " % np.std(energy))
-
     # plot
     ax.fill_between(epoch, energy - variance, energy +
                     variance, alpha=0.5, color='#4298f4')

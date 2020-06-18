@@ -7,6 +7,7 @@ class OrbitalConfigurations(object):
         # self.mol = mol
         self.nup = mol.nup
         self.ndown = mol.ndown
+        self.nelec = self.nup + self.ndown
         self.norb = mol.basis.nmo
 
     def get_configs(self, configs):
@@ -32,16 +33,19 @@ class OrbitalConfigurations(object):
 
         elif configs.startswith('cas('):
             nelec, norb = eval(configs.lstrip("cas"))
+            self.sanity_check(nelec, norb)
             nocc, nvirt = self._get_orb_number(nelec, norb)
             return self._get_cas_config(nocc, nvirt, nelec)
 
         elif configs.startswith('single('):
             nelec, norb = eval(configs.lstrip("single"))
+            self.sanity_check(nelec, norb)
             nocc, nvirt = self._get_orb_number(nelec, norb)
             return self._get_single_config(nocc, nvirt)
 
         elif configs.startswith('single_double('):
             nelec, norb = eval(configs.lstrip("single_double"))
+            self.sanity_check(nelec, norb)
             nocc, nvirt = self._get_orb_number(nelec, norb)
             return self._get_single_double_config(nocc, nvirt)
 
@@ -52,6 +56,23 @@ class OrbitalConfigurations(object):
             print('              single_double(nelec,norb)')
             print('              cas(nelec,norb)')
             raise ValueError("Config error")
+
+    def sanity_check(self, nelec, norb):
+        """Check if the number of elec/orb is consistent with the
+           properties of the molecule
+
+        Args:
+            nelec (int): required number of electrons in config
+            norb (int): required number of orb in config
+
+        """
+        if nelec > self.nelec:
+            raise ValueError(
+                'required number of electron in config too large')
+
+        if norb > self.norb:
+            raise ValueError(
+                'required number of orbitals in config too large')
 
     def _get_ground_state_config(self):
         """Return only the ground state configuration

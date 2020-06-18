@@ -1,6 +1,7 @@
 import torch
 import numpy as np
 from torch.distributions import MultivariateNormal
+from .. import log
 
 
 class Walkers(object):
@@ -49,7 +50,7 @@ class Walkers(object):
             self.pos = pos
 
         else:
-
+            log.debug("  Initialize walkers")
             if 'center' in self.init_domain.keys():
                 self.pos = self._init_center()
 

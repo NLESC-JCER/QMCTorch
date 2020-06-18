@@ -1,6 +1,7 @@
 from tqdm import tqdm
 import torch
 from torch.distributions import MultivariateNormal
+from time import time
 from .sampler_base import SamplerBase
 from .. import log
 
@@ -94,6 +95,7 @@ class Metropolis(SamplerBase):
             rng = tqdm(range(self.nstep),
                        desc='INFO:QMCTorch|  Sampling',
                        disable=not with_tqdm)
+            tstart = time()
 
             for istep in rng:
 
@@ -124,8 +126,13 @@ class Metropolis(SamplerBase):
                         pos.append(self.walkers.pos.to('cpu').clone())
                     idecor += 1
 
-            log.options(style='percent').debug("  Acceptance rate %1.3f" %
-                                               (rate / self.nstep * 100))
+            if with_tqdm:
+                log.info(
+                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100))
+                log.info(
+                    "   Timing statistics   : {:1.2f} steps/sec.", self.nstep/(time()-tstart))
+                log.info(
+                    "   Total Time          : {:1.2f} sec.", (time()-tstart))
 
         return torch.cat(pos).requires_grad_()
 
