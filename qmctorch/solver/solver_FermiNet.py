@@ -98,7 +98,7 @@ class SolverFermiNet(SolverBase):
             log.info('  epoch %d' % epoch)
             # sample from both the hf and FermiNet
             # take 10 Metropolis-Hastings steps
-            if epoch % self.resampling_options.nstep_update == 0 
+            if epoch % self.resampling_options.nstep_update == 0:
                 pos = torch.cat((self.sampler(self.hf_train.pdf,
                                             pos[:self.sampler.nwalkers],
                                             with_tqdm=False),
@@ -372,7 +372,7 @@ class SolverFermiNet(SolverBase):
 
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=False)
-            eloc = eloc.clone().detach().requires_grad=(False)
+            eloc = torch.tensor(eloc.clone().detach(), requires_grad=False)
             psi = self.wf(lpos)
             norm = 1. / len(psi)
 
