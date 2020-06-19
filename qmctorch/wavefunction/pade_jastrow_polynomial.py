@@ -27,14 +27,16 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
-        self.pord = order
+        super(PadeJastrowPolynomial, self).__init__(nup, ndown, cuda)
+        self.porder = order
 
-        self.weight_a = nn.Parameter(torch.zeros(self.porder))
+        self.weight_a = nn.Parameter(
+            0.1*torch.zeros(self.porder)).to(self.device)
         self.weight_a.requires_grad = True
         register_extra_attributes(self, ['weight_a'])
 
-        self.weight_b = nn.Parameter(torch.zeros(self.porder))
+        self.weight_b = nn.Parameter(
+            0.1*torch.zeros(self.porder)).to(self.device)
         self.weight_b.requires_grad = True
         register_extra_attributes(self, ['weight_b'])
 
@@ -159,7 +161,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         num, denom = self._compute_polynoms(r)
         num = num.unsqueeze(1)
         denom = denom.unsqueeze(1)
-
+        print(denom)
         der_num, der_denom = self._compute_polynom_derivatives(r, dr)
 
         d2_num, d2_denom = self._compute_polynom_second_derivative(
@@ -184,7 +186,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         denom = (1.0 + self.weight_b[0] * r)
         riord = r.clone()
 
-        for iord in range(1, self.pord):
+        for iord in range(1, self.porder):
             riord = riord * r
             num += self.weight_a[iord] * riord
             denom += self.weight_b[iord] * riord
@@ -214,8 +216,9 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         for iord in range(1, self.porder):
 
-            der_num += self.weight_a[iord] * dr * riord
-            der_denom += self.weight_b[iord] * dr * riord
+            fact = (iord+1) * dr * riord
+            der_num += self.weight_a[iord] * fact
+            der_denom += self.weight_b[iord] * fact
             riord = riord * r_
 
         return der_num, der_denom
@@ -237,7 +240,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         """
 
-        der_num self.static_weight * d2r
+        der_num = self.static_weight * d2r
         der_denom = self.weight_b[0] * d2r
         dr2 = dr*dr
 
@@ -250,8 +253,9 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             n = iord+1
             fact = n * (d2r * rnm1 + iord * dr2*rnm2)
             der_num += self.weight_a[iord] * fact
-            der_denom += self.weight_b[iord] * * fact
-            rnm2 = r_nm1
+            der_denom += self.weight_b[iord] * fact
+
+            rnm2 = rnm1
             rnm1 = rnm1 * r_
 
         return der_num, der_denom

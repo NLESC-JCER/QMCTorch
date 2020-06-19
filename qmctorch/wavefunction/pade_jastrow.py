@@ -135,7 +135,7 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         r_ = r.unsqueeze(1)
         denom = 1. / (1.0 + self.weight * r_)
         denom2 = denom**2
-        dr_square = dr**2
+        dr_square = dr*dr
 
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom2
