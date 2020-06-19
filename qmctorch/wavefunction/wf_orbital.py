@@ -10,9 +10,7 @@ from .pade_jastrow import PadeJastrow
 # from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
-from ..utils.interpolate import (get_reg_grid, get_log_grid,
-                                 interpolator_reg_grid, interpolate_reg_grid,
-                                 interpolator_irreg_grid, interpolate_irreg_grid)
+
 from .. import log
 
 

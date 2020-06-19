@@ -20,7 +20,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(TwoBodyJastrowFactor, self).__init__()
+        super(TwoBodyJastrowFactorBase, self).__init__()
 
         self.nup = nup
         self.ndown = ndown
@@ -49,16 +49,63 @@ class TwoBodyJastrowFactorBase(nn.Module):
                 range(self.nelec-1), 2))).to(self.device)
 
     def _get_jastrow_elements(self, r):
-        """Get the elements of the jastrow matrix."""
+        r"""Get the elements of the jastrow matrix :
+        .. math::
+            out_{i,j} = \exp{ U(r_{ij}) }
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: matrix fof the jastrow elements
+                          Nbatch x Nelec x Nelec
+        """
         raise NotImplementedError('Jastrow element not implemented')
 
     def _get_der_jastrow_elements(self, r, dr):
-        """Get the elements of the derivative of the jastrow kernels."""
+        """Get the elements of the derivative of the jastrow kernels
+        wrt to the first electrons
+
+        .. math::
+
+            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i 
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+            dr (torch.tensor): matrix of the derivative of the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+
+        Returns:
+            torch.tensor: matrix fof the derivative of the jastrow elements
+                          Nbatch x Ndim x Nelec x Nelec
+        """
         raise NotImplementedError(
             'Jastrow derivative not implemented')
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
-        """Get the elements of the pure 2nd derivative of the jastrow kernels."""
+        """Get the elements of the pure 2nd derivative of the jastrow kernels
+        wrt to the first electron
+
+        .. math ::
+
+            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+            dr (torch.tensor): matrix of the derivative of the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+            d2r (torch.tensor): matrix of the 2nd derivative of
+                                the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+
+        Returns:
+            torch.tensor: matrix fof the pure 2nd derivative of
+                          the jastrow elements
+                          Nbatch x Ndim x Nelec x Nelec
+        """
         raise NotImplementedError(
             'Jastrow second derivative not implemented')
 
