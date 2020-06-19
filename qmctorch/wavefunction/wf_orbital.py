@@ -6,7 +6,7 @@ from .slater_pooling import SlaterPooling
 from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
-from .fast_jastrow import TwoBodyJastrowFactor
+from .pade_jastrow import PadeJastrow
 # from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
@@ -77,8 +77,8 @@ class Orbital(WaveFunction):
 
         # jastrow
         self.use_jastrow = use_jastrow
-        self.jastrow = TwoBodyJastrowFactor(mol.nup, mol.ndown,
-                                            w=1., cuda=cuda)
+        self.jastrow = PadeJastrow(mol.nup, mol.ndown,
+                                   w=1., cuda=cuda)
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs_method,
