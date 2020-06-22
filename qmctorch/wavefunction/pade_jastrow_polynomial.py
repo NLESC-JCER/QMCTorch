@@ -41,29 +41,20 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         Args:
             weight_a (torch.tensor or None): Value of the weight on the numerator
             weight_b (torch.tensor or None): Value of the weight on the numerator
+
         """
 
         if weight_a is not None:
             assert weight_a.shape[0] == self.porder
-            self.weight_a = nn.Parameter(torch.tensor(weight_a.numpy(),
-                                                      requires_grad=True,
-                                                      device=self.device))
+            self.weight_a = nn.Parameter(weight_a)
         else:
-            self.weight_a = nn.Parameter(
-                0.01 * torch.ones(self.porder,
-                                  requires_grad=True,
-                                  device=self.device))
+            self.weight_a = nn.Parameter(0.01*torch.ones(self.porder))
 
         if weight_b is not None:
             assert weight_b.shape[0] == self.porder
-            self.weight_b = nn.Parameter(torch.tensor(weight_b.numpy(),
-                                                      requires_grad=True,
-                                                      device=self.device))
+            self.weight_b = nn.Parameter(weight_b)
         else:
-            self.weight_b = nn.Parameter(
-                0.01 * torch.ones(self.porder,
-                                  requires_grad=True,
-                                  device=self.device))
+            self.weight_b = nn.Parameter(0.01*torch.ones(self.porder))
             self.weight_b.data[0] = 1.
 
         register_extra_attributes(self, ['weight_a'])
@@ -138,7 +129,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             out_{k,i,j} = \\frac{P'Q - PQ'}{Q^2}
 
             P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
-            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 + 
+            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 +
 
             P'_{ij} = a_1 dr + a_2 2 r dr + a_r 3 dr r^2 + ....
             Q'_{ij} = b_1 dr + b_2 2 r dr + b_r 3 dr r^2 + ....
@@ -175,12 +166,12 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nbatch x Ndim x Nelec x Nelec
         """
@@ -194,8 +185,8 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         d2_num, d2_denom = self._compute_polynom_second_derivative(
             r, dr, d2r)
 
-        out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(denom*denom) \
-            + 2 * num*der_denom*der_denom/(denom*denom*denom)
+        out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(
+            denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
 
         return out + self._get_der_jastrow_elements(r, dr)**2
 
@@ -232,7 +223,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor, torch.tensor : p and q polynoms derivatives 
+            torch.tensor, torch.tensor : p and q polynoms derivatives
                                          size Nbatch x Ndim x Nelec x Nelec
 
         """
@@ -264,7 +255,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
         Returns:
-            torch.tensor, torch.tensor : p and q polynoms derivatives 
+            torch.tensor, torch.tensor : p and q polynoms derivatives
                                          size Nbatch x Ndim x Nelec x Nelec
 
         """
