@@ -2,7 +2,7 @@ import torch
 from torch.autograd import Variable, grad, gradcheck
 from qmctorch.wavefunction.pade_jastrow import PadeJastrow
 import unittest
-
+import numpy as np
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
@@ -33,6 +33,9 @@ def hess(out, pos):
 class TestPadeJastrow(unittest.TestCase):
 
     def setUp(self):
+
+        torch.manual_seed(0)
+        np.random.seed(0)
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
@@ -73,6 +76,9 @@ class TestPadeJastrow(unittest.TestCase):
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
+
+        print(d2val, d2val_grad.view(
+            self.nbatch, self.nelec, 3).sum(2))
 
         assert torch.allclose(d2val, d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))

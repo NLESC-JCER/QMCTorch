@@ -9,7 +9,7 @@ from time import time
 
 class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
-    def __init__(self, nup, ndown, order, cuda=False):
+    def __init__(self, nup, ndown, order, weight_a=None, weight_b=None, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -23,24 +23,46 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
             order (int): degree of the polynomial
-            w (float, optional): Value of the variational parameter. Defaults to 1..
+            weight_a (torch.tensor, optional): Value of the weight on the numerator
+            weight_b (torch.tensor, optional): Value of the weight on the numerator
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
         super(PadeJastrowPolynomial, self).__init__(nup, ndown, cuda)
         self.porder = order
 
-        self.weight_a = nn.Parameter(
-            torch.ones(self.porder)).to(self.device)
-        self.weight_a.requires_grad = True
-        register_extra_attributes(self, ['weight_a'])
-
-        self.weight_b = nn.Parameter(
-            torch.ones(self.porder)).to(self.device)
-        self.weight_b.requires_grad = True
-        register_extra_attributes(self, ['weight_b'])
+        self.set_variational_weights(weight_a, weight_b)
 
         self.static_weight = self.get_static_weight()
+
+    def set_variational_weights(self, weight_a, weight_b):
+        """Define the initial values of the variational weights.
+
+        Args:
+            weight_a (torch.tensor or None): Value of the weight on the numerator
+            weight_b (torch.tensor or None): Value of the weight on the numerator
+        """
+
+        if weight_a is not None:
+            assert weight_a.shape[0] == self.porder
+            self.weight_a = nn.Parameter(weight_a).to(self.device)
+        else:
+            self.weight_a = nn.Parameter(
+                torch.zeros(self.porder)).to(self.device)
+
+        if weight_b is not None:
+            assert weight_b.shape[0] == self.porder
+            self.weight_b = nn.Parameter(weight_b).to(self.device)
+        else:
+            self.weight_b = nn.Parameter(
+                torch.zeros(self.porder)).to(self.device)
+            self.weight_b.data[0] = 1.
+
+        self.weight_a.requires_grad = True
+        self.weight_b.requires_grad = True
+
+        register_extra_attributes(self, ['weight_a'])
+        register_extra_attributes(self, ['weight_b'])
 
     def get_static_weight(self):
         """Get the matrix of static weights
@@ -167,8 +189,10 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         d2_num, d2_denom = self._compute_polynom_second_derivative(
             r, dr, d2r)
 
-        return d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(denom*denom) \
+        out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(denom*denom) \
             + 2 * num*der_denom*der_denom/(denom*denom*denom)
+
+        return out + self._get_der_jastrow_elements(r, dr)**2
 
     def _compute_polynoms(self, r):
         """Compute the num and denom polynomials.
@@ -242,6 +266,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         d2_num = self.static_weight * d2r
         d2_denom = self.weight_b[0] * d2r
+
         dr2 = dr*dr
 
         r_ = r.unsqueeze(1)
@@ -257,10 +282,5 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
             rnm2 = rnm1
             rnm1 = rnm1 * r_
-
-        dnum, ddenom = self._compute_polynom_derivatives(r, dr)
-
-        d2_num += dnum*dnum
-        d2_denom += ddenom*ddenom
 
         return d2_num, d2_denom

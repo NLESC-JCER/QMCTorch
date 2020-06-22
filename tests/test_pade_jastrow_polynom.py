@@ -2,6 +2,7 @@ import torch
 from torch.autograd import Variable, grad, gradcheck
 from qmctorch.wavefunction.pade_jastrow_polynomial import PadeJastrowPolynomial
 import unittest
+import numpy as np
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -34,10 +35,15 @@ class TestPadeJastrowPolynom(unittest.TestCase):
 
     def setUp(self):
 
+        torch.manual_seed(0)
+        np.random.seed(0)
+
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         self.jastrow = PadeJastrowPolynomial(
-            self.nup, self.ndown, order=5)
+            self.nup, self.ndown, order=5,
+            weight_a=0.1*torch.ones(5),
+            weight_b=0.1*torch.ones(5))
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
@@ -74,9 +80,6 @@ class TestPadeJastrowPolynom(unittest.TestCase):
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
-
-        # print(d2val, d2val_grad.view(
-        #     self.nbatch, self.nelec, 3).sum(2))
 
         assert torch.allclose(d2val, d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))
