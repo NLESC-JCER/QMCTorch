@@ -45,21 +45,26 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         if weight_a is not None:
             assert weight_a.shape[0] == self.porder
-            self.weight_a = nn.Parameter(weight_a).to(self.device)
+            self.weight_a = nn.Parameter(torch.tensor(weight_a.numpy(),
+                                                      requires_grad=True,
+                                                      device=self.device))
         else:
             self.weight_a = nn.Parameter(
-                0.01 * torch.ones(self.porder)).to(self.device)
+                0.01 * torch.ones(self.porder,
+                                  requires_grad=True,
+                                  device=self.device))
 
         if weight_b is not None:
             assert weight_b.shape[0] == self.porder
-            self.weight_b = nn.Parameter(weight_b).to(self.device)
+            self.weight_b = nn.Parameter(torch.tensor(weight_b.numpy(),
+                                                      requires_grad=True,
+                                                      device=self.device))
         else:
             self.weight_b = nn.Parameter(
-                0.01*torch.ones(self.porder)).to(self.device)
+                0.01 * torch.ones(self.porder,
+                                  requires_grad=True,
+                                  device=self.device))
             self.weight_b.data[0] = 1.
-
-        self.weight_a.requires_grad = True
-        self.weight_b.requires_grad = True
 
         register_extra_attributes(self, ['weight_a'])
         register_extra_attributes(self, ['weight_b'])

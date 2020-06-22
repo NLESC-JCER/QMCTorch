@@ -25,8 +25,8 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
 
         super(PadeJastrow, self).__init__(nup, ndown, cuda)
 
-        self.weight = nn.Parameter(torch.tensor([w]))
-        self.weight.requires_grad = True
+        self.weight = nn.Parameter(torch.tensor(
+            [w], requires_grad=True, device=self.device))
         register_extra_attributes(self, ['weight'])
 
         self.static_weight = self.get_static_weight()
