@@ -48,14 +48,14 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             self.weight_a = nn.Parameter(weight_a).to(self.device)
         else:
             self.weight_a = nn.Parameter(
-                torch.zeros(self.porder)).to(self.device)
+                0.01 * torch.ones(self.porder)).to(self.device)
 
         if weight_b is not None:
             assert weight_b.shape[0] == self.porder
             self.weight_b = nn.Parameter(weight_b).to(self.device)
         else:
             self.weight_b = nn.Parameter(
-                torch.zeros(self.porder)).to(self.device)
+                0.01*torch.ones(self.porder)).to(self.device)
             self.weight_b.data[0] = 1.
 
         self.weight_a.requires_grad = True
