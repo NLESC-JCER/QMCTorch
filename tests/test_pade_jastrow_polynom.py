@@ -75,8 +75,8 @@ class TestPadeJastrowPolynom(unittest.TestCase):
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
 
-        print(d2val, d2val_grad.view(
-            self.nbatch, self.nelec, 3).sum(2))
+        # print(d2val, d2val_grad.view(
+        #     self.nbatch, self.nelec, 3).sum(2))
 
         assert torch.allclose(d2val, d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))

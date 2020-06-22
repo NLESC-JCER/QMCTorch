@@ -31,12 +31,12 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         self.porder = order
 
         self.weight_a = nn.Parameter(
-            0.1*torch.zeros(self.porder)).to(self.device)
+            torch.ones(self.porder)).to(self.device)
         self.weight_a.requires_grad = True
         register_extra_attributes(self, ['weight_a'])
 
         self.weight_b = nn.Parameter(
-            0.1*torch.zeros(self.porder)).to(self.device)
+            torch.ones(self.porder)).to(self.device)
         self.weight_b.requires_grad = True
         register_extra_attributes(self, ['weight_b'])
 
@@ -161,7 +161,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         num, denom = self._compute_polynoms(r)
         num = num.unsqueeze(1)
         denom = denom.unsqueeze(1)
-        print(denom)
+
         der_num, der_denom = self._compute_polynom_derivatives(r, dr)
 
         d2_num, d2_denom = self._compute_polynom_second_derivative(
@@ -240,8 +240,8 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         """
 
-        der_num = self.static_weight * d2r
-        der_denom = self.weight_b[0] * d2r
+        d2_num = self.static_weight * d2r
+        d2_denom = self.weight_b[0] * d2r
         dr2 = dr*dr
 
         r_ = r.unsqueeze(1)
@@ -252,10 +252,15 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
             n = iord+1
             fact = n * (d2r * rnm1 + iord * dr2*rnm2)
-            der_num += self.weight_a[iord] * fact
-            der_denom += self.weight_b[iord] * fact
+            d2_num += self.weight_a[iord] * fact
+            d2_denom += self.weight_b[iord] * fact
 
             rnm2 = rnm1
             rnm1 = rnm1 * r_
 
-        return der_num, der_denom
+        dnum, ddenom = self._compute_polynom_derivatives(r, dr)
+
+        d2_num += dnum*dnum
+        d2_denom += ddenom*ddenom
+
+        return d2_num, d2_denom
