@@ -75,7 +75,12 @@ class SolverFermiNet(SolverBase):
         self.hf_train = Orbital(
             self.mol, configs="ground_state", use_jastrow=False)
         
+        _nstep_save = self.sampler.nstep
+        _ntherm_save = self.sampler.ntherm
+        _nwalker_save = self.sampler.walkers.nwalkers
         # initial position of the walkers
+        self.sampler.nstep = 1
+        self.sampler.ntherm = 0
         pos = self.sampler(self.hf_train.pdf, with_tqdm=False)
 
         # change the number of steps/walker size
@@ -105,7 +110,7 @@ class SolverFermiNet(SolverBase):
                                 self.sampler(self.wf.pdf,
                                             pos[self.sampler.nwalkers:],
                                             with_tqdm=False)), dim=0)
-
+            
             self.pretraining_epoch(pos)
 
             self.Loss_list[epoch-load_epoch] = self.loss.item()
@@ -118,7 +123,8 @@ class SolverFermiNet(SolverBase):
                 if epoch % display_every == 0:
                     Display_orbital(self.wf.compute_mo, self.wf, 
                                 path=path_figure+str(epoch), 
-                                title="Pretraining FermiNet epoch: {}".format(epoch))
+                                title="Pretraining FermiNet epoch: {}".format(epoch),
+                                plane="x")
 
             # save the model if necessary
             if self.loss < min_loss:
@@ -314,9 +320,6 @@ class SolverFermiNet(SolverBase):
             if self.scheduler is not None:
                 self.scheduler.step()
 
- 
-
-
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
         self.sampler.ntherm = _ntherm_save
@@ -372,14 +375,13 @@ class SolverFermiNet(SolverBase):
 
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=False)
-            eloc = torch.tensor(eloc.clone().detach(), requires_grad=False)
             psi = self.wf(lpos)
             norm = 1. / len(psi)
 
             # evaluate the prefactor of the grads
             weight = eloc.clone()
             weight -= torch.mean(eloc)
-            weight /= psi.clone().detach()
+            weight /= psi
             weight *= 2.
             weight *= norm
 

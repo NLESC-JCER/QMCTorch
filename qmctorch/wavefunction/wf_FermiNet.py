@@ -168,15 +168,12 @@ class FermiIntermediate(nn.Module):
         '''
         nbatch = h_i.shape[0]
         hidden_nodes_e = h_i.shape[2]
+        g_up = h_i[:, :mol.nup].mean(axis=1).unsqueeze(1).repeat(1,mol.nelec,1)
+        g_down = h_i[:, mol.nup:].mean(axis=1).unsqueeze(1).repeat(1,mol.nelec,1)
+        g_up_i = h_ij[:, :mol.nup].mean(axis=1)
+        g_down_i = h_ij[:, mol.nup:].mean(axis=1)
 
-        g_down = torch.mean(h_i[:, :mol.nup], axis=1).repeat(
-            mol.nelec, 1).reshape(nbatch, mol.nelec, hidden_nodes_e)
-        g_up = torch.mean(h_i[:, mol.nup:], axis=1).repeat(
-            mol.nelec, 1).reshape(nbatch, mol.nelec, hidden_nodes_e)
-        g_down_i = torch.mean(h_ij[:, :mol.nup], axis=1)
-        g_up_i = torch.mean(h_ij[:, mol.nup:], axis=1)
-
-        f_i = torch.cat((h_i, g_down, g_up, g_down_i, g_up_i), axis=2)
+        f_i = torch.cat((h_i, g_up, g_down, g_up_i, g_down_i), axis=2)
         # outputs a array f_i (N_batch x Nelec x f_size)
         return f_i
 
