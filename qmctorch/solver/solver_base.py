@@ -130,10 +130,14 @@ class SolverBase(object):
         # opt all wf parameters
         self.wf.ao.bas_exp.requires_grad = True
         self.wf.ao.bas_coeffs.requires_grad = True
+
         for param in self.wf.mo.parameters():
             param.requires_grad = True
+
         self.wf.fc.weight.requires_grad = True
-        self.wf.jastrow.weight.requires_grad = True
+
+        for param in self.wf.jastrow.parameters():
+            param.requires_grad = True
 
         # no opt the atom positions
         self.wf.ao.atom_coords.requires_grad = False
@@ -161,7 +165,8 @@ class SolverBase(object):
                     self.wf.ao.bas_coeffs.requires_grad = False
 
                 elif name.lower() == 'jastrow':
-                    self.wf.jastrow.weight.requires_grad = False
+                    for param in self.wf.jastrow.parameters():
+                        param.requires_grad = False
 
                 else:
                     opt_freeze = ['ci', 'mo', 'ao', 'jastrow']

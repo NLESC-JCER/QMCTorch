@@ -241,4 +241,6 @@ class SolverOrbital(SolverBase):
             '  Resampling every    : {0}', self.resampling_options.resample_every)
         log.info(
             '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+        log.info(
+            '  Output file         : {0}', self.hdf5file)
         log.info('')
