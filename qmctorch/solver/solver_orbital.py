@@ -150,7 +150,8 @@ class SolverOrbital(SolverBase):
         # dump
         if hdf5_group is None:
             hdf5_group = self.task
-        dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
+        hdf5_group = dump_to_hdf5(
+            self.observable, self.hdf5file, hdf5_group)
         add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
         return self.observable

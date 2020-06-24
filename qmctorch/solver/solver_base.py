@@ -250,8 +250,6 @@ class SolverBase(object):
             if obs == 'energy' and local_energy is not None:
                 data = local_energy.cpu().detach().numpy()
                 if (ibatch is None) or (ibatch == 0):
-                    print(data.shape)
-                    print(np.mean(data).shape)
                     self.observable.energy.append(np.mean(data))
                 else:
                     self.observable.energy[-1] *= ibatch/(ibatch+1)
@@ -259,7 +257,7 @@ class SolverBase(object):
                         data)/(ibatch+1)
 
             # store local energy
-            if obs == 'local_energy' and local_energy is not None:
+            elif obs == 'local_energy' and local_energy is not None:
                 data = local_energy.cpu().detach().numpy()
                 if (ibatch is None) or (ibatch == 0):
                     self.observable.local_energy.append(data)
