@@ -148,9 +148,28 @@ def insert_group(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
+
+    # ignore object starting with underscore
+    # a lot of pytorch internal are like that
     if obj_name.startswith('_'):
+        log.debug(
+            ' Warning : Object {obj} not stored in {parent}', obj=obj_name, parent=parent_grp)
+        log.debg(
+            '         : because object name starts with "_"')
         return
 
+    # # change objet name if that name is already present in the file
+    # if obj_name in parent_grp:
+
+    #     log.info(
+    #         ' Object {obj} already exists in {parent}', obj=obj_name, parent=parent_grp)
+
+    #     n = sum(1 for n in parent_grp if n.startswith(obj_name)) + 1
+    #     obj_name = obj_name + '_' + str(n)
+    #     log.info(
+    #         ' Object name changed to {obj}', obj=obj_name)
+
+    # store if the object name is not in parent
     if obj_name not in parent_grp:
 
         try:
@@ -165,9 +184,12 @@ def insert_group(obj, parent_grp, obj_name):
         except:
             print_insert_error(obj, obj_name)
 
+    # if something went wrong anyway
     else:
-        log.debug(
-            'object {obj} already exists, keeping existing version of the data', obj=obj_name)
+        log.critical(
+            ' Warning : Object {obj} already exists in {parent}', obj=obj_name, parent=parent_grp)
+        log.critical(
+            ' Warning : Keeping original version of the data')
 
 
 def insert_data(obj, parent_grp, obj_name):
