@@ -121,8 +121,22 @@ def dump_to_hdf5(obj, fname, root_name=None):
     if root_name is None:
         root_name = obj.__class__.__name__
 
+    # change root name if that name is already present in the file
+    if root_name in h5:
+
+        log.info('')
+        log.info(' Warning : dump to hdf5')
+        log.info(
+            ' Object {obj} already exists in {parent}', obj=root_name, parent=fname)
+        n = sum(1 for n in h5 if n.startswith(root_name)) + 1
+        root_name = root_name + '_' + str(n)
+        log.info(
+            ' Object name changed to {obj}', obj=root_name)
+        log.info('')
+
     insert_object(obj, h5, root_name)
     h5.close()
+    return root_name
 
 
 def insert_object(obj, parent_grp, obj_name):
@@ -148,26 +162,38 @@ def insert_group(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
+
+    # ignore object starting with underscore
+    # a lot of pytorch internal are like that
     if obj_name.startswith('_'):
+        log.debug(
+            ' Warning : Object {obj} not stored in {parent}', obj=obj_name, parent=parent_grp)
+        log.debug(
+            '         : because object name starts with "_"')
         return
 
+    # store if the object name is not in parent
     if obj_name not in parent_grp:
 
         try:
             own_grp = parent_grp.create_group(obj_name)
-            # for child_name, child_obj in children(obj):
-            #     insert_object(child_obj,  own_grp, child_name)
+
             for child_name in get_children_names(obj):
 
                 child_obj = get_child_object(obj, child_name)
                 insert_object(child_obj,  own_grp, child_name)
 
-        except:
+        except Exception as inst:
+            print(type(inst))
+            print(inst)
             print_insert_error(obj, obj_name)
 
+    # if something went wrong anyway
     else:
-        log.debug(
-            'object {obj} already exists, keeping existing version of the data', obj=obj_name)
+        log.critical(
+            ' Warning : Object {obj} already exists in {parent}', obj=obj_name, parent=parent_grp)
+        log.critical(
+            ' Warning : Keeping original version of the data')
 
 
 def insert_data(obj, parent_grp, obj_name):
