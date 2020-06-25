@@ -7,8 +7,8 @@ from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
 from .wf_base import WaveFunction
 from .pade_jastrow import PadeJastrow
+from .scaled_pade_jastrow import ScaledPadeJastrow
 from .pade_jastrow_polynomial import PadeJastrowPolynomial
-# from .jastrow import TwoBodyJastrowFactor
 
 from ..utils import register_extra_attributes
 
@@ -160,13 +160,20 @@ class Orbital(WaveFunction):
         if jastrow_type == 'pade_jastrow':
             self.jastrow = PadeJastrow(self.mol.nup, self.mol.ndown,
                                        w=1., cuda=self.cuda)
+
         elif jastrow_type.startswith('pade_jastrow('):
             order = int(jastrow_type.split('(')[1][0])
             self.jastrow = PadeJastrowPolynomial(
                 self.mol.nup, self.mol.ndown, order, cuda=self.cuda)
 
+        elif jastrow_type == 'scaled_pade_jastrow':
+            self.jastrow = ScaledPadeJastrow(self.mol.nup, self.mol.ndown,
+                                             w=1., kappa=0.6, cuda=self.cuda)
+
         else:
-            valid_names = ['pade_jastrow', 'pade_jastrow_(n)']
+            valid_names = ['pade_jastrow',
+                           'pade_jastrow_(n)',
+                           'scaled_pade_jastrow']
             log.info(
                 '   Error : Jastrow form not recognized. Options are :')
             for n in valid_names:

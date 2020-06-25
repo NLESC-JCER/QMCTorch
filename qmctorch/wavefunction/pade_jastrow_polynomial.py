@@ -44,39 +44,24 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         """
 
+        # that can cause a nan if too low ...
+        w0 = 1E-5
+
         if weight_a is not None:
             assert weight_a.shape[0] == self.porder
             self.weight_a = nn.Parameter(weight_a)
         else:
-            self.weight_a = nn.Parameter(0.01*torch.ones(self.porder))
+            self.weight_a = nn.Parameter(w0*torch.ones(self.porder))
 
         if weight_b is not None:
             assert weight_b.shape[0] == self.porder
             self.weight_b = nn.Parameter(weight_b)
         else:
-            self.weight_b = nn.Parameter(0.01*torch.ones(self.porder))
+            self.weight_b = nn.Parameter(w0*torch.ones(self.porder))
             self.weight_b.data[0] = 1.
 
         register_extra_attributes(self, ['weight_a'])
         register_extra_attributes(self, ['weight_b'])
-
-    def get_static_weight(self):
-        """Get the matrix of static weights
-
-        Returns:
-            torch.tensor: static weight (0.5 (0.25)for parallel(anti) spins
-        """
-
-        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
-                         torch.ones(self.nup, self.ndown)), dim=1)
-
-        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
-                           torch.ones(self.ndown, self.ndown)), dim=1)
-
-        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
-        static_weight = static_weight.masked_select(self.mask_tri_up)
-
-        return static_weight
 
     def _compute_kernel(self, r):
         """ Get the jastrow kernel.
