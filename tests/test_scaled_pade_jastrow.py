@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.pade_jastrow import PadeJastrow
+from qmctorch.wavefunction.scaled_pade_jastrow import ScaledPadeJastrow
 import unittest
 import numpy as np
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -30,7 +30,7 @@ def hess(out, pos):
     return hess
 
 
-class TestPadeJastrow(unittest.TestCase):
+class TestScaledPadeJastrow(unittest.TestCase):
 
     def setUp(self):
 
@@ -39,7 +39,7 @@ class TestPadeJastrow(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.jastrow = PadeJastrow(self.nup, self.ndown)
+        self.jastrow = ScaledPadeJastrow(self.nup, self.ndown)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)

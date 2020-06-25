@@ -7,9 +7,9 @@ import itertools
 from time import time
 
 
-class PadeJastrow(TwoBodyJastrowFactorBase):
+class ScaledPadeJastrow(TwoBodyJastrowFactorBase):
 
-    def __init__(self, nup, ndown, w=1., cuda=False):
+    def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -23,13 +23,66 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
+        super(ScaledPadeJastrow, self).__init__(nup, ndown, cuda)
 
         self.weight = nn.Parameter(
             torch.tensor([w]), requires_grad=True)
-        register_extra_attributes(self, ['weight'])
 
         self.static_weight = self.get_static_weight()
+
+        self.kappa = kappa
+
+        register_extra_attributes(self, ['weight'])
+        register_extra_attributes(self, ['kappa'])
+
+    def _get_scaled_distance(self, r):
+        """compute the scaled distance 
+        .. math::
+            u = \frac{1+e^{-kr}}{k}      
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: values of the scaled distance
+                          Nbatch, Nelec, Nelec
+        """
+        return (1. - torch.exp(-self.kappa * r))/self.kappa
+
+    def _get_der_scaled_distance(self, r, dr):
+        """Returns the derivative of the scaled distances
+
+        Args:
+            r (torch.tensor): unsqueezed matrix of the e-e distances
+                              Nbatch x 1 x Nelec x Nelec
+
+            dr (torch.tensor): matrix of the derivative of the e-e distances
+                               Nbatch x Ndim x Nelec x Nelec
+
+        Returns:
+            torch.tensor : deriative of the scaled distance
+                          Nbatch x Ndim x Nelec x Nelec
+        """
+        return dr * torch.exp(-self.kappa * r)
+
+    def _get_second_der_scaled_distance(self, r, dr, d2r):
+        """computes the second derivative of the scaled distances
+
+        Args:
+            r (torch.tensor): unsqueezed matrix of the e-e distances
+                              Nbatch x 1 x Nelec x Nelec
+            dr (torch.tensor): matrix of the derivative of the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+            d2r (torch.tensor): matrix of the 2nd derivative of
+                                the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+
+        Returns:
+            torch.tensor : second deriative of the scaled distance
+                          Nbatch x Ndim x Nelec x Nelec
+        """
+        return (d2r - self.kappa * dr * dr) * torch.exp(-self.kappa*r)
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -59,7 +112,8 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
             torch.tensor: matrix of the jastrow kernels
                           Nbatch x Nelec x Nelec
         """
-        return self.static_weight * r / (1.0 + self.weight * r)
+        ur = self._get_scaled_distance(r)
+        return self.static_weight * ur / (1.0 + self.weight * ur)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -85,9 +139,13 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         """
 
         r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
-        a = self.static_weight * dr * denom
-        b = - self.static_weight * self.weight * r_ * dr * denom**2
+        u = self._get_scaled_distance(r_)
+        du = self._get_der_scaled_distance(r_, dr)
+
+        denom = 1. / (1.0 + self.weight * u)
+
+        a = self.static_weight * du * denom
+        b = - self.static_weight * self.weight * u * du * denom**2
 
         return (a + b)
 
@@ -104,25 +162,29 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nbatch x Ndim x Nelec x Nelec
         """
 
         r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
-        denom2 = denom**2
-        dr_square = dr*dr
+        u = self._get_scaled_distance(r_)
+        du = self._get_der_scaled_distance(r_, dr)
+        d2u = self._get_second_der_scaled_distance(r_, dr, d2r)
 
-        a = self.static_weight * d2r * denom
-        b = -2 * self.static_weight * self.weight * dr_square * denom2
-        c = - self.static_weight * self.weight * r_ * d2r * denom2
-        d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
+        denom = 1. / (1.0 + self.weight * u)
+        denom2 = denom**2
+        du_square = du*du
+
+        a = self.static_weight * d2u * denom
+        b = -2 * self.static_weight * self.weight * du_square * denom2
+        c = - self.static_weight * self.weight * u * d2u * denom2
+        d = 2 * self.static_weight * self.weight**2 * u * du_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 

@@ -48,6 +48,24 @@ class TwoBodyJastrowFactorBase(nn.Module):
             self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
                 range(self.nelec-1), 2))).to(self.device)
 
+    def get_static_weight(self):
+        """Get the matrix of static weights
+
+        Returns:
+            torch.tensor: static weight (0.5 (0.25)for parallel(anti) spins
+        """
+
+        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
+                         torch.ones(self.nup, self.ndown)), dim=1)
+
+        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
+                           torch.ones(self.ndown, self.ndown)), dim=1)
+
+        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
+        static_weight = static_weight.masked_select(self.mask_tri_up)
+
+        return static_weight
+
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
         .. math::
