@@ -70,9 +70,6 @@ class TestPadeJastrow(unittest.TestCase):
             self.nbatch, self.nelec, 3).sum(2)
         gradcheck(self.jastrow, self.pos)
 
-        print(dval.shape, dval_grad.shape)
-        print(dval, dval_grad)
-
         assert torch.allclose(dval, dval_grad)
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
 
