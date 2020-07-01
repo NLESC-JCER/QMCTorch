@@ -81,8 +81,8 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Nelec x Nelec
         """
 
-        ur = self._get_scaled_distance(r)
-        num, denom = self._compute_polynoms(ur)
+        u = self._get_scaled_distance(r)
+        num, denom = self._compute_polynoms(u)
         return num / denom
 
     def _get_jastrow_elements(self, r):
@@ -132,10 +132,13 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r).unsqueeze(1)
+        u = self._get_scaled_distance(r)
         num, denom = self._compute_polynoms(u)
 
-        du = self._get_der_scaled_distance(r_, dr)
+        num = num.unsqueeze(1)
+        denom = denom.unsqueeze(1)
+
+        du = self._get_der_scaled_distance(r, dr)
 
         der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
@@ -164,11 +167,13 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r).unsqueeze(1)
-        num, denom = self._compute_polynoms(u)
-
+        u = self._get_scaled_distance(r)
         du = self._get_der_scaled_distance(r, dr)
         d2u = self._get_second_der_scaled_distance(r, dr, d2r)
+
+        num, denom = self._compute_polynoms(u)
+        num = num.unsqueeze(1)
+        denom = denom.unsqueeze(1)
 
         der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
@@ -178,7 +183,7 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
         out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(
             denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
 
-        return out + self._get_der_jastrow_elements(u, du)**2
+        return out + self._get_der_jastrow_elements(r, dr)**2
 
     def _compute_polynoms(self, r):
         """Compute the num and denom polynomials.
@@ -220,7 +225,6 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
 
         der_num = self.static_weight * dr
         der_denom = self.weight_b[0] * dr
-
         r_ = r.unsqueeze(1)
         riord = r.unsqueeze(1)
 
