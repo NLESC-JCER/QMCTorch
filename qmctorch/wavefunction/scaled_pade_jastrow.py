@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 from .electron_distance import ElectronDistance
-from . scaled_two_body_jastrow_base import ScaledTwoBodyJastrowFactorBase
+from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 from ..utils import register_extra_attributes
 import itertools
 from time import time
 
 
-class ScaledPadeJastrow(ScaledTwoBodyJastrowFactorBase):
+class ScaledPadeJastrow(TwoBodyJastrowFactorBase):
 
     def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
@@ -60,7 +60,7 @@ class ScaledPadeJastrow(ScaledTwoBodyJastrowFactorBase):
             torch.tensor: matrix of the jastrow kernels
                           Nbatch x Nelec x Nelec
         """
-        ur = self._get_scaled_distance(r)
+        ur = self.edist.get_scaled_distance(r)
         return self.static_weight * ur / (1.0 + self.weight * ur)
 
     def _get_der_jastrow_elements(self, r, dr):
@@ -86,8 +86,8 @@ class ScaledPadeJastrow(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r).unsqueeze(1)
-        du = self._get_der_scaled_distance(r, dr)
+        u = self.edist.get_scaled_distance(r).unsqueeze(1)
+        du = self.edist.get_der_scaled_distance(r, dr)
 
         denom = 1. / (1.0 + self.weight * u)
 
@@ -119,9 +119,9 @@ class ScaledPadeJastrow(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r).unsqueeze(1)
-        du = self._get_der_scaled_distance(r, dr)
-        d2u = self._get_second_der_scaled_distance(r, dr, d2r)
+        u = self.edist.get_scaled_distance(r).unsqueeze(1)
+        du = self.edist.get_der_scaled_distance(r, dr)
+        d2u = self.edist.get_second_der_scaled_distance(r, dr, d2r)
 
         denom = 1. / (1.0 + self.weight * u)
         denom2 = denom**2

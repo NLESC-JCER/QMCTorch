@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 from .electron_distance import ElectronDistance
-from . scaled_two_body_jastrow_base import ScaledTwoBodyJastrowFactorBase
+from .pade_jastrow_polynomial import PadeJastrowPolynomial
 from ..utils import register_extra_attributes
 import itertools
 from time import time
 
 
-class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
+class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
 
     def __init__(self, nup, ndown, order, kappa=0.6, weight_a=None, weight_b=None, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
@@ -29,40 +29,12 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
         """
 
         super(ScaledPadeJastrowPolynomial,
-              self).__init__(nup, ndown, kappa, cuda)
+              self).__init__(nup, ndown, order, weight_a, weight_b, cuda)
         self.porder = order
-
+        self.edist.kappa = kappa
         self.set_variational_weights(weight_a, weight_b)
 
         self.static_weight = self.get_static_weight()
-
-    def set_variational_weights(self, weight_a, weight_b):
-        """Define the initial values of the variational weights.
-
-        Args:
-            weight_a (torch.tensor or None): Value of the weight on the numerator
-            weight_b (torch.tensor or None): Value of the weight on the numerator
-
-        """
-
-        # that can cause a nan if too low ...
-        w0 = 1E-5
-
-        if weight_a is not None:
-            assert weight_a.shape[0] == self.porder
-            self.weight_a = nn.Parameter(weight_a)
-        else:
-            self.weight_a = nn.Parameter(w0*torch.ones(self.porder))
-
-        if weight_b is not None:
-            assert weight_b.shape[0] == self.porder
-            self.weight_b = nn.Parameter(weight_b)
-        else:
-            self.weight_b = nn.Parameter(w0*torch.ones(self.porder))
-            self.weight_b.data[0] = 1.
-
-        register_extra_attributes(self, ['weight_a'])
-        register_extra_attributes(self, ['weight_b'])
 
     def _compute_kernel(self, r):
         """ Get the jastrow kernel.
@@ -81,7 +53,7 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r)
+        u = self.edist.get_scaled_distance(r)
         num, denom = self._compute_polynoms(u)
         return num / denom
 
@@ -132,13 +104,13 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r)
+        u = self.edist.get_scaled_distance(r)
         num, denom = self._compute_polynoms(u)
 
         num = num.unsqueeze(1)
         denom = denom.unsqueeze(1)
 
-        du = self._get_der_scaled_distance(r, dr)
+        du = self.edist.get_der_scaled_distance(r, dr)
 
         der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
@@ -167,9 +139,9 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self._get_scaled_distance(r)
-        du = self._get_der_scaled_distance(r, dr)
-        d2u = self._get_second_der_scaled_distance(r, dr, d2r)
+        u = self.edist.get_scaled_distance(r)
+        du = self.edist.get_der_scaled_distance(r, dr)
+        d2u = self.edist.get_second_der_scaled_distance(r, dr, d2r)
 
         num, denom = self._compute_polynoms(u)
         num = num.unsqueeze(1)
@@ -184,93 +156,3 @@ class ScaledPadeJastrowPolynomial(ScaledTwoBodyJastrowFactorBase):
             denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
 
         return out + self._get_der_jastrow_elements(r, dr)**2
-
-    def _compute_polynoms(self, r):
-        """Compute the num and denom polynomials.
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor, torch.tensor : p and q polynoms
-                                         size Nbatch x Nelec x Nelec
-        """
-
-        num = self.static_weight * r
-        denom = (1.0 + self.weight_b[0] * r)
-        riord = r.clone()
-
-        for iord in range(1, self.porder):
-            riord = riord * r
-            num += self.weight_a[iord] * riord
-            denom += self.weight_b[iord] * riord
-
-        return num, denom
-
-    def _compute_polynom_derivatives(self, r, dr):
-        """Computes the derivatives of the polynomials.
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-            dr (torch.tensor): matrix of the derivative of the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-
-        Returns:
-            torch.tensor, torch.tensor : p and q polynoms derivatives
-                                         size Nbatch x Ndim x Nelec x Nelec
-
-        """
-
-        der_num = self.static_weight * dr
-        der_denom = self.weight_b[0] * dr
-        r_ = r.unsqueeze(1)
-        riord = r.unsqueeze(1)
-
-        for iord in range(1, self.porder):
-
-            fact = (iord+1) * dr * riord
-            der_num += self.weight_a[iord] * fact
-            der_denom += self.weight_b[iord] * fact
-            riord = riord * r_
-
-        return der_num, der_denom
-
-    def _compute_polynom_second_derivative(self, r, dr, d2r):
-        """Computes the second derivative of the polynoms.
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-            dr (torch.tensor): matrix of the derivative of the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of
-                                the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-        Returns:
-            torch.tensor, torch.tensor : p and q polynoms derivatives
-                                         size Nbatch x Ndim x Nelec x Nelec
-
-        """
-
-        d2_num = self.static_weight * d2r
-        d2_denom = self.weight_b[0] * d2r
-
-        dr2 = dr*dr
-
-        r_ = r.unsqueeze(1)
-        rnm1 = r.unsqueeze(1)
-        rnm2 = 1.
-
-        for iord in range(1, self.porder):
-
-            n = iord+1
-            fact = n * (d2r * rnm1 + iord * dr2*rnm2)
-            d2_num += self.weight_a[iord] * fact
-            d2_denom += self.weight_b[iord] * fact
-
-            rnm2 = rnm1
-            rnm1 = rnm1 * r_
-
-        return d2_num, d2_denom
