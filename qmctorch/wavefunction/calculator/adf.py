@@ -39,6 +39,8 @@ class CalculatorADF(CalculatorBase):
 
         # extract the data to hdf5
         basis = self.get_basis_data(t21_path)
+
+        # remove adf data
         shutil.rmtree(plams_wd)
 
         return basis

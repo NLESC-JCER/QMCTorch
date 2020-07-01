@@ -1,42 +1,72 @@
 import torch
 from torch import nn
 from .electron_distance import ElectronDistance
-from .pade_jastrow import PadeJastrow
+from .pade_jastrow_polynomial import PadeJastrowPolynomial
 from ..utils import register_extra_attributes
 import itertools
 from time import time
 
 
-class ScaledPadeJastrow(PadeJastrow):
+class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
 
-    def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
+    def __init__(self, nup, ndown, order, kappa=0.6, weight_a=None, weight_b=None, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
             J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
-            B_{ij} = \\frac{w_0 r_{i,j}}{1 + w r_{i,j}}
+            B_{ij} =  \\frac{P_{ij}}{Q_{ij}}
+
+            P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
+            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 + ...
 
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            w (float, optional): Value of the variational parameter. Defaults to 1.
+            order (int): degree of the polynomial
             kappa (float, optional): value of the scale parameter. Defaults to 0.6.
+            weight_a (torch.tensor, optional): Value of the weight on the numerator
+            weight_b (torch.tensor, optional): Value of the weight on the numerator
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ScaledPadeJastrow, self).__init__(
-            nup, ndown, w, cuda)
-
-        self.weight = nn.Parameter(
-            torch.tensor([w]), requires_grad=True)
+        super(ScaledPadeJastrowPolynomial,
+              self).__init__(nup, ndown, order, weight_a, weight_b, cuda)
+        self.porder = order
         self.edist.kappa = kappa
+        self.set_variational_weights(weight_a, weight_b)
+
         self.static_weight = self.get_static_weight()
-        register_extra_attributes(self, ['weight'])
+
+    def _compute_kernel(self, r):
+        """ Get the jastrow kernel.
+        .. math::
+            B_{ij} = \\frac{P_{ij}}{Q_{ij}}
+
+            P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
+            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 + ...
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: matrix of the jastrow kernels
+                          Nbatch x Nelec x Nelec
+        """
+
+        u = self.edist.get_scaled_distance(r)
+        num, denom = self._compute_polynoms(u)
+        return num / denom
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
         .. math::
-            out_{i,j} = \exp{ \frac{b r_{i,j}}{1+b'r_{i,j}} }
+            out_{i,j} = \exp{ U(r_{ij}) }
+
+            U(r_{ij}) = \\frac{P_{ij}}{Q_{ij}}
+
+            P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
+            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 + ...
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -48,22 +78,6 @@ class ScaledPadeJastrow(PadeJastrow):
         """
         return torch.exp(self._compute_kernel(r))
 
-    def _compute_kernel(self, r):
-        """ Get the jastrow kernel.
-        .. math::
-            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix of the jastrow kernels
-                          Nbatch x Nelec x Nelec
-        """
-        ur = self.edist.get_scaled_distance(r)
-        return self.static_weight * ur / (1.0 + self.weight * ur)
-
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
@@ -72,9 +86,13 @@ class ScaledPadeJastrow(PadeJastrow):
 
             d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
 
-            out_{k,i,j} = A1 + A2
-            A1_{kij} = w0 \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})
-            A2_{kij} = - w0 w' r_{ij} \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})^2
+            out_{k,i,j} = \\frac{P'Q - PQ'}{Q^2}
+
+            P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
+            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 +
+
+            P'_{ij} = a_1 dr + a_2 2 r dr + a_r 3 dr r^2 + ....
+            Q'_{ij} = b_1 dr + b_2 2 r dr + b_r 3 dr r^2 + ....
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -87,15 +105,17 @@ class ScaledPadeJastrow(PadeJastrow):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self.edist.get_scaled_distance(r).unsqueeze(1)
+        u = self.edist.get_scaled_distance(r)
+        num, denom = self._compute_polynoms(u)
+
+        num = num.unsqueeze(1)
+        denom = denom.unsqueeze(1)
+
         du = self.edist.get_der_scaled_distance(r, dr)
 
-        denom = 1. / (1.0 + self.weight * u)
+        der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
-        a = self.static_weight * du * denom
-        b = - self.static_weight * self.weight * u * du * denom**2
-
-        return (a + b)
+        return (der_num * denom - num * der_denom)/(denom*denom)
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -120,19 +140,20 @@ class ScaledPadeJastrow(PadeJastrow):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self.edist.get_scaled_distance(r).unsqueeze(1)
+        u = self.edist.get_scaled_distance(r)
         du = self.edist.get_der_scaled_distance(r, dr)
         d2u = self.edist.get_second_der_scaled_distance(r, dr, d2r)
 
-        denom = 1. / (1.0 + self.weight * u)
-        denom2 = denom**2
-        du_square = du*du
+        num, denom = self._compute_polynoms(u)
+        num = num.unsqueeze(1)
+        denom = denom.unsqueeze(1)
 
-        a = self.static_weight * d2u * denom
-        b = -2 * self.static_weight * self.weight * du_square * denom2
-        c = - self.static_weight * self.weight * u * d2u * denom2
-        d = 2 * self.static_weight * self.weight**2 * u * du_square * denom**3
+        der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
-        e = self._get_der_jastrow_elements(r, dr)
+        d2_num, d2_denom = self._compute_polynom_second_derivative(
+            u, du, d2u)
 
-        return a + b + c + d + e**2
+        out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(
+            denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
+
+        return out + self._get_der_jastrow_elements(r, dr)**2

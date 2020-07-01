@@ -102,13 +102,17 @@ def norm_slater_cartesian(a, b, c, n, exp):
     from scipy.special import factorial2 as f2
 
     lvals = a + b + c + n + 1.
+
     lfact = torch.tensor([np.math.factorial(2 * i)
                           for i in lvals]).type(torch.get_default_dtype())
+
     prefact = 4 * np.pi * lfact / ((2 * exp)**(2 * lvals + 1))
+
     num = torch.tensor(f2(2 * a.astype('int') - 1) *
                        f2(2 * b.astype('int') - 1) *
                        f2(2 * c.astype('int') - 1)
                        ).type(torch.get_default_dtype())
+
     denom = torch.tensor(
         f2((2 * a + 2 * b + 2 * c + 1).astype('int')
            )).type(torch.get_default_dtype())

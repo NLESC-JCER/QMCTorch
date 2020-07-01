@@ -12,7 +12,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
         r"""Base class for two body jastrow of the form:
 
         .. math::
-            J = \prod_{i<j} \exp(B_{ij})
+            J = \prod_{i<j} \exp(B(r_{rij}))
 
         Args:
             nup (int): number of spin up electons

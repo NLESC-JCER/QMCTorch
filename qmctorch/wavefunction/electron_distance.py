@@ -4,12 +4,13 @@ from torch import nn
 
 class ElectronDistance(nn.Module):
 
-    def __init__(self, nelec, ndim):
+    def __init__(self, nelec, ndim, scale=0.6):
         """Computes the electron-electron distances
 
         Args:
             nelec (int): number of electrons
-            ndim (int): number of spatial dimensions 
+            ndim (int): number of spatial dimensions
+            scale(float, optional): value of the scale factor, Defaults to 0.6
 
         Examples::
             >>> edist = ElectronDistance(2,3)
@@ -22,6 +23,7 @@ class ElectronDistance(nn.Module):
         super(ElectronDistance, self).__init__()
         self.nelec = nelec
         self.ndim = ndim
+        self.kappa = scale
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
@@ -36,9 +38,9 @@ class ElectronDistance(nn.Module):
         When required, the derivative is computed wrt to the first electron i.e.
 
         .. math::
-            \\frac{dr_{ij}}{dx_i} 
+            \\frac{dr_{ij}}{dx_i}
 
-        which is different from :    
+        which is different from :
 
         .. math::
             \\frac{d r_{ij}}{dx_j}
@@ -132,3 +134,52 @@ class ElectronDistance(nn.Module):
             nbatch, self.nelec, self.nelec, self.ndim)
         dist = torch.pow(in1 - in2, 2).sum(3)
         return dist
+
+    def get_scaled_distance(self, r):
+        """compute the scaled distance 
+        .. math::
+            u = \frac{1+e^{-kr}}{k}      
+
+        Args:
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: values of the scaled distance
+                          Nbatch, Nelec, Nelec
+        """
+        return (1. - torch.exp(-self.kappa * r))/self.kappa
+
+    def get_der_scaled_distance(self, r, dr):
+        """Returns the derivative of the scaled distances
+
+        Args:
+            r (torch.tensor): unsqueezed matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+
+            dr (torch.tensor): matrix of the derivative of the e-e distances
+                               Nbatch x Ndim x Nelec x Nelec
+
+        Returns:
+            torch.tensor : deriative of the scaled distance
+                          Nbatch x Ndim x Nelec x Nelec
+        """
+        return dr * torch.exp(-self.kappa * r.unsqueeze(1))
+
+    def get_second_der_scaled_distance(self, r, dr, d2r):
+        """computes the second derivative of the scaled distances
+
+        Args:
+            r (torch.tensor): unsqueezed matrix of the e-e distances
+                              Nbatch x Nelec x Nelec
+            dr (torch.tensor): matrix of the derivative of the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+            d2r (torch.tensor): matrix of the 2nd derivative of
+                                the e-e distances
+                              Nbatch x Ndim x Nelec x Nelec
+
+        Returns:
+            torch.tensor : second deriative of the scaled distance
+                          Nbatch x Ndim x Nelec x Nelec
+        """
+        return (d2r - self.kappa * dr * dr) * torch.exp(-self.kappa*r.unsqueeze(1))
