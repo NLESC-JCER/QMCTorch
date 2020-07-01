@@ -22,7 +22,8 @@ class ScaledTwoBodyJastrowFactorBase(TwoBodyJastrowFactorBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ScaledPadeJastrow, self).__init__(nup, ndown, cuda)
+        super(ScaledTwoBodyJastrowFactorBase,
+              self).__init__(nup, ndown, cuda)
         self.kappa = kappa
         register_extra_attributes(self, ['kappa'])
 
