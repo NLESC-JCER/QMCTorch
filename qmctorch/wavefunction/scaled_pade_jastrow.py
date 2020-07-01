@@ -19,7 +19,8 @@ class ScaledPadeJastrow(PadeJastrow):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            w (float, optional): Value of the variational parameter. Defaults to 1..
+            w (float, optional): Value of the variational parameter. Defaults to 1.
+            kappa (float, optional): value of the scale parameter. Defaults to 0.6.
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 

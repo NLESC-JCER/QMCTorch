@@ -41,7 +41,7 @@ class CalculatorADF(CalculatorBase):
         basis = self.get_basis_data(t21_path)
 
         # remove adf data
-        # shutil.rmtree(plams_wd)
+        shutil.rmtree(plams_wd)
 
         return basis
 
@@ -163,7 +163,7 @@ class CalculatorADF(CalculatorBase):
         # Molecular orbitals
         mos = np.array(kf.read('A', 'Eigen-Bas_A'))
         mos = mos.reshape(nmo, nao).T
-        # mos = self.normalize_columns(mos)
+        mos = self.normalize_columns(mos)
         basis.mos = mos
 
         return basis

@@ -23,6 +23,7 @@ class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
             order (int): degree of the polynomial
+            kappa (float, optional): value of the scale parameter. Defaults to 0.6.
             weight_a (torch.tensor, optional): Value of the weight on the numerator
             weight_b (torch.tensor, optional): Value of the weight on the numerator
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.

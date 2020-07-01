@@ -10,6 +10,7 @@ class ElectronDistance(nn.Module):
         Args:
             nelec (int): number of electrons
             ndim (int): number of spatial dimensions
+            scale(float, optional): value of the scale factor, Defaults to 0.6
 
         Examples::
             >>> edist = ElectronDistance(2,3)

@@ -8,7 +8,7 @@ from time import time
 
 class TwoBodyJastrowFactorBase(nn.Module):
 
-    def __init__(self, nup, ndown, kappa=0.6, cuda=False):
+    def __init__(self, nup, ndown, cuda=False):
         r"""Base class for two body jastrow of the form:
 
         .. math::
@@ -34,8 +34,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
-        self.edist = ElectronDistance(
-            self.nelec, self.ndim, scale=kappa)
+        self.edist = ElectronDistance(self.nelec, self.ndim)
 
         # choose the partial derivative method
         method = 'col_perm'
