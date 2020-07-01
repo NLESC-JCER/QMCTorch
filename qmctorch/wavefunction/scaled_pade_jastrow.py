@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 from .electron_distance import ElectronDistance
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from .pade_jastrow import PadeJastrow
 from ..utils import register_extra_attributes
 import itertools
 from time import time
 
 
-class ScaledPadeJastrow(TwoBodyJastrowFactorBase):
+class ScaledPadeJastrow(PadeJastrow):
 
     def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
@@ -24,11 +24,11 @@ class ScaledPadeJastrow(TwoBodyJastrowFactorBase):
         """
 
         super(ScaledPadeJastrow, self).__init__(
-            nup, ndown, kappa, cuda)
+            nup, ndown, w, cuda)
 
         self.weight = nn.Parameter(
             torch.tensor([w]), requires_grad=True)
-
+        self.edist.kappa = kappa
         self.static_weight = self.get_static_weight()
         register_extra_attributes(self, ['weight'])
 
