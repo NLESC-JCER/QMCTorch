@@ -16,7 +16,8 @@ class Molecule(object):
 
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
-                 name=None, load=None, rank=0):
+                 name=None, load=None, save_scf_file=False,
+                 rank=0):
         """Create a molecule in QMCTorch
 
         Args:
@@ -27,6 +28,7 @@ class Molecule(object):
             unit (str, optional): units of the coordinates. Defaults to 'bohr'.
             name (str or None, optional): name of the molecule. Defaults to None.
             load (str or None, optional): path to a hdf5 file to load. Defaults to None.
+            save_scf_file (bool, optional): save the scf file (when applicable) Defaults to False
             rank (int, optional): Rank of the process. Defaults to 0.
 
         Examples:
@@ -51,6 +53,7 @@ class Molecule(object):
         self.basis = SimpleNamespace()
         self.calculator_name = calculator
         self.basis_name = basis
+        self.save_scf_file = save_scf_file
 
         log.info('')
         log.info(' SCF Calculation')
@@ -81,10 +84,16 @@ class Molecule(object):
                 calc = {'adf': CalculatorADF,
                         'pyscf': CalculatorPySCF}[calculator]
 
-                self.calculator = calc(
-                    self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+                self.calculator = calc(self.atoms,
+                                       self.atom_coords,
+                                       basis,
+                                       scf,
+                                       self.unit,
+                                       self.name,
+                                       self.save_scf_file)
 
                 self.basis = self.calculator.run()
+                self.save_scf_file = self.calculator.savefile
 
                 if rank == 0:
                     dump_to_hdf5(self, self.hdf5file,
@@ -251,6 +260,7 @@ class Molecule(object):
 
         self.basis.TotalEnergy = basis_grp['TotalEnergy'][()]
         self.basis.mos = basis_grp['mos'][()]
+        self.basis.npart = basis_grp['npart'][()]
 
         if self.basis.harmonics_type == 'cart':
             self.basis.bas_kr = basis_grp['bas_kr'][()]
