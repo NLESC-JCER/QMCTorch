@@ -15,10 +15,10 @@ except ModuleNotFoundError:
 
 class CalculatorADF(CalculatorBase):
 
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname):
+    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
 
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'adf')
+            self, atoms, atom_coords, basis, scf, units, molname, 'adf', savefile)
 
     def run(self):
         """Run the calculation using ADF."""
@@ -41,7 +41,9 @@ class CalculatorADF(CalculatorBase):
         basis = self.get_basis_data(t21_path)
 
         # remove adf data
-        shutil.copyfile(t21_path, t21_name)
+        if self.savefile:
+            shutil.copyfile(t21_path, t21_name)
+            self.savefile = t21_name
         shutil.rmtree(plams_wd)
 
         return basis
@@ -165,24 +167,20 @@ class CalculatorADF(CalculatorBase):
         mos = np.array(kf.read('A', 'Eigen-Bas_A'))
         mos = mos.reshape(nmo, nao).T
 
-        # other quantities from the tape21
-        # sfo = np.array(
-        #     kf.read('A', 'SFO')).reshape(nmo, nao).T
-        # eigcore = np.array(
-        #     kf.read('A', 'Eig-CoreSFO_A')).reshape(nmo, nmo)
-        # mos = sfo @ eigcore
-
         # normalize the MO
         # this is not needed !!!
         # mos = self.normalize_columns(mos)
 
         # orbital that take part in the rep
-        npart = np.array(kf.read('A', 'npart'))-1
-        # print(npart)
+        basis.npart = np.array(kf.read('A', 'npart'))-1
+
+        # create permutation matrix
+        perm_mat = np.zeros((basis.nao, basis.nao))
+        for i in range(basis.nao):
+            perm_mat[basis.npart[i], i] = 1.
 
         # reorder the basis function
-        basis.mos = mos[npart, :]
-        # basis.mos = mos
+        basis.mos = perm_mat @ mos
 
         return basis
 
