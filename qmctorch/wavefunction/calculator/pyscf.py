@@ -10,10 +10,10 @@ from .calculator_base import CalculatorBase
 
 class CalculatorPySCF(CalculatorBase):
 
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname):
+    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
 
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'pyscf')
+            self, atoms, atom_coords, basis, scf, units, molname, 'pyscf', savefile)
 
     def run(self):
         """Run the scf calculation using PySCF."""
@@ -29,12 +29,13 @@ class CalculatorPySCF(CalculatorBase):
             cart=True)
         rhf = scf.RHF(mol).run()
 
-        # self.save_data(mol, rhf)
+        if savefile:
+            save_file_name = molname + '_pyscf.chkfile'
+            shutil.copyfile(rhf.chkfile, save_file_name)
+            self.savefile = save_file_name
+
         basis = self.get_basis_data(mol, rhf)
         return basis
-
-        # print total energy
-        # self.print_total_energy()
 
     def get_basis_data(self, mol, rhf):
         """Save the data to HDF5
@@ -147,6 +148,9 @@ class CalculatorPySCF(CalculatorBase):
         basis.mos = mol.cart2sph_coeff() @ rhf.mo_coeff
         basis.mos = self.normalize_columns(basis.mos)
 
+        # reordering of that aos (not needed here)
+        basis.npart = np.arange(basis.nao)
+
         # atom coords
         basis.atom_coords_internal = self.atom_coords
 
@@ -176,15 +180,3 @@ class CalculatorPySCF(CalculatorBase):
         nlabel = [l[2][1] for l in unique_labels]
         n = [label2int[nl] for nl in nlabel]
         return n
-
-    # @staticmethod
-    # def get_bas_n_(mol):
-
-    #     label2int = {'s': 1, 'p': 2, 'd': 3}
-    #     labels = [l[:3] for l in mol.cart_labels(fmt=False)]
-    #     unique_labels = []
-    #     for l in labels:
-    #         if l not in unique_labels:
-    #             unique_labels.append(l)
-    #     n = [int(l[2][0]) for l in unique_labels]
-    #     return n
