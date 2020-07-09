@@ -82,7 +82,7 @@ class AtomicOrbitals(nn.Module):
         self.radial_type = mol.basis.radial_type
 
         # get the normalisation constants
-        if hasattr(mol.basis, 'bas_norm') and False:
+        if hasattr(mol.basis, 'bas_norm') and True:
             self.norm_cst = torch.tensor(
                 mol.basis.bas_norm).type(dtype)
         else:
@@ -208,7 +208,6 @@ class AtomicOrbitals(nn.Module):
         Returns:
             torch.tensor: values of the AOs (with contraction)
         """
-
         ao = self.norm_cst * R * Y
         if self.contract:
             ao = self._contract(ao)
@@ -354,6 +353,7 @@ class AtomicOrbitals(nn.Module):
         Returns:
             torch.tensor: values of the laplacian of the AOs (with contraction)
         """
+
         d2ao = self.norm_cst * \
             (d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y)
         if self.contract:

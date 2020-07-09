@@ -69,6 +69,10 @@ class Orbital(WaveFunction):
         if self.cuda:
             self.mo_scf.to(self.device)
 
+        # print(self.mo_scf.weight[0, 0])
+        # for i in range(self.mo_scf.weight.shape[0]):
+        #     print(self.mo_scf.weight.data[i, :].norm())
+
         # define the mo mixing layer
         self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
         self.mo.weight = nn.Parameter(
@@ -118,7 +122,7 @@ class Orbital(WaveFunction):
         log.info('  Jastrow factor      : {0}', self.use_jastrow)
         if self.use_jastrow:
             log.info('  Jastrow type        : {0}', self.jastrow_type)
-        log.info('  Highest MO included : {0}', self.highest_occ_mo)
+        log.info('  Highest MO included : {0}', self.nmo_opt)
         log.info('  Configurations      : {0}', self.configs_method)
         log.info('  Number of confs     : {0}', self.nci)
 

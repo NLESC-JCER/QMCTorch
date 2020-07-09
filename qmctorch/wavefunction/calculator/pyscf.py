@@ -87,6 +87,7 @@ class CalculatorPySCF(CalculatorBase):
 
             # get qn per bas
             bas_n += [n] * nctr * mult
+            # bas_n += [0] * nctr * mult
             bas_l += [lval] * nctr * mult
 
             # coeffs/exp
@@ -114,7 +115,10 @@ class CalculatorPySCF(CalculatorBase):
         for expnt, lval in zip(bas_exp, bas_l):
             bas_norm.append(mol.gto_norm(lval, expnt))
 
-        bas_kr = np.array(bas_n) - np.array(bas_l) - 1
+        # bas_kr = np.array(bas_n) - np.array(bas_l) - 1
+        # the cartesian gto are all :
+        #   x^a y^b z^c exp(-zeta r)
+        bas_kr = 0 * (np.array(bas_n) - np.array(bas_l) - 1)
 
         basis.nshells = nshells
         basis.index_ctr = index_ctr
@@ -171,3 +175,15 @@ class CalculatorPySCF(CalculatorBase):
         nlabel = [l[2][1] for l in unique_labels]
         n = [label2int[nl] for nl in nlabel]
         return n
+
+    # @staticmethod
+    # def get_bas_n_(mol):
+
+    #     label2int = {'s': 1, 'p': 2, 'd': 3}
+    #     labels = [l[:3] for l in mol.cart_labels(fmt=False)]
+    #     unique_labels = []
+    #     for l in labels:
+    #         if l not in unique_labels:
+    #             unique_labels.append(l)
+    #     n = [int(l[2][0]) for l in unique_labels]
+    #     return n

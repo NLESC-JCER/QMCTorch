@@ -41,6 +41,7 @@ class CalculatorADF(CalculatorBase):
         basis = self.get_basis_data(t21_path)
 
         # remove adf data
+        shutil.copyfile(t21_path, t21_name)
         shutil.rmtree(plams_wd)
 
         return basis
@@ -115,14 +116,14 @@ class CalculatorADF(CalculatorBase):
                             for i in range(1, len(nbptr))])
 
         # kx/ky/kz/kr exponent per atom type
-        bas_kx = np.array(kf.read('Basis', 'kx'))
-        bas_ky = np.array(kf.read('Basis', 'ky'))
-        bas_kz = np.array(kf.read('Basis', 'kz'))
-        bas_kr = np.array(kf.read('Basis', 'kr'))
+        bas_kx = self.read_array(kf, 'Basis', 'kx')
+        bas_ky = self.read_array(kf, 'Basis', 'ky')
+        bas_kz = self.read_array(kf, 'Basis', 'kz')
+        bas_kr = self.read_array(kf, 'Basis', 'kr')
 
         # bas exp/coeff/norm per atom type
-        bas_exp = np.array(kf.read('Basis', 'alf'))
-        bas_norm = np.array(kf.read('Basis', 'bnorm'))
+        bas_exp = self.read_array(kf, 'Basis', 'alf')
+        bas_norm = self.read_array(kf, 'Basis', 'bnorm')
 
         basis_nshells = []
         basis_bas_kx, basis_bas_ky, basis_bas_kz = [], [], []
@@ -163,7 +164,41 @@ class CalculatorADF(CalculatorBase):
         # Molecular orbitals
         mos = np.array(kf.read('A', 'Eigen-Bas_A'))
         mos = mos.reshape(nmo, nao).T
-        mos = self.normalize_columns(mos)
-        basis.mos = mos
+
+        # other quantities from the tape21
+        # sfo = np.array(
+        #     kf.read('A', 'SFO')).reshape(nmo, nao).T
+        # eigcore = np.array(
+        #     kf.read('A', 'Eig-CoreSFO_A')).reshape(nmo, nmo)
+        # mos = sfo @ eigcore
+
+        # normalize the MO
+        # this is not needed !!!
+        # mos = self.normalize_columns(mos)
+
+        # orbital that take part in the rep
+        npart = np.array(kf.read('A', 'npart'))-1
+        # print(npart)
+
+        # reorder the basis function
+        basis.mos = mos[npart, :]
+        # basis.mos = mos
 
         return basis
+
+    @staticmethod
+    def read_array(kf, section, name):
+        """read a data from the kf file
+
+        Args:
+            kf (file handle): kf file
+            section (str): name of the section
+            name (str): name of the property
+
+        Returns:
+            np.data: data
+        """
+        data = np.array(kf.read(section, name))
+        if data.shape == ():
+            data = np.array([data])
+        return data
