@@ -69,10 +69,6 @@ class Orbital(WaveFunction):
         if self.cuda:
             self.mo_scf.to(self.device)
 
-        # print(self.mo_scf.weight[0, 0])
-        # for i in range(self.mo_scf.weight.shape[0]):
-        #     print(self.mo_scf.weight.data[i, :].norm())
-
         # define the mo mixing layer
         self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
         self.mo.weight = nn.Parameter(

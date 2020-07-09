@@ -25,7 +25,8 @@ class CalculatorPySCF(CalculatorBase):
         mol = gto.M(
             atom=atom_str,
             basis=self.basis_name,
-            unit=self.units)
+            unit=self.units,
+            cart=True)
         rhf = scf.RHF(mol).run()
 
         # self.save_data(mol, rhf)

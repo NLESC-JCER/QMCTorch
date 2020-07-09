@@ -82,7 +82,7 @@ class AtomicOrbitals(nn.Module):
         self.radial_type = mol.basis.radial_type
 
         # get the normalisation constants
-        if hasattr(mol.basis, 'bas_norm') and True:
+        if hasattr(mol.basis, 'bas_norm') and False:
             self.norm_cst = torch.tensor(
                 mol.basis.bas_norm).type(dtype)
         else:
