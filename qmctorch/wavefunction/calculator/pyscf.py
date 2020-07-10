@@ -51,21 +51,19 @@ class CalculatorPySCF(CalculatorBase):
 
         basis = SimpleNamespace()
         basis.TotalEnergy = rhf.e_tot
-        basis.radial_type = 'gto'
+        basis.radial_type = 'gto_pure'
         basis.harmonics_type = 'cart'
 
-        # number of unique ao (e.g. px,py,px -> p)
-        # h5['nbas'] = mol.nbas
-
-        # total number of ao
-        # wrong if there are d orbitals as counts only 5 d orbs (sph)
-        # h5['nao'] = mol.nao
-
+        # number of AO / MO
+        # can be different if d or f orbs are present
+        # due to cart 2 sph harmonics
         basis.nao = len(mol.cart_labels())
         basis.nmo = rhf.mo_energy.shape[0]
 
+        # nshells is the number of bas per atoms
         nshells = [0] * mol.natm
 
+        # init bas properties
         bas_coeff, bas_exp = [], []
         index_ctr = []
         bas_n, bas_l = [], []
@@ -89,7 +87,6 @@ class CalculatorPySCF(CalculatorBase):
 
             # get qn per bas
             bas_n += [n] * nctr * mult
-            # bas_n += [0] * nctr * mult
             bas_l += [lval] * nctr * mult
 
             # coeffs/exp
@@ -117,11 +114,6 @@ class CalculatorPySCF(CalculatorBase):
         for expnt, lval in zip(bas_exp, bas_l):
             bas_norm.append(mol.gto_norm(lval, expnt))
 
-        # bas_kr = np.array(bas_n) - np.array(bas_l) - 1
-        # the cartesian gto are all :
-        #   x^a y^b z^c exp(-zeta r)
-        bas_kr = 0 * (np.array(bas_n) - np.array(bas_l) - 1)
-
         basis.nshells = nshells
         basis.index_ctr = index_ctr
         intervals = np.concatenate(([0], np.cumsum(nshells)))
@@ -138,7 +130,11 @@ class CalculatorPySCF(CalculatorBase):
 
         basis.bas_n = bas_n
         basis.bas_l = bas_l
-        basis.bas_kr = np.array(bas_kr)
+
+        # the cartesian gto are all :
+        #   x^a y^b z^c exp(-zeta r)
+        # i.e. there is no r dependency
+        basis.bas_kr = np.zeros_like(basis.bas_exp)
 
         basis.bas_kx = np.array(bas_kx)
         basis.bas_ky = np.array(bas_ky)

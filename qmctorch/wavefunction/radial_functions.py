@@ -6,7 +6,7 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """Compute the radial part of STOs (or its derivative).
 
     .. math:
-        sto = r^n exp(-\alpha r)
+        sto = r^n exp(-\alpha |r|)
 
     Args:
         R (torch.tensor): distance between each electron and each atom
@@ -77,20 +77,9 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         nabla_er = -(bexp_er).unsqueeze(-1) * \
             xyz / R.unsqueeze(-1)
 
-    # prepare the output/kernel
-    output = []
-    fns = [_kernel,
-           _first_derivative_kernel,
-           _second_derivative_kernel]
-
-    # compute the requested functions
-    for d in derivative:
-        output.append(fns[d]())
-
-    if len(derivative) == 1:
-        return output[0]
-    else:
-        return output
+    return return_required_data(derivative, _kernel,
+                                _first_derivative_kernel,
+                                _second_derivative_kernel)
 
 
 def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
@@ -163,23 +152,12 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
         nabla_rn = (nRnm2).unsqueeze(-1) * xyz
         nabla_er = -2 * (bexp_er).unsqueeze(-1) * xyz
 
-    # prepare the output/function calls
-    output = []
-    fns = [_kernel,
-           _first_derivative_kernel,
-           _second_derivative_kernel]
-
-    # compute the requested derivatives
-    for d in derivative:
-        output.append(fns[d]())
-
-    if len(derivative) == 1:
-        return output[0]
-    else:
-        return output
+    return return_required_data(derivative, _kernel,
+                                _first_derivative_kernel,
+                                _second_derivative_kernel)
 
 
-def radial_gaussian_no_power(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
+def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
     """Compute the radial part of GTOs (or its derivative).
 
     .. math:
@@ -232,11 +210,11 @@ def radial_gaussian_no_power(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobi
                                 _second_derivative_kernel)
 
 
-def radial_slater_no_power(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
+def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """Compute the radial part of STOs (or its derivative).
 
     .. math:
-        sto = exp(-\alpha r)
+        sto = exp(-\alpha |r|)
 
     Args:
         R (torch.tensor): distance between each electron and each atom

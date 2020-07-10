@@ -1,6 +1,7 @@
 import torch
 from torch import nn
-from .radial_functions import radial_gaussian, radial_slater
+from .radial_functions import (radial_gaussian, radial_slater,
+                               radial_slater_pure, radial_gaussian_pure)
 from .norm_orbital import atomic_orbital_norm
 from .spherical_harmonics import Harmonics
 from ..utils import register_extra_attributes
@@ -77,7 +78,9 @@ class AtomicOrbitals(nn.Module):
 
         # select the radial apart
         radial_dict = {'sto': radial_slater,
-                       'gto': radial_gaussian}
+                       'gto': radial_gaussian,
+                       'sto_pure': radial_slater_pure,
+                       'gto_pure': radial_gaussian_pure}
         self.radial = radial_dict[mol.basis.radial_type]
         self.radial_type = mol.basis.radial_type
 
