@@ -78,20 +78,17 @@ class Molecule(object):
             self.hdf5file = '_'.join(
                 [self.name, calculator, basis]) + '.hdf5'
 
+            # force a redo of the sc calculation
+            if os.path.isfile(self.hdf5file) and redo_scf:
+                log.info('  Removing {file} and redo SCF calculations',
+                         file=self.hdf5file)
+                os.remove(self.hdf5file)
+
             # deals with existing files
             if os.path.isfile(self.hdf5file):
-
-                # force a redo of the sc calculation
-                if redo_scf:
-                    log.info('  Removing {file} and redo SCF calculations',
-                             file=self.hdf5file)
-                    os.remove(self.hdf5file)
-
-                # reuse previously done calculation
-                else:
-                    log.info('  Reusing scf results from {file}',
-                             file=self.hdf5file)
-                    self.basis = self._load_basis()
+                log.info('  Reusing scf results from {file}',
+                         file=self.hdf5file)
+                self.basis = self._load_basis()
 
             # perform the scf calculation
             else:
