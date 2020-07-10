@@ -36,8 +36,8 @@ class TestAOvaluesPyscf(unittest.TestCase):
 
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
-        self.iorb = 0
-        self.x = self.pos[:, idim].detach().numpy()
+
+        self.x = self.pos[:, 0].detach().numpy()
 
     def test_ao(self):
 
