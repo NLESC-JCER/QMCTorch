@@ -260,7 +260,6 @@ class Molecule(object):
 
         self.basis.TotalEnergy = basis_grp['TotalEnergy'][()]
         self.basis.mos = basis_grp['mos'][()]
-        self.basis.npart = basis_grp['npart'][()]
 
         if self.basis.harmonics_type == 'cart':
             self.basis.bas_kr = basis_grp['bas_kr'][()]

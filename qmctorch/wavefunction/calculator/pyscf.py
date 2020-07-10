@@ -26,7 +26,7 @@ class CalculatorPySCF(CalculatorBase):
             atom=atom_str,
             basis=self.basis_name,
             unit=self.units,
-            cart=True)
+            cart=False)
         rhf = scf.RHF(mol).run()
 
         if self.savefile:
@@ -147,9 +147,6 @@ class CalculatorPySCF(CalculatorBase):
         # molecular orbitals
         basis.mos = mol.cart2sph_coeff() @ rhf.mo_coeff
         basis.mos = self.normalize_columns(basis.mos)
-
-        # reordering of that aos (not needed here)
-        basis.npart = np.arange(basis.nao)
 
         # atom coords
         basis.atom_coords_internal = self.atom_coords

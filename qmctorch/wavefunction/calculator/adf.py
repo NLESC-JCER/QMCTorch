@@ -172,12 +172,12 @@ class CalculatorADF(CalculatorBase):
         # mos = self.normalize_columns(mos)
 
         # orbital that take part in the rep
-        basis.npart = np.array(kf.read('A', 'npart'))-1
+        npart = np.array(kf.read('A', 'npart'))-1
 
         # create permutation matrix
         perm_mat = np.zeros((basis.nao, basis.nao))
         for i in range(basis.nao):
-            perm_mat[basis.npart[i], i] = 1.
+            perm_mat[npart[i], i] = 1.
 
         # reorder the basis function
         basis.mos = perm_mat @ mos
