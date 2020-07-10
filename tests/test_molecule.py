@@ -9,7 +9,7 @@ class TestMolecule(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 0; H 0 0 1.',
+            atom='H 0. 0. 0.; H 0. 0. 1.',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g')
