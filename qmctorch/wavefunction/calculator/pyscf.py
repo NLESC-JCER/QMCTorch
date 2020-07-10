@@ -29,7 +29,7 @@ class CalculatorPySCF(CalculatorBase):
             cart=True)
         rhf = scf.RHF(mol).run()
 
-        if savefile:
+        if self.savefile:
             save_file_name = molname + '_pyscf.chkfile'
             shutil.copyfile(rhf.chkfile, save_file_name)
             self.savefile = save_file_name
