@@ -1,5 +1,10 @@
 import torch
 from torch import nn
+from copy import deepcopy
+
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import numpy as np
 
 from .atomic_orbitals import AtomicOrbitals
 from .slater_pooling import SlaterPooling
@@ -41,7 +46,7 @@ class Orbital(WaveFunction):
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
 
         # check for cuda
-        if not torch.cuda.is_available and self.wf.cuda:
+        if not torch.cuda.is_available and self.cuda:
             raise ValueError('Cuda not available, use cuda=False')
 
         # number of atoms
@@ -345,3 +350,65 @@ class Orbital(WaveFunction):
                                       :].detach().numpy().tolist()
             d.append((at, xyz))
         return d
+
+    def gto2sto(self):
+        """Fits the AO GTO to AO STO."""
+
+        assert(self.ao.radial_type == 'gto')
+        assert(self.ao.harmonics_type == 'cart')
+
+        def sto(x, norm, alpha):
+            return norm * np.exp(-alpha * np.abs(x))
+
+        nao = self.mol.basis.nao
+
+        new_mol = deepcopy(self.mol)
+        basis = deepcopy(self.mol.basis)
+
+        basis.radial_type = 'sto'
+        basis.nshells = self.ao.nao_per_atom.numpy()
+
+        basis.index_ctr = np.arange(nao)
+        basis.bas_coeffs = np.ones(nao)
+        basis.bas_exp = np.zeros(nao)
+        basis.bas_norm = np.zeros(nao)
+        basis.bas_kr = np.zeros(nao)
+        basis.bas_kx = np.zeros(nao)
+        basis.bas_ky = np.zeros(nao)
+        basis.bas_kz = np.zeros(nao)
+
+        x = torch.linspace(-5, 5, 501)
+
+        pos = x.reshape(-1, 1).repeat(1, self.ao.nbas)
+        gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
+        ao = self.ao._contract(gto.unsqueeze(1))[
+            :, 0, :].detach().numpy()
+
+        for iorb in range(self.ao.norb):
+
+            xdata = x.numpy()
+            ydata = ao[:, iorb]
+            popt, pcov = curve_fit(sto, xdata, ydata)
+
+            basis.bas_norm[iorb] = popt[0]
+            basis.bas_exp[iorb] = popt[1]
+
+            basis.bas_kx[iorb] = self.ao.harmonics.bas_kx[self.ao.index_ctr == iorb].unique(
+            ).item()
+            basis.bas_ky[iorb] = self.ao.harmonics.bas_ky[self.ao.index_ctr == iorb].unique(
+            ).item()
+            basis.bas_kz[iorb] = self.ao.harmonics.bas_kz[self.ao.index_ctr == iorb].unique(
+            ).item()
+
+            # plt.plot(xdata, ydata)
+            # plt.plot(xdata, sto(xdata, *popt))
+            # plt.show()
+
+        new_mol.basis = basis
+
+        return Orbital(new_mol, configs=self.configs_method,
+                       kinetic=self.kinetic_method,
+                       use_jastrow=self.use_jastrow,
+                       jastrow_type=self.jastrow_type,
+                       cuda=self.cuda,
+                       include_all_mo=self.include_all_mo)
