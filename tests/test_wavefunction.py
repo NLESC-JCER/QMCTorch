@@ -21,7 +21,8 @@ class TestWaveFunction(unittest.TestCase):
             atom='H 0 0 0; H 0 0 1.',
             unit='bohr',
             calculator='pyscf',
-            basis='sto-3g')
+            basis='sto-3g',
+            redo_scf=True)
 
         self.wf = Orbital(mol, kinetic='auto', configs='cas(2,2)')
         self.pos = torch.tensor(np.random.rand(10, 6))
