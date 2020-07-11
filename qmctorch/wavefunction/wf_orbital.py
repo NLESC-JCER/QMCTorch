@@ -390,10 +390,10 @@ class Orbital(WaveFunction):
         x = torch.linspace(-5, 5, 501)
 
         # compute the values of the current AOs using GTO BAS
-        pos = x.reshape(-1, 1).repeat(1, self.ao.nbas)
+        pos = x.reshape(-1, 1).repeat(1, self.ao.nbas).to(self.device)
         gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
         ao = self.ao._contract(gto.unsqueeze(1))[
-            :, 0, :].detach().numpy()
+            :, 0, :].detach().cpu().numpy()
 
         # loop over AOs
         for iorb in range(self.ao.norb):
