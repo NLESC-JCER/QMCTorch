@@ -392,7 +392,8 @@ class Orbital(WaveFunction):
         # compute the values of the current AOs using GTO BAS
         pos = x.reshape(-1, 1).repeat(1, self.ao.nbas).to(self.device)
         gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
-        ao = self.ao._contract(gto.unsqueeze(1))[
+        gto = gto.unsqueeze(1).repeat(1, self.nelec, 1)
+        ao = self.ao._contract(gto)[
             :, 0, :].detach().cpu().numpy()
 
         # loop over AOs
