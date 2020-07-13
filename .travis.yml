@@ -15,11 +15,13 @@ before_install:
 
   # dependencies
   - conda install cython numpy
-  #- conda install pytorch torchvision cpuonly -c pytorch-nightly -c defaults -c conda-forge
   - conda install pytorch torchvision cpuonly -c pytorch
 
   # codacy coverage
   - pip install -q coverage codacy-coverage coveralls
+
+  # mpi for mpi4py and horovod
+  - sudo apt-get install libopenmpi-dev openmpi-bin
 
 # command to install dependencies
 install:

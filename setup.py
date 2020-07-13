@@ -29,6 +29,7 @@ setup(
     license="Apache Software License 2.0",
     zip_safe=False,
     keywords='qmctorch',
+    scripts=['bin/qmctorch'],
     classifiers=[
         'Development Status :: 2 - Pre-Alpha',
         'Intended Audience :: Developers',
@@ -38,9 +39,9 @@ setup(
         'Topic :: Scientific/Engineering :: Chemistry'
     ],
     test_suite='tests',
-    install_requires=['autograd', 'cython', 'matplotlib', 'numpy',
+    install_requires=['autograd', 'cython', 'matplotlib', 'numpy', 'argparse',
                       'pyyaml>=5.1', 'schema', 'scipy', 'tqdm', 'torch',
-                      'pyscf', 'mendeleev', 'twiggy'],
+                      'pyscf', 'mendeleev', 'twiggy', 'mpi4py', 'horovod'],
 
     # 'horovod'], fails so far ...
     extras_require={

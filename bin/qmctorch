@@ -1,0 +1,52 @@
+#!/usr/bin/env python
+import os
+import argparse
+
+
+dist_solvers = ['SolverOrbitalHorovod']
+
+
+def check_file(fname):
+    """Check if any distributed solver is imported."""
+
+    with open(fname, 'r') as f:
+        data = f.readlines()
+    for d in data:
+        d = d.split()
+        if any(s in d for s in dist_solvers):
+            return True
+    return False
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument('filename', help='name of the file')
+parser.add_argument('-np', '--num-proc', type=int,
+                    default=1, help='Number of process to use')
+parser.add_argument('-o', '--output', type=str,
+                    default=None, help='name of the output')
+args = parser.parse_args()
+
+
+if args.num_proc == 1:
+    if args.output is None:
+        os.system('python %s' % args.filename)
+    else:
+        os.system('python %s > %s' % (args.filename, args.output))
+
+else:
+    if check_file(args.filename):
+        if args.output is None:
+            os.system('horovodrun -np %d python %s' %
+                      (args.num_proc, args.filename))
+        else:
+            os.system('horovodrun -np %d --output-file %s python %s' %
+                      (args.num_proc, args.output, args.filename))
+    else:
+        import qmctorch
+        from qmctorch import log
+        log.info(' Error :')
+        log.info(
+            ' Your python file must use of of the following solvers:')
+        for d in dist_solvers:
+            log.info('   - %s' % d)
+        log.info(' to be used with multiple processes.')
