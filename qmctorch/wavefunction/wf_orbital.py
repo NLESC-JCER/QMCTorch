@@ -1,5 +1,10 @@
 import torch
 from torch import nn
+from copy import deepcopy
+
+import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
+import numpy as np
 
 from .atomic_orbitals import AtomicOrbitals
 from .slater_pooling import SlaterPooling
@@ -41,7 +46,7 @@ class Orbital(WaveFunction):
         super(Orbital, self).__init__(mol.nelec, 3, kinetic, cuda)
 
         # check for cuda
-        if not torch.cuda.is_available and self.wf.cuda:
+        if not torch.cuda.is_available and self.cuda:
             raise ValueError('Cuda not available, use cuda=False')
 
         # number of atoms
@@ -118,7 +123,7 @@ class Orbital(WaveFunction):
         log.info('  Jastrow factor      : {0}', self.use_jastrow)
         if self.use_jastrow:
             log.info('  Jastrow type        : {0}', self.jastrow_type)
-        log.info('  Highest MO included : {0}', self.highest_occ_mo)
+        log.info('  Highest MO included : {0}', self.nmo_opt)
         log.info('  Configurations      : {0}', self.configs_method)
         log.info('  Number of confs     : {0}', self.nci)
 
@@ -345,3 +350,85 @@ class Orbital(WaveFunction):
                                       :].detach().numpy().tolist()
             d.append((at, xyz))
         return d
+
+    def gto2sto(self, plot=False):
+        """Fits the AO GTO to AO STO.
+            The sto have only one basis function per ao
+        """
+
+        assert(self.ao.radial_type.startswith('gto'))
+        assert(self.ao.harmonics_type == 'cart')
+
+        log.info('  Fit GTOs to STOs  : ')
+
+        def sto(x, norm, alpha):
+            """Fitting function."""
+            return norm * np.exp(-alpha * np.abs(x))
+
+        # shortcut for nao
+        nao = self.mol.basis.nao
+
+        # create a new mol and a new basis
+        new_mol = deepcopy(self.mol)
+        basis = deepcopy(self.mol.basis)
+
+        # change basis to sto
+        basis.radial_type = 'sto_pure'
+        basis.nshells = self.ao.nao_per_atom.numpy()
+
+        # reset basis data
+        basis.index_ctr = np.arange(nao)
+        basis.bas_coeffs = np.ones(nao)
+        basis.bas_exp = np.zeros(nao)
+        basis.bas_norm = np.zeros(nao)
+        basis.bas_kr = np.zeros(nao)
+        basis.bas_kx = np.zeros(nao)
+        basis.bas_ky = np.zeros(nao)
+        basis.bas_kz = np.zeros(nao)
+
+        # 2D fit space
+        x = torch.linspace(-5, 5, 501)
+
+        # compute the values of the current AOs using GTO BAS
+        pos = x.reshape(-1, 1).repeat(1, self.ao.nbas).to(self.device)
+        gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
+        gto = gto.unsqueeze(1).repeat(1, self.nelec, 1)
+        ao = self.ao._contract(gto)[
+            :, 0, :].detach().cpu().numpy()
+
+        # loop over AOs
+        for iorb in range(self.ao.norb):
+
+            # fit AO with STO
+            xdata = x.numpy()
+            ydata = ao[:, iorb]
+            popt, pcov = curve_fit(sto, xdata, ydata)
+
+            # store new exp/norm
+            basis.bas_norm[iorb] = popt[0]
+            basis.bas_exp[iorb] = popt[1]
+
+            # determine k values
+            basis.bas_kx[iorb] = self.ao.harmonics.bas_kx[self.ao.index_ctr == iorb].unique(
+            ).item()
+            basis.bas_ky[iorb] = self.ao.harmonics.bas_ky[self.ao.index_ctr == iorb].unique(
+            ).item()
+            basis.bas_kz[iorb] = self.ao.harmonics.bas_kz[self.ao.index_ctr == iorb].unique(
+            ).item()
+
+            # plot if necessary
+            if plot:
+                plt.plot(xdata, ydata)
+                plt.plot(xdata, sto(xdata, *popt))
+                plt.show()
+
+        # update basis in new mole
+        new_mol.basis = basis
+
+        # returns new orbital instance
+        return Orbital(new_mol, configs=self.configs_method,
+                       kinetic=self.kinetic_method,
+                       use_jastrow=self.use_jastrow,
+                       jastrow_type=self.jastrow_type,
+                       cuda=self.cuda,
+                       include_all_mo=self.include_all_mo)

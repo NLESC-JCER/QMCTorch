@@ -9,10 +9,11 @@ class TestMolecule(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
+            atom='H 0. 0. 0.; H 0. 0. 1.',
             unit='bohr',
             calculator='pyscf',
-            basis='sto-3g')
+            basis='sto-3g',
+            redo_scf=True)
 
         mol.print_total_energy()
 

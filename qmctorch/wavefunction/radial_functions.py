@@ -5,6 +5,9 @@ from ..utils import fast_power
 def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
     """Compute the radial part of STOs (or its derivative).
 
+    .. math:
+        sto = r^n exp(-\alpha |r|)
+
     Args:
         R (torch.tensor): distance between each electron and each atom
         bas_n (torch.tensor): principal quantum number
@@ -74,24 +77,16 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         nabla_er = -(bexp_er).unsqueeze(-1) * \
             xyz / R.unsqueeze(-1)
 
-    # prepare the output/kernel
-    output = []
-    fns = [_kernel,
-           _first_derivative_kernel,
-           _second_derivative_kernel]
-
-    # compute the requested functions
-    for d in derivative:
-        output.append(fns[d]())
-
-    if len(derivative) == 1:
-        return output[0]
-    else:
-        return output
+    return return_required_data(derivative, _kernel,
+                                _first_derivative_kernel,
+                                _second_derivative_kernel)
 
 
 def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
     """Compute the radial part of GTOs (or its derivative).
+
+    .. math:
+        gto = r^n exp(-\alpha r^2)
 
     Args:
         R (torch.tensor): distance between each electron and each atom
@@ -157,13 +152,140 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
         nabla_rn = (nRnm2).unsqueeze(-1) * xyz
         nabla_er = -2 * (bexp_er).unsqueeze(-1) * xyz
 
-    # prepare the output/function calls
+    return return_required_data(derivative, _kernel,
+                                _first_derivative_kernel,
+                                _second_derivative_kernel)
+
+
+def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
+    """Compute the radial part of GTOs (or its derivative).
+
+    .. math:
+        gto = exp(-\alpha r^2)
+
+    Args:
+        R (torch.tensor): distance between each electron and each atom
+        bas_n (torch.tensor): principal quantum number
+        bas_exp (torch.tensor): exponents of the exponential
+
+    Keyword Arguments:
+        xyz (torch.tensor): positions of the electrons
+                            (needed for derivative) (default: {None})
+        derivative (int): degree of the derivative (default: {0})
+        jacobian (bool): return the jacobian, i.e the sum of the gradients
+                           (default: {True})
+
+    Returns:
+        torch.tensor: values of each orbital radial part at each position
+    """
+
+    if not isinstance(derivative, list):
+        derivative = [derivative]
+
+    def _kernel():
+        return er
+
+    def _first_derivative_kernel():
+        if jacobian:
+            return nabla_er.sum(3)
+        else:
+            return nabla_er
+
+    def _second_derivative_kernel():
+        lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
+        return lap_er
+
+    # computes the basic  quantities
+    R2 = R*R
+    er = torch.exp(-bas_exp * R2)
+
+    # computes the grads
+    if any(x in derivative for x in [1, 2]):
+
+        bexp_er = bas_exp * er
+        nabla_er = -2 * (bexp_er).unsqueeze(-1) * xyz
+
+    return return_required_data(derivative, _kernel,
+                                _first_derivative_kernel,
+                                _second_derivative_kernel)
+
+
+def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
+    """Compute the radial part of STOs (or its derivative).
+
+    .. math:
+        sto = exp(-\alpha |r|)
+
+    Args:
+        R (torch.tensor): distance between each electron and each atom
+        bas_n (torch.tensor): principal quantum number
+        bas_exp (torch.tensor): exponents of the exponential
+
+    Keyword Arguments:
+        xyz (torch.tensor): positions of the electrons
+                            (needed for derivative) (default: {None})
+        derivative (int): degree of the derivative (default: {0})
+        jacobian (bool): return the jacobian, i.e the sum of the gradients
+                           (default: {True})
+
+    Returns:
+        torch.tensor: values of each orbital radial part at each position
+    """
+
+    if not isinstance(derivative, list):
+        derivative = [derivative]
+
+    def _kernel():
+        return er
+
+    def _first_derivative_kernel():
+        if jacobian:
+            return nabla_er.sum(3)
+        else:
+            return nabla_er
+
+    def _second_derivative_kernel():
+
+        R2 = R*R
+        lap_er = bexp_er * (bas_exp - 2. / R)
+        return lap_er
+
+    # computes the basic quantities
+    er = torch.exp(-bas_exp * R)
+
+    # computes the grad
+    if any(x in derivative for x in [1, 2]):
+        bexp_er = bas_exp * er
+        nabla_er = -(bexp_er).unsqueeze(-1) * \
+            xyz / R.unsqueeze(-1)
+
+    return return_required_data(derivative, _kernel,
+                                _first_derivative_kernel,
+                                _second_derivative_kernel)
+
+
+def return_required_data(derivative, _kernel,
+                         _first_derivative_kernel,
+                         _second_derivative_kernel):
+    """Returns the data contained in derivative
+
+    Args:
+        derivative (list): list of the derivatives required
+        _kernel (callable): kernel of the values 
+        _first_derivative_kernel (callable): kernel for 1st der
+        _second_derivative_kernel (callable): kernel for 2nd der
+
+    Returns:
+        list: values of the different der requried
+    """
+
+    # prepare the output/kernel
     output = []
     fns = [_kernel,
            _first_derivative_kernel,
            _second_derivative_kernel]
 
-    # compute the requested derivatives
+    # compute the requested functions
     for d in derivative:
         output.append(fns[d]())
 

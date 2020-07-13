@@ -16,7 +16,8 @@ class Molecule(object):
 
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
-                 name=None, load=None, rank=0):
+                 name=None, load=None, save_scf_file=False,
+                 redo_scf=False, rank=0):
         """Create a molecule in QMCTorch
 
         Args:
@@ -27,6 +28,8 @@ class Molecule(object):
             unit (str, optional): units of the coordinates. Defaults to 'bohr'.
             name (str or None, optional): name of the molecule. Defaults to None.
             load (str or None, optional): path to a hdf5 file to load. Defaults to None.
+            save_scf_file (bool, optional): save the scf file (when applicable) Defaults to False
+            redo_scf (bool, optional): if true ignore existing hdf5 file and redo the scf calculation
             rank (int, optional): Rank of the process. Defaults to 0.
 
         Examples:
@@ -51,10 +54,12 @@ class Molecule(object):
         self.basis = SimpleNamespace()
         self.calculator_name = calculator
         self.basis_name = basis
+        self.save_scf_file = save_scf_file
 
         log.info('')
         log.info(' SCF Calculation')
 
+        # load an existing hdf5 file
         if load is not None:
             log.info('  Loading data from {file}', file=load)
             self._load_hdf5(load)
@@ -65,26 +70,43 @@ class Molecule(object):
             if self.unit not in ['angs', 'bohr']:
                 raise ValueError('unit should be angs or bohr')
 
+            # extract the atom names/positions from
+            # the atom kwargs
             self._process_atom_str()
 
+            # name of the hdf5 file
             self.hdf5file = '_'.join(
                 [self.name, calculator, basis]) + '.hdf5'
 
+            # force a redo of the sc calculation
+            if os.path.isfile(self.hdf5file) and redo_scf:
+                log.info('  Removing {file} and redo SCF calculations',
+                         file=self.hdf5file)
+                os.remove(self.hdf5file)
+
+            # deals with existing files
             if os.path.isfile(self.hdf5file):
                 log.info('  Reusing scf results from {file}',
                          file=self.hdf5file)
                 self.basis = self._load_basis()
 
+            # perform the scf calculation
             else:
                 log.info('  Running scf  calculation')
 
                 calc = {'adf': CalculatorADF,
                         'pyscf': CalculatorPySCF}[calculator]
 
-                self.calculator = calc(
-                    self.atoms, self.atom_coords, basis, scf, self.unit, self.name)
+                self.calculator = calc(self.atoms,
+                                       self.atom_coords,
+                                       basis,
+                                       scf,
+                                       self.unit,
+                                       self.name,
+                                       self.save_scf_file)
 
                 self.basis = self.calculator.run()
+                self.save_scf_file = self.calculator.savefile
 
                 if rank == 0:
                     dump_to_hdf5(self, self.hdf5file,

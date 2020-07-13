@@ -4,7 +4,7 @@ import numpy as np
 
 
 class CalculatorBase(object):
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname, calcname):
+    def __init__(self, atoms, atom_coords, basis, scf, units, molname, calcname, savefile):
 
         self.atoms = atoms
         self.atom_coords = atom_coords
@@ -13,6 +13,7 @@ class CalculatorBase(object):
         self.units = units
         self.molname = molname
         self.calcname = calcname
+        self.savefile = savefile
 
     def run(self):
         raise NotImplementedError(

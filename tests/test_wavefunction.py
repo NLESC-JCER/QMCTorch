@@ -4,6 +4,7 @@ import numpy as np
 import torch
 import unittest
 import itertools
+import os
 
 
 class TestWaveFunction(unittest.TestCase):
@@ -17,10 +18,11 @@ class TestWaveFunction(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
+            atom='H 0 0 0; H 0 0 1.',
             unit='bohr',
             calculator='pyscf',
-            basis='sto-3g')
+            basis='sto-3g',
+            redo_scf=True)
 
         self.wf = Orbital(mol, kinetic='auto', configs='cas(2,2)')
         self.pos = torch.tensor(np.random.rand(10, 6))

@@ -19,16 +19,19 @@ def atomic_orbital_norm(basis):
     # spherical
     if basis.harmonics_type == 'sph':
 
-        if basis.radial_type == 'sto':
+        if basis.radial_type.startswith('sto'):
             return norm_slater_spherical(basis.bas_n, basis.bas_exp)
 
-        elif basis.radial_type == 'gto':
+        elif basis.radial_type.startswith('gto'):
             return norm_gaussian_spherical(basis.bas_n, basis.bas_exp)
+
+        else:
+            raise ValueError('%s is not a valid radial_type')
 
     # cartesian
     elif basis.harmonics_type == 'cart':
 
-        if basis.radial_type == 'sto':
+        if basis.radial_type.startswith('sto'):
             return norm_slater_cartesian(
                 basis.bas_kx,
                 basis.bas_ky,
@@ -36,9 +39,12 @@ def atomic_orbital_norm(basis):
                 basis.bas_kr,
                 basis.bas_exp)
 
-        if basis.radial_type == 'gto':
+        elif basis.radial_type.startswith('gto'):
             return norm_gaussian_cartesian(
                 basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_exp)
+
+        else:
+            raise ValueError('%s is not a valid radial_type')
 
 
 def norm_slater_spherical(bas_n, bas_exp):
