@@ -40,7 +40,7 @@ setup(
     test_suite='tests',
     install_requires=['autograd', 'cython', 'matplotlib', 'numpy',
                       'pyyaml>=5.1', 'schema', 'scipy', 'tqdm', 'torch',
-                      'pyscf', 'mendeleev', 'twiggy', 'horovod'],
+                      'pyscf', 'mendeleev', 'twiggy', 'mpi4py', 'horovod'],
 
     # 'horovod'], fails so far ...
     extras_require={
