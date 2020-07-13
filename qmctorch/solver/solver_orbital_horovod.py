@@ -1,11 +1,13 @@
 import torch
 from torch.utils.data import DataLoader
 import warnings
-
+from time import time
 from .solver_orbital import SolverOrbital
 from qmctorch.utils import (
     DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+from .. import log
 
+from mpi4py import MPI
 
 try:
     import horovod.torch as hvd
@@ -13,9 +15,9 @@ except ModuleNotFoundError:
     pass
 
 
-def printd(rank, *args):
+def logd(rank, *args):
     if rank == 0:
-        print(*args)
+        log.info(*args)
 
 
 class SolverOrbitalHorovod(SolverOrbital):
@@ -63,6 +65,12 @@ class SolverOrbitalHorovod(SolverOrbital):
                                         Defaults to wf.task.
         """
 
+        logd(hvd.rank(), '')
+        logd(hvd.rank(),
+             '  Distributed Optimization on {num} process'.format(num=hvd.size()))
+        log.info('   - Process {id} using {nw} walkers'.format(
+                 id=hvd.rank(), nw=self.sampler.nwalkers))
+
         # observalbe
         if not hasattr(self, 'observable'):
             self.track_observable(['local_energy'])
@@ -79,10 +87,6 @@ class SolverOrbitalHorovod(SolverOrbital):
         hvd.broadcast_parameters(self.wf.state_dict(), root_rank=0)
         torch.set_num_threads(num_threads)
 
-        # sample the wave function
-        pos = self.sampler(self.wf.pdf)
-        pos.requires_grad_(False)
-
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
         self.loss.use_weight = (
@@ -90,9 +94,27 @@ class SolverOrbitalHorovod(SolverOrbital):
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
+
+        # log data
+        if hvd.rank() == 0:
+            self.log_data_opt(nepoch, batchsize, loss, grad)
+
+        # sample the wave function
+        if hvd.rank() == 0:
+            pos = self.sampler(self.wf.pdf)
+        else:
+            pos = self.sampler(self.wf.pdf, with_tqdm=False)
+
+        # requried to build the distributed data container
+        pos.requires_grad_(False)
+
         # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
+
+        # get the initial observable
+        if hvd.rank() == 0:
+            self.store_observable(pos)
 
         # change the number of steps/walker size
         _nstep_save = self.sampler.nstep
@@ -118,17 +140,14 @@ class SolverOrbitalHorovod(SolverOrbital):
         cumulative_loss = []
         min_loss = 1E3
 
-        # get the initial observalbe
-        self.store_observable(pos)
-
         for n in range(nepoch):
 
-            printd(
-                hvd.rank(),
-                '----------------------------------------')
-            printd(hvd.rank(), 'epoch %d' % n)
+            tstart = time()
+            logd(hvd.rank(), '')
+            logd(hvd.rank(), '  epoch %d' % n)
 
             cumulative_loss = 0.
+
             for ibatch, data in enumerate(self.dataloader):
 
                 # get data
@@ -143,8 +162,9 @@ class SolverOrbitalHorovod(SolverOrbital):
                 self.optimization_step(lpos)
 
                 # observable
-                self.store_observable(
-                    pos, local_energy=eloc, ibatch=ibatch)
+                if hvd.rank() == 0:
+                    self.store_observable(
+                        pos, local_energy=eloc, ibatch=ibatch)
 
             cumulative_loss = self.metric_average(cumulative_loss,
                                                   'cum_loss')
@@ -154,10 +174,11 @@ class SolverOrbitalHorovod(SolverOrbital):
                     min_loss = self.save_checkpoint(
                         n, cumulative_loss, self.save_model)
 
-            self.print_observable(cumulative_loss)
+            if hvd.rank() == 0:
+                self.print_observable(cumulative_loss)
 
-            printd(hvd.rank(),
-                   '----------------------------------------')
+            logd(hvd.rank(), '  epoch done in %1.2f sec.' %
+                 (time()-tstart))
 
             # resample the data
             pos = self.resample(n, pos)

@@ -3,6 +3,7 @@ import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
+from mpi4py import MPI
 import h5py
 
 from .calculator.adf import CalculatorADF
@@ -56,8 +57,9 @@ class Molecule(object):
         self.basis_name = basis
         self.save_scf_file = save_scf_file
 
-        log.info('')
-        log.info(' SCF Calculation')
+        if rank == 0:
+            log.info('')
+            log.info(' SCF Calculation')
 
         # load an existing hdf5 file
         if load is not None:
@@ -67,9 +69,6 @@ class Molecule(object):
 
         else:
 
-            if self.unit not in ['angs', 'bohr']:
-                raise ValueError('unit should be angs or bohr')
-
             # extract the atom names/positions from
             # the atom kwargs
             self._process_atom_str()
@@ -78,42 +77,52 @@ class Molecule(object):
             self.hdf5file = '_'.join(
                 [self.name, calculator, basis]) + '.hdf5'
 
-            # force a redo of the sc calculation
-            if os.path.isfile(self.hdf5file) and redo_scf:
-                log.info('  Removing {file} and redo SCF calculations',
-                         file=self.hdf5file)
-                os.remove(self.hdf5file)
+            if rank == 0:
 
-            # deals with existing files
-            if os.path.isfile(self.hdf5file):
-                log.info('  Reusing scf results from {file}',
-                         file=self.hdf5file)
-                self.basis = self._load_basis()
+                if self.unit not in ['angs', 'bohr']:
+                    raise ValueError('unit should be angs or bohr')
 
-            # perform the scf calculation
-            else:
-                log.info('  Running scf  calculation')
+                # force a redo of the sc calculation
+                if os.path.isfile(self.hdf5file) and redo_scf:
+                    log.info('  Removing {file} and redo SCF calculations',
+                             file=self.hdf5file)
+                    os.remove(self.hdf5file)
 
-                calc = {'adf': CalculatorADF,
-                        'pyscf': CalculatorPySCF}[calculator]
+                # deals with existing files
+                if os.path.isfile(self.hdf5file):
+                    log.info('  Reusing scf results from {file}',
+                             file=self.hdf5file)
+                    self.basis = self._load_basis()
 
-                self.calculator = calc(self.atoms,
-                                       self.atom_coords,
-                                       basis,
-                                       scf,
-                                       self.unit,
-                                       self.name,
-                                       self.save_scf_file)
+                # perform the scf calculation
+                else:
+                    log.info('  Running scf  calculation')
 
-                self.basis = self.calculator.run()
-                self.save_scf_file = self.calculator.savefile
+                    calc = {'adf': CalculatorADF,
+                            'pyscf': CalculatorPySCF}[calculator]
 
-                if rank == 0:
+                    self.calculator = calc(self.atoms,
+                                           self.atom_coords,
+                                           basis,
+                                           scf,
+                                           self.unit,
+                                           self.name,
+                                           self.save_scf_file)
+
+                    self.basis = self.calculator.run()
+                    self.save_scf_file = self.calculator.savefile
+
                     dump_to_hdf5(self, self.hdf5file,
                                  root_name='molecule')
 
-        self._check_basis()
-        self.log_data()
+                    self._check_basis()
+                    self.log_data()
+
+            MPI.COMM_WORLD.barrier()
+            if rank != 0:
+                log.info(
+                    '  Loading data from {file}', file=self.hdf5file)
+                self._load_hdf5(self.hdf5file)
 
     def log_data(self):
 
