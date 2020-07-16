@@ -1,4 +1,5 @@
 import torch
+from types import SimpleNamespace
 from torch.utils.data import DataLoader
 import warnings
 from time import time
@@ -24,7 +25,7 @@ class SolverOrbitalHorovod(SolverOrbital):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None, output=None, rank=0):
-        """Distributed QMC solver 
+        """Distributed QMC solver
 
         Args:
             wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
@@ -177,18 +178,16 @@ class SolverOrbitalHorovod(SolverOrbital):
             if hvd.rank() == 0:
                 self.print_observable(cumulative_loss)
 
-            logd(hvd.rank(), '  epoch done in %1.2f sec.' %
-                 (time()-tstart))
-
             # resample the data
             pos = self.resample(n, pos)
             pos.requires_grad = False
 
-            if self.task == 'geo_opt':
-                self.wf.update_mo_coeffs()
-
+            # scheduler step
             if self.scheduler is not None:
                 self.scheduler.step()
+
+            logd(hvd.rank(), '  epoch done in %1.2f sec.' %
+                 (time()-tstart))
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
@@ -206,75 +205,73 @@ class SolverOrbitalHorovod(SolverOrbital):
 
         return self.observable
 
-    def single_point(self, pos=None, prt=True):
+    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
         """Performs a single point calculation
 
-        Keyword Arguments:
-            pos {torch.tensor} -- positions of the walkers If none, sample
-                                  (default: {None})
-            prt {bool} -- print energy/variance values (default: {True})
-            ntherm {int} -- number of MC steps to thermalize (default: {-1})
-            ndecor {int} -- number of MC step to decorelate  (default: {100})
+        Args:
+            with_tqdm (bool, optional): use tqdm for samplig. Defaults to True.
+            hdf5_group (str, optional): hdf5 group where to store the data.
+                                        Defaults to 'single_point'.
 
         Returns:
-            tuple -- (position, energy, variance)
+            SimpleNamespace: contains the local energy, positions, ...
         """
 
-        self.wf.eval()
+        logd(hvd.rank(), '')
+        logd(hvd.rank(), '  Single Point Calculation : {nw} walkers | {ns} steps'.format(
+             nw=self.sampler.nwalkers, ns=self.sampler.nstep))
+
+        # check if we have to compute and store the grads
+        grad_mode = torch.no_grad()
+        if self.wf.kinetic == 'auto':
+            grad_mode = torch.enable_grad()
+
+        # distribute the calculation
         num_threads = 1
         hvd.broadcast_parameters(self.wf.state_dict(), root_rank=0)
         torch.set_num_threads(num_threads)
 
-        # sample the wave function
-        pos = self.sampler(self.wf.pdf)
-        pos.requires_grad_(False)
+        with grad_mode:
 
-        # handle the batch size
-        batchsize = len(pos)
+            # sample the wave function
+            pos = self.sampler(self.wf.pdf)
+            if self.wf.cuda and pos.device.type == 'cpu':
+                pos = pos.to(self.device)
 
-        # create the data loader
-        self.dataset = DataSet(pos)
+            # compute energy/variance/error
+            eloc = self.wf.local_energy(pos)
+            e, s, err = torch.mean(eloc), torch.var(
+                eloc), self.wf.sampling_error(eloc)
 
-        if self.cuda:
-            kwargs = {'num_workers': num_threads, 'pin_memory': True}
-        else:
-            kwargs = {'num_workers': num_threads}
-        self.dataloader = DataLoader(self.dataset,
-                                     batch_size=batchsize,
-                                     **kwargs)
+            # gather all data
+            eloc_all = hvd.allgather(eloc, name='local_energies')
+            e, s, err = torch.mean(eloc_all), torch.var(
+                eloc_all), self.wf.sampling_error(eloc_all)
 
-        for data in self.dataloader:
+            # print
+            if hvd.rank() == 0:
+                log.options(style='percent').info(
+                    '  Energy   : %f +/- %f' % (e.detach().item(), err.detach().item()))
+                log.options(style='percent').info(
+                    '  Variance : %f' % s.detach().item())
 
-            lpos = data.to(self.device)
-            lpos.requires_grad = True
-            eloc = self.wf.local_energy(lpos)
+            # dump data to hdf5
+            obs = SimpleNamespace(
+                pos=pos,
+                local_energy=eloc_all,
+                energy=e,
+                variance=s,
+                error=err
+            )
 
-        eloc_all = hvd.allgather(eloc, name='local_energies')
-        e, s = torch.mean(eloc_all), torch.var(eloc_all)
-        err = self.wf.sampling_error(eloc_all)
+            # dump to file
+            if hvd.rank() == 0:
 
-        # print data
-        print('Energy   : ', e.detach().item(),
-              ' +/- ', err.detach().item())
-        print('Variance : ', s.detach().item())
-
-        # dump data to hdf5
-        obs = SimpleNamespace(
-            pos=pos,
-            local_energy=el,
-            energy=e,
-            variance=s,
-            error=err
-        )
-
-        # dump to file
-        if hvd.rank() == 0:
-
-            dump_to_hdf5(obs,
-                         self.hdf5file,
-                         root_name=hdf5_group)
-            add_group_attr(self.hdf5file, hdf5_group,
-                           {'type': 'single_point'})
+                dump_to_hdf5(obs,
+                             self.hdf5file,
+                             root_name=hdf5_group)
+                add_group_attr(self.hdf5file, hdf5_group,
+                               {'type': 'single_point'})
 
         return obs
 

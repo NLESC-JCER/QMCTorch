@@ -355,6 +355,7 @@ class SolverBase(object):
         """Performs a single point calculatin
 
         Args:
+            with_tqdm (bool, optional): use tqdm for samplig. Defaults to True.
             hdf5_group (str, optional): hdf5 group where to store the data.
                                         Defaults to 'single_point'.
 
