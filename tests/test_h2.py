@@ -132,8 +132,9 @@ class TestH2(unittest.TestCase):
         self.solver.run(5, loss='energy', grad='auto')
 
         # load the best model
-        best_model = torch.load('model.pth')
-        self.solver.wf.load_state_dict(best_model['model_state_dict'])
+        # best_model = torch.load('model.pth')
+        # self.solver.wf.load_state_dict(best_model['model_state_dict'])
+        self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
         self.solver.wf.eval()
 
         # sample and compute variables
@@ -151,7 +152,7 @@ class TestH2(unittest.TestCase):
         self.solver.sampler = self.sampler
 
         self.solver.sampler.ntherm = 10
-        self.solver.sampler.ndecor = 1
+        self.solver.sampler.ndecor = 50
 
         pos = self.solver.sampler(self.solver.wf.pdf)
         obs = self.solver.sampling_traj(pos)
@@ -165,8 +166,8 @@ class TestH2(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestH2()
-    # t.setUp()
-    # t.test1_single_point()
+    # unittest.main()
+    t = TestH2()
+    t.setUp()
+    t.test1_single_point()
     # # t.test3_wf_opt()
