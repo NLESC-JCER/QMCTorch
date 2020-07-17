@@ -151,8 +151,9 @@ class TestH2(unittest.TestCase):
     def test5_sampling_traj(self):
         self.solver.sampler = self.sampler
 
-        self.solver.sampler.ntherm = 10
-        self.solver.sampler.ndecor = 50
+        self.solver.sampler.nstep = 100
+        self.solver.sampler.ntherm = 0
+        self.solver.sampler.ndecor = 1
 
         pos = self.solver.sampler(self.solver.wf.pdf)
         obs = self.solver.sampling_traj(pos)
@@ -169,5 +170,6 @@ if __name__ == "__main__":
     # unittest.main()
     t = TestH2()
     t.setUp()
-    t.test1_single_point()
+    # t.test1_single_point()
     # # t.test3_wf_opt()
+    t.test5_sampling_traj()
