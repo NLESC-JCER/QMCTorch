@@ -137,7 +137,7 @@ class SolverOrbital(SolverBase):
                     self.wf.state_dict())
 
             # save checkpoint file
-            if n % chkpt_every == 0:
+            if (n > 0) and (n % chkpt_every == 0):
                 self.save_checkpoint(n, cumulative_loss)
 
             self.print_observable(cumulative_loss)
