@@ -102,7 +102,7 @@ class SolverBase(object):
         elif task == 'wf_opt':
             self.configure_wf_opt()
 
-            self.freeze_parameters(freeze)
+        self.freeze_parameters(freeze)
 
     def configure_geo_opt(self):
         """Configure the solver for geometry optimization."""
@@ -115,7 +115,8 @@ class SolverBase(object):
         self.wf.ao.bas_exp.requires_grad = False
 
         # no jastrow opt
-        self.wf.jastrow.weight.requires_grad = False
+        for param in self.wf.jastrow.parameters():
+            param.requires_grad = False
 
         # no mo opt
         for param in self.wf.mo.parameters():
@@ -485,25 +486,26 @@ class SolverBase(object):
         else:
             self.opt.step()
 
-    def save_traj(self, fname):
+    def save_traj(self, fname, obs):
         """Save trajectory of geo_opt
 
         Args:
             fname (str): file name
         """
         f = open(fname, 'w')
-        xyz = self.obs_dict['geometry']
+        xyz = obs.geometry
         natom = len(xyz[0])
         nm2bohr = 1.88973
         for snap in xyz:
             f.write('%d \n\n' % natom)
-            for at in snap:
+            for i, pos in enumerate(snap):
+                at = self.wf.atoms[i]
                 f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0],
-                                                      at[1][0] /
+                                                      pos[0] /
                                                       nm2bohr,
-                                                      at[1][1] /
+                                                      pos[1] /
                                                       nm2bohr,
-                                                      at[1][2] / nm2bohr))
+                                                      pos[2] / nm2bohr))
             f.write('\n')
         f.close()
 
