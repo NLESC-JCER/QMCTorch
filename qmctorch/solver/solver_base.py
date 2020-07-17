@@ -231,6 +231,8 @@ class SolverBase(object):
             else:
                 self.observable.__setattr__(k, [])
 
+        self.observable.models = SimpleNamespace()
+
     def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
         """store observale in the dictionary
 
@@ -408,6 +410,16 @@ class SolverBase(object):
         return obs
 
     def save_checkpoint(self, epoch, loss, filename):
+        """save the model and optimizer state
+
+        Args:
+            epoch (int): epoch
+            loss (float): current value of the loss
+            filename (str): name to save the file
+
+        Returns:
+            float: loss (?)
+        """
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.wf.state_dict(),
@@ -415,6 +427,22 @@ class SolverBase(object):
             'loss': loss
         }, filename)
         return loss
+
+    def load_checkpoint(self, filename):
+        """load a model/optmizer
+
+        Args:
+            filename (str): filename
+
+        Returns:
+            tuple : epoch number and loss
+        """
+        data = torch.load(filename)
+        self.wf.load_state_dict(data['model_state_dict'])
+        self.opt.load_state_dict(data['optimzier_state_dict'])
+        epoch = data['epoch']
+        loss = data['loss']
+        return epoch, loss
 
     def _append_observable(self, key, data):
         """Append a new data point to observable key.

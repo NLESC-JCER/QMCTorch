@@ -127,6 +127,8 @@ class SolverOrbital(SolverBase):
             if cumulative_loss < min_loss:
                 min_loss = self.save_checkpoint(
                     n, cumulative_loss, self.save_model)
+                self.observable.models.best = dict(
+                    self.wf.state_dict())
 
             self.print_observable(cumulative_loss)
 
@@ -148,8 +150,12 @@ class SolverOrbital(SolverBase):
         # dump
         if hdf5_group is None:
             hdf5_group = self.task
+
+        self.observable.models.last = dict(self.wf.state_dict())
+
         hdf5_group = dump_to_hdf5(
             self.observable, self.hdf5file, hdf5_group)
+
         add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
         return self.observable

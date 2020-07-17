@@ -1,5 +1,5 @@
 import torch
-
+import h5py
 from torch.autograd import grad, Variable
 
 
@@ -236,3 +236,20 @@ class WaveFunction(torch.nn.Module):
             if param.requires_grad:
                 nparam += param.data.numel()
         return nparam
+
+    def load(self, filename, group='wf_opt', model='best'):
+        """Load trained parameters
+
+        Args:
+            filename (str): hdf5 filename
+            group (str, optional): group in the hdf5 file where the model is stored. 
+                                   Defaults to 'wf_opt'.
+            model (str, optional): 'best' or ' last'. Defaults to 'best'.
+        """
+        f5 = h5py.File(filename, 'r')
+        grp = f5[group]['models'][model]
+        data = dict()
+        for name, val in grp.items():
+            data[name] = torch.tensor(val)
+        self.load_state_dict(data)
+        f5.close()
