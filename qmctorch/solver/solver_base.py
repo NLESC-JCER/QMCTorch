@@ -409,7 +409,7 @@ class SolverBase(object):
 
         return obs
 
-    def save_checkpoint(self, epoch, loss, filename):
+    def save_checkpoint(self, epoch, loss):
         """save the model and optimizer state
 
         Args:
@@ -420,13 +420,13 @@ class SolverBase(object):
         Returns:
             float: loss (?)
         """
+        filename = 'checkpoint_epoch%d.pth' % epoch
         torch.save({
             'epoch': epoch,
             'model_state_dict': self.wf.state_dict(),
             'optimzier_state_dict': self.opt.state_dict(),
             'loss': loss
         }, filename)
-        return loss
 
     def load_checkpoint(self, filename):
         """load a model/optmizer

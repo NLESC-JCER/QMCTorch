@@ -26,14 +26,15 @@ class SolverOrbital(SolverBase):
                             optimizer, scheduler, output, rank)
 
     def run(self, nepoch, batchsize=None, loss='energy',
-            clip_loss=False, grad='manual', hdf5_group=None):
+            clip_loss=False, grad='manual', hdf5_group=None,
+            chkpt_every=None):
         """Run the optimization
 
         Args:
             nepoch (int): Number of optimziation step
             batchsize (int, optional): Number of sample in a mini batch.
                                        If None, all samples are used.
-                                       Defaults to None.
+                                       Defaults to Never.
             loss (str, optional): merhod to compute the loss: variance or energy.
                                   Defaults to 'energy'.
             clip_loss (bool, optional): Clip the loss values at +/- 5std.
@@ -42,6 +43,8 @@ class SolverOrbital(SolverBase):
                                   Defaults to 'auto'.
             hdf5_group (str, optional): name of the hdf5 group where to store the data.
                                         Defaults to wf.task.
+            chkpt_every (int, optional): save a checkpoint every every iteration.
+                                         Defaults to half the number of epoch
         """
 
         log.info('')
@@ -94,6 +97,10 @@ class SolverOrbital(SolverBase):
         self.dataloader = DataLoader(
             self.dataset, batch_size=batchsize)
 
+        # half check point by default
+        if chkpt_every is None:
+            chkpt_every = nepoch//2
+
         cumulative_loss = []
         min_loss = 1E3
 
@@ -125,10 +132,13 @@ class SolverOrbital(SolverBase):
 
             # save the model if necessary
             if cumulative_loss < min_loss:
-                min_loss = self.save_checkpoint(
-                    n, cumulative_loss, self.save_model)
+                min_loss = cumulative_loss
                 self.observable.models.best = dict(
                     self.wf.state_dict())
+
+            # save checkpoint file
+            if n % chkpt_every == 0:
+                self.save_checkpoint(n, cumulative_loss)
 
             self.print_observable(cumulative_loss)
 
