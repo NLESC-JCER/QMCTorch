@@ -345,10 +345,9 @@ class Orbital(WaveFunction):
         """
         d = []
         for iat in range(self.natom):
-            #at = self.atoms[iat]
+
             xyz = self.ao.atom_coords[iat,
                                       :].cpu().detach().numpy().tolist()
-            #d.append((at, xyz))
             d.append(xyz)
         return d
 

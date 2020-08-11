@@ -71,22 +71,22 @@ class TestLiH(unittest.TestCase):
     def test2_wf_opt_grad_auto(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(task='wf_opt')
-        self.solver.track_observable(['local_energy'])
-        obs = self.solver.run(5, loss='energy', grad='auto')
+        self.solver.configure(track=['local_energy'],
+                              loss='energy', grad='auto')
+        obs = self.solver.run(5)
 
     def test3_wf_opt_grad_manual(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(task='wf_opt')
-        self.solver.track_observable(['local_energy'])
-        obs = self.solver.run(5, loss='energy', grad='manual')
+        self.solver.configure(track=['local_energy'],
+                              loss='energy', grad='manual')
+        obs = self.solver.run(5)
 
 
 if __name__ == "__main__":
     unittest.main()
-    t = TestLiH()
-    t.setUp()
-    t.test1_single_point()
-    t.test2_wf_opt_grad_auto()
-    t.test3_wf_opt_grad_manual()
+    # t = TestLiH()
+    # t.setUp()
+    # t.test1_single_point()
+    # t.test2_wf_opt_grad_auto()
+    # t.test3_wf_opt_grad_manual()
