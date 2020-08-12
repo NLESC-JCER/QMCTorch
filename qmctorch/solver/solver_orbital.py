@@ -28,12 +28,17 @@ class SolverOrbital(SolverBase):
 
         self.set_params_requires_grad()
 
-    def configure(self, track=['local_energy'], freeze=None,
-                  loss='energy', grad='manual',
-                  ortho_mo=False, clip_loss=False,
-                  resampling={'mode': 'update',
-                              'resample_every': 1,
-                              'nstep_update': 25}):
+        self.configure(track=['local_energy'], freeze=None,
+                       loss='energy', grad='manual',
+                       ortho_mo=False, clip_loss=False,
+                       resampling={'mode': 'update',
+                                   'resample_every': 1,
+                                   'nstep_update': 25})
+
+    def configure(self, track=None, freeze=None,
+                  loss=None, grad=None,
+                  ortho_mo=None, clip_loss=None,
+                  resampling=None):
         """Configure the solver
 
         Args:
@@ -55,26 +60,31 @@ class SolverOrbital(SolverBase):
         self.freeze_parameters(freeze)
 
         # track the observable we want
-        if not hasattr(self, 'observable'):
-            self.track_observable(track)
+        if track is not None:
+            if not hasattr(self, 'observable'):
+                self.track_observable(track)
 
         # define the grad calulation
-        self.grad_method = grad
-        self.evaluate_gradient = {
-            'auto': self.evaluate_grad_auto,
-            'manual': self.evaluate_grad_manual}[grad]
+        if grad is not None:
+            self.grad_method = grad
+            self.evaluate_gradient = {
+                'auto': self.evaluate_grad_auto,
+                'manual': self.evaluate_grad_manual}[grad]
 
         # resampling of the wave function
-        self.configure_resampling(**resampling)
+        if resampling is not None:
+            self.configure_resampling(**resampling)
 
         # get the loss
-        self.loss = Loss(self.wf, method=loss, clip=clip_loss)
-        self.loss.use_weight = (
-            self.resampling_options.resample_every > 1)
+        if loss is not None:
+            self.loss = Loss(self.wf, method=loss, clip=clip_loss)
+            self.loss.use_weight = (
+                self.resampling_options.resample_every > 1)
 
         # orthogonalization penalty for the MO coeffs
-        self.ortho_mo = ortho_mo
-        self.ortho_loss = OrthoReg()
+        if ortho_mo is not None:
+            self.ortho_mo = ortho_mo
+            self.ortho_loss = OrthoReg()
 
     def set_params_requires_grad(self, wf_params=True, geo_params=False):
         """Configure parameters for wf opt."""
