@@ -167,6 +167,7 @@ if __name__ == "__main__":
     unittest.main()
     # t = TestH2()
     # t.setUp()
+    # t.test2_single_point_hmc()
     # t.test1_single_point()
     # # t.test3_wf_opt()
     # t.test5_sampling_traj()

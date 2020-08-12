@@ -117,7 +117,7 @@ class Hamiltonian(SamplerBase):
         p = torch.randn(q.shape)
 
         # initial energy terms
-        Einit = U(q) + 0.5 * (p**2).sum(1)
+        Einit = U(q) + 0.5 * (p*p).sum(1)
 
         # half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)

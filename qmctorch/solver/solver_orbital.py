@@ -26,6 +26,8 @@ class SolverOrbital(SolverBase):
         SolverBase.__init__(self, wf, sampler,
                             optimizer, scheduler, output, rank)
 
+        self.set_params_requires_grad()
+
     def configure(self, track=['local_energy'], freeze=None,
                   loss='energy', grad='manual',
                   ortho_mo=False, clip_loss=False,
