@@ -54,18 +54,16 @@ solver = SolverOrbitalHorovod(wf=wf, sampler=sampler,
                               optimizer=opt, scheduler=scheduler,
                               rank=hvd.rank())
 
+# configure the solver
+solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
+                 loss='energy', grad='auto',
+                 ortho_mo=False, clip_loss=False,
+                 resampling={'mode': 'update',
+                             'resample_every': 1,
+                             'nstep_update': 50})
+
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['mo', 'ao'])
-solver.track_observable(['local_energy'])
-
-solver.configure_resampling(mode='update',
-                            resample_every=1,
-                            nstep_update=50)
-
-obs = solver.run(5, batchsize=None,
-                 loss='energy',
-                 grad='manual',
-                 clip_loss=False)
+obs = solver.run(250)
 
 if hvd.rank() == 0:
     plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)

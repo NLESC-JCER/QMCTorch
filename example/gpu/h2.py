@@ -33,7 +33,7 @@ sampler = Metropolis(nwalkers=2000,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'},
-                    cuda=True)
+                     cuda=True)
 
 
 # optimizer
@@ -54,17 +54,16 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 obs = solver.single_point()
 
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-solver.track_observable(['local_energy'])
+# configure the solver
+solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
+                 loss='energy', grad='auto',
+                 ortho_mo=False, clip_loss=False,
+                 resampling={'mode': 'update',
+                             'resample_every': 1,
+                             'nstep_update': 50})
 
-solver.configure_resampling(mode='update',
-                            resample_every=1,
-                            nstep_update=50)
-solver.ortho_mo = False
-obs = solver.run(250, batchsize=None,
-                 loss='energy',
-                 grad='manual',
-                 clip_loss=False)
+# optimize the wave function
+obs = solver.run(250)
 
 plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
 plot_data(solver.observable, obsname='jastrow.weight')
