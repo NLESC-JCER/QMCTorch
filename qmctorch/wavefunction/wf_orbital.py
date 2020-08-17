@@ -353,7 +353,7 @@ class Orbital(WaveFunction):
 
     def gto2sto(self, plot=False):
         """Fits the AO GTO to AO STO.
-            The sto have only one basis function per ao
+            The SZ sto tht have only one basis function per ao
         """
 
         assert(self.ao.radial_type.startswith('gto'))

@@ -46,7 +46,7 @@ class Hamiltonian(SamplerBase):
         return lambda x: -torch.log(func(x))
 
     def __call__(self, pdf, pos=None, with_tqdm=True):
-        """Generate walkers followinf HMC
+        """Generate walkers following HMC
 
         Arguments:
             pdf {callable} -- density to sample
@@ -102,7 +102,7 @@ class Hamiltonian(SamplerBase):
     def _step(U, get_grad, epsilon, L, qinit):
         '''Propagates all the walkers over on traj
         Args:
-            pdf (callable): the target dist
+            U (callable): the target pdf
             get_grad (callable) : get the value of the target dist gradient
             epsilon (float) : step size
             L (int) : number of steps in the traj
@@ -137,7 +137,7 @@ class Hamiltonian(SamplerBase):
         p = -p
 
         # current energy term
-        Enew = U(q) + 0.5 * (p**2).sum(1)
+        Enew = U(q) + 0.5 * (p*pS).sum(1)
 
         # metropolix accept/reject
         eps = torch.rand(Enew.shape)
