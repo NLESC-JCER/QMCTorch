@@ -137,7 +137,7 @@ class Hamiltonian(SamplerBase):
         p = -p
 
         # current energy term
-        Enew = U(q) + 0.5 * (p*pS).sum(1)
+        Enew = U(q) + 0.5 * (p*p).sum(1)
 
         # metropolix accept/reject
         eps = torch.rand(Enew.shape)
