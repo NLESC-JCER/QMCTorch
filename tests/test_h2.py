@@ -116,9 +116,9 @@ class TestH2(unittest.TestCase):
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(task='wf_opt')
-        self.solver.track_observable(['local_energy'])
-        obs = self.solver.run(5, loss='energy', grad='auto')
+        self.solver.configure(track=['local_energy'],
+                              loss='energy', grad='auto')
+        obs = self.solver.run(5)
         plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
 
     def test4_geo_opt(self):
@@ -126,14 +126,11 @@ class TestH2(unittest.TestCase):
         self.solver.wf.ao.atom_coords[0, 2].data = torch.tensor(-0.37)
         self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)
 
-        self.solver.configure(task='geo_opt')
-        self.solver.track_observable(
-            ['local_energy', 'geometry'])
-        self.solver.run(5, loss='energy', grad='auto')
+        self.solver.configure(track=['local_energy'],
+                              loss='energy', grad='auto')
+        self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
         # load the best model
-        # best_model = torch.load('model.pth')
-        # self.solver.wf.load_state_dict(best_model['model_state_dict'])
         self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
         self.solver.wf.eval()
 
@@ -167,9 +164,10 @@ class TestH2(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestH2()
-    t.setUp()
+    unittest.main()
+    # t = TestH2()
+    # t.setUp()
+    # t.test2_single_point_hmc()
     # t.test1_single_point()
     # # t.test3_wf_opt()
-    t.test5_sampling_traj()
+    # t.test5_sampling_traj()

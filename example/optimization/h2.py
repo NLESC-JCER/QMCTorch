@@ -51,18 +51,17 @@ solver = SolverOrbital(wf=wf, sampler=sampler,
 # perform a single point calculation
 obs = solver.single_point()
 
+# configure the solver
+solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
+                 loss='energy', grad='auto',
+                 ortho_mo=False, clip_loss=False,
+                 resampling={'mode': 'update',
+                             'resample_every': 1,
+                             'nstep_update': 50})
+
 # optimize the wave function
-solver.configure(task='wf_opt', freeze=['ao', 'mo'])
-solver.track_observable(['local_energy'])
+obs = solver.run(250)
 
-solver.configure_resampling(mode='update',
-                            resample_every=1,
-                            nstep_update=50)
-solver.ortho_mo = False
-obs = solver.run(250, batchsize=None,
-                 loss='energy',
-                 grad='auto',
-                 clip_loss=False)
-
+# plot
 plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
 plot_data(solver.observable, obsname='jastrow.weight')

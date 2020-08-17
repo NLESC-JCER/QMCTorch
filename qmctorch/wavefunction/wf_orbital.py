@@ -345,16 +345,15 @@ class Orbital(WaveFunction):
         """
         d = []
         for iat in range(self.natom):
-            #at = self.atoms[iat]
+
             xyz = self.ao.atom_coords[iat,
                                       :].cpu().detach().numpy().tolist()
-            #d.append((at, xyz))
             d.append(xyz)
         return d
 
     def gto2sto(self, plot=False):
         """Fits the AO GTO to AO STO.
-            The sto have only one basis function per ao
+            The SZ sto tht have only one basis function per ao
         """
 
         assert(self.ao.radial_type.startswith('gto'))
