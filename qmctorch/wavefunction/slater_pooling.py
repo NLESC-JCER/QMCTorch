@@ -302,8 +302,8 @@ class SlaterPooling(nn.Module):
         kin_up, kin_down = self.operator_unique_single_double(
             mo, bkin)
 
-        return (kin_up[:, self.index_unique_excitation[0]] +
-                kin_down[:, self.index_unique_excitation[1]])
+        return (kin_up[..., self.index_unique_excitation[0]] +
+                kin_down[..., self.index_unique_excitation[1]])
 
     def operator_unique_single_double(self, mo, bop):
         """Compute the kinetic energy of the unique single/double conformation
@@ -399,22 +399,21 @@ class SlaterPooling(nn.Module):
             op_dbl_up = mat_exc_up.view(
                 nbatch, -1)[:, self.exc_mask.index_unique_double_up]
 
-            _shape = (*op_dbl_up.shape[:-1], -1, 2, 2)
+            _ext_shape = (*op_dbl_up.shape[:-1], -1, 2, 2)
+            _m_shape = (*Mup.shape[:-1], -1, 2, 2)
 
-            op_dbl_up = torch.inverse(op_dbl_up.view(_shape))
-            print(op_dbl_up.shape)
-            print(Mup[..., self.exc_mask.index_unique_double_up].shape)
+            op_dbl_up = torch.inverse(op_dbl_up.view(_ext_shape))
             op_dbl_up = op_dbl_up @ (
-                Mup[..., self.exc_mask.index_unique_double_up]).view(_shape)
+                Mup[..., self.exc_mask.index_unique_double_up]).view(_m_shape)
             op_dbl_up = btrace(op_dbl_up)
             op_dbl_up += op_ground_up
 
             op_dbl_down = mat_exc_down.view(
                 nbatch, -1)[:, self.exc_mask.index_unique_double_down]
             op_dbl_down = torch.inverse(
-                op_dbl_down.view(_shape))
+                op_dbl_down.view(_ext_shape))
             op_dbl_down = op_dbl_down @ (
-                Mdown[..., self.exc_mask.index_unique_double_down]).view(_shape)
+                Mdown[..., self.exc_mask.index_unique_double_down]).view(_m_shape)
             op_dbl_down = btrace(op_dbl_down)
             op_dbl_down += op_ground_down
 

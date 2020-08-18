@@ -48,10 +48,10 @@ class TestSlater(unittest.TestCase):
     def test_kin(self):
 
         mo = torch.rand(10, 22, 45)
-        bkin = torch.rand(6, 10, 22, 45)
-        # kin_explicit = self.wf.pool.kinetic_explicit(mo, bkin)
+        bkin = torch.rand(10, 22, 45)
+        kin_explicit = self.wf.pool.kinetic_explicit(mo, bkin)
         kin = self.wf.pool.kinetic_single_double(mo, bkin)
-        # assert(torch.allclose(kin_explicit, kin))
+        assert(torch.allclose(kin_explicit, kin))
 
     def test_kin_all_mo(self):
 
