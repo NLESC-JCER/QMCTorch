@@ -253,3 +253,21 @@ class WaveFunction(torch.nn.Module):
             data[name] = torch.tensor(val)
         self.load_state_dict(data)
         f5.close()
+
+    def grad(self, pos):
+        """computes the gradients of the wave function
+
+        Args:
+            pos (torch.tensor): positions of the walkers            
+        """
+        raise NotImplementedError("Implement a gradient calculations")
+
+    def grad_pdf(self, pos, wf_vals=None):
+        """computes the gradients of the pdf
+
+        Args:
+            pos (torch.tensor): positions of the walkers
+        """
+        if wf_vals is None:
+            wf_vals = self(pos)
+        return 2. * self.grad(pos) * wf_vals

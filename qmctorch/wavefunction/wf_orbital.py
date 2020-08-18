@@ -303,6 +303,57 @@ class Orbital(WaveFunction):
             out = self.fc(kin * psi) / self.fc(psi)
             return out
 
+    def gradient_jacobi(self, x):
+        """Compute the gradients of the wave function using the Jacobi Formula
+        C. Filippi, Simple Formalism for Efficient Derivatives.
+
+        .. math::
+             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{grad})
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+        Returns:
+            torch.tensor: values of the gradients wrt the walker pos at each sampling points
+        """
+
+        ao = self.ao(x)
+        grad_ao = self.ao(x, derivative=1, jacobian=False)
+        mo = self.ao2mo(ao)
+        bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
+        print(bgrad.shape)
+        out = []
+        for ig in range(3):
+            grads = self.pool.kinetic(mo, bgrad[..., ig])
+            print(grads.shape)
+            psi = self.pool(mo)
+            print(psi.shape)
+            aa = self.fc(grads * psi) / self.fc(psi)
+            print(aa.shape)
+            out.append(aa)
+        return torch.stack(out)
+
+    def get_grad_operator(self, x, ao, grad_ao, mo):
+        """Compute the gradient operator
+
+        Args:
+            x ([type]): [description]
+            ao ([type]): [description]
+            dao ([type]): [description]
+        """
+
+        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
+
+        if self.use_jastrow:
+
+            jast = self.jastrow(x)
+            grad_jast = self.jastrow(x, derivative=1, jacobian=False)
+            djast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
+
+            bgrad = bgrad + djast.unsqueeze(2)*mo.unsqueeze(-1)
+
+        return bgrad
+
     def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
         """Compute the Bkin matrix
 
@@ -332,7 +383,7 @@ class Orbital(WaveFunction):
 
             bkin = bkin + 2 * djast_dmo + d2jast_mo
 
-        return bkin
+        return -0.5 * bkin
 
     def geometry(self, pos):
         """Returns the gemoetry of the system in xyz format

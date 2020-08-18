@@ -87,6 +87,15 @@ class TestWaveFunction(unittest.TestCase):
 
         efd = self.wf.kinetic_energy_finite_difference(self.pos)
 
+    # def test_gradients(self):
+
+    #     D = self.pool(
+    #         self.mo(self.mo_scf(self.ao(x, derivative=1, jacobian=False))))
+
+    #     if self.wf.use_jastrow:
+    #         J = self.wf.jastrow(self.pos, derivative=1, jacobian=False)
+    #         return
+
 
 if __name__ == "__main__":
     unittest.main()
