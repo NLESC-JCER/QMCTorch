@@ -238,7 +238,7 @@ class SlaterPooling(nn.Module):
 
         return det_out_up, det_out_down
 
-    def kinetic(self, mo, bkin):
+    def operator(self, mo, bop):
         """Computes the values of the kinetic energy
 
         Args:
@@ -250,11 +250,11 @@ class SlaterPooling(nn.Module):
         """
 
         if self.config_method.startswith('cas('):
-            return self.kinetic_explicit(mo, bkin)
+            return self.operator_explicit(mo, bop)
         else:
-            return self.kinetic_single_double(mo, bkin)
+            return self.operator_single_double(mo, bop)
 
-    def kinetic_explicit(self, mo, bkin):
+    def operator_explicit(self, mo, bkin):
         r"""Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
 
         .. math::
@@ -288,7 +288,7 @@ class SlaterPooling(nn.Module):
 
         return kinetic
 
-    def kinetic_single_double(self, mo, bkin):
+    def operator_single_double(self, mo, bop):
         """Computes the kinetic energy of gs + single + double
 
         Args:
@@ -299,11 +299,11 @@ class SlaterPooling(nn.Module):
             torch.tensor: kinetic energy values
         """
 
-        kin_up, kin_down = self.operator_unique_single_double(
-            mo, bkin)
+        op_up, op_down = self.operator_unique_single_double(
+            mo, bop)
 
-        return (kin_up[..., self.index_unique_excitation[0]] +
-                kin_down[..., self.index_unique_excitation[1]])
+        return (op_up[..., self.index_unique_excitation[0]] +
+                op_down[..., self.index_unique_excitation[1]])
 
     def operator_unique_single_double(self, mo, bop):
         """Compute the kinetic energy of the unique single/double conformation

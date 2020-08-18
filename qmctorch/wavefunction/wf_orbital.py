@@ -298,7 +298,7 @@ class Orbital(WaveFunction):
             return self.fc(kin) / self.fc(psi)
 
         else:
-            kin = self.pool.kinetic(mo, bkin)
+            kin = self.pool.operator(mo, bkin)
             psi = self.pool(mo)
             out = self.fc(kin * psi) / self.fc(psi)
             return out
@@ -321,17 +321,13 @@ class Orbital(WaveFunction):
         grad_ao = self.ao(x, derivative=1, jacobian=False)
         mo = self.ao2mo(ao)
         bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
-        print(bgrad.shape)
-        out = []
-        for ig in range(3):
-            grads = self.pool.kinetic(mo, bgrad[..., ig])
-            print(grads.shape)
-            psi = self.pool(mo)
-            print(psi.shape)
-            aa = self.fc(grads * psi) / self.fc(psi)
-            print(aa.shape)
-            out.append(aa)
-        return torch.stack(out)
+
+        grads = self.pool.operator(mo, bgrad)
+
+        psi = self.pool(mo)
+        out = self.fc(grads * psi) / self.fc(psi)
+
+        return out.transpose(0, 1).squeeze()
 
     def get_grad_operator(self, x, ao, grad_ao, mo):
         """Compute the gradient operator
@@ -343,14 +339,23 @@ class Orbital(WaveFunction):
         """
 
         bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
+        bgrad = bgrad.permute(3, 0, 1, 2).repeat(2, 1, 1, 1)
+
+        for ielec in range(self.nelec):
+            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
+            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
 
         if self.use_jastrow:
 
-            jast = self.jastrow(x)
-            grad_jast = self.jastrow(x, derivative=1, jacobian=False)
-            djast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
+            jast = self.jastrow(x).transpose(0, 1)
+            grad_jast = self.jastrow(x,
+                                     derivative=1,
+                                     jacobian=False).transpose(1, 2)
+            grad_jast = grad_jast.flatten(start_dim=1).transpose(0, 1)
 
-            bgrad = bgrad + djast.unsqueeze(2)*mo.unsqueeze(-1)
+            grad_jast = grad_jast / jast
+            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
+            bgrad = bgrad + grad_jast*mo.unsqueeze(0)
 
         return bgrad
 
