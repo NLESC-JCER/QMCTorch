@@ -347,15 +347,18 @@ class Orbital(WaveFunction):
 
         if self.use_jastrow:
 
-            jast = self.jastrow(x).transpose(0, 1)
+            jast = self.jastrow(x)
             grad_jast = self.jastrow(x,
                                      derivative=1,
-                                     jacobian=False).transpose(1, 2)
-            grad_jast = grad_jast.flatten(start_dim=1).transpose(0, 1)
+                                     jacobian=False)
+            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
 
-            grad_jast = grad_jast / jast
+            grad_jast = grad_jast.flatten(start_dim=1)
+            grad_jast = grad_jast.transpose(0, 1)
+
             grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
-            bgrad = bgrad + grad_jast*mo.unsqueeze(0)
+
+            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
 
         return bgrad
 
