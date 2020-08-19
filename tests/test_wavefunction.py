@@ -49,8 +49,11 @@ class TestWaveFunction(unittest.TestCase):
 
     def test_local_energy(self):
 
+        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
         eloc_auto = self.wf.local_energy(self.pos)
-        eloc_jac = self.wf.local_energy_jacobi(self.pos)
+
+        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
+        eloc_jac = self.wf.local_energy(self.pos)
 
         ref = torch.tensor([[-1.6567],
                             [-0.8790],
@@ -93,28 +96,17 @@ class TestWaveFunction(unittest.TestCase):
 
     def test_gradients_wf(self):
 
-        grads = self.wf.gradient_jacobi(self.pos)
-
-        wf_vals = self.wf(self.pos)
-        grad_auto = torch.autograd.grad(
-            wf_vals, self.pos,
-            grad_outputs=torch.ones_like(wf_vals),
-            only_inputs=True)[0]
+        grads = self.wf.gradients_jacobi(self.pos)
+        grad_auto = self.wf.gradients_autograd(self.pos)
 
         assert torch.allclose(grads, grad_auto)
 
     def test_gradients_pdf(self):
 
-        grads_pdf = self.wf.gradient_jacobi(self.pos, pdf=True)
+        grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
+        grads_auto = self.wf.gradients_autograd(self.pos, pdf=True)
 
-        pdf = self.wf.pdf(self.pos)
-        grad_auto = torch.autograd.grad(
-            pdf, self.pos,
-            grad_outputs=torch.ones_like(
-                pdf),
-            only_inputs=True)[0]
-
-        assert torch.allclose(grads_pdf, grad_auto)
+        assert torch.allclose(grads_pdf, grads_auto)
 
 
 if __name__ == "__main__":

@@ -105,7 +105,7 @@ class WaveFunction(torch.nn.Module):
         return vnn
 
     def gradients_autograd(self, pos, pdf=False):
-        """Computes the gradients of the wavefunction
+        """Computes the gradients of the wavefunction (or density)
         w.r.t the values of the pos.
 
         Args:
@@ -164,7 +164,7 @@ class WaveFunction(torch.nn.Module):
         return -0.5 * hess.view(-1, 1) / out
 
     def local_energy(self, pos):
-        """Computes the local energy using the Jacobi formula
+        """Computes the local energy
 
          .. math::
              E = K(R) + V_{ee}(R) + V_{en}(R) + V_{nn}
@@ -179,8 +179,12 @@ class WaveFunction(torch.nn.Module):
              >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
              >>> wf = Orbital(mol, configs='cas(2,2)')
              >>> pos = torch.rand(500,6)
-             >>> vals = wf.local_energy_jacobi(pos)
+             >>> vals = wf.local_energy(pos)
 
+         Note:
+            by default kinetic_energy refers to kinetic_energy_autograd 
+            users can overwrite it to poit to any other methods
+            see kinetic_energy_jacobi in wf_orbital
          """
 
         ke = self.kinetic_energy(pos)
