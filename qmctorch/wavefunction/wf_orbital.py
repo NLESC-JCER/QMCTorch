@@ -103,7 +103,8 @@ class Orbital(WaveFunction):
 
         self.kinetic_method = kinetic
         if kinetic == 'jacobi':
-            self.local_energy = self.local_energy_jacobi
+            self.kinetic_energy = self.kinetic_energy_jacobi
+            self.gradients = self.gradients_jacobi
 
         if self.cuda:
             self.device = torch.device('cuda')
@@ -247,33 +248,6 @@ class Orbital(WaveFunction):
         """
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
-    def local_energy_jacobi(self, pos):
-        """Computes the local energy using the Jacobi formula
-
-        .. math::
-            E = K(R) + V_{ee}(R) + V_{en}(R) + V_{nn}
-
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
-
-        Returns:
-            [torch.tensor]: values of the local enrgies at each sampling points
-
-        Examples::
-            >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
-            >>> pos = torch.rand(500,6)
-            >>> vals = wf.local_energy_jacobi(pos)
-
-        """
-
-        ke = self.kinetic_energy_jacobi(pos)
-
-        return ke \
-            + self.nuclear_potential(pos) \
-            + self.electronic_potential(pos) \
-            + self.nuclear_repulsion()
-
     def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
@@ -303,7 +277,7 @@ class Orbital(WaveFunction):
             out = self.fc(kin * psi) / self.fc(psi)
             return out
 
-    def gradient_jacobi(self, x, pdf=False):
+    def gradients_jacobi(self, x, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
         C. Filippi, Simple Formalism for Efficient Derivatives.
 
