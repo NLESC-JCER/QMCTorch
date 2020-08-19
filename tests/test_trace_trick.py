@@ -233,7 +233,7 @@ class TestTrace(unittest.TestCase):
                             basis='sto-3g', unit='bohr')
 
         # define the wave function
-        self.wf = OrbitalTest(self.mol, )
+        self.wf = OrbitalTest(self.mol)
         self.x = 2 * torch.rand(5, 3 * self.mol.nelec) - 1.
         self.x.requires_grad = True
 
