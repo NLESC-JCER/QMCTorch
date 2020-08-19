@@ -273,9 +273,17 @@ class SlaterPooling(nn.Module):
         Aup, Adown = self.orb_proj.split_orbitals(mo)
         Bup, Bdown = self.orb_proj.split_orbitals(bkin)
 
+        # check ifwe have 1 or multiple ops
+        multiple_op = (Bup.ndim == 5)
+
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
         iAdown = torch.inverse(Adown)
+
+        # if we have multiple operators
+        if multiple_op:
+            iAup = iAup.unsqueeze(1)
+            iAdown = iAdown.unsqueeze(1)
 
         # determinant product
         det_prod = torch.det(Aup) * torch.det(Adown)
@@ -284,7 +292,10 @@ class SlaterPooling(nn.Module):
         kinetic = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
 
         # reshape
-        kinetic = kinetic.transpose(0, 1)
+        if multiple_op:
+            kinetic = kinetic.permute(1, 2, 0)
+        else:
+            kinetic = kinetic.transpose(0, 1)
 
         return kinetic
 
