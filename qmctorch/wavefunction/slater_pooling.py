@@ -255,7 +255,7 @@ class SlaterPooling(nn.Module):
             return self.operator_single_double(mo, bop)
 
     def operator_explicit(self, mo, bkin):
-        r"""Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
+        r"""Computes the value of any operator using the trace trick for a product of spin up/down determinant.
 
         .. math::
             -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}
@@ -300,7 +300,7 @@ class SlaterPooling(nn.Module):
         return kinetic
 
     def operator_single_double(self, mo, bop):
-        """Computes the kinetic energy of gs + single + double
+        """Computes the value of any operator on gs + single + double
 
         Args:
             mo (torch.tensor): matrix of molecular orbitals

@@ -303,8 +303,8 @@ class Orbital(WaveFunction):
             out = self.fc(kin * psi) / self.fc(psi)
             return out
 
-    def gradient_jacobi(self, x):
-        """Compute the gradients of the wave function using the Jacobi Formula
+    def gradient_jacobi(self, x, pdf=False):
+        """Compute the gradients of the wave function (or density) using the Jacobi Formula
         C. Filippi, Simple Formalism for Efficient Derivatives.
 
         .. math::
@@ -312,22 +312,46 @@ class Orbital(WaveFunction):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            pdf (bool, optional) : if true compute the grads of the density
 
         Returns:
             torch.tensor: values of the gradients wrt the walker pos at each sampling points
         """
 
+        # compute the gradient operator matrix
         ao = self.ao(x)
         grad_ao = self.ao(x, derivative=1, jacobian=False)
         mo = self.ao2mo(ao)
         bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
 
+        # use the Jacobi formula to compute the value
+        # the grad of each determinants
         grads = self.pool.operator(mo, bgrad)
 
-        psi = self.pool(mo)
-        out = self.fc(grads * psi) / self.fc(psi)
+        # comoute the determinants
+        dets = self.pool(mo)
 
-        return out.transpose(0, 1).squeeze()
+        # CI sum
+        psi = self.fc(dets)
+
+        # assemble the final values of
+        # nabla psi / psi
+        grads = self.fc(grads * dets)
+        grads = grads.transpose(0, 1).squeeze()
+
+        # multiply by psi to get the grads
+        # grads = grads * psi
+        if self.use_jastrow:
+            jast = self.jastrow(x)
+            grads = grads * jast
+
+        # if we need the grads of the pdf
+        if pdf:
+            grads = 2*grads*psi
+            if self.use_jastrow:
+                grads = grads*jast
+
+        return grads
 
     def get_grad_operator(self, x, ao, grad_ao, mo):
         """Compute the gradient operator
