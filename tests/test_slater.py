@@ -31,6 +31,10 @@ class TestSlater(unittest.TestCase):
                                 use_jastrow=True,
                                 include_all_mo=True)
 
+        self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
+        self.wf.fc.weight.data = self.random_fc_weight
+        self.wf_allmo.fc.weight.data = self.random_fc_weight
+
     def test_det(self):
 
         mo = torch.rand(10, 22, 45)
@@ -71,11 +75,11 @@ class TestSlater(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestSlater()
-    t.setUp()
+    unittest.main()
+    # t = TestSlater()
+    # t.setUp()
     # t.test_det()
     # t.test_det_all_mo()
     # t.test_op()
     # t.test_op_all_mo()
-    t.test_multiple_ops()
+    # t.test_multiple_ops()
