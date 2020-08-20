@@ -42,11 +42,11 @@ class OrbitalProjector(object):
 
         return Pup.unsqueeze(1).to(self.device), Pdown.unsqueeze(1).to(self.device)
 
-    def split_orbitals(self, mo):
+    def split_orbitals(self, mat):
         """Split the orbital  matrix in multiple slater matrices
 
         Args:
-            mo (torch.tensor): molecular orbital matrix
+            mat (torch.tensor): matrix to split
 
         Returns:
             torch.tensor: all slater matrices
@@ -54,8 +54,18 @@ class OrbitalProjector(object):
         if not hasattr(self, 'Pup'):
             self.Pup, self.Pdown = self.get_projectors()
 
-        return mo[:, :self.nup, :] @ self.Pup, mo[:,
-                                                  self.nup:, :] @ self.Pdown
+        if mat.ndim == 4:
+            # case for multiple operators
+            out_up = mat[..., :self.nup, :] @ self.Pup.unsqueeze(1)
+            out_down = mat[..., self.nup:,
+                           :] @ self.Pdown.unsqueeze(1)
+
+        else:
+            # case for single operator
+            out_up = mat[..., :self.nup, :] @ self.Pup
+            out_down = mat[..., self.nup:, :] @ self.Pdown
+
+        return out_up, out_down
 
 
 class ExcitationMask(object):

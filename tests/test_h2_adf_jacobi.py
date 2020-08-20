@@ -84,7 +84,7 @@ class TestH2ADFJacobi(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestH2ADFJacobi()
-    t.setUp()
-    t.test_single_point()
+    unittest.main()
+    # t = TestH2ADFJacobi()
+    # t.setUp()
+    # t.test_single_point()

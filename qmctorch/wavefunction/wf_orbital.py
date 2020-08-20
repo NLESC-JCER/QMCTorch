@@ -103,7 +103,8 @@ class Orbital(WaveFunction):
 
         self.kinetic_method = kinetic
         if kinetic == 'jacobi':
-            self.local_energy = self.local_energy_jacobi
+            self.kinetic_energy = self.kinetic_energy_jacobi
+            self.gradients = self.gradients_jacobi
 
         if self.cuda:
             self.device = torch.device('cuda')
@@ -247,33 +248,6 @@ class Orbital(WaveFunction):
         """
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
-    def local_energy_jacobi(self, pos):
-        """Computes the local energy using the Jacobi formula
-
-        .. math::
-            E = K(R) + V_{ee}(R) + V_{en}(R) + V_{nn}
-
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
-
-        Returns:
-            [torch.tensor]: values of the local enrgies at each sampling points
-
-        Examples::
-            >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
-            >>> pos = torch.rand(500,6)
-            >>> vals = wf.local_energy_jacobi(pos)
-
-        """
-
-        ke = self.kinetic_energy_jacobi(pos)
-
-        return ke \
-            + self.nuclear_potential(pos) \
-            + self.electronic_potential(pos) \
-            + self.nuclear_repulsion()
-
     def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
@@ -298,10 +272,93 @@ class Orbital(WaveFunction):
             return self.fc(kin) / self.fc(psi)
 
         else:
-            kin = self.pool.kinetic(mo, bkin)
+            kin = self.pool.operator(mo, bkin)
             psi = self.pool(mo)
             out = self.fc(kin * psi) / self.fc(psi)
             return out
+
+    def gradients_jacobi(self, x, pdf=False):
+        """Compute the gradients of the wave function (or density) using the Jacobi Formula
+        C. Filippi, Simple Formalism for Efficient Derivatives.
+
+        .. math::
+             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{grad})
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            pdf (bool, optional) : if true compute the grads of the density
+
+        Returns:
+            torch.tensor: values of the gradients wrt the walker pos at each sampling points
+        """
+
+        # compute the gradient operator matrix
+        ao = self.ao(x)
+        grad_ao = self.ao(x, derivative=1, jacobian=False)
+        mo = self.ao2mo(ao)
+        bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
+
+        # use the Jacobi formula to compute the value
+        # the grad of each determinants
+        grads = self.pool.operator(mo, bgrad)
+
+        # comoute the determinants
+        dets = self.pool(mo)
+
+        # CI sum
+        psi = self.fc(dets)
+
+        # assemble the final values of
+        # nabla psi / psi
+        grads = self.fc(grads * dets)
+        grads = grads.transpose(0, 1).squeeze()
+
+        # multiply by psi to get the grads
+        # grads = grads * psi
+        if self.use_jastrow:
+            jast = self.jastrow(x)
+            grads = grads * jast
+
+        # if we need the grads of the pdf
+        if pdf:
+            grads = 2*grads*psi
+            if self.use_jastrow:
+                grads = grads*jast
+
+        return grads
+
+    def get_grad_operator(self, x, ao, grad_ao, mo):
+        """Compute the gradient operator
+
+        Args:
+            x ([type]): [description]
+            ao ([type]): [description]
+            dao ([type]): [description]
+        """
+
+        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
+        bgrad = bgrad.permute(3, 0, 1, 2).repeat(2, 1, 1, 1)
+
+        for ielec in range(self.nelec):
+            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
+            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
+
+        if self.use_jastrow:
+
+            jast = self.jastrow(x)
+            grad_jast = self.jastrow(x,
+                                     derivative=1,
+                                     jacobian=False)
+            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
+
+            grad_jast = grad_jast.flatten(start_dim=1)
+            grad_jast = grad_jast.transpose(0, 1)
+
+            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
+
+            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
+
+        return bgrad
 
     def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
         """Compute the Bkin matrix
@@ -332,7 +389,7 @@ class Orbital(WaveFunction):
 
             bkin = bkin + 2 * djast_dmo + d2jast_mo
 
-        return bkin
+        return -0.5 * bkin
 
     def geometry(self, pos):
         """Returns the gemoetry of the system in xyz format

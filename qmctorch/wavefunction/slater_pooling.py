@@ -238,7 +238,7 @@ class SlaterPooling(nn.Module):
 
         return det_out_up, det_out_down
 
-    def kinetic(self, mo, bkin):
+    def operator(self, mo, bop):
         """Computes the values of the kinetic energy
 
         Args:
@@ -250,12 +250,12 @@ class SlaterPooling(nn.Module):
         """
 
         if self.config_method.startswith('cas('):
-            return self.kinetic_explicit(mo, bkin)
+            return self.operator_explicit(mo, bop)
         else:
-            return self.kinetic_single_double(mo, bkin)
+            return self.operator_single_double(mo, bop)
 
-    def kinetic_explicit(self, mo, bkin):
-        r"""Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
+    def operator_explicit(self, mo, bkin):
+        r"""Computes the value of any operator using the trace trick for a product of spin up/down determinant.
 
         .. math::
             -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}
@@ -273,25 +273,34 @@ class SlaterPooling(nn.Module):
         Aup, Adown = self.orb_proj.split_orbitals(mo)
         Bup, Bdown = self.orb_proj.split_orbitals(bkin)
 
+        # check ifwe have 1 or multiple ops
+        multiple_op = (Bup.ndim == 5)
+
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
         iAdown = torch.inverse(Adown)
+
+        # if we have multiple operators
+        if multiple_op:
+            iAup = iAup.unsqueeze(1)
+            iAdown = iAdown.unsqueeze(1)
 
         # determinant product
         det_prod = torch.det(Aup) * torch.det(Adown)
 
         # kinetic terms
-        kinetic = -0.5 * (btrace(iAup@Bup) +
-                          btrace(iAdown@Bdown))  # * det_prod
+        kinetic = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
 
         # reshape
-        kinetic = kinetic.transpose(0, 1)
-        #det_prod = det_prod.transpose(0, 1)
-        return kinetic
-        # return kinetic, det_prod
+        if multiple_op:
+            kinetic = kinetic.permute(1, 2, 0)
+        else:
+            kinetic = kinetic.transpose(0, 1)
 
-    def kinetic_single_double(self, mo, bkin):
-        """Computes the kinetic energy of gs + single + double
+        return kinetic
+
+    def operator_single_double(self, mo, bop):
+        """Computes the value of any operator on gs + single + double
 
         Args:
             mo (torch.tensor): matrix of molecular orbitals
@@ -301,12 +310,13 @@ class SlaterPooling(nn.Module):
             torch.tensor: kinetic energy values
         """
 
-        kin_up, kin_down = self.kinetic_unique_single_double(mo, bkin)
+        op_up, op_down = self.operator_unique_single_double(
+            mo, bop)
 
-        return (kin_up[:, self.index_unique_excitation[0]] +
-                kin_down[:, self.index_unique_excitation[1]])
+        return (op_up[..., self.index_unique_excitation[0]] +
+                op_down[..., self.index_unique_excitation[1]])
 
-    def kinetic_unique_single_double(self, mo, bkin):
+    def operator_unique_single_double(self, mo, bop):
         """Compute the kinetic energy of the unique single/double conformation
 
         Args:
@@ -337,20 +347,21 @@ class SlaterPooling(nn.Module):
         invAup = torch.inverse(Aocc_up)
         invAdown = torch.inverse(Aocc_down)
 
-        # ground state kinetic
-        kin_ground_up = -0.5 * \
-            btrace(invAup @ bkin[:, :self.nup, :self.nup])
-        kin_ground_down = -0.5 * \
-            btrace(invAdown @ bkin[:, self.nup:, :self.ndown])
-        kin_ground_up.unsqueeze_(-1)
-        kin_ground_down.unsqueeze_(-1)
+        # ground state operator
+        op_ground_up = btrace(
+            invAup @ bop[..., :self.nup, :self.nup])
+        op_ground_down = btrace(
+            invAdown @ bop[..., self.nup:, :self.ndown])
+
+        op_ground_up.unsqueeze_(-1)
+        op_ground_down.unsqueeze_(-1)
 
         # store the kin terms we need
-        kin_out_up = kin_ground_up.clone()
-        kin_out_down = kin_ground_down.clone()
+        op_out_up = op_ground_up.clone()
+        op_out_down = op_ground_down.clone()
 
         if self.config_method == 'ground_state':
-            return kin_out_up, kin_out_down
+            return op_out_up, op_out_down
 
         # virtual orbital matrices spin up/down
         Avirt_up = mo[:, :self.nup, self.nup:self.index_max_orb_up]
@@ -361,63 +372,65 @@ class SlaterPooling(nn.Module):
         mat_exc_up = (invAup @ Avirt_up)
         mat_exc_down = (invAdown @ Avirt_down)
 
-        bkin_up = bkin[:, :self.nup, :self.index_max_orb_up]
-        bkin_occ_up = bkin[:, :self.nup, :self.nup]
-        bkin_virt_up = bkin[:, :self.nup,
-                            self.nup:self.index_max_orb_up]
+        bop_up = bop[..., :self.nup, :self.index_max_orb_up]
+        bop_occ_up = bop[..., :self.nup, :self.nup]
+        bop_virt_up = bop[..., :self.nup,
+                          self.nup:self.index_max_orb_up]
 
-        bkin_down = bkin[:, self.nup:, :self.index_max_orb_down]
-        bkin_occ_down = bkin[:, self.nup:, :self.ndown]
-        bkin_virt_down = bkin[:, self.nup:,
-                              self.ndown:self.index_max_orb_down]
+        bop_down = bop[:, self.nup:, :self.index_max_orb_down]
+        bop_occ_down = bop[..., self.nup:, :self.ndown]
+        bop_virt_down = bop[..., self.nup:,
+                            self.ndown:self.index_max_orb_down]
 
-        Mup = invAup @ bkin_virt_up - invAup @ bkin_occ_up @ invAup @ Avirt_up
-        Mdown = invAdown @ bkin_virt_down - \
-            invAdown @ bkin_occ_down @ invAdown @ Avirt_down
+        Mup = invAup @ bop_virt_up - invAup @ bop_occ_up @ invAup @ Avirt_up
+        Mdown = invAdown @ bop_virt_down - \
+            invAdown @ bop_occ_down @ invAdown @ Avirt_down
+
+        # reshape the M matrices
+        Mup = Mup.view(*Mup.shape[:-2], -1)
+        Mdown = Mdown.view(*Mdown.shape[:-2], -1)
 
         if do_single:
 
-            ksin_up = (1. / mat_exc_up.view(nbatch, -1)[:, self.exc_mask.index_unique_single_up]) * \
-                Mup.view(
-                    nbatch, -1)[:, self.exc_mask.index_unique_single_up]
-            ksin_up *= -0.5
-            ksin_up += kin_ground_up
+            op_sin_up = (1. / mat_exc_up.view(nbatch, -1)[:, self.exc_mask.index_unique_single_up]) * \
+                Mup[..., self.exc_mask.index_unique_single_up]
+            op_sin_up += op_ground_up
 
-            ksin_down = (1. / mat_exc_down.view(nbatch, -1)[:, self.exc_mask.index_unique_single_down]) * \
-                Mdown.view(
-                    nbatch, -1)[:, self.exc_mask.index_unique_single_down]
-            ksin_down *= -0.5
-            ksin_down += kin_ground_down
+            op_sin_down = (1. / mat_exc_down.view(nbatch, -1)[:, self.exc_mask.index_unique_single_down]) * \
+                Mdown[..., self.exc_mask.index_unique_single_down]
+            op_sin_down += op_ground_down
 
             # store the terms we need
-            kin_out_up = torch.cat((kin_out_up, ksin_up), dim=1)
-            kin_out_down = torch.cat(
-                (kin_out_down, ksin_down), dim=1)
+            op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
+            op_out_down = torch.cat(
+                (op_out_down, op_sin_down), dim=-1)
 
         if do_double:
 
-            kdbl_up = mat_exc_up.view(
+            op_dbl_up = mat_exc_up.view(
                 nbatch, -1)[:, self.exc_mask.index_unique_double_up]
-            kdbl_up = torch.inverse(kdbl_up.view(nbatch, -1, 2, 2))
-            kdbl_up = kdbl_up @ (Mup.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_double_up]).view(nbatch, -1, 2, 2)
-            kdbl_up = btrace(kdbl_up)
-            kdbl_up *= -0.5
-            kdbl_up += kin_ground_up
 
-            kdbl_down = mat_exc_down.view(
+            _ext_shape = (*op_dbl_up.shape[:-1], -1, 2, 2)
+            _m_shape = (*Mup.shape[:-1], -1, 2, 2)
+
+            op_dbl_up = torch.inverse(op_dbl_up.view(_ext_shape))
+            op_dbl_up = op_dbl_up @ (
+                Mup[..., self.exc_mask.index_unique_double_up]).view(_m_shape)
+            op_dbl_up = btrace(op_dbl_up)
+            op_dbl_up += op_ground_up
+
+            op_dbl_down = mat_exc_down.view(
                 nbatch, -1)[:, self.exc_mask.index_unique_double_down]
-            kdbl_down = torch.inverse(
-                kdbl_down.view(nbatch, -1, 2, 2))
-            kdbl_down = kdbl_down @ (Mdown.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_double_down]).view(nbatch, -1, 2, 2)
-            kdbl_down = btrace(kdbl_down)
-            kdbl_down *= -0.5
-            kdbl_down += kin_ground_down
+            op_dbl_down = torch.inverse(
+                op_dbl_down.view(_ext_shape))
+            op_dbl_down = op_dbl_down @ (
+                Mdown[..., self.exc_mask.index_unique_double_down]).view(_m_shape)
+            op_dbl_down = btrace(op_dbl_down)
+            op_dbl_down += op_ground_down
 
             # store the terms we need
-            kin_out_up = torch.cat((kin_out_up, kdbl_up), dim=1)
-            kin_out_down = torch.cat(
-                (kin_out_down, kdbl_down), dim=1)
+            op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
+            op_out_down = torch.cat(
+                (op_out_down, op_dbl_down), dim=-1)
 
-        return kin_out_up, kin_out_down
+        return op_out_up, op_out_down

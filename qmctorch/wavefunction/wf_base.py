@@ -17,6 +17,8 @@ class WaveFunction(torch.nn.Module):
         self.device = torch.device('cpu')
         if self.cuda:
             self.device = torch.device('cuda')
+        self.kinetic_energy = self.kinetic_energy_autograd
+        self.gradients = self.gradients_autograd
 
     def forward(self, x):
         ''' Compute the value of the wave function.
@@ -102,33 +104,40 @@ class WaveFunction(torch.nn.Module):
                 vnn += Z0 * Z1 / rnn
         return vnn
 
-    def kinetic_energy(self, pos):
-        '''Main switch for the kinetic energy.'''
-
-        if self.kinetic == 'auto':
-            return self.kinetic_energy_autograd(pos)
-
-        elif self.kinetic == 'fd':
-            return self.kinetic_energy_finite_difference(pos)
-
-        else:
-            raise ValueError(
-                'kinetic %s not recognized' %
-                self.kinetic)
-
-    def kinetic_energy_autograd(self, pos):
-        '''Compute the second derivative of the network
-        output w.r.t the value of the input.
-
-        This is to compute the value of the kinetic operator.
+    def gradients_autograd(self, pos, pdf=False):
+        """Computes the gradients of the wavefunction (or density)
+        w.r.t the values of the pos.
 
         Args:
-            pos: position of the electron
-            out : preomputed values of the wf at pos
+            pos (torch.tensor): positions of the walkers
+            pdf (bool, optional) : if true compute the grads of the density
+
+        Returns:
+            torch.tensor: values of the gradients
+        """
+        out = self.forward(pos)
+
+        # compute the grads
+        grads = grad(out, pos,
+                     grad_outputs=torch.ones_like(out),
+                     only_inputs=True)[0]
+
+        # if we return grad of pdf
+        if pdf:
+            grads = 2*grads*out
+
+        return grads
+
+    def kinetic_energy_autograd(self, pos):
+        """Compute the kinetic energy through the 2nd derivative
+        w.r.t the value of the pos.
+
+        Args:
+            pos (torch.tensor): positions of the walkers
 
         Returns:
             values of nabla^2 * Psi
-        '''
+        """
 
         out = self.forward(pos)
 
@@ -154,45 +163,29 @@ class WaveFunction(torch.nn.Module):
 
         return -0.5 * hess.view(-1, 1) / out
 
-    def kinetic_energy_finite_difference(self, pos, eps=1E-3):
-        '''Compute the second derivative of the network
-        output w.r.t the value of the input using finite difference.
-
-        This is to compute the value of the kinetic operator.
-
-        Args:
-            pos: position of the electron
-            out : preomputed values of the wf at pos
-            eps : psilon for numerical derivative
-        Returns:
-            values of nabla^2 * Psi
-        '''
-
-        nwalk = pos.shape[0]
-        ndim = pos.shape[1]
-        out = torch.zeros(nwalk, 1)
-
-        pos_tmp = pos.clone()
-        out = -2 * self.forward(pos_tmp)
-
-        for icol in range(ndim):
-
-            feps = out.clone()
-
-            pos_tmp = pos.clone()
-            pos_tmp[:, icol] += eps
-            feps += self.forward(pos_tmp)
-
-            pos_tmp = pos.clone()
-            pos_tmp[:, icol] -= eps
-            feps += self.forward(pos_tmp)
-
-            out += feps / (eps**2)
-
-        return -0.5 * out.view(-1, 1) / out
-
     def local_energy(self, pos):
-        ''' local energy of the sampling points.'''
+        """Computes the local energy
+
+         .. math::
+             E = K(R) + V_{ee}(R) + V_{en}(R) + V_{nn}
+
+         Args:
+             pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
+
+         Returns:
+             [torch.tensor]: values of the local enrgies at each sampling points
+
+         Examples::
+             >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
+             >>> wf = Orbital(mol, configs='cas(2,2)')
+             >>> pos = torch.rand(500,6)
+             >>> vals = wf.local_energy(pos)
+
+         Note:
+            by default kinetic_energy refers to kinetic_energy_autograd 
+            users can overwrite it to poit to any other methods
+            see kinetic_energy_jacobi in wf_orbital
+         """
 
         ke = self.kinetic_energy(pos)
 
@@ -225,9 +218,12 @@ class WaveFunction(torch.nn.Module):
         el = self.local_energy(pos)
         return torch.mean(el), torch.var(el), self.sampling_error(el)
 
-    def pdf(self, pos):
+    def pdf(self, pos, return_grad=False):
         '''density of the wave function.'''
-        return (self.forward(pos)**2).reshape(-1)
+        if return_grad:
+            return self.gradients(pos, pdf=True)
+        else:
+            return (self.forward(pos)**2).reshape(-1)
 
     def get_number_parameters(self):
         """Computes the total number of parameters."""
