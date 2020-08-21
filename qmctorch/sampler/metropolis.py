@@ -3,11 +3,11 @@ import torch
 from torch.distributions import MultivariateNormal
 from time import time
 from types import SimpleNamespace
-from .sampler_base import SamplerBase
+from .metropolis_base import MetropolisBase
 from .. import log
 
 
-class Metropolis(SamplerBase):
+class Metropolis(MetropolisBase):
 
     def __init__(self, nwalkers=100,
                  nstep=1000, step_size=0.2,
@@ -46,239 +46,19 @@ class Metropolis(SamplerBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+        MetropolisBase.__init__(self, nwalkers, nstep,
+                                step_size, ntherm, ndecor,
+                                nelec, ndim, init, move, cuda)
 
-        self.configure_move(move)
-        self.log_data()
-
-    def log_data(self):
-        """log data about the sampler."""
-        log.info('  Move type           : {0}', self.movedict['type'])
-        log.info(
-            '  Move proba          : {0}', self.movedict['proba'])
-
-    def __call__(self, pdf, pos=None, with_tqdm=True):
-        """Generate a series of point using MC sampling
+    def displacement(self, num_elec, index=None):
+        """get the displacement vectors for the move
 
         Args:
-            pdf (callable): probability distribution function to be sampled
-            pos (torch.tensor, optional): position to start with.
-                                          Defaults to None.
-            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
-
-        Returns:
-            torch.tensor: positions of the walkers
+            num_elec (int): number of elec to move
+            index (torch.tensor): index of elec to move
         """
-
-        if self.ntherm >= self.nstep:
-            raise ValueError('Thermalisation longer than trajectory')
-
-        with torch.no_grad():
-
-            if self.ntherm < 0:
-                self.ntherm = self.nstep + self.ntherm
-
-            self.walkers.initialize(pos=pos)
-
-            self.init_sampling_data(pdf)
-
-            pos, rate, idecor = [], 0, 0
-            rng = tqdm(range(self.nstep),
-                       desc='INFO:QMCTorch|  Sampling',
-                       disable=not with_tqdm)
-            tstart = time()
-
-            for istep in rng:
-
-                for id_elec in self.fixed_id_elec_list:
-
-                    # new positions
-                    self.propose_move(pdf, id_elec)
-
-                    # get transition matrix
-                    trans_mat = self.transisition_matrix()
-
-                    # accept the moves
-                    index = self.accept_reject(trans_mat)
-
-                    # acceptance rate
-                    rate += index.byte().sum().float().to('cpu') / \
-                        (self.nwalkers * self._move_per_iter)
-
-                    # update position/function value
-                    # new function
-                    self.update_sampling_data()
-
-                if (istep >= self.ntherm):
-                    if (idecor % self.ndecor == 0):
-                        pos.append(self.walkers.pos.to('cpu').clone())
-                    idecor += 1
-
-            if with_tqdm:
-                log.info(
-                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100))
-                log.info(
-                    "   Timing statistics   : {:1.2f} steps/sec.", self.nstep/(time()-tstart))
-                log.info(
-                    "   Total Time          : {:1.2f} sec.", (time()-tstart))
-
-        return torch.cat(pos).requires_grad_()
-
-    def configure_move(self, move):
-        """Configure the electron moves
-
-        Args:
-            move (dict, optional): method to move the electrons. default('all-elec','normal') \n
-                                   'type':
-                                        'one-elec': move a single electron per iteration \n
-                                        'all-elec': move all electrons at the same time \n
-                                        'all-elec-iter': move all electrons by iterating through single elec moves \n
-                                    'proba' : 
-                                        'uniform': uniform ina cube \n
-                                        'normal': gussian in a sphere \n
-
-        Raises:
-            ValueError: If moves are not recognized
-        """
-
-        self.movedict = move
-
-        if 'type' not in self.movedict.keys():
-            print('Metroplis : Set 1 electron move by default')
-            self.movedict['type'] = 'one-elec'
-
-        if 'proba' not in self.movedict.keys():
-            print('Metroplis : Set uniform trial move probability')
-            self.movedict['proba'] = 'uniform'
-
-        if self.movedict['proba'] == 'normal':
-            _sigma = self.step_size / \
-                (2 * torch.sqrt(2 * torch.log(torch.tensor(2.))))
-            self.multiVariate = MultivariateNormal(
-                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
-
-        self._move_per_iter = 1
-        if self.movedict['type'] not in [
-                'one-elec', 'all-elec', 'all-elec-iter']:
-            raise ValueError(
-                " 'type' in move should be 'one-elec','all-elec', \
-                  'all-elec-iter'")
-
-        if self.movedict['type'] == 'all-elec-iter':
-            self.fixed_id_elec_list = range(self.nelec)
-            self._move_per_iter = self.nelec
-        else:
-            self.fixed_id_elec_list = [None]
-
-    def init_sampling_data(self, pdf):
-        """Computes the data needed to stat the sampling."""
-
-        self.data = SimpleNamespace()
-        self.data.initial_density = pdf(self.walkers.pos)
-        self.data.initial_density[self.data.initial_density ==
-                                  0] = self.epsilon
-        self.data.final_density = None
-
-    def update_sampling_data(self, index):
-        """Update the data for th sampling process
-
-        Args:
-            index (torch tensor): indices of the accepted move
-        """
-
-        self.walkers.pos[index, :] = self.data.final_pos[index, :]
-        self.data.initial_density[index] = self.data.final_density[index]
-        self.data.initial_density[self.data.initial_density ==
-                                  0] = self.epsilon
-
-    def propose_move(self, pdf, id_elec):
-        """propose a new move and computes the data
-
-        Args:
-            id_elec (torch.tensor): indexes of the elecs to move
-        """
-
-        self.data.final_pos = self.move(id_elec)
-        self.data.final_density = pdf(self.data.final_pos)
-        self.data.final_density[self.data.final_density ==
-                                0.] = self.epsilon
-
-    def move(self, id_elec):
-        """Move electron one at a time in a vectorized way.
-
-        Args:
-            id_elec (int): index f the electron to move
-
-        Returns:
-            torch.tensor: new positions of the walkers
-        """
-        if self.nelec == 1 or self.movedict['type'] == 'all-elec':
-            return self._move(self.walkers.pos, self.nelec)
-
-        else:
-
-            # clone and reshape data : Nwlaker, Nelec, Ndim
-            new_pos = self.walkers.pos.clone()
-            new_pos = new_pos.view(self.nwalkers,
-                                   self.nelec, self.ndim)
-
-            # get indexes
-            if id_elec is None:
-                index = torch.LongTensor(self.nwalkers).random_(
-                    0, self.nelec)
-            else:
-                index = torch.LongTensor(self.nwalkers).fill_(id_elec)
-
-            return self._move(new_pos, 1, index)
-
-    def _move(self, initial_pos, num_elec, index=None):
-        """Return a random array of length size between
-        [-step_size,step_size]
-
-        Args:
-            step_size (float): boundary of the array
-            size (int): number of points in the array
-
-        Returns:
-            torch.tensor: random array
-        """
-        if self.movedict['proba'] == 'uniform':
-            displacement = torch.rand(
-                (self.nwalkers, num_elec, self.ndim), device=self.device).view(
-                self.nwalkers, num_elec * self.ndim)
-            displacement = self.step_size * (2. * displacement - 1.)
-
-        elif self.movedict['proba'] == 'normal':
-            displacement = self.multiVariate.sample(
-                (self.nwalkers, num_elec)).to(self.device)
-            displacement = displacement.view(
-                self.nwalkers, num_elec * self.ndim)
-
-        if index is None:
-            new_pos = initial_pos + displacement
-        else:
-            new_pos = initial_pos[range(
-                self.nwalkers), index, :] + displacement
-
-        return new_pos.view(self.nwalkers, self.nelec * self.ndim)
+        return self.random_displacement(num_elec)
 
     def transisition_matrix(self):
         """computes the transitions matrix"""
         return self.data.final_density / self.data.initial_density
-
-    def accept_reject(self, P):
-        """accept the move or not
-
-        Args:
-            P (torch.tensor): probability of each move
-
-        Returns:
-            t0rch.tensor: the indx of the accepted moves
-        """
-
-        P[P > 1] = 1.0
-        tau = torch.rand_like(P)
-        index = (P - tau >= 0).reshape(-1)
-        return index.type(torch.bool)

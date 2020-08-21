@@ -4,12 +4,11 @@ from torch.autograd import Variable, grad
 from torch.distributions import MultivariateNormal
 import numpy as np
 
-from .sampler_base import SamplerBase
-from .metropolis import Metropolis
+from .metropolis_base import MetropolisBase
 from .. import log
 
 
-class GeneralizedMetropolis(Metropolis):
+class GeneralizedMetropolis(MetropolisBase):
 
     def __init__(self, nwalkers=100,
                  nstep=1000, step_size=0.2,
@@ -48,103 +47,65 @@ class GeneralizedMetropolis(Metropolis):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor,
-                             nelec, ndim, init, move, cuda)
+        MetropolisBase.__init__(self, nwalkers, nstep,
+                                step_size, ntherm, ndecor,
+                                nelec, ndim, init, move, cuda)
 
-        if self.movedict['type'] != 'all-elec':
-            raise ValueError(
-                'Generalized Metropolis only implemented for all elecron moves')
+        self.tau = self.step_size**2
+        self.additional_field = {'drift': self.get_drift}
 
     def transisition_matrix(self):
         """computes the transitions matrix"""
 
-        Tif = self.trans(self.walkers.pos,
-                         self.data.final_pos, self.data.final_drift)
-        Tfi = self.trans(self.data.final_pos,
-                         self.walkers.pos, self.data.initial_drift)
+        def trans(xf, xi, drifti):
+            a = (xf - xi - drifti * self.tau).norm(dim=1)
+            N = 1./(2*np.pi*self.tau)**(3*self.ndim/2)
+            return N * torch.exp(- 0.5 * a / self.tau)
+
+        Tif = trans(self.walkers.pos,
+                    self.data.final_pos, self.data.final_drift)
+        Tfi = trans(self.data.final_pos,
+                    self.walkers.pos, self.data.initial_drift)
 
         return (Tif * self.data.final_density) / \
             (Tfi * self.data.initial_density).double()
 
-    def init_sampling_data(self, pdf):
-        """Computes the data needed to stat the sampling."""
-        super(Metropolis, self).init_sampling_data(pdf)
-
-        xi = self.walkers.pos.clone()
-        xi.requires_grad = True
-
-        self.data.initial_drift = self.get_drift(pdf, xi)
-        self.data.final_drift = None
-
-    def update_sampling_data(self, index):
-        """Update the data for th sampling process
+    def displacement(self, num_elec, index=None):
+        """get the displacement vectors for the move
 
         Args:
-            index (torch tensor): indices of the accepted move
+            num_elec (int): number of elec to move
+            index (torch.tensor): index of elec to move
         """
-        super().update_sampling_data(index)
-        self.data.initial_drift[index,
-                                :] = self.data.final_drift[index, :]
 
-    def propose_move(self, pdf, id_elec):
-        """propose a new move and computes the data
+        eps = self.random_displacement(num_elec)
+
+        if index is None:
+            displacement = eps + self.tau * self.data.initial_drift
+
+        else:
+
+            drift = self.data.initial_drift.view(self.nwalkers,
+                                                 self.nelec, self.ndim)
+            displacement = torch.zeros((
+                self.nwalkers, num_elec, self.ndim)).to(self.device)
+
+            idx_walkers = range(self.nwalkers)
+            displacement[:, 0, :] += drift[idx_walkers,
+                                           index, :] + eps
+            displacement = displacement.view(
+                self.nwalkers, num_elec*self.ndim)
+
+        return displacement
+
+    def get_drift(self, pdf, pos):
+        """computes the drift velocity
 
         Args:
-            pdf (callable): density
-            id_elec (torch.tensor): indexes of the elecs to move
-        """
-        super().propose_move(pdf, id_elec)
-        self.final_drift = self.get_drift(pdf, self.data.final_pos)
-
-    def move(self, id_elec):
-        """Move electron one at a time in a vectorized way.
-
-        Args:
-
+            pdf (callable): density function
+            pos (torch.tensor): positions
 
         Returns:
-            torch.tensor: new positions of the walkers
+            torch.tensor: drift velocity
         """
-
-        if self.nelec == 1 or self.movedict['type'] = 'all-elec':
-            return self._move(self.walkers.pos, self.nelec)
-
-        # clone and reshape data : Nwlaker, Nelec, Ndim
-        new_pos = self.walkers.pos.clone()
-        new_pos = new_pos.view(self.nwalkers,
-                               self.nelec, self.ndim)
-
-        # get indexes
-        if id_elec is None:
-            index = torch.LongTensor(self.nwalkers).random_(
-                0, self.nelec)
-        else:
-            index = torch.LongTensor(self.nwalkers).fill_(id_elec)
-
-        # change selected data
-        new_pos[range(self.nwalkers), index,
-                :] += self._move(1)
-
-        # new_pos[range(self.nwalkers), index,
-        #         :] += self._move(self.data.initial_drift, index)
-
-        return new_pos.view(self.nwalkers, self.nelec * self.ndim)
-
-    def _move(self, initial_pos, num_elec, index=None):
-
-        d = self.data.initial_drift.view(self.nwalkers,
-                                         self.nelec, self.ndim)
-
-        mv = MultivariateNormal(torch.zeros(self.ndim), np.sqrt(
-            self.step_size) * torch.eye(self.ndim))
-
-        displacement self.step_size * d[range(self.nwalkers), index, :] \
-            + mv.sample((self.nwalkers, 1)).squeeze()
-
-    def trans(self, xf, xi, drifti):
-        a = (xf - xi - drifti * self.step_size).norm(dim=1)
-        return torch.exp(- 0.5 * a / self.step_size)
-
-    def get_drift(self, pdf, x):
-        return 0.5 * pdf(xi, return_grad=True) / pdf(xi)
+        return 0.5 * pdf(pos, return_grad=True) / pdf(pos).unsqueeze(-1)
