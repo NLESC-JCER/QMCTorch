@@ -50,7 +50,7 @@ class Walkers(object):
             self.pos = pos
 
         else:
-            log.debug("  Initialize walkers")
+            log.info("  Initializing walkers")
             if 'center' in self.init_domain.keys():
                 self.pos = self._init_center()
 
@@ -61,7 +61,8 @@ class Walkers(object):
                 self.pos = self._init_multivar()
 
             elif 'atom_coords' in self.init_domain.keys():
-                self.pos = self._init_atomic()
+                #self.pos = self._init_atomic()
+                self.pos = self._init_atomic_fast()
 
             else:
                 raise ValueError('Init walkers not recognized')
@@ -126,6 +127,7 @@ class Walkers(object):
             nelec_placed = [0] * natom
             idx = torch.tensor(idx_ref)
             idx = idx[torch.randperm(nelec_tot)]
+
             xyz = torch.tensor(
                 self.init_domain['atom_coords'])[
                 idx, :]
@@ -144,3 +146,56 @@ class Walkers(object):
 
             pos[iw, :] = xyz.view(-1)
         return pos.to(device=self.device)
+
+    def _init_atomic_fast(self):
+        """Initialize the walkers around the atoms
+
+        Returns:
+            torch.tensor -- positions of the walkers
+        """
+        # prepare the output
+        pos = torch.zeros(self.nwalkers, self.nelec * self.ndim)
+        idx_ref, std_factor_ref = [], []
+
+        # get the correct number of elec per atom
+        for iat, nelec in enumerate(self.init_domain['atom_nelec']):
+            idx_ref += [iat] * nelec
+            std_factor_ref += self._get_scale_ref(nelec)
+
+        # repeat the index and scale factor
+        idx0 = torch.tensor(idx_ref).repeat(self.nwalkers, 1)
+        std_factor0 = torch.tensor(
+            std_factor_ref).repeat(self.nwalkers, 1)
+
+        # get permutation index for indexes and factor
+        rand_perm = torch.rand(
+            self.nwalkers, self.nelec).argsort(dim=1)
+
+        # permute the indexes and scale factor
+        idx = torch.zeros(self.nwalkers, self.nelec).long().scatter_(
+            1, rand_perm, idx0)
+
+        std_factor = torch.zeros(self.nwalkers, self.nelec).scatter_(
+            1, rand_perm, std_factor0)
+
+        # get the atomic positions
+        xyz = torch.tensor(self.init_domain['atom_coords'])[idx, :]
+        xyz = xyz.reshape(self.nwalkers, self.nelec * self.ndim)
+
+        # get the std of each elec
+        scale = torch.tensor(self.init_domain['atom_num']).double()
+        scale = (scale.view(-1, 1)[idx, :]).squeeze()
+        scale = std_factor / (scale - std_factor)
+        scale = scale.repeat(1, 1, 3)
+        scale = scale.reshape(self.nwalkers, self.nelec * self.ndim)
+
+        # return the positions
+        return torch.normal(xyz, scale).to(device=self.device)
+
+    @staticmethod
+    def _get_scale_ref(nelec):
+        s = torch.zeros(nelec)
+        s[0] = 1
+        s[1:5] = 2
+        s[5:] = 3
+        return s.tolist()

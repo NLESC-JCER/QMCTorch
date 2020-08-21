@@ -320,6 +320,7 @@ class SolverOrbital(SolverBase):
             for ibatch, data in enumerate(self.dataloader):
 
                 # port data to device
+                t0_opt = time()
                 lpos = data.to(self.device)
 
                 # get the gradient
@@ -332,6 +333,9 @@ class SolverOrbital(SolverBase):
                 # observable
                 self.store_observable(
                     lpos, local_energy=eloc, ibatch=ibatch)
+
+                log.info('  optmization step in %1.2f sec.' %
+                         (time()-t0_opt))
 
             # save the model if necessary
             if n == 0 or cumulative_loss < min_loss:
@@ -347,7 +351,10 @@ class SolverOrbital(SolverBase):
             self.print_observable(cumulative_loss)
 
             # resample the data
+            t0_resample = time()
             self.dataset.data = self.resample(n, self.dataset.data)
+            log.info('  resampling done in %1.2f sec.' %
+                     (time()-t0_resample))
 
             # scheduler step
             if self.scheduler is not None:
