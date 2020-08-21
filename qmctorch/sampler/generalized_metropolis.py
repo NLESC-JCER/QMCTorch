@@ -58,9 +58,11 @@ class GeneralizedMetropolis(MetropolisBase):
         """computes the transitions matrix"""
 
         def trans(xf, xi, drifti):
+            """transition probability. 
+            Note we no not need the normalization factor
+            as we then compute Tif/Tfi."""
             a = (xf - xi - drifti * self.tau).norm(dim=1)
-            N = 1./(2*np.pi*self.tau)**(3*self.ndim/2)
-            return N * torch.exp(- 0.5 * a / self.tau)
+            return torch.exp(- 0.5 * a / self.tau)
 
         Tif = trans(self.walkers.pos,
                     self.data.final_pos, self.data.final_drift)
@@ -68,7 +70,7 @@ class GeneralizedMetropolis(MetropolisBase):
                     self.walkers.pos, self.data.initial_drift)
 
         return (Tif * self.data.final_density) / \
-            (Tfi * self.data.initial_density).double()
+            (Tfi * self.data.initial_density)
 
     def displacement(self, num_elec, index=None):
         """get the displacement vectors for the move
@@ -107,5 +109,8 @@ class GeneralizedMetropolis(MetropolisBase):
 
         Returns:
             torch.tensor: drift velocity
+
+        Note:
+            v(R) = \grad\Psi / \Psi = 0.5 \grad |\Psi|^2 / |\Psi|^2
         """
         return 0.5 * pdf(pos, return_grad=True) / pdf(pos).unsqueeze(-1)
