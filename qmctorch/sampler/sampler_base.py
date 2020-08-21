@@ -38,6 +38,12 @@ class SamplerBase(object):
         self.walkers = Walkers(
             nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init, cuda=cuda)
 
+        _type_ = torch.get_default_dtype()
+        if _type_ == torch.float32:
+            self.epsilon = 1E-7
+        elif _type_ == torch.float64:
+            self.epsilon = 1E-16
+
         log.info('')
         log.info(' Monte-Carlo Sampler')
         log.info('  Number of walkers   : {0}', self.nwalkers)
