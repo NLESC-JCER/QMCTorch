@@ -265,15 +265,7 @@ class Metropolis(SamplerBase):
         return new_pos.view(self.nwalkers, self.nelec * self.ndim)
 
     def transisition_matrix(self):
-        """computes the transitions matrix
-
-        Args:
-            pnew (torch.tensor): density of the new positions
-            pold (torch.tensor): density of the old positions
-
-        Returns:
-            torch.tensor: transition matrix
-        """
+        """computes the transitions matrix"""
         return self.data.final_density / self.data.initial_density
 
     def accept_reject(self, P):
