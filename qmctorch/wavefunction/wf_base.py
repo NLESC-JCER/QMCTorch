@@ -124,9 +124,10 @@ class WaveFunction(torch.nn.Module):
 
         # if we return grad of pdf
         if pdf:
-            grads = 2*grads*out
+            return 2*grads*out
 
-        return grads
+        else:
+            return grads
 
     def kinetic_energy_autograd(self, pos):
         """Compute the kinetic energy through the 2nd derivative

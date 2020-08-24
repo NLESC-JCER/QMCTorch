@@ -42,8 +42,12 @@ class Hamiltonian(SamplerBase):
         return fgrad
 
     @staticmethod
-    def log_func(func):
-        return lambda x: -torch.log(func(x))
+    def log_func(pdf):
+        return lambda x: -torch.log(pdf(x))
+
+    def grad_log_func(self, logpdf):
+        return lambda x: self.get_grad(logpdf, x)
+        # return lambda x: pdf(x, return_grad=True)/pdf(x).unsqueeze(-1)
 
     def __call__(self, pdf, pos=None, with_tqdm=True):
         """Generate walkers following HMC
@@ -71,19 +75,22 @@ class Hamiltonian(SamplerBase):
         # get the logpdf function
         logpdf = self.log_func(pdf)
 
+        # get the gradients of the log pdf
+        grad_logpdf = self.grad_log_func(logpdf)
+
         pos = []
         rate = 0
         idecor = 0
 
         rng = tqdm(range(self.nstep),
-                   desc='INFO:QMCTorch|  Sampling',
+                   desc='INFO:QMCTorch|  HMC Sampling',
                    disable=not with_tqdm)
 
         for istep in rng:
 
             # move the walkers
             self.walkers.pos, _r = self._step(
-                logpdf, self.get_grad, self.step_size, self.traj_length,
+                logpdf, grad_logpdf, self.step_size, self.traj_length,
                 self.walkers.pos)
             rate += _r
 
@@ -99,7 +106,7 @@ class Hamiltonian(SamplerBase):
         return torch.cat(pos).requires_grad_()
 
     @staticmethod
-    def _step(U, get_grad, epsilon, L, qinit):
+    def _step(U, gradU, epsilon, L, qinit):
         '''Propagates all the walkers over on traj
         Args:
             U (callable): the target pdf
@@ -113,25 +120,25 @@ class Hamiltonian(SamplerBase):
         '''
 
         # init the momentum
-        q = qinit.clone()
+        q = qinit.clone().requires_grad_()
         p = torch.randn(q.shape)
 
         # initial energy terms
         Einit = U(q) + 0.5 * (p*p).sum(1)
 
         # half step in momentum space
-        p -= 0.5 * epsilon * get_grad(U, q)
+        p -= 0.5 * epsilon * gradU(q)
 
         # full steps in q and p space
         for iL in range(L - 1):
             q = q + epsilon * p
-            p -= 0.5 * epsilon * get_grad(U, q)
+            p -= 0.5 * epsilon * gradU(q)
 
         # last full step in pos space
         q = q + epsilon * p
 
         # half step in momentum space
-        p -= 0.5 * epsilon * get_grad(U, q)
+        p -= 0.5 * epsilon * gradU(q)
 
         # negate momentum
         p = -p

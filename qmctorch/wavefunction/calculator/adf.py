@@ -20,6 +20,12 @@ class CalculatorADF(CalculatorBase):
         CalculatorBase.__init__(
             self, atoms, atom_coords, basis, scf, units, molname, 'adf', savefile)
 
+        # basis from the emma paper
+        self.additional_basis_type = ['VB1', 'VB2', 'VB3',
+                                      'CVB1', 'CVB2', 'CVB3']
+        self.additional_basis_path = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), 'atomicdata/adf/')
+
     def run(self):
         """Run the calculation using ADF."""
 
@@ -66,6 +72,8 @@ class CalculatorADF(CalculatorBase):
 
         sett = plams.Settings()
         sett.input.basis.type = self.basis_name.upper()
+        if self.basis_name.upper() in self.additional_basis_type:
+            sett.input.basis.path = self.additional_basis_path
         sett.input.basis.core = 'None'
         sett.input.symmetry = 'nosym'
         sett.input.XC.HartreeFock = ''
