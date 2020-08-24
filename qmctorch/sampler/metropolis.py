@@ -9,9 +9,10 @@ from .. import log
 
 class Metropolis(MetropolisBase):
 
-    def __init__(self, nwalkers=100,
-                 nstep=1000, step_size=0.2,
-                 ntherm=-1, ndecor=1,
+    def __init__(self, nwalkers, ntherm,
+                 nstep=None,
+                 nsample=None, ndecor=None,
+                 step_size=0.2,
                  nelec=1, ndim=3,
                  init={'min': -5, 'max': 5},
                  move={'type': 'all-elec', 'proba': 'normal'},
@@ -46,7 +47,7 @@ class Metropolis(MetropolisBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        MetropolisBase.__init__(self, nwalkers, nstep,
+        MetropolisBase.__init__(self, nwalkers, nsample, nstep,
                                 step_size, ntherm, ndecor,
                                 nelec, ndim, init, move, cuda)
 

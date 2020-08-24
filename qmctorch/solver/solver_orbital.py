@@ -135,25 +135,6 @@ class SolverOrbital(SolverBase):
                     raise ValueError(
                         'Valid arguments for freeze are :', opt_freeze)
 
-    def save_sampling_parameters(self, pos):
-        """ save the sampling params."""
-        self.sampler._nstep_save = self.sampler.nstep
-        self.sampler._ntherm_save = self.sampler.ntherm
-        self.sampler._nwalker_save = self.sampler.walkers.nwalkers
-
-        if self.resampling_options.mode == 'update':
-            self.sampler.ntherm = -1
-            self.sampler.nstep = self.resampling_options.nstep_update
-            self.sampler.walkers.nwalkers = pos.shape[0]
-            self.sampler.nwalkers = pos.shape[0]
-
-    def restore_sampling_parameters(self):
-        """restore sampling params to their original values."""
-        self.sampler.nstep = self.sampler._nstep_save
-        self.sampler.ntherm = self.sampler._ntherm_save
-        self.sampler.walkers.nwalkers = self.sampler._nwalker_save
-        self.sampler.nwalkers = self.sampler._nwalker_save
-
     def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
                 nepoch_wf_init=100, nepoch_wf_update=50,
                 hdf5_group=None, chkpt_every=None):
@@ -258,48 +239,6 @@ class SolverOrbital(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every):
-        """Prepare the optimization process
-
-        Args:
-            batchsize (int or None): batchsize
-            chkpt_every (int or none): save a chkpt file every 
-        """
-
-        # sample the wave function
-        pos = self.sampler(self.wf.pdf)
-
-        # handle the batch size
-        if batchsize is None:
-            batchsize = len(pos)
-
-        # get the initial observable
-        self.store_observable(pos)
-
-        # change the number of steps/walker size
-        self.save_sampling_parameters(pos)
-
-        # create the data loader
-        self.dataset = DataSet(pos)
-        self.dataloader = DataLoader(
-            self.dataset, batch_size=batchsize)
-
-        # chkpt
-        self.chkpt_every = chkpt_every
-
-    def save_data(self, hdf5_group):
-        """Save the data to hdf5.
-
-        Args:
-            hdf5_group (str): name of group in the hdf5 file
-        """
-        self.observable.models.last = dict(self.wf.state_dict())
-
-        hdf5_group = dump_to_hdf5(
-            self.observable, self.hdf5file, hdf5_group)
-
-        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
-
     def run_epochs(self, nepoch):
         """Run a certain number of epochs
 
@@ -334,8 +273,8 @@ class SolverOrbital(SolverBase):
                 self.store_observable(
                     lpos, local_energy=eloc, ibatch=ibatch)
 
-                log.info('  optmization step in %1.2f sec.' %
-                         (time()-t0_opt))
+                log.info(' %d optmization step in %1.2f sec.' % (ibatch,
+                                                                 (time()-t0_opt)))
 
             # save the model if necessary
             if n == 0 or cumulative_loss < min_loss:

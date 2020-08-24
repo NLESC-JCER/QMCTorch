@@ -1,9 +1,11 @@
 import torch
+from torch.utils.data import DataLoader
 from types import SimpleNamespace
 from tqdm import tqdm
 import numpy as np
 
 from ..utils import dump_to_hdf5, add_group_attr
+from ..utils import DataSet
 from .. import log
 
 
@@ -137,6 +139,48 @@ class SolverBase(object):
 
         self.observable.models = SimpleNamespace()
 
+    def prepare_optimization(self, batchsize, chkpt_every):
+        """Prepare the optimization process
+
+        Args:
+            batchsize (int or None): batchsize
+            chkpt_every (int or none): save a chkpt file every 
+        """
+
+        # sample the wave function
+        pos = self.sampler(self.wf.pdf)
+
+        # handle the batch size
+        if batchsize is None:
+            batchsize = self.sampler.nsample
+
+        # get the initial observable
+        self.store_observable(pos)
+
+        # change the number of steps/walker size
+        self.save_sampling_parameters(pos)
+
+        # create the data loader
+        self.dataset = DataSet(pos)
+        self.dataloader = DataLoader(
+            self.dataset, batch_size=batchsize)
+
+        # chkpt
+        self.chkpt_every = chkpt_every
+
+    def save_data(self, hdf5_group):
+        """Save the data to hdf5.
+
+        Args:
+            hdf5_group (str): name of group in the hdf5 file
+        """
+        self.observable.models.last = dict(self.wf.state_dict())
+
+        hdf5_group = dump_to_hdf5(
+            self.observable, self.hdf5file, hdf5_group)
+
+        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
+
     def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
         """store observale in the dictionary
 
@@ -222,6 +266,28 @@ class SolverBase(object):
                 log.options(style='percent').info(
                     'loss %f' % (cumulative_loss))
 
+    def save_sampling_parameters(self, pos):
+        """ save the sampling params."""
+        self.sampler._nstep_save = self.sampler.nstep
+        self.sampler._nsample_save = self.sampler.nsample
+        self.sampler._ntherm_save = self.sampler.ntherm
+        self.sampler._nwalker_save = self.sampler.walkers.nwalkers
+
+        if self.resampling_options.mode == 'update':
+            self.sampler.ntherm = self.resampling_options.nstep_update
+            self.sampler.nstep = self.sampler.get_number_steps()
+
+        # self.sampler.walkers.nwalkers = pos.shape[0]
+        # self.sampler.nwalkers = pos.shape[0]
+
+    def restore_sampling_parameters(self):
+        """restore sampling params to their original values."""
+        self.sampler.nstep = self.sampler._nstep_save
+        self.sampler.nsample = self.sampler._nsample_save
+        self.sampler.ntherm = self.sampler._ntherm_save
+        self.sampler.walkers.nwalkers = self.sampler._nwalker_save
+        self.sampler.nwalkers = self.sampler._nwalker_save
+
     def resample(self, n, pos):
         """Resample the wave function
 
@@ -240,7 +306,8 @@ class SolverBase(object):
 
                 # make a copy of the pos if we update
                 if self.resampling_options.mode == 'update':
-                    pos = pos.clone().detach().to(self.device)
+                    pos = pos[-self.sampler.walkers.nwalkers:
+                              ].clone().detach().to(self.device)
 
                 # start from scratch otherwise
                 else:
@@ -270,8 +337,8 @@ class SolverBase(object):
         """
 
         log.info('')
-        log.info('  Single Point Calculation : {nw} walkers | {ns} steps',
-                 nw=self.sampler.nwalkers, ns=self.sampler.nstep)
+        log.info('  Single Point Calculation : {nw} walkers | {ns} steps | {nsamp} samples ',
+                 nw=self.sampler.nwalkers, ns=self.sampler.nstep, nsamp=self.sampler.nsample)
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()

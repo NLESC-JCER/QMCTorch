@@ -7,8 +7,12 @@ from .. import log
 
 class Hamiltonian(SamplerBase):
 
-    def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
-                 step_size=0.1, ntherm=-1, ndecor=1, init={'min': -2, 'max': 2}, L=10,
+    def __init__(self, nwalkers, ntherm,
+                 nstep=None,
+                 nsample=None, ndecor=None,
+                 step_size=0.1,
+                 nelec=1, ndim=3,
+                 init={'min': -2, 'max': 2}, L=10,
                  cuda=False):
         """Hamiltonian Monte Carlo Sampler.
 
@@ -25,7 +29,7 @@ class Hamiltonian(SamplerBase):
             with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
+        SamplerBase.__init__(self, nwalkers, nstep, nsample,
                              step_size, ntherm, ndecor,
                              nelec, ndim, init, cuda)
         self.traj_length = L
@@ -95,7 +99,7 @@ class Hamiltonian(SamplerBase):
             rate += _r
 
             # store
-            if (istep >= self.ntherm):
+            if ((istep+1) >= self.ntherm):
                 if (idecor % self.ndecor == 0):
                     pos.append(self.walkers.pos.detach())
                 idecor += 1

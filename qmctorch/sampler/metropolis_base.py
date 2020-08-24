@@ -9,13 +9,11 @@ from .. import log
 
 class MetropolisBase(SamplerBase):
 
-    def __init__(self, nwalkers=100,
-                 nstep=1000, step_size=0.2,
-                 ntherm=-1, ndecor=1,
-                 nelec=1, ndim=3,
-                 init={'min': -5, 'max': 5},
-                 move={'type': 'all-elec', 'proba': 'normal'},
-                 cuda=False):
+    def __init__(self, nwalkers, nsample,
+                 nstep, step_size,
+                 ntherm, ndecor,
+                 nelec, ndim,
+                 init, move, cuda):
         """Metropolis Base generator
 
         Args:
@@ -53,7 +51,7 @@ class MetropolisBase(SamplerBase):
             see for example generalized_metropolis.py
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
+        SamplerBase.__init__(self, nwalkers, nsample, nstep,
                              step_size, ntherm, ndecor,
                              nelec, ndim, init, cuda)
 
@@ -262,7 +260,7 @@ class MetropolisBase(SamplerBase):
               torch.tensor: positions of the walkers
         """
 
-        if self.ntherm >= self.nstep:
+        if self.ntherm > self.nstep:
             raise ValueError(
                 'Thermalisation longer than trajectory')
 
@@ -277,7 +275,7 @@ class MetropolisBase(SamplerBase):
 
             pos, rate, idecor = [], 0, 0
             rng = tqdm(range(self.nstep),
-                       desc='INFO:QMCTorch|  Sampling',
+                       desc='INFO:QMCTorch|  MC Sampling',
                        disable=not with_tqdm)
             tstart = time()
 
@@ -302,7 +300,7 @@ class MetropolisBase(SamplerBase):
                     # new function
                     self.update_sampling_data(index)
 
-                if (istep >= self.ntherm):
+                if ((istep+1) >= self.ntherm):
                     if (idecor % self.ndecor == 0):
                         pos.append(
                             self.walkers.pos.to('cpu').clone())

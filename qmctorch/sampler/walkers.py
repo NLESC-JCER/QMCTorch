@@ -31,6 +31,8 @@ class Walkers(object):
         else:
             self.device = torch.device('cpu')
 
+        log.info('  Walkers init pos    : {0}', init['method'])
+
     def initialize(self, pos=None):
         """Initalize the position of the walkers
 
