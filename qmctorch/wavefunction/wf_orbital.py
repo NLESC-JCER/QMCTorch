@@ -104,7 +104,7 @@ class Orbital(WaveFunction):
         self.kinetic_method = kinetic
         if kinetic == 'jacobi':
             self.kinetic_energy = self.kinetic_energy_jacobi
-            self.gradients = self.gradients_jacobi
+            #self.gradients = self.gradients_jacobi
 
         if self.cuda:
             self.device = torch.device('cuda')
@@ -277,7 +277,7 @@ class Orbital(WaveFunction):
             out = self.fc(kin * psi) / self.fc(psi)
             return out
 
-    def gradients_jacobi(self, x, pdf=False):
+    def gradients_jacobi(self, x, out=None, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
         C. Filippi, Simple Formalism for Efficient Derivatives.
 
@@ -291,7 +291,6 @@ class Orbital(WaveFunction):
         Returns:
             torch.tensor: values of the gradients wrt the walker pos at each sampling points
         """
-
         # compute the gradient operator matrix
         ao = self.ao(x)
         grad_ao = self.ao(x, derivative=1, jacobian=False)

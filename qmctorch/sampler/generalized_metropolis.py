@@ -113,4 +113,5 @@ class GeneralizedMetropolis(MetropolisBase):
         Note:
             v(R) = \grad\Psi / \Psi = 0.5 \grad |\Psi|^2 / |\Psi|^2
         """
-        return 0.5 * pdf(pos, return_grad=True) / pdf(pos).unsqueeze(-1)
+        pdfvals, gradvals = pdf(pos, return_grad=True)
+        return 0.5 * gradvals / pdfvals.unsqueeze(-1)

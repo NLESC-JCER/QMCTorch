@@ -115,19 +115,25 @@ class WaveFunction(torch.nn.Module):
         Returns:
             torch.tensor: values of the gradients
         """
-        out = self.forward(pos)
+        with torch.enable_grad():
 
-        # compute the grads
-        grads = grad(out, pos,
-                     grad_outputs=torch.ones_like(out),
-                     only_inputs=True)[0]
+            if not pos.requires_grad:
+                pos.requires_grad = True
 
-        # if we return grad of pdf
-        if pdf:
-            return 2*grads*out
+            # compute the output if necessary
+            out = self.forward(pos)
 
-        else:
-            return grads
+            # compute the grads
+            grads = grad(out, pos,
+                         grad_outputs=torch.ones_like(out),
+                         only_inputs=True)[0]
+
+            # if we return grad of pdf
+            if pdf:
+                return 2*grads*out
+
+            else:
+                return grads
 
     def kinetic_energy_autograd(self, pos):
         """Compute the kinetic energy through the 2nd derivative
@@ -220,11 +226,24 @@ class WaveFunction(torch.nn.Module):
         return torch.mean(el), torch.var(el), self.sampling_error(el)
 
     def pdf(self, pos, return_grad=False):
-        '''density of the wave function.'''
+        """Compute the density
+
+        Args:
+            pos (torch.tensor): positions of the walkers [Nwalkers, Nelec*Ndim]
+            return_grad (bool, optional): return the pdf and its gradients. Defaults to False.
+
+        Returns:
+            torch.tensor or tuple: density or (density, grad) 
+        """
+
+        wf_vals = self.forward(pos)
+        pdf_vals = (wf_vals*wf_vals).reshape(-1)
+
         if return_grad:
-            return self.gradients(pos, pdf=True)
+            grads = self.gradients(pos, pdf=True)
+            return pdf_vals, self.gradients(pos, pdf=True)
         else:
-            return (self.forward(pos)**2).reshape(-1)
+            return pdf_vals
 
     def get_number_parameters(self):
         """Computes the total number of parameters."""

@@ -177,6 +177,8 @@ class Walkers(object):
 
         std_factor = torch.zeros(self.nwalkers, self.nelec).scatter_(
             1, rand_perm, std_factor0)
+        scale_factor = std_factor.clone()
+        std_factor[std_factor == 1] = 0
 
         # get the atomic positions
         xyz = torch.tensor(self.init_domain['atom_coords'])[idx, :]
@@ -185,7 +187,7 @@ class Walkers(object):
         # get the std of each elec
         scale = torch.tensor(self.init_domain['atom_num']).double()
         scale = (scale.view(-1, 1)[idx, :]).squeeze()
-        scale = std_factor / (scale - std_factor)
+        scale = scale_factor / (scale - std_factor)
         scale = scale.repeat(1, 1, 3)
         scale = scale.reshape(self.nwalkers, self.nelec * self.ndim)
 

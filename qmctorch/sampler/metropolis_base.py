@@ -44,6 +44,13 @@ class MetropolisBase(SamplerBase):
             >>> wf = Orbital(mol)
             >>> sampler = Metropolis(nwalkers=100, nelec=wf.nelec)
             >>> pos = sampler(wf.pdf)
+
+        Note::
+            Additional fields can be created with a dictionary:
+            self.additional_field = {name : func}
+            where name is a string and func a callable with prototype func(pdf, pos) -> tensor
+            These additional fields will be computed and updated automatically in the __call__ functions
+            see for example generalized_metropolis.py
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
