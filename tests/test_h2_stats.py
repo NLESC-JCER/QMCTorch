@@ -41,7 +41,9 @@ class TestH2Stat(unittest.TestCase):
         # sampler
         self.sampler = Metropolis(
             nwalkers=100,
-            ntherm=500,
+            ntherm=0,
+            nsample=50000,
+            ndecor=1,
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -60,9 +62,7 @@ class TestH2Stat(unittest.TestCase):
     def test_sampling_traj(self):
 
         pos = self.solver.sampler(self.solver.wf.pdf)
-        print(pos.shape)
         obs = self.solver.sampling_traj(pos)
-        print(obs.local_energy.shape)
         plot_walkers_traj(obs.local_energy)
         plot_block(obs.local_energy)
 
