@@ -26,32 +26,28 @@ class SolverOrbital(SolverBase):
         SolverBase.__init__(self, wf, sampler,
                             optimizer, scheduler, output, rank)
 
-        self.set_params_requires_grad()
+        # set which parameter to optimize
+        self.configure_parameters(freeze=None)
 
-        self.configure(track=['local_energy'], freeze=None,
-                       loss='energy', grad='manual',
-                       ortho_mo=False, clip_loss=False,
-                       resampling={'mode': 'update',
-                                   'resample_every': 1,
-                                   'nstep_update': 25})
+        # which observalbe to track
+        self.configure_observable(['local_energy'])
 
-    def configure(self, track=None, freeze=None,
-                  loss=None, grad=None,
-                  ortho_mo=None, clip_loss=None,
-                  resampling=None):
-        """Configure the solver
+        # how to compute the grad of the parameters
+        self.configure_gradients('manual')
+
+        # how to resample
+        self.configure_resampling(mode='update',
+                                  resample_every=1,
+                                  nstep_update=25)
+
+        # loss to use
+        self.configure_loss('energy', clip=False, ortho_mo=False)
+
+    def configure_parameters(self, freeze=None):
+        """Configure which parmeters to freeze
 
         Args:
-            track (list, optional): list of observable to track. Defaults to ['local_energy'].
-            freeze ([type], optional): list of parameters to freeze. Defaults to None.
-            loss(str, optional): merhod to compute the loss: variance or energy.
-                                  Defaults to 'energy'.
-            grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
-                                  Defaults to 'auto'.
-            ortho_mo (bool, optional): apply regularization to orthogonalize the MOs.
-                                       Defaults to False.
-            clip_loss (bool, optional): Clip the loss values at +/- 5std.
-                                        Defaults to False.
+            freeze (list, optional): list of parameters to freeze. Defaults to None.
         """
 
         # set the parameters we want to optimize/freeze
@@ -59,32 +55,40 @@ class SolverOrbital(SolverBase):
         self.freeze_params_list = freeze
         self.freeze_parameters(freeze)
 
-        # track the observable we want
-        if track is not None:
-            if not hasattr(self, 'observable'):
-                self.track_observable(track)
+    def configure_loss(self, loss, clip=False, ortho_mo=False):
+        """[summary]
 
-        # define the grad calulation
-        if grad is not None:
-            self.grad_method = grad
-            self.evaluate_gradient = {
-                'auto': self.evaluate_grad_auto,
-                'manual': self.evaluate_grad_manual}[grad]
-
-        # resampling of the wave function
-        if resampling is not None:
-            self.configure_resampling(**resampling)
+        Args:
+            loss(str, optional): merhod to compute the loss: variance or energy.
+                                  Defaults to 'energy'.
+            ortho_mo (bool, optional): apply regularization to orthogonalize the MOs.
+                                       Defaults to False.
+            clip (bool, optional): Clip the loss values at +/- 5std.
+                                        Defaults to False.
+        """
 
         # get the loss
-        if loss is not None:
-            self.loss = Loss(self.wf, method=loss, clip=clip_loss)
-            self.loss.use_weight = (
-                self.resampling_options.resample_every > 1)
+        self.loss = Loss(self.wf, method=loss, clip=clip)
+        self.loss.use_weight = (
+            self.resampling_options.resample_every > 1)
 
         # orthogonalization penalty for the MO coeffs
-        if ortho_mo is not None:
-            self.ortho_mo = ortho_mo
-            self.ortho_loss = OrthoReg()
+        self.ortho_mo = ortho_mo
+        self.ortho_loss = OrthoReg()
+
+    def configure_gradients(self, grad):
+        """Configure how the grad of the parameters are evaluated
+
+        Args:
+            grad (str): 'auto' or 'manual'
+        """
+        if grad not in ['auto', 'manual']:
+            raise ValueError('grad must be auto or manual')
+
+        self.grad_method = grad
+        self.evaluate_gradient = {
+            'auto': self.evaluate_grad_auto,
+            'manual': self.evaluate_grad_manual}[grad]
 
     def set_params_requires_grad(self, wf_params=True, geo_params=False):
         """Configure parameters for wf opt."""
@@ -273,8 +277,8 @@ class SolverOrbital(SolverBase):
                 self.store_observable(
                     lpos, local_energy=eloc, ibatch=ibatch)
 
-                log.info(' %d optmization step in %1.2f sec.' % (ibatch,
-                                                                 (time()-t0_opt)))
+                log.info(' optmization step in %1.2f sec.' %
+                         ((time()-t0_opt)))
 
             # save the model if necessary
             if n == 0 or cumulative_loss < min_loss:

@@ -14,6 +14,7 @@ from .wf_base import WaveFunction
 from .pade_jastrow import PadeJastrow
 from .scaled_pade_jastrow import ScaledPadeJastrow
 from .pade_jastrow_polynomial import PadeJastrowPolynomial
+from .scaled_pade_jastrow_polynomial import ScaledPadeJastrowPolynomial
 
 from ..utils import register_extra_attributes
 
@@ -177,9 +178,14 @@ class Orbital(WaveFunction):
             self.jastrow = ScaledPadeJastrow(self.mol.nup, self.mol.ndown,
                                              w=1., kappa=0.6, cuda=self.cuda)
 
+        elif jastrow_type.startswith('scaled_pade_jastrow('):
+            order = int(jastrow_type.split('(')[1][0])
+            self.jastrow = ScaledPadeJastrowPolynomial(
+                self.mol.nup, self.mol.ndown, order, kappa=0.6, cuda=self.cuda)
+
         else:
             valid_names = ['pade_jastrow',
-                           'pade_jastrow_(n)',
+                           'pade_jastrow(n)',
                            'scaled_pade_jastrow']
             log.info(
                 '   Error : Jastrow form not recognized. Options are :')

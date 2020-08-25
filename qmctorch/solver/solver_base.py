@@ -80,7 +80,7 @@ class SolverBase(object):
         self.resampling_options.resample_every = resample_every
         self.resampling_options.nstep_update = nstep_update
 
-    def track_observable(self, obs_name):
+    def configure_observable(self, obs_name):
         """define the observalbe we want to track
 
         Args:
@@ -511,7 +511,7 @@ class SolverBase(object):
         raise NotImplementedError()
 
     def log_data(self):
-        """Log basi information about the sampler."""
+        """Log basic information about the sampler."""
 
         log.info('')
         log.info(' QMC Solver ')
