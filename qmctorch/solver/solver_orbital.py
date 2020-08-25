@@ -235,9 +235,6 @@ class SolverOrbital(SolverBase):
         # run the epochs
         self.run_epochs(nepoch)
 
-        # restore the sampler number of step
-        # self.restore_sampling_parameters()
-
         # dump
         self.save_data(hdf5_group or 'wf_opt')
 

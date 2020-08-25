@@ -162,9 +162,6 @@ class SolverBase(object):
         # get the initial observable
         self.store_observable(pos)
 
-        # change the number of steps/walker size
-        # self.save_sampling_parameters(pos)
-
         # create the data loader
         self.dataset = DataSet(pos)
         self.dataloader = DataLoader(
@@ -270,28 +267,6 @@ class SolverBase(object):
                     k + ' : ', self.observable.__getattribute__(k)[-1])
                 log.options(style='percent').info(
                     'loss %f' % (cumulative_loss))
-
-    def save_sampling_parameters(self, pos):
-        """ save the sampling params."""
-        self.sampler._nstep_save = self.sampler.nstep
-        self.sampler._nsample_save = self.sampler.nsample
-        self.sampler._ntherm_save = self.sampler.ntherm
-        self.sampler._nwalker_save = self.sampler.walkers.nwalkers
-
-        if self.resampling_options.mode == 'update':
-            self.sampler.ntherm = self.resampling_options.nstep_update
-            self.sampler.nstep = self.sampler.get_number_steps()
-
-        # self.sampler.walkers.nwalkers = pos.shape[0]
-        # self.sampler.nwalkers = pos.shape[0]
-
-    def restore_sampling_parameters(self):
-        """restore sampling params to their original values."""
-        self.sampler.nstep = self.sampler._nstep_save
-        self.sampler.nsample = self.sampler._nsample_save
-        self.sampler.ntherm = self.sampler._ntherm_save
-        self.sampler.walkers.nwalkers = self.sampler._nwalker_save
-        self.sampler.nwalkers = self.sampler._nwalker_save
 
     def resample(self, n, pos):
         """Resample the wave function
