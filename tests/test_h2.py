@@ -151,12 +151,7 @@ class TestH2(unittest.TestCase):
     def test5_sampling_traj(self):
         self.solver.sampler = self.sampler
 
-        self.solver.sampler.nstep = 100
-        self.solver.sampler.ntherm = 0
-        self.solver.sampler.ndecor = 1
-
-        pos = self.solver.sampler(self.solver.wf.pdf)
-        obs = self.solver.sampling_traj(pos)
+        obs = self.solver.sampling_traj()
 
         plot_walkers_traj(obs.local_energy)
         plot_block(obs.local_energy)
