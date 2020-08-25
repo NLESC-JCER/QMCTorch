@@ -91,6 +91,7 @@ class Orbital(WaveFunction):
 
         # pooling operation to directly compute
         # the kinetic energies via Jacobi formula
+        # not really used anymore
         self.kinpool = KineticPooling(
             self.configs, mol, cuda)
 
@@ -273,6 +274,7 @@ class Orbital(WaveFunction):
         mo = self.ao2mo(ao)
         bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
 
+        # deprecated
         if kinpool:
             kin, psi = self.kinpool(mo, bkin)
             return self.fc(kin) / self.fc(psi)
