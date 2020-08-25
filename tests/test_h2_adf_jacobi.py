@@ -27,7 +27,7 @@ class TestH2ADFJacobi(unittest.TestCase):
         # sampler
         self.sampler = Metropolis(
             nwalkers=1000,
-            nstep=2000,
+            ntherm=2000,
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -72,14 +72,16 @@ class TestH2ADFJacobi(unittest.TestCase):
 
     def test_wf_opt_auto_grad(self):
 
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
+        self.solver.configure_observable(['local_energy'])
+        self.solver.configure_loss('energy')
+        self.solver.configure_gradients('auto')
         obs = self.solver.run(5)
 
     def test_wf_opt_manual_grad(self):
 
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='manual')
+        self.solver.configure_observable(['local_energy'])
+        self.solver.configure_loss('energy')
+        self.solver.configure_gradients('manual')
         obs = self.solver.run(5)
 
 

@@ -35,7 +35,7 @@ class TestLiH(unittest.TestCase):
         # sampler
         self.sampler = Metropolis(
             nwalkers=500,
-            nstep=200,
+            ntherm=200,
             step_size=0.05,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -70,16 +70,16 @@ class TestLiH(unittest.TestCase):
 
     def test2_wf_opt_grad_auto(self):
         self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
+        self.solver.configure_observable(['local_energy'])
+        self.solver.configure_loss('energy')
+        self.solver.configure_gradients('auto')
         obs = self.solver.run(5)
 
     def test3_wf_opt_grad_manual(self):
         self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='manual')
+        self.solver.configure_observable(['local_energy'])
+        self.solver.configure_loss('energy')
+        self.solver.configure_gradients('manual')
         obs = self.solver.run(5)
 
 

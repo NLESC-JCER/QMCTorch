@@ -50,7 +50,7 @@ class TestSampler(unittest.TestCase):
 
         sampler = Metropolis(
             nwalkers=10,
-            nstep=20,
+            ntherm=20,
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -66,7 +66,7 @@ class TestSampler(unittest.TestCase):
         """Test HMC sampler."""
         sampler = Hamiltonian(
             nwalkers=10,
-            nstep=20,
+            ntherm=20,
             step_size=0.1,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -77,7 +77,7 @@ class TestSampler(unittest.TestCase):
     def test_gmh(self):
         """Test generalized MH."""
         sampler = GeneralizedMetropolis(
-            nwalkers=10, nstep=20, step_size=0.2,
+            nwalkers=10, ntherm=20, step_size=0.2,
             nelec=self.wf.nelec, ndim=self.wf.ndim,
             init=self.mol.domain('normal'))
 

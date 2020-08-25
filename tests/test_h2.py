@@ -41,7 +41,7 @@ class TestH2(unittest.TestCase):
         # sampler
         self.sampler = Metropolis(
             nwalkers=1000,
-            nstep=2000,
+            ntherm=2000,
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -52,7 +52,7 @@ class TestH2(unittest.TestCase):
 
         self.hmc_sampler = Hamiltonian(
             nwalkers=100,
-            nstep=200,
+            ntherm=200,
             step_size=0.1,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
@@ -116,8 +116,10 @@ class TestH2(unittest.TestCase):
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
+        self.solver.configure_observable(['local_energy'])
+        self.solver.configure_loss('energy')
+        self.solver.configure_gradients('auto')
+
         obs = self.solver.run(5)
         plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
 
@@ -126,8 +128,9 @@ class TestH2(unittest.TestCase):
         self.solver.wf.ao.atom_coords[0, 2].data = torch.tensor(-0.37)
         self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)
 
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
+        self.solver.configure_observable(['local_energy'])
+        self.solver.configure_loss('energy')
+        self.solver.configure_gradients('auto')
         self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
         # load the best model

@@ -41,7 +41,7 @@ class TestH2Stat(unittest.TestCase):
         # sampler
         self.sampler = Metropolis(
             nwalkers=100,
-            nstep=500,
+            ntherm=500,
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
