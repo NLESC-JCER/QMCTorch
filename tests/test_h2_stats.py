@@ -60,8 +60,9 @@ class TestH2Stat(unittest.TestCase):
     def test_sampling_traj(self):
 
         pos = self.solver.sampler(self.solver.wf.pdf)
+        print(pos.shape)
         obs = self.solver.sampling_traj(pos)
-
+        print(obs.local_energy.shape)
         plot_walkers_traj(obs.local_energy)
         plot_block(obs.local_energy)
 
