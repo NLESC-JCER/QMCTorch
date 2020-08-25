@@ -45,8 +45,6 @@ class TestH2Stat(unittest.TestCase):
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            ntherm=0,
-            ndecor=1,
             init=self.mol.domain('normal'),
             move={
                 'type': 'all-elec',
