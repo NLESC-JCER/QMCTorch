@@ -406,7 +406,7 @@ class SolverBase(object):
             self.obs_dict[key] = []
         self.obs_dict[key].append(data)
 
-    def sampling_traj(self, pos=None, with_tqdm=True, hdf5_group='sampling_trajectory'):
+    def sampling_traj(self, with_tqdm=True, hdf5_group='sampling_trajectory'):
         """Compute the local energy along a sampling trajectory
 
         Args:
@@ -419,8 +419,15 @@ class SolverBase(object):
         log.info('')
         log.info('  Sampling trajectory')
 
-        if pos is None:
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
+        # make a copy of the sampler
+        traj_sampler = deepcopy(self.sampler)
+        traj_sampler.ntherm = 0
+        traj_sampler.nstep = self.sampler.ntherm
+        traj_sampler.ndecor = 1
+        traj_sampler.nsample = traj_sampler.nwalkers * traj_sampler.nstep
+
+        # sample
+        pos = traj_sampler(self.wf.pdf, with_tqdm=with_tqdm)
 
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.nwalkers, ndim)
