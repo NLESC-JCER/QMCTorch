@@ -1,6 +1,7 @@
 import torch
 from torch.utils.data import DataLoader
 from types import SimpleNamespace
+from copy import deepcopy
 from tqdm import tqdm
 import numpy as np
 
@@ -27,6 +28,7 @@ class SolverBase(object):
 
         self.wf = wf
         self.sampler = sampler
+        self.resampler = deepcopy(sampler)
         self.opt = optimizer
         self.scheduler = scheduler
         self.cuda = False
@@ -79,6 +81,9 @@ class SolverBase(object):
         self.resampling_options.mode = mode
         self.resampling_options.resample_every = resample_every
         self.resampling_options.nstep_update = nstep_update
+        if mode == 'update':
+            self.resampler.ntherm = nstep_update
+            self.resampler.nstep = self.resampler.get_number_steps()
 
     def configure_observable(self, obs_name):
         """define the observalbe we want to track
@@ -158,7 +163,7 @@ class SolverBase(object):
         self.store_observable(pos)
 
         # change the number of steps/walker size
-        self.save_sampling_parameters(pos)
+        # self.save_sampling_parameters(pos)
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -314,7 +319,7 @@ class SolverBase(object):
                     pos = None
 
                 # sample and update the dataset
-                pos = self.sampler(
+                pos = self.resampler(
                     self.wf.pdf, pos=pos, with_tqdm=False)
                 self.dataloader.dataset.data = pos
 

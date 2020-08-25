@@ -236,7 +236,7 @@ class SolverOrbital(SolverBase):
         self.run_epochs(nepoch)
 
         # restore the sampler number of step
-        self.restore_sampling_parameters()
+        # self.restore_sampling_parameters()
 
         # dump
         self.save_data(hdf5_group or 'wf_opt')
@@ -277,7 +277,7 @@ class SolverOrbital(SolverBase):
                 self.store_observable(
                     lpos, local_energy=eloc, ibatch=ibatch)
 
-                log.info(' optmization step in %1.2f sec.' %
+                log.info('  optmization step in %1.2f sec.' %
                          ((time()-t0_opt)))
 
             # save the model if necessary
