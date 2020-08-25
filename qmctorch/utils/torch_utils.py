@@ -80,12 +80,8 @@ class DataSet(Dataset):
 
 class Loss(nn.Module):
 
-    def __init__(
-            self,
-            wf,
-            method='variance',
-            clip=False,
-            no_weight=False):
+    def __init__(self, wf, method='variance',
+                 clip=False, no_weight=False):
         """Defines the loss to use during the optimization
 
         Arguments:

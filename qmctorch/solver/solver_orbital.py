@@ -204,9 +204,6 @@ class SolverOrbital(SolverBase):
                 if (n > 0) and (n % chkpt_every == 0):
                     self.save_checkpoint(n, cumulative_loss)
 
-        # restore the sampler number of step
-        self.restore_sampling_parameters()
-
         # dump
         self.observable.geometry = xyz
         self.save_data(hdf5_group or 'geo_opt')
