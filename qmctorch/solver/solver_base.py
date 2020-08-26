@@ -29,7 +29,6 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.resampler = deepcopy(sampler)
-        self.expander = deepcopy(sample)
         self.opt = optimizer
         self.scheduler = scheduler
         self.cuda = False
@@ -326,36 +325,6 @@ class SolverBase(object):
             # update the weight of the loss if needed
             if self.loss.use_weight:
                 self.loss.weight['psi0'] = None
-
-        return pos
-
-    def expand_sampling(self, n, pos):
-        """Add additional sampling points to the set
-
-        Args:
-            n ([type]): [description]
-            pos ([type]): [description]
-        """
-
-        if self.expanse_options.mode != 'never':
-
-            if (n % self.expanse_options.expand_every == 0):
-
-                if self.expanse_options.mode == 'update':
-                    pos = pos[-self.expander.walkers.nwalkers:
-                              ].clone().detach().to(self.device)
-                else:
-                    pos = None
-
-                pos = self.expander(
-                    self.wf.pdf, pos=pos, with_tqdm=True)
-                pos = torch.cat(
-                    (self.dataloader.dataset.data, pos), axis=0)
-
-                self.dataset = DataSet(pos)
-                self.dataloader = DataLoader(
-                    dataset, batch_size=pos.shape[0])
-                self.resampler.walkers.nwalkers += self.expander.walkers.nwalkers
 
         return pos
 

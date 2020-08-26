@@ -298,12 +298,6 @@ class SolverOrbital(SolverBase):
             log.info('  resampling done in %1.2f sec.' %
                      (time()-t0_resample))
 
-            # expand the data
-            t0_expand = time()
-            self.expand_sampling(n, self.dataset.data)
-            log.info('  expanse done in %1.2f sec.' %
-                     (time()-t0_resample))
-
             # scheduler step
             if self.scheduler is not None:
                 self.scheduler.step()
