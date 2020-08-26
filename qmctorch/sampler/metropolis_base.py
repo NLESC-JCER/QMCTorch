@@ -271,6 +271,11 @@ class MetropolisBase(SamplerBase):
 
             self.walkers.initialize(pos=pos)
 
+            if with_tqdm:
+                log.info('')
+                log.info('  Sampling                 : {nw} walkers | {ns} steps | {nsamp} samples ',
+                         nw=self.nwalkers, ns=self.nstep, nsamp=self.nsample)
+
             self.init_sampling_data(pdf)
 
             pos, rate, idecor = [], 0, 0

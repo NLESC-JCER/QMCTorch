@@ -29,6 +29,7 @@ class SolverBase(object):
         self.wf = wf
         self.sampler = sampler
         self.resampler = deepcopy(sampler)
+        self.expander = deepcopy(sample)
         self.opt = optimizer
         self.scheduler = scheduler
         self.cuda = False
@@ -60,6 +61,29 @@ class SolverBase(object):
 
         self.log_data()
 
+    def configure_expanse(self, mode='never', expand_every=None, nwalkers=None):
+        """Configure the expansion of the sampler
+
+        Args:
+            mode (str, optional): [description]. Defaults to 'never'.
+            expand_every ([type], optional): [description]. Defaults to None.
+            nwalkers ([type], optional): [description]. Defaults to None.
+        """
+
+        self.expanse_options = SimpleNamespace()
+        valid_mode = ['never', 'full', 'update']
+        if mode not in valid_mode:
+            raise ValueError(
+                mode, 'not a valid update method : ', valid_mode)
+
+        self.expanse_options.mode = mode
+        self.expanse_options.expand_every = expand_every
+        self.expanse_options.nwalkers = nwalkers
+
+        if mode == 'update':
+            self.expander.ntherm = self.resampler.ntherm
+            self.expander.nstep = self.expander.get_number_steps()
+
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
         """Configure the resampling
 
@@ -81,6 +105,7 @@ class SolverBase(object):
         self.resampling_options.mode = mode
         self.resampling_options.resample_every = resample_every
         self.resampling_options.nstep_update = nstep_update
+
         if mode == 'update':
             self.resampler.ntherm = nstep_update
             self.resampler.nstep = self.resampler.get_number_steps()
@@ -286,7 +311,7 @@ class SolverBase(object):
 
                 # make a copy of the pos if we update
                 if self.resampling_options.mode == 'update':
-                    pos = pos[-self.sampler.walkers.nwalkers:
+                    pos = pos[-self.resampler.walkers.nwalkers:
                               ].clone().detach().to(self.device)
 
                 # start from scratch otherwise
@@ -295,12 +320,42 @@ class SolverBase(object):
 
                 # sample and update the dataset
                 pos = self.resampler(
-                    self.wf.pdf, pos=pos, with_tqdm=False)
+                    self.wf.pdf, pos=pos, with_tqdm=True)
                 self.dataloader.dataset.data = pos
 
             # update the weight of the loss if needed
             if self.loss.use_weight:
                 self.loss.weight['psi0'] = None
+
+        return pos
+
+    def expand_sampling(self, n, pos):
+        """Add additional sampling points to the set
+
+        Args:
+            n ([type]): [description]
+            pos ([type]): [description]
+        """
+
+        if self.expanse_options.mode != 'never':
+
+            if (n % self.expanse_options.expand_every == 0):
+
+                if self.expanse_options.mode == 'update':
+                    pos = pos[-self.expander.walkers.nwalkers:
+                              ].clone().detach().to(self.device)
+                else:
+                    pos = None
+
+                pos = self.expander(
+                    self.wf.pdf, pos=pos, with_tqdm=True)
+                pos = torch.cat(
+                    (self.dataloader.dataset.data, pos), axis=0)
+
+                self.dataset = DataSet(pos)
+                self.dataloader = DataLoader(
+                    dataset, batch_size=pos.shape[0])
+                self.resampler.walkers.nwalkers += self.expander.walkers.nwalkers
 
         return pos
 
@@ -317,8 +372,7 @@ class SolverBase(object):
         """
 
         log.info('')
-        log.info('  Single Point Calculation : {nw} walkers | {ns} steps | {nsamp} samples ',
-                 nw=self.sampler.nwalkers, ns=self.sampler.nstep, nsamp=self.sampler.nsample)
+        log.info('  Single Point Calculation')
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()

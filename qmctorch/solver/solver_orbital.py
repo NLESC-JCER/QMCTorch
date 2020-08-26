@@ -40,6 +40,11 @@ class SolverOrbital(SolverBase):
                                   resample_every=1,
                                   nstep_update=25)
 
+        # how to expand the sampling
+        self.configure_expanse(mode='never',
+                               expand_every=None,
+                               nwalkers=None)
+
         # loss to use
         self.configure_loss('energy', clip=False, ortho_mo=False)
 
@@ -289,8 +294,14 @@ class SolverOrbital(SolverBase):
 
             # resample the data
             t0_resample = time()
-            self.dataset.data = self.resample(n, self.dataset.data)
+            self.resample(n, self.dataset.data)
             log.info('  resampling done in %1.2f sec.' %
+                     (time()-t0_resample))
+
+            # expand the data
+            t0_expand = time()
+            self.expand_sampling(n, self.dataset.data)
+            log.info('  expanse done in %1.2f sec.' %
                      (time()-t0_resample))
 
             # scheduler step
