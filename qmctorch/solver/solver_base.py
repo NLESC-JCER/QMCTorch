@@ -60,29 +60,6 @@ class SolverBase(object):
 
         self.log_data()
 
-    def configure_expanse(self, mode='never', expand_every=None, nwalkers=None):
-        """Configure the expansion of the sampler
-
-        Args:
-            mode (str, optional): [description]. Defaults to 'never'.
-            expand_every ([type], optional): [description]. Defaults to None.
-            nwalkers ([type], optional): [description]. Defaults to None.
-        """
-
-        self.expanse_options = SimpleNamespace()
-        valid_mode = ['never', 'full', 'update']
-        if mode not in valid_mode:
-            raise ValueError(
-                mode, 'not a valid update method : ', valid_mode)
-
-        self.expanse_options.mode = mode
-        self.expanse_options.expand_every = expand_every
-        self.expanse_options.nwalkers = nwalkers
-
-        if mode == 'update':
-            self.expander.ntherm = self.resampler.ntherm
-            self.expander.nstep = self.expander.get_number_steps()
-
     def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
         """Configure the resampling
 
