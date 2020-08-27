@@ -45,7 +45,7 @@ class Molecule(object):
         self.atoms = []
         self.atoms_str = atom
         self.hdf5file = None
-        self.max_angular = 2
+        # self.max_angular = 2
         self.name = name
         self.natom = 0
         self.ndown = 0

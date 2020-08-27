@@ -5,9 +5,8 @@ from .. import log
 
 class SamplerBase(object):
 
-    def __init__(self, nwalkers, nsample, nstep, step_size,
-                 ntherm, ndecor, nelec, ndim, init,
-                 cuda):
+    def __init__(self, mol, nwalkers, nsample, nstep, step_size,
+                 ntherm, ndecor, init, cuda):
         """Base class for the sampler
 
         Args:
@@ -24,8 +23,8 @@ class SamplerBase(object):
 
         self.nwalkers = nwalkers
         self.nsample = nsample
-        self.nelec = nelec
-        self.ndim = ndim
+        self.nelec = mol.nelec
+        self.ndim = 3
         self.nstep = nstep
         self.step_size = step_size
         self.ntherm = ntherm
@@ -38,7 +37,7 @@ class SamplerBase(object):
             self.device = torch.device('cpu')
 
         self.walkers = Walkers(
-            nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init, cuda=cuda)
+            nwalkers=nwalkers, nelec=nelec, ndim=self.ndim, init=mol.domain[init], cuda=cuda)
 
         # configure the sampler
         self.configure()

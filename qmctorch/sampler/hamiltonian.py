@@ -7,12 +7,11 @@ from .. import log
 
 class Hamiltonian(SamplerBase):
 
-    def __init__(self, nwalkers, ntherm,
+    def __init__(self, mol, nwalkers, ntherm,
                  nstep=None,
                  nsample=None, ndecor=None,
                  step_size=0.1,
-                 nelec=1, ndim=3,
-                 init={'min': -2, 'max': 2}, L=10,
+                 init='atomic', L=10,
                  cuda=False):
         """Hamiltonian Monte Carlo Sampler.
 
@@ -29,9 +28,8 @@ class Hamiltonian(SamplerBase):
             with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep, nsample,
-                             step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+        SamplerBase.__init__(self, mol, nwalkers, nsample, nstep,
+                             step_size, ntherm, ndecor, init, cuda)
         self.traj_length = L
 
     @staticmethod

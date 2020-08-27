@@ -10,25 +10,24 @@ from .. import log
 
 class GeneralizedMetropolis(MetropolisBase):
 
-    def __init__(self, nwalkers, ntherm,
+    def __init__(self, mol, nwalkers, ntherm,
                  nstep=None,
                  nsample=None, ndecor=None,
                  step_size=0.2,
-                 nelec=1, ndim=3,
-                 init={'min': -5, 'max': 5},
+                 init='atomic',
                  move={'type': 'all-elec', 'proba': 'normal'},
                  cuda=False):
         """Generalized Metropolis Hasting generator
 
         Args:
+            mol (Molecule instance): instance of a Molecule object
             nwalkers (int, optional): Number of walkers. Defaults to 100.
+            ntherm (int): number of mc step to thermalize.
+            nsample (int, optional): total number of sample required
             nstep (int, optional): Number of steps. Defaults to 1000.
             step_size (int, optional): length of the step. Defaults to 3.
-            nelec (int, optional): total number of electrons. Defaults to 1.
-            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
             ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
-            ndim (int, optional): total number of dimension. Defaults to 1.
-            init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
+            init (str, optional): method to init the positions of the walkers. See Molecule.domain()
 
             move (dict, optional): method to move the electrons. default('all-elec','normal') \n
                                    'type':
@@ -44,13 +43,12 @@ class GeneralizedMetropolis(MetropolisBase):
         Examples::
             >>> mol = Molecule('h2.xyz')
             >>> wf = Orbital(mol)
-            >>> sampler = GeneralizedMetropolis(nwalkers=100, nelec=wf.nelec)
+            >>> sampler = GeneralizedMetropolis(mol, nwalkers=100, ntherm=1000)
             >>> pos = sampler(wf.pdf)
         """
 
-        MetropolisBase.__init__(self, nwalkers, nstep, nsample,
-                                step_size, ntherm, ndecor,
-                                nelec, ndim, init, move, cuda)
+        MetropolisBase.__init__(self, mol, nwalkers, nsample, nstep
+                                step_size, ntherm, ndecor, init, move, cuda)
 
         self.tau = self.step_size**2
         self.additional_field = {'drift': self.get_drift}

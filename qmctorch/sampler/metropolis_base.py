@@ -9,10 +9,9 @@ from .. import log
 
 class MetropolisBase(SamplerBase):
 
-    def __init__(self, nwalkers, nsample,
+    def __init__(self, mol, nwalkers, nsample,
                  nstep, step_size,
                  ntherm, ndecor,
-                 nelec, ndim,
                  init, move, cuda):
         """Metropolis Base generator
 
@@ -51,9 +50,8 @@ class MetropolisBase(SamplerBase):
             see for example generalized_metropolis.py
         """
 
-        SamplerBase.__init__(self, nwalkers, nsample, nstep,
-                             step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+        SamplerBase.__init__(self, mol, nwalkers, nsample, nstep,
+                             step_size, ntherm, ndecor, init, cuda)
 
         self.additional_field = None
         self.configure_move(move)
