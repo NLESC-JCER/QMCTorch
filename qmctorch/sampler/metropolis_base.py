@@ -23,7 +23,7 @@ class MetropolisBase(SamplerBase):
             ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
             ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
             ndim (int, optional): total number of dimension. Defaults to 1.
-            init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
+            init (str, optional): method to init the positions of the walkers. See Molecule.domain()
 
             move (dict, optional): method to move the electrons. default('all-elec','normal') \n
                                    'type':
