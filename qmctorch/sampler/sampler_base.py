@@ -37,7 +37,7 @@ class SamplerBase(object):
             self.device = torch.device('cpu')
 
         self.walkers = Walkers(
-            nwalkers=nwalkers, nelec=nelec, ndim=self.ndim, init=mol.domain[init], cuda=cuda)
+            nwalkers=nwalkers, nelec=self.nelec, ndim=self.ndim, init=mol.domain(init), cuda=cuda)
 
         # configure the sampler
         self.configure()
@@ -109,7 +109,9 @@ class SamplerBase(object):
 
     def get_sampling_size(self):
         """evaluate the number of sampling point we'll have."""
-        if self.ntherm == -1:
+        if self.last_only:
             return self.nwalkers
         else:
-            return self.walkers.nwalkers * int((self.nstep-self.ntherm)/self.ndecor)
+            ninterval = (self.nstep-self.ntherm)/self.ndecor
+            nsample = (ninterval + 1) * self.walkers.nwalkers
+            return nsample

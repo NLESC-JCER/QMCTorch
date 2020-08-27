@@ -47,7 +47,7 @@ class GeneralizedMetropolis(MetropolisBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        MetropolisBase.__init__(self, mol, nwalkers, nsample, nstep
+        MetropolisBase.__init__(self, mol, nwalkers, nsample, nstep,
                                 step_size, ntherm, ndecor, init, move, cuda)
 
         self.tau = self.step_size**2

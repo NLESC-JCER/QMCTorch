@@ -145,6 +145,48 @@ class SolverBase(object):
 
         self.observable.models = SimpleNamespace()
 
+    def add_walkers(self, nwalkers, batchsize=None):
+        """Add walkers to the sampler
+
+        Args:
+            nwalkers (int): number of walkers to add
+        """
+
+        log.info('')
+        log.info('  Adding %d walkers to the dataloader' % nwalkers)
+
+        # make a copy of the sampler
+        sampler_copy = deepcopy(self.sampler)
+
+        # change the sampler settings
+        sampler_copy.nwalkers = nwalkers
+        sampler_copy.walkers.nwalkers = nwalkers
+
+        # sample
+        pos = sampler_copy(self.wf.pdf)
+
+        # change the sampler
+        self.sampler.nwalkers += nwalkers
+        self.sampler.walkers.nwalkers += nwalkers
+        self.sampler.nsample = self.sampler.get_sampling_size()
+        self.sampler.walkers.pos = torch.cat(
+            (self.sampler.walkers.pos, sampler_copy.walkers.pos))
+
+        # change the resampler
+        self.resampler.nwalkers += nwalkers
+        self.resampler.walkers.nwalkers += nwalkers
+        self.resampler.nsample = self.resampler.get_sampling_size()
+
+        # resample
+        pos = self.resampler(self.wf.pdf)
+
+        # update the dataloader
+        self.dataset.data = pos
+        if batchsize is None:
+            batchsize = self.sampler.nsample
+        self.dataloader = DataLoader(
+            self.dataset, batch_size=batchsize)
+
     def prepare_optimization(self, batchsize, chkpt_every):
         """Prepare the optimization process
 

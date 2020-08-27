@@ -30,7 +30,7 @@ class SolverOrbital(SolverBase):
         self.configure_parameters(freeze=None)
 
         # which observalbe to track
-        self.configure_observable(['local_energy', 'parmeters'])
+        self.configure_observable(['local_energy', 'parameters'])
 
         # how to compute the grad of the parameters
         self.configure_gradients('manual')
@@ -39,11 +39,6 @@ class SolverOrbital(SolverBase):
         self.configure_resampling(mode='update',
                                   resample_every=1,
                                   nstep_update=50)
-
-        # how to expand the sampling
-        self.configure_expanse(mode='never',
-                               expand_every=None,
-                               nwalkers=None)
 
         # loss to use
         self.configure_loss(loss='energy', clip=False, ortho_mo=False)
@@ -60,7 +55,7 @@ class SolverOrbital(SolverBase):
         self.freeze_params_list = freeze
         self.freeze_parameters(freeze)
 
-    def configure_loss(self, loss, clip=False, ortho_mo=False):
+    def configure_loss(self, loss='energy', clip=False, ortho_mo=False):
         """[summary]
 
         Args:

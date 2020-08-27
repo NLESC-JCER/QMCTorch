@@ -6,7 +6,7 @@ from .. import log
 
 class Walkers(object):
 
-    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, cuda=False):
+    def __init__(self, nwalkers=None, nelec=None, ndim=None, init=None, cuda=False):
         """Creates Walkers for the sampler.
 
         Args:
@@ -52,22 +52,26 @@ class Walkers(object):
             self.pos = pos
 
         else:
-            log.info("  Initializing walkers")
-            if 'center' in self.init_domain.keys():
-                self.pos = self._init_center()
+            self.pos = self._init()
 
-            elif 'min' in self.init_domain.keys():
-                self.pos = self._init_uniform()
+    def _init(self):
+        """Main switch for the init method."""
 
-            elif 'mean' in self.init_domain.keys():
-                self.pos = self._init_multivar()
+        log.info("  Initializing walkers")
+        if 'center' in self.init_domain.keys():
+            return self._init_center()
 
-            elif 'atom_coords' in self.init_domain.keys():
-                #self.pos = self._init_atomic()
-                self.pos = self._init_atomic_fast()
+        elif 'min' in self.init_domain.keys():
+            return self._init_uniform()
 
-            else:
-                raise ValueError('Init walkers not recognized')
+        elif 'mean' in self.init_domain.keys():
+            return self._init_multivar()
+
+        elif 'atom_coords' in self.init_domain.keys():
+            # return self._init_atomic()
+            return self._init_atomic_fast()
+        else:
+            raise ValueError('Init walkers not recognized')
 
     def _init_center(self):
         """Initialize the walkers at the center of the molecule
