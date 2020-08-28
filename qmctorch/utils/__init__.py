@@ -10,7 +10,8 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'fast_power',
            'InterpolateMolecularOrbitals',
            'InterpolateAtomicOribtals',
-           'btrace', 'bdet2', 'bproj', 'timeit', 'timeline']
+           'btrace', 'bdet2', 'bproj', 'timeit', 'timeline',
+           'save_trajectory', 'metric_average']
 
 from .plot_data import (plot_energy, plot_data, plot_block,
                         plot_walkers_traj, plot_correlation_time,
@@ -20,7 +21,7 @@ from .plot_data import (plot_energy, plot_data, plot_block,
 
 from .torch_utils import (set_torch_double_precision,
                           set_torch_single_precision,
-                          DataSet, Loss, OrthoReg, fast_power)
+                          DataSet, Loss, OrthoReg)
 
 from .hdf5_utils import (dump_to_hdf5, load_from_hdf5,
                          add_group_attr, register_extra_attributes)
@@ -29,8 +30,12 @@ from .hdf5_utils import (dump_to_hdf5, load_from_hdf5,
 from .interpolate import (InterpolateMolecularOrbitals,
                           InterpolateAtomicOribtals)
 
-from .algebra_utils import (btrace, bproj, bdet2)
+from .algebra_utils import (btrace, bproj, bdet2, fast_power)
 
 from .time_utils import timeit, timeline
 
 from .stat_utils import blocking, correlation_coefficient, integrated_autocorrelation_time
+
+from .export_utils import save_trajectory
+
+from .hvd_utils import metric_average

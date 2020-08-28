@@ -1,0 +1,183 @@
+import torch
+from types import SimpleNamespace
+from torch.utils.data import DataLoader
+import warnings
+from time import time
+from .solver_orbital import SolverOrbital
+from qmctorch.utils import (
+    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+from .. import log
+from ..utils import metric_average
+from mpi4py import MPI
+
+try:
+    import horovod.torch as hvd
+except ModuleNotFoundError:
+    pass
+
+
+class SolverBaseHorovod(SolverBase):
+
+    def __init__(self, wf=None, sampler=None, optimizer=None,
+                 scheduler=None, output=None, rank=0):
+        """Distributed QMC solver
+
+        Args:
+            wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
+            sampler (qmctorch.sampler, optional): Sampler. Defaults to None.
+            optimizer (torch.optim, optional): optimizer. Defaults to None.
+            scheduler (torch.optim, optional): scheduler. Defaults to None.
+            output (str, optional): hdf5 filename. Defaults to None.
+            rank (int, optional): rank of he process. Defaults to 0.
+        """
+
+        hvd.broadcast_optimizer_state(opt, root_rank=0)
+        opt = hvd.DistributedOptimizer(
+            opt, named_parameters=wf.named_parameters())
+
+        sampler.nwalkers //= hvd.size()
+        sampler.walkers.nwalkers //= hvd.size()
+
+        SolverBase.__init__(self, wf, sampler,
+                            optimizer, scheduler, output, rank)
+
+    def prepare_optimization(self, batchsize,  chkpt_every):
+        """Prepare the optimization process
+
+        Args:
+            batchsize (int or None): batchsize
+            chkpt_every (int or none): save a chkpt file every
+        """
+
+        # sample the wave function
+        if hvd.rank() == 0:
+            pos = self.sampler(self.wf.pdf)
+        else:
+            pos = self.sampler(self.wf.pdf, with_tqdm=False)
+
+        # required to build the distributed data container
+        pos.requires_grad_(False)
+
+        # handle the batch size
+        if batchsize is None:
+            batchsize = len(pos)
+
+        if hvd.rank() == 1:
+            self.observable.store(self.wf, pos)
+
+        # create the data loader
+        self.dataset = DataSet(pos)
+
+        if self.cuda:
+            kwargs = {'num_workers': num_threads, 'pin_memory': True}
+        else:
+            kwargs = {'num_workers': num_threads}
+
+        self.dataloader = DataLoader(self.dataset,
+                                     batch_size=batchsize,
+                                     **kwargs)
+
+        # chkpt
+        self.chkpt_every = chkpt_every
+
+    def run(self, nepoch, batchsize=None, loss='energy',
+            clip_loss=False, grad='manual', hdf5_group=None,
+            num_threads=1):
+        """Run the optimization
+
+        Args:
+            nepoch (int): Number of optimziation step
+            batchsize (int, optional): Number of sample in a mini batch.
+                                       If None, all samples are used.
+                                       Defaults to None.
+            loss (str, optional): merhod to compute the loss: variance or energy.
+                                  Defaults to 'energy'.
+            clip_loss (bool, optional): Clip the loss values at +/- 5std.
+                                        Defaults to False.
+            grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
+                                  Defaults to 'auto'.
+            hdf5_group (str, optional): name of the hdf5 group where to store the data.
+                                        Defaults to wf.task.
+        """
+
+        logd(hvd.rank(), '')
+        logd(hvd.rank(),
+             '  Distributed Optimization on {num} process'.format(num=hvd.size()))
+        log.info('   - Process {id} using {nw} walkers'.format(
+                 id=hvd.rank(), nw=self.sampler.nwalkers))
+
+        self.wf.train()
+
+        # broadcast variational parameters
+        hvd.broadcast_parameters(self.wf.state_dict(), root_rank=0)
+        torch.set_num_threads(num_threads)
+
+        # log data
+        if hvd.rank() == 0:
+            self.log_data_opt(nepoch, batchsize, loss, grad)
+
+        # run the epochs
+        self.run_epochs(nepoch)
+
+        # save the data
+        if hvd.rank() == 0:
+            self.observable.save(hdf5_group or 'wf_opt')
+
+        return self.observable
+
+    def run_epochs(self, nepoch)
+
+       for n in range(nepoch):
+
+            tstart = time()
+            logd(hvd.rank(), '')
+            logd(hvd.rank(), '  epoch %d' % n)
+
+            cumulative_loss = 0.
+
+            for ibatch, data in enumerate(self.dataloader):
+
+                # get data
+                lpos = data.to(self.device)
+                lpos.requires_grad = True
+
+                # get the gradient
+                loss, eloc = self.evaluate_gradient(lpos)
+                cumulative_loss += loss
+
+                # optimize the parameters
+                self.opt.step()
+
+                # observable
+                if hvd.rank() == 0:
+                    self.observable.store(self.wf,
+                                          lpos,
+                                          local_energy=eloc,
+                                          ibatch=ibatch)
+
+            cumulative_loss = metric_average(
+                cumulative_loss, 'cum_loss')
+
+            if hvd.rank() == 0:
+                if n == 0 or cumulative_loss < min_loss:
+                    min_loss = cumulative_loss
+                    self.observable.store_model(dict(
+                        self.wf.state_dict()))
+
+            if hvd.rank() == 0:
+                self.observable.print(cumulative_loss)
+
+            # resample the data
+            pos = self.resample(n, pos)
+            pos.requires_grad = False
+            self.dataset.data = pos
+            self.loss.weight['psi0'] = None
+
+            # scheduler step
+            if self.scheduler is not None:
+                self.scheduler.step()
+
+            logd(hvd.rank(), '  epoch done in %1.2f sec.' %
+                 (time()-tstart))
+
+        return cumulative_loss

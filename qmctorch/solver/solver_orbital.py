@@ -4,8 +4,9 @@ from time import time
 from copy import deepcopy
 from .solver_base import SolverBase
 from qmctorch.utils import (
-    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+    DataSet, Loss, dump_to_hdf5, add_group_attr)
 from .. import log
+from ..utils import save_trajectory
 
 
 class SolverOrbital(SolverBase):
@@ -29,31 +30,11 @@ class SolverOrbital(SolverBase):
         # set which parameter to optimize
         self.configure_parameters(freeze=None)
 
-        # which observalbe to track
-        self.configure_observable(['local_energy', 'parameters'])
-
         # how to compute the grad of the parameters
         self.configure_gradients('manual')
 
-        # how to resample
-        self.configure_resampling(mode='update',
-                                  resample_every=1,
-                                  nstep_update=50)
-
         # loss to use
         self.configure_loss(loss='energy', clip=False, ortho_mo=False)
-
-    def configure_parameters(self, freeze=None):
-        """Configure which parmeters to freeze
-
-        Args:
-            freeze (list, optional): list of parameters to freeze. Defaults to None.
-        """
-
-        # set the parameters we want to optimize/freeze
-        self.set_params_requires_grad()
-        self.freeze_params_list = freeze
-        self.freeze_parameters(freeze)
 
     def configure_loss(self, loss='energy', clip=False, ortho_mo=False):
         """[summary]
@@ -73,22 +54,20 @@ class SolverOrbital(SolverBase):
             self.resampling_options.resample_every > 1)
 
         # orthogonalization penalty for the MO coeffs
-        self.ortho_mo = ortho_mo
-        self.ortho_loss = OrthoReg()
+        if ortho_mo:
+            self.loss_reg.append(OrthoReg(self.wf.mo.weight))
 
-    def configure_gradients(self, grad):
-        """Configure how the grad of the parameters are evaluated
+    def configure_parameters(self, freeze=None):
+        """Configure which parmeters to freeze
 
         Args:
-            grad (str): 'auto' or 'manual'
+            freeze (list, optional): list of parameters to freeze. Defaults to None.
         """
-        if grad not in ['auto', 'manual']:
-            raise ValueError('grad must be auto or manual')
 
-        self.grad_method = grad
-        self.evaluate_gradient = {
-            'auto': self.evaluate_grad_auto,
-            'manual': self.evaluate_grad_manual}[grad]
+        # set the parameters we want to optimize/freeze
+        self.set_params_requires_grad()
+        self.freeze_params_list = freeze
+        self.freeze_parameters(freeze)
 
     def set_params_requires_grad(self, wf_params=True, geo_params=False):
         """Configure parameters for wf opt."""
@@ -139,190 +118,19 @@ class SolverOrbital(SolverBase):
                     raise ValueError(
                         'Valid arguments for freeze are :', opt_freeze)
 
-    def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
-                nepoch_wf_init=100, nepoch_wf_update=50,
-                hdf5_group=None, chkpt_every=None):
-        """optimize the geometry of the molecule
+    def configure_gradients(self, grad):
+        """Configure how the grad of the parameters are evaluated
 
         Args:
-            nepoch (int): Number of optimziation step
-            batchsize (int, optional): Number of sample in a mini batch.
-                                       If None, all samples are used.
-                                       Defaults to Never.
-            hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                        Defaults to wf.task.
-            chkpt_every (int, optional): save a checkpoint every every iteration.
-                                         Defaults to half the number of epoch
+            grad (str): 'auto' or 'manual'
         """
+        if grad not in ['auto', 'manual']:
+            raise ValueError('grad must be auto or manual')
 
-        # save the optimizer used for the wf params
-        opt_wf = deepcopy(self.opt)
-        opt_wf.lpos_needed = self.opt.lpos_needed
-
-        # create the optmizier for the geo opt
-        opt_geo = torch.optim.SGD(self.wf.parameters(), lr=geo_lr)
-        opt_geo.lpos_needed = False
-
-        # save the grad method
-        eval_grad_wf = self.evaluate_gradient
-
-        # log data
-        self.prepare_optimization(batchsize, None)
-        self.log_data_opt(nepoch, 'geometry optimization')
-
-        # init the traj
-        xyz = [self.wf.geometry(None)]
-
-        # initial wf optimization
-        self.set_params_requires_grad(wf_params=True,
-                                      geo_params=False)
-        self.freeze_parameters(self.freeze_params_list)
-        self.run_epochs(nepoch_wf_init)
-
-        # iterations over geo optim
-        for n in range(nepoch):
-
-            # make one step geo optim
-            self.set_params_requires_grad(wf_params=False,
-                                          geo_params=True)
-            self.opt = opt_geo
-            self.evaluate_gradient = self.evaluate_grad_auto
-            self.run_epochs(1)
-            xyz.append(self.wf.geometry(None))
-
-            # make a few wf optim
-            self.set_params_requires_grad(wf_params=True,
-                                          geo_params=False)
-            self.freeze_parameters(self.freeze_params_list)
-            self.opt = opt_wf
-            self.evaluate_gradient = eval_grad_wf
-
-            cumulative_loss = self.run_epochs(nepoch_wf_update)
-
-            # save checkpoint file
-            if chkpt_every is not None:
-                if (n > 0) and (n % chkpt_every == 0):
-                    self.save_checkpoint(n, cumulative_loss)
-
-        # dump
-        self.observable.geometry = xyz
-        self.save_data(hdf5_group or 'geo_opt')
-
-        return self.observable
-
-    def run(self, nepoch, batchsize=None,
-            hdf5_group=None, chkpt_every=None):
-        """Run a wave function optimization
-
-        Args:
-            nepoch (int): Number of optimziation step
-            batchsize (int, optional): Number of sample in a mini batch.
-                                       If None, all samples are used.
-                                       Defaults to Never.
-            hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                        Defaults to wf.task.
-            chkpt_every (int, optional): save a checkpoint every every iteration.
-                                         Defaults to half the number of epoch
-        """
-
-        # prepare the optimization
-        self.prepare_optimization(batchsize, chkpt_every)
-        self.log_data_opt(nepoch, 'wave function optimization')
-
-        # run the epochs
-        self.run_epochs(nepoch)
-
-        # dump
-        self.save_data(hdf5_group or 'wf_opt')
-
-        return self.observable
-
-    def run_epochs(self, nepoch):
-        """Run a certain number of epochs
-
-        Args:
-            nepoch (int): number of epoch to run
-        """
-
-        # loop over the epoch
-        for n in range(nepoch):
-
-            tstart = time()
-            log.info('')
-            log.info('  epoch %d' % n)
-
-            cumulative_loss = 0
-
-            # loop over the batches
-            for ibatch, data in enumerate(self.dataloader):
-
-                # port data to device
-                t0_opt = time()
-                lpos = data.to(self.device)
-
-                # get the gradient
-                loss, eloc = self.evaluate_gradient(lpos)
-                cumulative_loss += loss
-
-                # optimize the parameters
-                self.optimization_step(lpos)
-
-                # observable
-                self.store_observable(
-                    lpos, local_energy=eloc, ibatch=ibatch)
-
-                log.info('  optmization step in %1.2f sec.' %
-                         ((time()-t0_opt)))
-
-            # save the model if necessary
-            if n == 0 or cumulative_loss < min_loss:
-                min_loss = cumulative_loss
-                self.observable.models.best = dict(
-                    self.wf.state_dict())
-
-            # save checkpoint file
-            if self.chkpt_every is not None:
-                if (n > 0) and (n % self.chkpt_every == 0):
-                    self.save_checkpoint(n, cumulative_loss)
-
-            self.print_observable(cumulative_loss)
-
-            # resample the data
-            t0_resample = time()
-            self.resample(n, self.dataset.data)
-            log.info('  resampling done in %1.2f sec.' %
-                     (time()-t0_resample))
-
-            # scheduler step
-            if self.scheduler is not None:
-                self.scheduler.step()
-
-            log.info('  epoch done in %1.2f sec.' % (time()-tstart))
-
-        return cumulative_loss
-
-    def evaluate_grad_auto(self, lpos):
-        """Evaluate the gradient using automatic differentiation
-
-        Args:
-            lpos (torch.tensor): sampling points
-
-        Returns:
-            tuple: loss values and local energies
-        """
-
-        # compute the loss
-        loss, eloc = self.loss(lpos)
-
-        # add mo orthogonalization if required
-        if self.wf.mo.weight.requires_grad and self.ortho_mo:
-            loss += self.ortho_loss(self.wf.mo.weight)
-
-        # compute local gradients
-        self.opt.zero_grad()
-        loss.backward()
-
-        return loss, eloc
+        self.grad_method = grad
+        self.evaluate_gradient = {
+            'auto': self.evaluate_grad_auto,
+            'manual': self.evaluate_grad_manual}[grad]
 
     def evaluate_grad_manual(self, lpos):
         """Evaluate the gradient using low variance express
@@ -369,28 +177,3 @@ class SolverOrbital(SolverBase):
         else:
             raise ValueError(
                 'Manual gradient only for energy minimization')
-
-    def log_data_opt(self, nepoch, task):
-        """Log data for the optimization."""
-        log.info('')
-        log.info('  Optimization')
-        log.info('  Task                :', task)
-        log.info(
-            '  Number Parameters   : {0}', self.wf.get_number_parameters())
-        log.info('  Number of epoch     : {0}', nepoch)
-        log.info(
-            '  Batch size          : {0}', self.sampler.get_sampling_size())
-        log.info('  Loss function       : {0}', self.loss.method)
-        log.info('  Clip Loss           : {0}', self.loss.clip)
-        log.info('  Gradients           : {0}', self.grad_method)
-        log.info(
-            '  Resampling mode     : {0}', self.resampling_options.mode)
-        log.info(
-            '  Resampling every    : {0}', self.resampling_options.resample_every)
-        log.info(
-            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
-        log.info(
-            '  Output file         : {0}', self.hdf5file)
-        log.info(
-            '  Checkpoint every    : {0}', self.chkpt_every)
-        log.info('')

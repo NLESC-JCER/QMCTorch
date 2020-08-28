@@ -15,37 +15,43 @@ def set_torch_single_precision():
     torch.set_default_tensor_type(torch.FloatTensor)
 
 
-def fast_power(x, k, mask0=None, mask2=None):
-    """Computes x**k when k have elements 0, 1, 2
+def save_checkpoint(solver, epoch, loss):
+    """save the model and optimizer state
 
     Args:
-        x (torch.tensor): input
-        k (torch.tensor): exponents
-        mask0 (torch.tensor): precomputed mask of the elements of that are 0 (Defaults to None and computed here)
-        mask2 (torch.tensor): precomputed mask of the elements of that are 2 (Defaults to None and computed here)
+        solver (solver): solver instance
+        epoch (int): epoch
+        loss (float): current value of the loss
+        filename (str): name to save the file
 
     Returns:
-        torch.tensor: values of x**k
+        float: loss (?)
     """
-    kmax = 3
-    if k.max() < kmax:
+    filename = 'checkpoint_epoch%d.pth' % epoch
+    torch.save({
+        'epoch': epoch,
+        'model_state_dict': solver.wf.state_dict(),
+        'optimzier_state_dict': solver.opt.state_dict(),
+        'loss': loss
+    }, filename)
 
-        out = x.clone()
 
-        if mask0 is None:
-            mask0 = k == 0
+def load_checkpoint(solver, filename):
+    """load a model/optmizer
 
-        out.masked_fill_(mask0, 1)
+    Args:
+        solver (solver): solver instance
+        filename (str): filename
 
-        if k.max() > 1:
-            if mask2 is None:
-                mask2 = k == 2
-            out[..., mask2] *= out[..., mask2]
-
-    else:
-        out = x**k
-
-    return out
+    Returns:
+        tuple : solver epoch number and loss
+    """
+    data = torch.load(filename)
+    solver.wf.load_state_dict(data['model_state_dict'])
+    solver.opt.load_state_dict(data['optimzier_state_dict'])
+    epoch = data['epoch']
+    loss = data['loss']
+    return solver, epoch, loss
 
 
 class DataSet(Dataset):
@@ -80,8 +86,7 @@ class DataSet(Dataset):
 
 class Loss(nn.Module):
 
-    def __init__(self, wf, method='variance',
-                 clip=False, no_weight=False):
+    def __init__(self, wf, method='energy', clip=False, penalties=None):
         """Defines the loss to use during the optimization
 
         Arguments:
@@ -101,6 +106,7 @@ class Loss(nn.Module):
         self.method = method
         self.clip = clip
         self.use_weight = True
+        self.penalties = penalties
 
         self.loss_fn = {'energy': torch.mean,
                         'variance': torch.var}[method]
@@ -200,17 +206,18 @@ class Loss(nn.Module):
 class OrthoReg(nn.Module):
     '''add a penalty to make matrice orthgonal.'''
 
-    def __init__(self, alpha=0.1):
+    def __init__(self, mat, alpha=0.1):
         """Add a penalty loss to keep the MO orthogonalized
 
         Keyword Arguments:
             alpha {float} -- strength of the penaly (default: {0.1})
         """
         super(OrthoReg, self).__init__()
+        self.W = mat
         self.alpha = alpha
 
-    def forward(self, W):
+    def forward(self):
         """Return the loss : |W x W^T - I|."""
         return self.alpha * \
-            torch.norm(W.mm(W.transpose(0, 1)) -
-                       torch.eye(W.shape[0]))
+            torch.norm(self.W.mm(self.W.transpose(0, 1)) -
+                       torch.eye(self.W.shape[0]))

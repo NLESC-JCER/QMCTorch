@@ -1,6 +1,39 @@
 import torch
 
 
+def fast_power(x, k, mask0=None, mask2=None):
+    """Computes x**k when k have elements 0, 1, 2
+
+    Args:
+        x (torch.tensor): input
+        k (torch.tensor): exponents
+        mask0 (torch.tensor): precomputed mask of the elements of that are 0 (Defaults to None and computed here)
+        mask2 (torch.tensor): precomputed mask of the elements of that are 2 (Defaults to None and computed here)
+
+    Returns:
+        torch.tensor: values of x**k
+    """
+    kmax = 3
+    if k.max() < kmax:
+
+        out = x.clone()
+
+        if mask0 is None:
+            mask0 = k == 0
+
+        out.masked_fill_(mask0, 1)
+
+        if k.max() > 1:
+            if mask2 is None:
+                mask2 = k == 2
+            out[..., mask2] *= out[..., mask2]
+
+    else:
+        out = x**k
+
+    return out
+
+
 def btrace(M):
     """Computes the trace of batched matrices
 

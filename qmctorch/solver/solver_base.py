@@ -4,10 +4,11 @@ from types import SimpleNamespace
 from copy import deepcopy
 from tqdm import tqdm
 import numpy as np
-
+from ..sampler import Resampler
 from ..utils import dump_to_hdf5, add_group_attr
-from ..utils import DataSet
+from ..utils import DataSet, Loss
 from .. import log
+from .observable import Observable
 
 
 class SolverBase(object):
@@ -28,19 +29,12 @@ class SolverBase(object):
 
         self.wf = wf
         self.sampler = sampler
-        self.resampler = deepcopy(sampler)
         self.opt = optimizer
         self.scheduler = scheduler
+
+        # cuda capabilities
         self.cuda = False
         self.device = torch.device('cpu')
-        self.task = None
-
-        # if pos are needed for the optimizer (obsolete ?)
-        if 'lpos_needed' not in self.opt.__dict__.keys():
-            self.opt.lpos_needed = False
-
-        # distributed model
-        self.save_model = 'model.pth'
 
         # handles GPU availability
         if self.wf.cuda:
@@ -50,17 +44,41 @@ class SolverBase(object):
         else:
             self.device = torch.device('cpu')
 
+        # name of the hdf5 file
         self.hdf5file = output
         if output is None:
             basename = self.wf.mol.hdf5file.split('.')[0]
             self.hdf5file = basename + '_QMCTorch.hdf5'
+
+        # observable we want to track
+        self.observable = Observable(
+            ['local_energy', 'parameters'], self.wf)
+
+        # resampler
+        self.resampler = Resampler(sampler)
+
+        # additional penalties on the loss
+        self.loss = Loss()
+        self.loss_reg = []
+
+        # gradients
+        self.grad_method = 'auto'
+        self.evaluate_gradients = self.evaluate_grad_auto
 
         if rank == 0:
             dump_to_hdf5(self, self.hdf5file)
 
         self.log_data()
 
-    def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
+    def configure_observable(self, obsname):
+        """Configure the observable we need
+
+        Args:
+            obsname (list ,str): names of the observables
+        """
+        self.observable = Observable(obsname, self.wf)
+
+    def configure_resampling(self, mode, resample_every, nstep_update):
         """Configure the resampling
 
         Args:
@@ -71,121 +89,34 @@ class SolverBase(object):
             nstep_update (int, optional): Number of MC steps in update mode. 
                                           Defaults to 25.
         """
+        self.resampler = Resampler(mode, resample_every, nstep_update)
 
-        self.resampling_options = SimpleNamespace()
-        valid_mode = ['never', 'full', 'update']
-        if mode not in valid_mode:
-            raise ValueError(
-                mode, 'not a valid update method : ', valid_mode)
-
-        self.resampling_options.mode = mode
-        self.resampling_options.resample_every = resample_every
-        self.resampling_options.nstep_update = nstep_update
-
-        if mode == 'update':
-            self.resampler.ntherm = nstep_update
-            self.resampler.nstep = self.resampler.get_number_steps()
-
-    def configure_observable(self, obs_name):
-        """define the observalbe we want to track
+    def run(self, nepoch, batchsize=None,
+            hdf5_group=None, chkpt_every=None):
+        """Run a wave function optimization
 
         Args:
-            obs_name (list): list of str defining the observalbe.
-                             Each str must correspond to a WaveFuncion method
+            nepoch (int): Number of optimziation step
+            batchsize (int, optional): Number of sample in a mini batch.
+                                       If None, all samples are used.
+                                       Defaults to Never.
+            hdf5_group (str, optional): name of the hdf5 group where to store the data.
+                                        Defaults to wf.task.
+            chkpt_every (int, optional): save a checkpoint every every iteration.
+                                         Defaults to half the number of epoch
         """
 
-        # make sure it's a list
-        if not isinstance(obs_name, list):
-            obs_name = list(obs_name)
+        # prepare the optimization
+        self.prepare_optimization(batchsize, chkpt_every)
+        self.log_data_opt(nepoch, 'wave function optimization')
 
-        # sanity check
-        valid_obs_name = ['energy', 'local_energy',
-                          'geometry', 'parameters', 'gradients']
-        for name in obs_name:
-            if name in valid_obs_name:
-                continue
-            elif hasattr(self.wf, name):
-                continue
-            else:
-                log.info(
-                    '   Error : Observable %s not recognized' % name)
-                log.info('         : Possible observable')
-                for n in valid_obs_name:
-                    log.info('         :  - %s' % n)
-                log.info(
-                    '         :  - or any method of the wave function')
-                raise ValueError('Observable not recognized')
+        # run the epochs
+        self.run_epochs(nepoch)
 
-        # reset the Namesapce
-        self.observable = SimpleNamespace()
+        # dump
+        self.observable.save(hdf5_group or 'wf_opt')
 
-        # add the energy of the sytem
-        if 'energy' not in obs_name:
-            obs_name += ['energy']
-
-        if self.task == 'geo_opt' and 'geometry' not in obs_name:
-            obs_name += ['geometry']
-
-        for k in obs_name:
-
-            if k == 'parameters':
-                for key, p in zip(self.wf.state_dict().keys(),
-                                  self.wf.parameters()):
-                    if p.requires_grad:
-                        self.observable.__setattr__(key, [])
-
-            elif k == 'gradients':
-                for key, p in zip(self.wf.state_dict().keys(),
-                                  self.wf.parameters()):
-                    if p.requires_grad:
-                        self.observable.__setattr__(key+'.grad', [])
-
-            else:
-                self.observable.__setattr__(k, [])
-
-        self.observable.models = SimpleNamespace()
-
-    def add_walkers(self, nwalkers, batchsize=None):
-        """Add walkers to the sampler
-
-        Args:
-            nwalkers (int): number of walkers to add
-        """
-
-        log.info('')
-        log.info('  Adding %d walkers to the dataloader' % nwalkers)
-
-        # make a copy of the sampler
-        sampler_copy = deepcopy(self.sampler)
-
-        # change the sampler settings
-        sampler_copy.nwalkers = nwalkers
-        sampler_copy.walkers.nwalkers = nwalkers
-
-        # sample
-        pos = sampler_copy(self.wf.pdf)
-
-        # change the sampler
-        self.sampler.nwalkers += nwalkers
-        self.sampler.walkers.nwalkers += nwalkers
-        self.sampler.nsample = self.sampler.get_sampling_size()
-        self.sampler.walkers.pos = torch.cat(
-            (self.sampler.walkers.pos, sampler_copy.walkers.pos))
-
-        # change the resampler
-        self.resampler.nwalkers += nwalkers
-        self.resampler.walkers.nwalkers += nwalkers
-        self.resampler.nsample = self.resampler.get_sampling_size()
-
-        # resample
-        pos = self.resampler(self.wf.pdf)
-
-        # update the dataloader
-        self.dataset.data = pos
-        if batchsize is None:
-            batchsize = self.sampler.nsample
-        self.dataloader = DataLoader(
-            self.dataset, batch_size=batchsize)
+        return self.observable
 
     def prepare_optimization(self, batchsize, chkpt_every):
         """Prepare the optimization process
@@ -203,7 +134,7 @@ class SolverBase(object):
             batchsize = self.sampler.nsample
 
         # get the initial observable
-        self.store_observable(pos)
+        self.observable.store(self.wf, pos)
 
         # create the data loader
         self.dataset = DataSet(pos)
@@ -213,331 +144,97 @@ class SolverBase(object):
         # chkpt
         self.chkpt_every = chkpt_every
 
-    def save_data(self, hdf5_group):
-        """Save the data to hdf5.
+    def run_epochs(self, nepoch):
+        """Run a certain number of epochs
 
         Args:
-            hdf5_group (str): name of group in the hdf5 file
-        """
-        self.observable.models.last = dict(self.wf.state_dict())
-
-        hdf5_group = dump_to_hdf5(
-            self.observable, self.hdf5file, hdf5_group)
-
-        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
-
-    def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
-        """store observale in the dictionary
-
-        Args:
-            obs_dict (dict): dictionary of the observalbe
-            pos (torch.tensor): positions of th walkers
-            local_energy (torch.tensor, optional): precomputed values of the local
-                                           energy. Defaults to None
-            ibatch (int): index of the current batch. Defaults to None
+            nepoch (int): number of epoch to run
         """
 
-        if self.wf.cuda and pos.device.type == 'cpu':
-            pos = pos.to(self.device)
+        # loop over the epoch
+        for n in range(nepoch):
 
-        for obs in self.observable.__dict__.keys():
+            tstart = time()
+            log.info('')
+            log.info('  epoch %d' % n)
 
-            # store the energy
-            if obs == 'energy' and local_energy is not None:
-                data = local_energy.cpu().detach().numpy()
-                if (ibatch is None) or (ibatch == 0):
-                    self.observable.energy.append(np.mean(data))
-                else:
-                    self.observable.energy[-1] *= ibatch/(ibatch+1)
-                    self.observable.energy[-1] += np.mean(
-                        data)/(ibatch+1)
+            cumulative_loss = 0
 
-            # store local energy
-            elif obs == 'local_energy' and local_energy is not None:
-                data = local_energy.cpu().detach().numpy()
-                if (ibatch is None) or (ibatch == 0):
-                    self.observable.local_energy.append(data)
-                else:
-                    self.observable.local_energy[-1] = np.append(
-                        self.observable.local_energy[-1], data)
+            # loop over the batches
+            for ibatch, data in enumerate(self.dataloader):
 
-            # store variational parameter
-            elif obs in self.wf.state_dict():
-                layer, param = obs.split('.')
-                p = self.wf.__getattr__(layer).__getattr__(param)
-                self.observable.__getattribute__(
-                    obs).append(p.data.cpu().numpy())
+                # port data to device
+                t0_opt = time()
+                lpos = data.to(self.device)
 
-                if obs+'.grad' in self.observable.__dict__.keys():
-                    if p.grad is not None:
-                        self.observable.__getattribute__(obs +
-                                                         '.grad').append(p.grad.cpu().numpy())
-                    else:
-                        self.observable.__getattribute__(obs +
-                                                         '.grad').append(torch.zeros_like(p.data).cpu().numpy())
+                # get the gradient
+                loss, eloc = self.evaluate_gradient(lpos)
+                cumulative_loss += loss
 
-            # store any other defined method
-            elif hasattr(self.wf, obs):
-                func = self.wf.__getattribute__(obs)
-                data = func(pos)
-                if isinstance(data, torch.Tensor):
-                    data = data.cpu().detach().numpy()
-                self.observable.__getattribute__(obs).append(data)
+                # optimize the parameters
+                self.opt.step()
 
-    def print_observable(self, cumulative_loss, verbose=False):
-        """Print the observalbe to csreen
+                # observable
+                self.observable.store(self.wf,
+                                      lpos,
+                                      local_energy=eloc,
+                                      ibatch=ibatch)
 
-        Args:
-            cumulative_loss (float): current loss value
-            verbose (bool, optional): print all the observables. Defaults to False
-        """
+                log.info('  optmization step in %1.2f sec.' %
+                         ((time()-t0_opt)))
 
-        for k in self.observable.__dict__.keys():
+            # save the model if necessary
+            if n == 0 or cumulative_loss < min_loss:
+                min_loss = cumulative_loss
+                self.observable.store_model = dict(
+                    self.wf.state_dict())
 
-            if k == 'local_energy':
+            # save checkpoint file
+            if self.chkpt_every is not None:
+                if (n > 0) and (n % self.chkpt_every == 0):
+                    self.save_checkpoint(n, cumulative_loss)
 
-                eloc = self.observable.local_energy[-1]
-                e = np.mean(eloc)
-                v = np.var(eloc)
-                err = np.sqrt(v / len(eloc))
-                log.options(style='percent').info(
-                    '  energy   : %f +/- %f' % (e, err))
-                log.options(style='percent').info(
-                    '  variance : %f' % np.sqrt(v))
-
-            elif verbose:
-                log.options(style='percent').info(
-                    k + ' : ', self.observable.__getattribute__(k)[-1])
-                log.options(style='percent').info(
-                    'loss %f' % (cumulative_loss))
-
-    def resample(self, n, pos):
-        """Resample the wave function
-
-        Args:
-            n (int): current epoch value
-            pos (torch.tensor): positions of the walkers
-
-        Returns:
-            (torch.tensor): new positions of the walkers
-        """
-
-        if self.resampling_options.mode != 'never':
+            self.observable.print(cumulative_loss)
 
             # resample the data
-            if (n % self.resampling_options.resample_every == 0):
+            t0_resample = time()
+            self.dataset.data = self.resampler(
+                self.wf.pdf, n, self.dataset.data)
+            self.loss.weight['psi0'] = None
 
-                # make a copy of the pos if we update
-                if self.resampling_options.mode == 'update':
-                    pos = pos[-self.resampler.walkers.nwalkers:
-                              ].clone().detach().to(self.device)
+            log.info('  resampling done in %1.2f sec.' %
+                     (time()-t0_resample))
 
-                # start from scratch otherwise
-                else:
-                    pos = None
+            # scheduler step
+            if self.scheduler is not None:
+                self.scheduler.step()
 
-                # sample and update the dataset
-                pos = self.resampler(
-                    self.wf.pdf, pos=pos, with_tqdm=True)
-                self.dataloader.dataset.data = pos
+            log.info('  epoch done in %1.2f sec.' % (time()-tstart))
 
-            # update the weight of the loss if needed
-            if self.loss.use_weight:
-                self.loss.weight['psi0'] = None
+        return cumulative_loss
 
-        return pos
-
-    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
-        """Performs a single point calculatin
+    def evaluate_grad_auto(self, lpos):
+        """Evaluate the gradient using automatic differentiation
 
         Args:
-            with_tqdm (bool, optional): use tqdm for samplig. Defaults to True.
-            hdf5_group (str, optional): hdf5 group where to store the data.
-                                        Defaults to 'single_point'.
+            lpos (torch.tensor): sampling points
 
         Returns:
-            SimpleNamespace: contains the local energy, positions, ...
+            tuple: loss values and local energies
         """
 
-        log.info('')
-        log.info('  Single Point Calculation')
+        # compute the loss
+        loss, eloc = self.loss(lpos)
 
-        # check if we have to compute and store the grads
-        grad_mode = torch.no_grad()
-        if self.wf.kinetic == 'auto':
-            grad_mode = torch.enable_grad()
+        # add mo orthogonalization if required
+        for reg in self.loss_reg:
+            loss += reg()
 
-        with grad_mode:
+        # compute local gradients
+        self.opt.zero_grad()
+        loss.backward()
 
-            #  get the position and put to gpu if necessary
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
-            if self.wf.cuda and pos.device.type == 'cpu':
-                pos = pos.to(self.device)
-
-            # compute energy/variance/error
-            el = self.wf.local_energy(pos)
-            e, s, err = torch.mean(el), torch.var(
-                el), self.wf.sampling_error(el)
-
-            # print data
-            log.options(style='percent').info(
-                '  Energy   : %f +/- %f' % (e.detach().item(), err.detach().item()))
-            log.options(style='percent').info(
-                '  Variance : %f' % s.detach().item())
-
-            # dump data to hdf5
-            obs = SimpleNamespace(
-                pos=pos,
-                local_energy=el,
-                energy=e,
-                variance=s,
-                error=err
-            )
-            dump_to_hdf5(obs,
-                         self.hdf5file,
-                         root_name=hdf5_group)
-            add_group_attr(self.hdf5file, hdf5_group,
-                           {'type': 'single_point'})
-
-        return obs
-
-    def save_checkpoint(self, epoch, loss):
-        """save the model and optimizer state
-
-        Args:
-            epoch (int): epoch
-            loss (float): current value of the loss
-            filename (str): name to save the file
-
-        Returns:
-            float: loss (?)
-        """
-        filename = 'checkpoint_epoch%d.pth' % epoch
-        torch.save({
-            'epoch': epoch,
-            'model_state_dict': self.wf.state_dict(),
-            'optimzier_state_dict': self.opt.state_dict(),
-            'loss': loss
-        }, filename)
-
-    def load_checkpoint(self, filename):
-        """load a model/optmizer
-
-        Args:
-            filename (str): filename
-
-        Returns:
-            tuple : epoch number and loss
-        """
-        data = torch.load(filename)
-        self.wf.load_state_dict(data['model_state_dict'])
-        self.opt.load_state_dict(data['optimzier_state_dict'])
-        epoch = data['epoch']
-        loss = data['loss']
-        return epoch, loss
-
-    def _append_observable(self, key, data):
-        """Append a new data point to observable key.
-
-        Arguments:
-            key {str} -- name of the observable
-            data {} -- data
-        """
-
-        if key not in self.obs_dict.keys():
-            self.obs_dict[key] = []
-        self.obs_dict[key].append(data)
-
-    def sampling_traj(self, with_tqdm=True, hdf5_group='sampling_trajectory'):
-        """Compute the local energy along a sampling trajectory
-
-        Args:
-            pos (torch.tensor): positions of the walkers along the trajectory
-            hdf5_group (str, optional): name of the group where to store the data.
-                                        Defaults to 'sampling_trajecory'
-        Returns:
-            SimpleNamespace : contains energy/positions/
-        """
-        log.info('')
-        log.info('  Sampling trajectory')
-
-        # make a copy of the sampler
-        traj_sampler = deepcopy(self.sampler)
-        traj_sampler.ntherm = 0
-        traj_sampler.nstep = self.sampler.ntherm
-        traj_sampler.ndecor = 1
-        traj_sampler.nsample = traj_sampler.nwalkers * traj_sampler.nstep
-
-        # sample
-        pos = traj_sampler(self.wf.pdf, with_tqdm=with_tqdm)
-
-        ndim = pos.shape[-1]
-        p = pos.view(-1, self.sampler.nwalkers, ndim)
-        el = []
-        rng = tqdm(p, desc='INFO:QMCTorch|  Energy  ',
-                   disable=not with_tqdm)
-        for ip in rng:
-            el.append(self.wf.local_energy(ip).cpu().detach().numpy())
-
-        el = np.array(el).squeeze(-1)
-        obs = SimpleNamespace(local_energy=np.array(el), pos=pos)
-        dump_to_hdf5(obs,
-                     self.hdf5file, hdf5_group)
-
-        add_group_attr(self.hdf5file, hdf5_group,
-                       {'type': 'sampling_traj'})
-        return obs
-
-    def print_parameters(self, grad=False):
-        """print parameter values
-
-        Args:
-            grad (bool, optional): also print the gradient. Defaults to False.
-        """
-        for p in self.wf.parameters():
-            if p.requires_grad:
-                if grad:
-                    print(p.grad)
-                else:
-                    print(p)
-
-    def optimization_step(self, lpos):
-        """Performs one optimization step
-
-        Arguments:
-            lpos {torch.tensor} -- positions of the walkers
-        """
-
-        if self.opt.lpos_needed:
-            self.opt.step(lpos)
-        else:
-            self.opt.step()
-
-    def save_traj(self, fname, obs):
-        """Save trajectory of geo_opt
-
-        Args:
-            fname (str): file name
-        """
-        f = open(fname, 'w')
-        xyz = obs.geometry
-        natom = len(xyz[0])
-        nm2bohr = 1.88973
-        for snap in xyz:
-            f.write('%d \n\n' % natom)
-            for i, pos in enumerate(snap):
-                at = self.wf.atoms[i]
-                f.write('%s % 7.5f % 7.5f %7.5f\n' % (at[0],
-                                                      pos[0] /
-                                                      nm2bohr,
-                                                      pos[1] /
-                                                      nm2bohr,
-                                                      pos[2] / nm2bohr))
-            f.write('\n')
-        f.close()
-
-    def run(self, nepoch, batchsize=None, loss='variance'):
-        raise NotImplementedError()
+        return loss, eloc
 
     def log_data(self):
         """Log basic information about the sampler."""
@@ -568,3 +265,27 @@ class SolverBase(object):
                 '  Scheduler           : {0}', self.scheduler.__class__.__name__)
             for x in self.scheduler.__repr__().split('\n'):
                 log.debug('   ' + x)
+
+    def log_data_opt(self, nepoch):
+        """Log data for the optimization."""
+        log.info('')
+        log.info('  Optimization')
+        log.info(
+            '  Number Parameters   : {0}', self.wf.get_number_parameters())
+        log.info('  Number of epoch     : {0}', nepoch)
+        log.info(
+            '  Batch size          : {0}', self.sampler.get_sampling_size())
+        log.info('  Loss function       : {0}', self.loss.method)
+        log.info('  Clip Loss           : {0}', self.loss.clip)
+        log.info('  Gradients           : {0}', self.grad_method)
+        log.info(
+            '  Resampling mode     : {0}', self.resampling_options.mode)
+        log.info(
+            '  Resampling every    : {0}', self.resampling_options.resample_every)
+        log.info(
+            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+        log.info(
+            '  Output file         : {0}', self.hdf5file)
+        log.info(
+            '  Checkpoint every    : {0}', self.chkpt_every)
+        log.info('')
