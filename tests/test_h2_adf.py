@@ -25,16 +25,14 @@ class TestH2ADF(unittest.TestCase):
                           use_jastrow=True)
 
         # sampler
-        self.sampler = Metropolis(
-            nwalkers=1000,
-            ntherm=2000,
-            step_size=0.5,
-            ndim=self.wf.ndim,
-            nelec=self.wf.nelec,
-            init=self.mol.domain('normal'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+        self.sampler = Metropolis(self.mol,
+                                  nwalkers=1000,
+                                  ntherm=2000,
+                                  step_size=0.5,
+                                  init='normal',
+                                  move={
+                                      'type': 'all-elec',
+                                      'proba': 'normal'})
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)

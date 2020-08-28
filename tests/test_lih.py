@@ -33,16 +33,14 @@ class TestLiH(unittest.TestCase):
                           include_all_mo=False)
 
         # sampler
-        self.sampler = Metropolis(
-            nwalkers=500,
-            ntherm=200,
-            step_size=0.05,
-            ndim=self.wf.ndim,
-            nelec=self.wf.nelec,
-            init=self.mol.domain('normal'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+        self.sampler = Metropolis(self.mol,
+                                  nwalkers=500,
+                                  ntherm=200,
+                                  step_size=0.05,
+                                  init='normal',
+                                  move={
+                                      'type': 'all-elec',
+                                      'proba': 'normal'})
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
