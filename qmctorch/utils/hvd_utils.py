@@ -6,7 +6,7 @@ except ModuleNotFoundError:
 
 
 def metric_average(val, name):
-    """Average a give quantity over all processes
+    """Average a given quantity over all processes
 
     Arguments:
         val {torch.tensor} -- data to average

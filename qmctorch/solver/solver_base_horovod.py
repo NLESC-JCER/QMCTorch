@@ -80,9 +80,7 @@ class SolverBaseHorovod(SolverBase):
         # chkpt
         self.chkpt_every = chkpt_every
 
-    def run(self, nepoch, batchsize=None, loss='energy',
-            clip_loss=False, grad='manual', hdf5_group=None,
-            num_threads=1):
+    def run(self, nepoch, batchsize=None, hdf5_group=None, num_threads=1):
         """Run the optimization
 
         Args:
@@ -125,9 +123,15 @@ class SolverBaseHorovod(SolverBase):
 
         return self.observable
 
-    def run_epochs(self, nepoch)
+    def run_epochs(self, nepoch):
+        """Run a certain number of epochs
 
-       for n in range(nepoch):
+        Args:
+            nepoch (int): number of epoch to run
+        """
+
+        # loop over epochs
+        for n in range(nepoch):
 
             tstart = time()
             logd(hvd.rank(), '')

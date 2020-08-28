@@ -17,26 +17,22 @@ class Observable(object):
         if not isinstance(obs_name, list):
             obs_name = list(obs_name)
 
-        # sanity check
-        valid_obs_name = ['energy', 'local_energy',
-                          'parameters', 'gradients']
-        for name in obs_name:
-            if name in valid_obs_name:
-                continue
-            elif hasattr(wf, name):
-                continue
-            else:
-                log.info(
-                    '   Error : Observable %s not recognized' % name)
-                log.info('         : Possible observable')
-                for n in valid_obs_name:
-                    log.info('         :  - %s' % n)
-                log.info(
-                    '         :  - or any method of the wave function')
-                raise ValueError('Observable not recognized')
+        # check
+        self.check(obs_name, wf)
 
-        # add the energy of the sytem
-        if 'energy' not in obs_name:
+        # configure
+        self.configure(obs_name, wf)
+
+    def configure(self, obs_name, wf):
+        """Configure the observables.
+
+        Args:
+            obs_name (list str): names of the observable
+            wf (wave function instance): instance of a wave function
+        """
+
+       # add the energy of the sytem
+       if 'energy' not in obs_name:
             obs_name += ['energy']
 
         for k in obs_name:
@@ -58,15 +54,44 @@ class Observable(object):
 
         self.models = SimpleNamespace()
 
-    def store(self, wf, pos, local_energy=None, ibatch=None, **kwargs):
-        """Store the values of the observable 
+    def check(self, obs_name, wf):
+        """Check that all obs name are valid
 
         Args:
-            wf (WaveFunction): instance of the wave function
-            pos (torch.tensor): current position of the walkers
-            local_energy (torch.tensor, optional): precalculated values of the local energies.
+            obs_name (list str): names of the observable
+            wf (wave function instance): instance of a wave function
+
+        Raises:
+            ValueError: [description]
+        """
+        # sanity check
+        valid_obs_name = ['energy', 'local_energy',
+                          'parameters', 'gradients']
+        for name in obs_name:
+            if name in valid_obs_name:
+                continue
+
+            elif hasattr(wf, name):
+                continue
+            else:
+                log.info(
+                    '   Error : Observable %s not recognized' % name)
+                log.info('         : Possible observable')
+                for n in valid_obs_name:
+                    log.info('         :  - %s' % n)
+                log.info(
+                    '         :  - or any method of the wave function')
+                raise ValueError('Observable not recognized')
+
+    def store(self, wf, pos, local_energy=None, ibatch=None, **kwargs):
+        """Store the values of the observable
+
+        Args:
+            wf(WaveFunction): instance of the wave function
+            pos(torch.tensor): current position of the walkers
+            local_energy(torch.tensor, optional): precalculated values of the local energies.
                                                    Defaults to None.
-            ibatch (int, optional): index of the current minibatch. Defaults to None.
+            ibatch(int, optional): index of the current minibatch. Defaults to None.
         """
 
         if wf.cuda and pos.device.type == 'cpu':
@@ -119,17 +144,17 @@ class Observable(object):
         """Store a model in the observable dict
 
         Args:
-            name (str): name of the model
-            state_dict (state_dict): state dictionary of the model
+            name(str): name of the model
+            state_dict(state_dict): state dictionary of the model
         """
         self.models.__setattr__(name, dict(state_dict))
 
-    def print_observable(self, cumulative_loss, verbose=False):
+    def print(self, cumulative_loss, verbose=False):
         """Print the observalbe to csreen
 
         Args:
-            cumulative_loss (float): current loss value
-            verbose (bool, optional): print all the observables. Defaults to False
+            cumulative_loss(float): current loss value
+            verbose(bool, optional): print all the observables. Defaults to False
         """
 
         for k in self.__dict__.keys():
@@ -155,9 +180,9 @@ class Observable(object):
         """Save the data in the hdf5 file
 
         Args:
-            hdf5grp (str): name of group in the hdf5 file
-            hdf5file (str): name of the hdf5file
-            attr_type (str, optional): type of simulation
+            hdf5grp(str): name of group in the hdf5 file
+            hdf5file(str): name of the hdf5file
+            attr_type(str, optional): type of simulation
         """
 
         hdf5grp = dump_to_hdf5(

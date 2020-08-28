@@ -5,7 +5,17 @@ from copy import deepcopy
 class Resampler(object):
 
     def __init__(self, sampler, mode='update', resample_every=1, nstep_update=25):
+        """Resample the density between optimization step
 
+        Args:
+            sampler (sampler): original sampler
+            mode (str, optional): method to resample : 'full', 'update', 'never' 
+                                  Defaults to 'update'.
+            resample_every (int, optional): Number of optimization steps between resampling
+                                 Defaults to 1.
+            nstep_update (int, optional): Number of MC steps in update mode. 
+                                          Defaults to 25.
+        """
         self.original_sampler = sampler
         self.sampler = deepcopy(sampler)
         self.configure(mode, resample_every, nstep_update)
