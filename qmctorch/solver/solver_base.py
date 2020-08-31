@@ -58,8 +58,11 @@ class SolverBase(object):
         # resampler
         self.resampler = Resampler(sampler)
 
-        # additional penalties on the loss
+        # define the loss
         self.loss = Loss(self.wf)
+
+        # additional penalties on the loss
+        self.loss_reg = None
 
         # gradients
         self.grad_method = 'auto'

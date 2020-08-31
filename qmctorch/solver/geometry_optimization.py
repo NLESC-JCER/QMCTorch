@@ -4,7 +4,7 @@ from .solver_orbital import SolverOrbital
 
 class GeoSolver(SolverOrbital):
 
-    def __init__(self, wf=None, sampler=None, optmizer=None, scheduler=None, output=None, rank=0):
+    def __init__(self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0):
 
         SolverOrbital.__init__(self, wf, sampler,
                                optimizer, scheduler, output, rank)
