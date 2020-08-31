@@ -1,3 +1,4 @@
+from copy import deepcopy
 from .observable import Observable
 from .solver_orbital import SolverOrbital
 

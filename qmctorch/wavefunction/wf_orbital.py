@@ -153,10 +153,6 @@ class Orbital(WaveFunction):
             mo_coeff = mo_coeff[:, :self.highest_occ_mo]
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
-    def update_mo_coeffs(self):
-        self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
-        self.mo.weight = self.get_mo_coeffs()
-
     def set_jastrow(self, use_jastrow, jastrow_type):
         """Set the jastrow calculator
 
