@@ -62,7 +62,7 @@ class SolverBase(object):
         self.loss = Loss(self.wf)
 
         # additional penalties on the loss
-        self.loss_reg = None
+        self.loss_reg = []
 
         # gradients
         self.grad_method = 'auto'
