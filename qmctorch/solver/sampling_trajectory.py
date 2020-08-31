@@ -21,13 +21,13 @@ def SamplingTrajectory(wf, sampler, with_tqdm=True, hdf5_group='sampling_traject
     log.info('  Sampling trajectory')
 
     log.info(
-        '  WaveFunction        : {0}', self.wf.__class__.__name__)
-    for x in self.wf.__repr__().split('\n'):
+        '  WaveFunction        : {0}', wf.__class__.__name__)
+    for x in wf.__repr__().split('\n'):
         log.debug('   ' + x)
 
     log.info(
-        '  Sampler             : {0}', self.sampler.__class__.__name__)
-    for x in self.sampler.__repr__().split('\n'):
+        '  Sampler             : {0}', sampler.__class__.__name__)
+    for x in sampler.__repr__().split('\n'):
         log.debug('   ' + x)
 
     # make a copy of the sampler

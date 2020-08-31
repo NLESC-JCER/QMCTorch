@@ -135,7 +135,7 @@ class TestH2(unittest.TestCase):
         self.solver.configure_observable(['local_energy'])
         self.solver.configure_loss('energy')
         self.solver.configure_gradients('auto')
-        obs = GeoSolver.run(5, nepoch_wf_init=10, nepoch_wf_update=5)
+        obs = self.geo.run(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
         # load the best model
         self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
