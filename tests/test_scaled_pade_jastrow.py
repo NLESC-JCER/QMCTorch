@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.scaled_pade_jastrow import ScaledPadeJastrow
+from qmctorch.wavefunction.jastrow_factors.scaled_pade_jastrow import ScaledPadeJastrow
 import unittest
 import numpy as np
 torch.set_default_tensor_type(torch.DoubleTensor)
