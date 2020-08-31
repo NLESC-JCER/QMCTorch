@@ -137,21 +137,6 @@ class TestH2(unittest.TestCase):
         self.solver.configure_gradients('auto')
         obs = self.geo.run(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
-        # load the best model
-        self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
-        self.solver.wf.eval()
-
-        # sample and compute variables
-        obs = self.solver.single_point()
-        e, v = obs.energy, obs.variance
-
-        e = e.data.numpy()
-        v = v.data.numpy()
-
-        # it might be too much to assert with the ground state energy
-        assert(e > 2 * self.ground_state_energy and e < 0.)
-        assert(v > 0 and v < 2.)
-
     def test5_sampling_traj(self):
         self.solver.sampler = self.sampler
 
@@ -172,5 +157,5 @@ if __name__ == "__main__":
     t.setUp()
     # t.test2_single_point_hmc()
     # t.test1_single_point()
-    t.test3_wf_opt()
+    t.test4_geo_opt()
     # t.test5_sampling_traj()

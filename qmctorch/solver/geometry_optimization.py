@@ -2,6 +2,7 @@ from torch import optim
 from copy import deepcopy
 from .observable import Observable
 from .solver_orbital import SolverOrbital
+from ..utils import save_trajectory
 from .. import log
 
 
@@ -80,7 +81,7 @@ class GeoSolver(SolverOrbital):
 
         # dump
         self.observable.geometry = xyz
-        self.save_data(hdf5_group or 'geo_opt')
+        self.observable.save(hdf5_group or 'geo_opt', self.hdf5file)
 
         # save traj
         filename = self.wf.mol.name + '_go_traj.xyz'
@@ -101,11 +102,11 @@ class GeoSolver(SolverOrbital):
         log.info('  Clip Loss           : {0}', self.loss.clip)
         log.info('  Gradients           : {0}', self.grad_method)
         log.info(
-            '  Resampling mode     : {0}', self.resampling_options.mode)
+            '  Resampling mode     : {0}', self.resampler.options.mode)
         log.info(
-            '  Resampling every    : {0}', self.resampling_options.resample_every)
+            '  Resampling every    : {0}', self.resampler.options.resample_every)
         log.info(
-            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+            '  Resampling steps    : {0}', self.resampler.options.nstep_update)
         log.info(
             '  Output file         : {0}', self.hdf5file)
         log.info(
