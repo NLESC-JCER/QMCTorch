@@ -3,6 +3,9 @@ import numpy as np
 import torch
 import warnings
 from types import SimpleNamespace
+from types import BuiltinFunctionType, BuiltinMethodType
+from types import FunctionType, MethodType
+
 from .. import log
 
 
@@ -215,7 +218,11 @@ def insert_data(obj, parent_grp, obj_name):
                          torch.Tensor: insert_torch_tensor,
                          torch.nn.parameter.Parameter: insert_torch_parameter,
                          torch.device: insert_none,
-                         type(None): insert_none}
+                         type(None): insert_none,
+                         BuiltinFunctionType: insert_none,
+                         BuiltinMethodType: insert_none,
+                         FunctionType: insert_none,
+                         MethodType: insert_none}
 
         insert_fn = lookup_insert[type(obj)]
     except KeyError:
