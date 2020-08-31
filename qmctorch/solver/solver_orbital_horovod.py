@@ -1,5 +1,5 @@
 from .solver_orbital import SolverOrbital
-from .solver_base_horovod SolverBaseHorovod
+from .solver_base_horovod import SolverBaseHorovod
 
 
 class SolverOrbitalHorovod(SolverBaseHorovod, SolverOrbital):

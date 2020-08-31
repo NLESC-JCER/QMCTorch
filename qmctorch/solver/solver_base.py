@@ -3,6 +3,7 @@ from torch.utils.data import DataLoader
 from types import SimpleNamespace
 from copy import deepcopy
 from tqdm import tqdm
+from time import time
 import numpy as np
 from ..sampler import Resampler
 from ..utils import dump_to_hdf5, add_group_attr
@@ -58,8 +59,7 @@ class SolverBase(object):
         self.resampler = Resampler(sampler)
 
         # additional penalties on the loss
-        self.loss = Loss()
-        self.loss_reg = []
+        self.loss = Loss(self.wf)
 
         # gradients
         self.grad_method = 'auto'
@@ -108,13 +108,13 @@ class SolverBase(object):
 
         # prepare the optimization
         self.prepare_optimization(batchsize, chkpt_every)
-        self.log_data_opt(nepoch, 'wave function optimization')
+        self.log_data_opt(nepoch)
 
         # run the epochs
         self.run_epochs(nepoch)
 
         # dump
-        self.observable.save(hdf5_group or 'wf_opt')
+        self.observable.save(hdf5_group or 'wf_opt', self.hdf5file)
 
         return self.observable
 
@@ -279,11 +279,11 @@ class SolverBase(object):
         log.info('  Clip Loss           : {0}', self.loss.clip)
         log.info('  Gradients           : {0}', self.grad_method)
         log.info(
-            '  Resampling mode     : {0}', self.resampling_options.mode)
+            '  Resampling mode     : {0}', self.resampler.options.mode)
         log.info(
-            '  Resampling every    : {0}', self.resampling_options.resample_every)
+            '  Resampling every    : {0}', self.resampler.options.resample_every)
         log.info(
-            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+            '  Resampling steps    : {0}', self.resampler.options.nstep_update)
         log.info(
             '  Output file         : {0}', self.hdf5file)
         log.info(

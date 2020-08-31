@@ -51,7 +51,7 @@ class SolverOrbital(SolverBase):
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip)
         self.loss.use_weight = (
-            self.resampling_options.resample_every > 1)
+            self.resampler.options.resample_every > 1)
 
         # orthogonalization penalty for the MO coeffs
         if ortho_mo:

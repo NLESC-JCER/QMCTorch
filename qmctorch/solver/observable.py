@@ -1,11 +1,13 @@
+import torch
 import numpy as np
+from types import SimpleNamespace
 from .. import log
 from ..utils import dump_to_hdf5, add_group_attr
 
 
 class Observable(object):
 
-    def __init__(self, obs_name, wf, task):
+    def __init__(self, obs_name, wf):
         """Configure the observable we want to track
 
         Args:
@@ -32,7 +34,7 @@ class Observable(object):
         """
 
        # add the energy of the sytem
-       if 'energy' not in obs_name:
+        if 'energy' not in obs_name:
             obs_name += ['energy']
 
         for k in obs_name:

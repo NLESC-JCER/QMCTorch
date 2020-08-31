@@ -3,7 +3,7 @@ from types import SimpleNamespace
 from torch.utils.data import DataLoader
 import warnings
 from time import time
-from .solver_orbital import SolverOrbital
+from .solver_base import SolverBase
 from qmctorch.utils import (
     DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
 from .. import log

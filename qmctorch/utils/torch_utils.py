@@ -86,7 +86,7 @@ class DataSet(Dataset):
 
 class Loss(nn.Module):
 
-    def __init__(self, wf, method='energy', clip=False, penalties=None):
+    def __init__(self, wf, method='energy', clip=False):
         """Defines the loss to use during the optimization
 
         Arguments:
@@ -106,7 +106,7 @@ class Loss(nn.Module):
         self.method = method
         self.clip = clip
         self.use_weight = True
-        self.penalties = penalties
+        # self.penalties = penalties
 
         self.loss_fn = {'energy': torch.mean,
                         'variance': torch.var}[method]
