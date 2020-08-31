@@ -11,7 +11,8 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'InterpolateMolecularOrbitals',
            'InterpolateAtomicOribtals',
            'btrace', 'bdet2', 'bproj', 'timeit', 'timeline',
-           'save_trajectory', 'metric_average']
+           'save_trajectory', 'metric_average',
+           'gto2sto']
 
 from .plot_data import (plot_energy, plot_data, plot_block,
                         plot_walkers_traj, plot_correlation_time,
@@ -39,3 +40,5 @@ from .stat_utils import blocking, correlation_coefficient, integrated_autocorrel
 from .export_utils import save_trajectory
 
 from .hvd_utils import metric_average
+
+from .gto2sto import gto2sto
