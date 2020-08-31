@@ -2,6 +2,7 @@ from torch import optim
 from copy import deepcopy
 from .observable import Observable
 from .solver_orbital import SolverOrbital
+from .. import log
 
 
 class GeoSolver(SolverOrbital):
