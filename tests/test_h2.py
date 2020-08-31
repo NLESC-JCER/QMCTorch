@@ -66,8 +66,8 @@ class TestH2(unittest.TestCase):
                                     optimizer=self.opt)
 
         # geo solver
-        self.geo = GeoSolver(wf=self.wf, sampler=self.sampler,
-                             optimizer=self.opt)
+        opt_geo = optim.SGD(self.wf.parameters(), lr=1E-2)
+        self.geo = GeoSolver(self.solver, opt_geo=opt_geo)
 
         # ground state energy
         self.ground_state_energy = -1.16
