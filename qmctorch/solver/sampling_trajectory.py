@@ -7,7 +7,7 @@ from .. import log
 from ..utils import dump_to_hdf5, add_group_attr
 
 
-def sampling_traj(wf, sampler, with_tqdm=True, hdf5_group='sampling_trajectory'):
+def SamplingTrajectory(wf, sampler, with_tqdm=True, hdf5_group='sampling_trajectory'):
     """Compute the local energy along a sampling trajectory
 
     Args:

@@ -3,6 +3,9 @@ import torch.optim as optim
 
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
+
+from qmctorch.solver import SinglePoint
+
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import plot_energy
 
@@ -54,7 +57,7 @@ class TestH2ADF(unittest.TestCase):
         self.solver.sampler = self.sampler
 
         # sample and compute observables
-        obs = self.solver.single_point()
+        obs = SinglePoint(self.wf, self.sampler)
         e, v = obs.energy, obs.variance
 
         # vals on different archs

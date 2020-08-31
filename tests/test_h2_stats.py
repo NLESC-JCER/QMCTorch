@@ -3,6 +3,7 @@ import torch.optim as optim
 
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SamplingTrajectory
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import (plot_energy, plot_data, plot_walkers_traj, plot_block,
                             plot_correlation_coefficient,
@@ -57,13 +58,13 @@ class TestH2Stat(unittest.TestCase):
 
     def test_sampling_traj(self):
 
-        obs = self.solver.sampling_traj()
+        obs = SamplingTrajectory(self.wf, self.sampler)
         plot_walkers_traj(obs.local_energy)
         plot_block(obs.local_energy)
 
     def test_stat(self):
 
-        obs = self.solver.sampling_traj()
+        obs = SamplingTrajectory(self.wf, self.sampler)
         plot_blocking_energy(obs.local_energy, block_size=10)
         plot_correlation_coefficient(obs.local_energy)
         plot_integrated_autocorrelation_time(obs.local_energy)

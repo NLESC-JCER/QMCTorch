@@ -2,8 +2,14 @@ import torch
 import torch.optim as optim
 
 from qmctorch.wavefunction import Orbital, Molecule
+
 from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SinglePoint
+from qmctorch.solver import GeoSolver
+from qmctorch.solver import SamplingTrajectory
+
 from qmctorch.sampler import Metropolis, Hamiltonian
+
 from qmctorch.utils import (plot_energy, plot_data, plot_walkers_traj, plot_block,
                             plot_correlation_coefficient,
                             plot_integrated_autocorrelation_time,
@@ -59,6 +65,10 @@ class TestH2(unittest.TestCase):
         self.solver = SolverOrbital(wf=self.wf, sampler=self.sampler,
                                     optimizer=self.opt)
 
+        # geo solver
+        self.geo = GeoSolver(wf=self.wf, sampler=self.sampler,
+                             optimizer=self.opt)
+
         # ground state energy
         self.ground_state_energy = -1.16
 
@@ -72,7 +82,7 @@ class TestH2(unittest.TestCase):
         self.solver.sampler = self.sampler
 
         # sample and compute observables
-        obs = self.solver.single_point()
+        obs = SinglePoint(self.wf, self.sampler)
         e, v = obs.energy, obs.variance
 
         # values on different arch
@@ -90,10 +100,9 @@ class TestH2(unittest.TestCase):
 
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
         self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
-        self.solver.sampler = self.hmc_sampler
 
         # sample and compute observables
-        obs = self.solver.single_point()
+        obs = SinglePoint(self.wf, self.hmc_sampler)
         e, v = obs.energy, obs.variance
 
         # values on different arch
@@ -108,6 +117,7 @@ class TestH2(unittest.TestCase):
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
 
     def test3_wf_opt(self):
+
         self.solver.sampler = self.sampler
 
         self.solver.configure_observable(['local_energy'])
@@ -125,7 +135,7 @@ class TestH2(unittest.TestCase):
         self.solver.configure_observable(['local_energy'])
         self.solver.configure_loss('energy')
         self.solver.configure_gradients('auto')
-        self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
+        obs = GeoSolver.run(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
         # load the best model
         self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
@@ -145,7 +155,7 @@ class TestH2(unittest.TestCase):
     def test5_sampling_traj(self):
         self.solver.sampler = self.sampler
 
-        obs = self.solver.sampling_traj()
+        obs = SamplingTrajectory(self.wf, self.sampler)
 
         plot_walkers_traj(obs.local_energy)
         plot_block(obs.local_energy)

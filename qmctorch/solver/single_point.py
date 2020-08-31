@@ -6,7 +6,7 @@ from .. import log, logd
 from ..utils import dump_to_hdf5, add_group_attr
 
 
-def single_point(wf, sampler, with_tqdm=True, hdf5file=None):
+def SinglePoint(wf, sampler, with_tqdm=True, hdf5file=None):
     """Performs a single point calculation
 
     Args:

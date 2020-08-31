@@ -2,7 +2,7 @@ from .observable import Observable
 from .solver_orbital import SolverOrbital
 
 
-class GeoOptOrbital(SolverOrbital):
+class GeoSolver(SolverOrbital):
 
     def __init__(self, wf=None, sampler=None, optmizer=None, scheduler=None, output=None, rank=0):
 

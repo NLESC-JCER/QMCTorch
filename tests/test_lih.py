@@ -3,6 +3,7 @@ import torch.optim as optim
 
 from qmctorch.wavefunction import Orbital, Molecule
 from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SinglePoint
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import plot_energy, plot_data, plot_walkers_traj, plot_block
 
@@ -52,7 +53,7 @@ class TestLiH(unittest.TestCase):
     def test1_single_point(self):
 
         # sample and compute observables
-        obs = self.solver.single_point()
+        obs = SinglePoint(self.wf, self.sampler)
         e, v = obs.energy, obs.variance
 
         # # values on different arch

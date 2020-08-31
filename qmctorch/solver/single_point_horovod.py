@@ -16,7 +16,7 @@ except ModuleNotFoundError:
     pass
 
 
-def single_point_horovod(wf, sampler, with_tqdm=True, hdf5file=None):
+def SinglePointHorovod(wf, sampler, with_tqdm=True, hdf5file=None):
     """Performs a single point calculation
 
     Args:
