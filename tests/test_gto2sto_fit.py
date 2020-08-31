@@ -5,6 +5,7 @@ import torch
 import unittest
 import itertools
 import os
+from qmctorch.wavefunction import gto2sto
 
 
 class TestGTO2STOFit(unittest.TestCase):
@@ -24,8 +25,10 @@ class TestGTO2STOFit(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = Orbital(mol, kinetic='auto',
-                          configs='ground_state').gto2sto()
+        wf_gto = Orbital(mol, kinetic='auto',
+                         configs='ground_state')
+
+        self.wf = gto2sto(wf_gto)
 
         self.pos = -0.25 + 0.5*torch.tensor(np.random.rand(10, 18))
         self.pos.requires_grad = True

@@ -1,6 +1,9 @@
-from copy import deepcopy
+from . import Orbital
 from .. import log
-from ..wavefunction.wf_orbital import Orbital
+import numpy as np
+from copy import deepcopy
+from scipy.optimize import curve_fit
+import torch
 
 
 def gto2sto(wf, plot=False):
