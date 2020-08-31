@@ -58,7 +58,8 @@ class TestH2Stat(unittest.TestCase):
 
     def test_sampling_traj(self):
 
-        obs = SamplingTrajectory(self.wf, self.sampler)
+        obs = SamplingTrajectory(
+            self.wf, self.sampler)
         plot_walkers_traj(obs.local_energy)
         plot_block(obs.local_energy)
 
