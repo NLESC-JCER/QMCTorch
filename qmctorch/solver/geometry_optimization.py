@@ -86,25 +86,25 @@ class GeoSolver(SolverOrbital):
         return self.observable
 
         def log_data_geo(self, nepoch):
-        """Log data for the optimization."""
-        log.info('')
-        log.info('  Optimization')
-        log.info(
-            '  Number Parameters   : {0}', self.wf.get_number_parameters())
-        log.info('  Number of epoch     : {0}', nepoch)
-        log.info(
-            '  Batch size          : {0}', self.sampler.get_sampling_size())
-        log.info('  Loss function       : {0}', self.loss.method)
-        log.info('  Clip Loss           : {0}', self.loss.clip)
-        log.info('  Gradients           : {0}', self.grad_method)
-        log.info(
-            '  Resampling mode     : {0}', self.resampling_options.mode)
-        log.info(
-            '  Resampling every    : {0}', self.resampling_options.resample_every)
-        log.info(
-            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
-        log.info(
-            '  Output file         : {0}', self.hdf5file)
-        log.info(
-            '  Checkpoint every    : {0}', self.chkpt_every)
-        log.info('')
+            """Log data for the optimization."""
+            log.info('')
+            log.info('  Optimization')
+            log.info(
+                '  Number Parameters   : {0}', self.wf.get_number_parameters())
+            log.info('  Number of epoch     : {0}', nepoch)
+            log.info(
+                '  Batch size          : {0}', self.sampler.get_sampling_size())
+            log.info('  Loss function       : {0}', self.loss.method)
+            log.info('  Clip Loss           : {0}', self.loss.clip)
+            log.info('  Gradients           : {0}', self.grad_method)
+            log.info(
+                '  Resampling mode     : {0}', self.resampling_options.mode)
+            log.info(
+                '  Resampling every    : {0}', self.resampling_options.resample_every)
+            log.info(
+                '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+            log.info(
+                '  Output file         : {0}', self.hdf5file)
+            log.info(
+                '  Checkpoint every    : {0}', self.chkpt_every)
+            log.info('')
