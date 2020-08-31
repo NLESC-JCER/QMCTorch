@@ -1,3 +1,4 @@
+from torch import optim
 from copy import deepcopy
 from .observable import Observable
 from .solver_orbital import SolverOrbital
@@ -33,7 +34,7 @@ class GeoSolver(SolverOrbital):
         opt_wf = deepcopy(self.opt)
 
         # create the optmizier for the geo opt
-        opt_geo = torch.optim.SGD(self.wf.parameters(), lr=geo_lr)
+        opt_geo = optim.SGD(self.wf.parameters(), lr=geo_lr)
 
         # save the grad method
         eval_grad_wf = self.evaluate_gradient
