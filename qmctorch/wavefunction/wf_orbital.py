@@ -6,17 +6,13 @@ import matplotlib.pyplot as plt
 
 import numpy as np
 
+from .wf_base import WaveFunction
+
 from .atomic_orbitals import AtomicOrbitals
 from .slater_pooling import SlaterPooling
 from .kinetic_pooling import KineticPooling
 from .orbital_configurations import OrbitalConfigurations
-from .wf_base import WaveFunction
-
-
-from .pade_jastrow import PadeJastrow
-from .scaled_pade_jastrow import ScaledPadeJastrow
-from .pade_jastrow_polynomial import PadeJastrowPolynomial
-from .scaled_pade_jastrow_polynomial import ScaledPadeJastrowPolynomial
+from .jastrow import Jastrow
 
 from ..utils import register_extra_attributes
 
@@ -85,7 +81,9 @@ class Orbital(WaveFunction):
             self.mo.to(self.device)
 
         # jastrow
-        self.set_jastrow(use_jastrow, jastrow_type)
+        self.use_jastrow = use_jastrow
+        self.jastrow_type = jastrow_type
+        self.jastrow = Jastrow(mol, jastrow_type, cuda)
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs_method,
@@ -154,43 +152,6 @@ class Orbital(WaveFunction):
         if not self.include_all_mo:
             mo_coeff = mo_coeff[:, :self.highest_occ_mo]
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
-
-    def set_jastrow(self, use_jastrow, jastrow_type):
-        """Set the jastrow calculator
-
-        Args:
-            jastrow_type (str): name of the jastrow
-        """
-        self.use_jastrow = use_jastrow
-        self.jastrow_type = jastrow_type
-
-        if jastrow_type == 'pade_jastrow':
-            self.jastrow = PadeJastrow(self.mol.nup, self.mol.ndown,
-                                       w=1., cuda=self.cuda)
-
-        elif jastrow_type.startswith('pade_jastrow('):
-            order = int(jastrow_type.split('(')[1][0])
-            self.jastrow = PadeJastrowPolynomial(
-                self.mol.nup, self.mol.ndown, order, cuda=self.cuda)
-
-        elif jastrow_type == 'scaled_pade_jastrow':
-            self.jastrow = ScaledPadeJastrow(self.mol.nup, self.mol.ndown,
-                                             w=1., kappa=0.6, cuda=self.cuda)
-
-        elif jastrow_type.startswith('scaled_pade_jastrow('):
-            order = int(jastrow_type.split('(')[1][0])
-            self.jastrow = ScaledPadeJastrowPolynomial(
-                self.mol.nup, self.mol.ndown, order, kappa=0.6, cuda=self.cuda)
-
-        else:
-            valid_names = ['pade_jastrow',
-                           'pade_jastrow(n)',
-                           'scaled_pade_jastrow']
-            log.info(
-                '   Error : Jastrow form not recognized. Options are :')
-            for n in valid_names:
-                log.info('         : {0}', n)
-            raise ValueError('Jastrow type not supported')
 
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
