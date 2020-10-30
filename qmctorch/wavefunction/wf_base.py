@@ -1,6 +1,6 @@
-import torch
 import h5py
-from torch.autograd import grad, Variable
+import torch
+from torch.autograd import Variable, grad
 
 
 class WaveFunction(torch.nn.Module):

@@ -1,7 +1,7 @@
 import torch
 
 
-class OrbitalProjector(object):
+class OrbitalProjector:
 
     def __init__(self, configs, mol, cuda=False):
         """Project the MO matrix in Slater Matrices

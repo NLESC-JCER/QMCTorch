@@ -1,14 +1,10 @@
 import torch
 from torch import nn
-from .radial_functions import (radial_gaussian, radial_slater,
-                               radial_slater_pure, radial_gaussian_pure)
+
 from .norm_orbital import atomic_orbital_norm
+from .radial_functions import (radial_gaussian, radial_gaussian_pure,
+                               radial_slater, radial_slater_pure)
 from .spherical_harmonics import Harmonics
-from ..utils import register_extra_attributes
-from ..utils.interpolate import (get_reg_grid, logspace,
-                                 interpolator_reg_grid,
-                                 interpolate_reg_grid)
-from time import time
 
 
 class AtomicOrbitals(nn.Module):

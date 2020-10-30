@@ -1,9 +1,10 @@
+import itertools
+
 import torch
 from torch import nn
-from .electron_distance import ElectronDistance
+
 from ..utils import register_extra_attributes
-import itertools
-from time import time
+from .electron_distance import ElectronDistance
 
 
 class TwoBodyJastrowFactor(nn.Module):

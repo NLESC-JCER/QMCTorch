@@ -1,9 +1,7 @@
-import numpy as np
-import os
-from pyscf import gto, scf
-import h5py
 from types import SimpleNamespace
+
 import numpy as np
+from pyscf import gto, scf
 
 from .calculator_base import CalculatorBase
 

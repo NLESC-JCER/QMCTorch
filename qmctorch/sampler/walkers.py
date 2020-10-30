@@ -1,6 +1,7 @@
-import torch
 import numpy as np
+import torch
 from torch.distributions import MultivariateNormal
+
 from .. import log
 
 

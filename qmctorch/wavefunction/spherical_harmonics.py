@@ -2,7 +2,7 @@ import torch
 from ..utils import fast_power
 
 
-class Harmonics(object):
+class Harmonics:
 
     def __init__(self, type, **kwargs):
         """Compute spherical or cartesian harmonics and their derivatives

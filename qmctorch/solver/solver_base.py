@@ -1,10 +1,11 @@
-import torch
 from types import SimpleNamespace
-from tqdm import tqdm
-import numpy as np
 
-from ..utils import dump_to_hdf5, add_group_attr
+import numpy as np
+import torch
+from tqdm import tqdm
+
 from .. import log
+from ..utils import add_group_attr, dump_to_hdf5
 
 
 class SolverBase(object):
@@ -12,7 +13,7 @@ class SolverBase(object):
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
                  output=None, rank=0):
-        """Base Class for QMC solver 
+        """Base Class for QMC solver
 
         Args:
             wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.

@@ -1,11 +1,12 @@
-import numpy as np
 import os
 import shutil
 import warnings
-from .calculator_base import CalculatorBase
-import h5py
 from types import SimpleNamespace
+
+import numpy as np
+
 from ... import log
+from .calculator_base import CalculatorBase
 
 try:
     from scm import plams
