@@ -1,14 +1,11 @@
-import torch
-import torch.nn.functional as F
-import numpy as np
-from scipy.interpolate import RegularGridInterpolator
-from scipy.interpolate import LinearNDInterpolator
-from scipy.interpolate import CloughTocher2DInterpolator
-
 from time import time
 
+import numpy as np
+import torch
+from scipy.interpolate import LinearNDInterpolator, RegularGridInterpolator
 
-class InterpolateMolecularOrbitals(object):
+
+class InterpolateMolecularOrbitals:
 
     def __init__(self, wf):
         """Interpolation of the AO using a log grid centered on each atom."""
@@ -109,7 +106,7 @@ class InterpolateMolecularOrbitals(object):
         return mos
 
 
-class InterpolateAtomicOribtals(object):
+class InterpolateAtomicOrbitals:
 
     def __init__(self, wf):
         """Interpolation of the AO using a log grid centered on each atom."""

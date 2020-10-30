@@ -1,14 +1,12 @@
-import torch
-from torch.autograd import Variable
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
-
-import numpy as np
 import unittest
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from pyscf import gto
+from torch.autograd import Variable
 
-import os
+from qmctorch.wavefunction import Molecule, Orbital
 
 
 class TestAOvaluesPyscf(unittest.TestCase):

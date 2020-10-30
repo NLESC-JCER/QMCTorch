@@ -2,7 +2,7 @@ import unittest
 
 import torch
 
-from qmctorch.utils import (InterpolateAtomicOribtals,
+from qmctorch.utils import (InterpolateAtomicOrbitals,
                             InterpolateMolecularOrbitals)
 from qmctorch.wavefunction import Molecule, Orbital
 
