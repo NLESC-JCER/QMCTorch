@@ -29,7 +29,7 @@ jobs:
     - run: conda install matplotlib h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
 
     - name: Install the package
-      run: pip install .[test] -v
+      run: pip install .[test]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
