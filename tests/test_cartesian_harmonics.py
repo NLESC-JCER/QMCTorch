@@ -5,11 +5,7 @@ import torch
 
 from qmctorch.wavefunction import Molecule, Orbital
 
-from .utils import PATH_TEST
-
-
-def second_derivative(xm1, x0, xp1, eps):
-    return (xm1 - 2 * x0 + xp1) / eps / eps
+from .utils import PATH_TEST, second_derivative
 
 
 class TestRadialSlater(unittest.TestCase):
