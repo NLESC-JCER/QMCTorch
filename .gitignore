@@ -31,3 +31,6 @@ docs/apidocs
 
 # runs dir
 runs/*
+
+# emacs
+*~

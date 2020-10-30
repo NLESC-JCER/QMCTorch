@@ -1,13 +1,9 @@
-import torch
-import torch.optim as optim
-
-from qmctorch.wavefunction import Orbital, Molecule
-from qmctorch.utils import InterpolateAtomicOribtals, InterpolateMolecularOrbitals
-from qmctorch.utils import set_torch_double_precision
-import platform
-
-import numpy as np
 import unittest
+
+import torch
+
+from qmctorch.utils import set_torch_double_precision
+from qmctorch.wavefunction import Molecule, Orbital
 
 
 class TestSlater(unittest.TestCase):
