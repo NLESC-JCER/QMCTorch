@@ -8,7 +8,7 @@ from .. import log
 from ..utils import add_group_attr, dump_to_hdf5
 
 
-class SolverBase(object):
+class SolverBase:
 
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,

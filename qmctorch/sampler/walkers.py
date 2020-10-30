@@ -5,7 +5,7 @@ from torch.distributions import MultivariateNormal
 from .. import log
 
 
-class Walkers(object):
+class Walkers:
 
     def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, cuda=False):
         """Creates Walkers for the sampler.
