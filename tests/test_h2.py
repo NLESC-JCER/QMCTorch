@@ -1,18 +1,16 @@
+import unittest
+
+import numpy as np
 import torch
 import torch.optim as optim
 
-from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.sampler import Hamiltonian, Metropolis
 from qmctorch.solver import SolverOrbital
-from qmctorch.sampler import Metropolis, Hamiltonian
-from qmctorch.utils import (plot_energy, plot_data, plot_walkers_traj, plot_block,
-                            plot_correlation_coefficient,
+from qmctorch.utils import (plot_block, plot_blocking_energy,
+                            plot_correlation_coefficient, plot_energy,
                             plot_integrated_autocorrelation_time,
-                            blocking, plot_blocking_energy)
-
-import platform
-
-import numpy as np
-import unittest
+                            plot_walkers_traj)
+from qmctorch.wavefunction import Molecule, Orbital
 
 
 class TestH2(unittest.TestCase):

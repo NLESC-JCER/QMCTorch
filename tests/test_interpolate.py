@@ -1,12 +1,10 @@
-import torch
-import torch.optim as optim
-
-from qmctorch.wavefunction import Orbital, Molecule
-from qmctorch.utils import InterpolateAtomicOribtals, InterpolateMolecularOrbitals
-import platform
-
-import numpy as np
 import unittest
+
+import torch
+
+from qmctorch.utils import (InterpolateAtomicOribtals,
+                            InterpolateMolecularOrbitals)
+from qmctorch.wavefunction import Molecule, Orbital
 
 
 class TestInterpolate(unittest.TestCase):
