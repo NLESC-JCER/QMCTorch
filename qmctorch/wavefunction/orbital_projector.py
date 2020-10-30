@@ -1,7 +1,7 @@
 import torch
 
 
-class OrbitalProjector(object):
+class OrbitalProjector:
 
     def __init__(self, configs, mol, cuda=False):
         """Project the MO matrix in Slater Matrices
@@ -68,7 +68,7 @@ class OrbitalProjector(object):
         return out_up, out_down
 
 
-class ExcitationMask(object):
+class ExcitationMask:
 
     def __init__(self, unique_excitations, mol, max_orb, cuda=False):
         """Select the occupied MOs of Slater determinant using masks

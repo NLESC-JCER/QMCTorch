@@ -1,9 +1,9 @@
 from types import SimpleNamespace
-import h5py
+
 import numpy as np
 
 
-class CalculatorBase(object):
+class CalculatorBase:
     def __init__(self, atoms, atom_coords, basis, scf, units, molname, calcname, savefile):
 
         self.atoms = atoms

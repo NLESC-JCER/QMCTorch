@@ -1,11 +1,10 @@
-import numpy as np
 import matplotlib.pyplot as plt
+import numpy as np
 from matplotlib import cm
-import pickle
 
 from .stat_utils import (blocking, correlation_coefficient,
-                         integrated_autocorrelation_time,
-                         fit_correlation_coefficient)
+                         fit_correlation_coefficient,
+                         integrated_autocorrelation_time)
 
 
 def plot_energy(local_energy, e0=None, show_variance=False):

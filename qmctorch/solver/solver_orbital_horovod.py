@@ -1,14 +1,14 @@
-import torch
-from types import SimpleNamespace
-from torch.utils.data import DataLoader
-import warnings
 from time import time
-from .solver_orbital import SolverOrbital
-from qmctorch.utils import (
-    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
-from .. import log
+from types import SimpleNamespace
 
-from mpi4py import MPI
+import torch
+from torch.utils.data import DataLoader
+
+from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
+                            dump_to_hdf5)
+
+from .. import log
+from .solver_orbital import SolverOrbital
 
 try:
     import horovod.torch as hvd

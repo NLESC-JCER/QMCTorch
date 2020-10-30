@@ -1,10 +1,6 @@
 import torch
-from torch import nn
-from .electron_distance import ElectronDistance
+
 from .pade_jastrow_polynomial import PadeJastrowPolynomial
-from ..utils import register_extra_attributes
-import itertools
-from time import time
 
 
 class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):

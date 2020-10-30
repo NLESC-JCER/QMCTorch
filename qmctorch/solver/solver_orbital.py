@@ -1,11 +1,14 @@
+from copy import deepcopy
+from time import time
+
 import torch
 from torch.utils.data import DataLoader
-from time import time
-from copy import deepcopy
-from .solver_base import SolverBase
-from qmctorch.utils import (
-    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+
+from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
+                            dump_to_hdf5)
+
 from .. import log
+from .solver_base import SolverBase
 
 
 class SolverOrbital(SolverBase):

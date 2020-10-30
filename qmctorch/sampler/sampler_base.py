@@ -1,9 +1,10 @@
 import torch
-from .walkers import Walkers
+
 from .. import log
+from .walkers import Walkers
 
 
-class SamplerBase(object):
+class SamplerBase:
 
     def __init__(self, nwalkers, nstep, step_size,
                  ntherm, ndecor, nelec, ndim, init,

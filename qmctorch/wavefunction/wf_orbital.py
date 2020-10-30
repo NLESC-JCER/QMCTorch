@@ -1,23 +1,21 @@
-import torch
-from torch import nn
 from copy import deepcopy
 
 import matplotlib.pyplot as plt
-from scipy.optimize import curve_fit
 import numpy as np
-
-from .atomic_orbitals import AtomicOrbitals
-from .slater_pooling import SlaterPooling
-from .kinetic_pooling import KineticPooling
-from .orbital_configurations import OrbitalConfigurations
-from .wf_base import WaveFunction
-from .pade_jastrow import PadeJastrow
-from .scaled_pade_jastrow import ScaledPadeJastrow
-from .pade_jastrow_polynomial import PadeJastrowPolynomial
-
-from ..utils import register_extra_attributes
+import torch
+from scipy.optimize import curve_fit
+from torch import nn
 
 from .. import log
+from ..utils import register_extra_attributes
+from .atomic_orbitals import AtomicOrbitals
+from .kinetic_pooling import KineticPooling
+from .orbital_configurations import OrbitalConfigurations
+from .pade_jastrow import PadeJastrow
+from .pade_jastrow_polynomial import PadeJastrowPolynomial
+from .scaled_pade_jastrow import ScaledPadeJastrow
+from .slater_pooling import SlaterPooling
+from .wf_base import WaveFunction
 
 
 class Orbital(WaveFunction):

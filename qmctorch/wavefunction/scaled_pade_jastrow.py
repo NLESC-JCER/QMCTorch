@@ -1,10 +1,8 @@
 import torch
 from torch import nn
-from .electron_distance import ElectronDistance
-from .pade_jastrow import PadeJastrow
+
 from ..utils import register_extra_attributes
-import itertools
-from time import time
+from .pade_jastrow import PadeJastrow
 
 
 class ScaledPadeJastrow(PadeJastrow):

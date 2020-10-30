@@ -13,7 +13,7 @@ from ..utils import dump_to_hdf5, load_from_hdf5
 from .. import log
 
 
-class Molecule(object):
+class Molecule:
 
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',

@@ -1,7 +1,7 @@
 import torch
 
 
-class OrbitalConfigurations(object):
+class OrbitalConfigurations:
 
     def __init__(self, mol):
         # self.mol = mol

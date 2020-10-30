@@ -1,10 +1,8 @@
 import torch
 from torch import nn
-from .electron_distance import ElectronDistance
-from . two_body_jastrow_base import TwoBodyJastrowFactorBase
+
 from ..utils import register_extra_attributes
-import itertools
-from time import time
+from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 
 class PadeJastrow(TwoBodyJastrowFactorBase):
