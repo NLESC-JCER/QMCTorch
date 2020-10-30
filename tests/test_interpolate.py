@@ -29,10 +29,10 @@ class TestInterpolate(unittest.TestCase):
 
     def test_ao(self):
 
-        interp_ao = InterpolateAtomicOribtals(self.wf)
+        interp_ao = InterpolateAtomicOrbitals(self.wf)
         inter = interp_ao(self.pos)
         ref = self.wf.ao(self.pos)
-        delta = (inter-ref).abs().mean()
+        delta = (inter - ref).abs().mean()
         assert(delta < 0.1)
 
     def test_mo_reg(self):
@@ -40,7 +40,7 @@ class TestInterpolate(unittest.TestCase):
         interp_mo = InterpolateMolecularOrbitals(self.wf)
         inter = interp_mo(self.pos, method='reg')
         ref = self.wf.mo(self.wf.mo_scf(self.wf.ao(self.pos)))
-        delta = (inter-ref).abs().mean()
+        delta = (inter - ref).abs().mean()
         assert(delta < 0.1)
 
     def test_mo_irreg(self):
@@ -48,7 +48,7 @@ class TestInterpolate(unittest.TestCase):
         interp_mo = InterpolateMolecularOrbitals(self.wf)
         inter = interp_mo(self.pos, method='irreg')
         ref = self.wf.mo(self.wf.mo_scf(self.wf.ao(self.pos)))
-        delta = (inter-ref).abs().mean()
+        delta = (inter - ref).abs().mean()
         assert(delta < 0.1)
 
 
