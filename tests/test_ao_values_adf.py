@@ -94,7 +94,8 @@ class TestAOvaluesADF(unittest.TestCase):
 
         for iorb in range(self.mol.basis.nao):
 
-            fname = 'cube/C_AO_%%Basis%%AO%d.cub' % (iorb)
+            path_cube = PATH_TEST / f'cube/C_AO_%Basis%AO{iorb}.cub'
+            fname = path_cube.absolute().as_posix()
             adf_ref_data = np.array(read_cubefile(
                 fname)).reshape(self.npts, self.npts)
             qmctorch_data = (aovals[:, 0, iorb]).reshape(

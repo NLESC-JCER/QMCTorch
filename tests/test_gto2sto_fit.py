@@ -1,10 +1,10 @@
-from qmctorch.wavefunction import Molecule, Orbital
-from qmctorch.utils import set_torch_double_precision
+import unittest
+
 import numpy as np
 import torch
-import unittest
-import itertools
-import os
+
+from qmctorch.utils import set_torch_double_precision
+from qmctorch.wavefunction import Molecule, Orbital
 
 
 class TestGTO2STOFit(unittest.TestCase):
@@ -27,7 +27,7 @@ class TestGTO2STOFit(unittest.TestCase):
         self.wf = Orbital(mol, kinetic='auto',
                           configs='ground_state').gto2sto()
 
-        self.pos = -0.25 + 0.5*torch.tensor(np.random.rand(10, 18))
+        self.pos = -0.25 + 0.5 * torch.tensor(np.random.rand(10, 18))
         self.pos.requires_grad = True
 
     def test_forward(self):

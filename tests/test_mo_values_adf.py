@@ -76,8 +76,8 @@ class TestMOvaluesADF(unittest.TestCase):
         movals = self.wf.mo_scf(self.wf.ao(self.pos)).detach().numpy()
 
         for iorb in range(self.mol.basis.nmo):
-
-            fname = 'cube/C_MO_%%SCF_A%%%d.cub' % (iorb + 1)
+            path_cube = PATH_TEST / f'cube/C_MO_%SCF_A%{iorb + 1}.cub'
+            fname = path_cube.absolute().as_posix()
             adf_ref_data = np.array(read_cubefile(
                 fname)).reshape(self.npts, self.npts)**2
             qmctorch_data = (movals[:, 0, iorb]).reshape(
