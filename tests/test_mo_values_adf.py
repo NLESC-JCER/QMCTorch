@@ -1,14 +1,14 @@
-import torch
-from torch.autograd import Variable
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
-
-import numpy as np
+import os
 import unittest
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.autograd import Variable
 
-import os
+from qmctorch.wavefunction import Molecule, Orbital
+
+from .utils import PATH_TEST
 
 
 def read_cubefile(fname):
@@ -56,7 +56,8 @@ class TestMOvaluesADF(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        self.mol = Molecule(load='hdf5/C_adf_dzp.hdf5')
+        path_hdf5 = (PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
+        self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
         self.wf = Orbital(self.mol, include_all_mo=True)
@@ -65,7 +66,7 @@ class TestMOvaluesADF(unittest.TestCase):
         self.npts = 21
         pts = get_pts(self.npts)
 
-        self.pos = 10*torch.ones(self.npts**2, self.mol.nelec * 3)
+        self.pos = 10 * torch.ones(self.npts ** 2, self.mol.nelec * 3)
         self.pos[:, :3] = pts
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
@@ -76,7 +77,7 @@ class TestMOvaluesADF(unittest.TestCase):
 
         for iorb in range(self.mol.basis.nmo):
 
-            fname = 'cube/C_MO_%%SCF_A%%%d.cub' % (iorb+1)
+            fname = 'cube/C_MO_%%SCF_A%%%d.cub' % (iorb + 1)
             adf_ref_data = np.array(read_cubefile(
                 fname)).reshape(self.npts, self.npts)**2
             qmctorch_data = (movals[:, 0, iorb]).reshape(
