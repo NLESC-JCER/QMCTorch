@@ -79,7 +79,7 @@ class SolverOrbital(SolverBase):
         for param in self.wf.mo.parameters():
             param.requires_grad = wf_params
 
-        self.wf.fc.weight.requires_grad = wf_params
+        self.wf.ci.weight.requires_grad = wf_params
 
         for param in self.wf.jastrow.parameters():
             param.requires_grad = wf_params
@@ -99,7 +99,7 @@ class SolverOrbital(SolverBase):
 
             for name in freeze:
                 if name.lower() == 'ci':
-                    self.wf.fc.weight.requires_grad = False
+                    self.wf.ci.weight.requires_grad = False
 
                 elif name.lower() == 'mo':
                     for param in self.wf.mo.parameters():

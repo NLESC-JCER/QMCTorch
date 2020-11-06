@@ -96,12 +96,12 @@ class Orbital(WaveFunction):
             self.configs, mol, cuda)
 
         # define the linear layer
-        self.fc = nn.Linear(self.nci, 1, bias=False)
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0][0] = 1.
+        self.ci = nn.Linear(self.nci, 1, bias=False)
+        self.ci.weight.data.fill_(0.)
+        self.ci.weight.data[0][0] = 1.
 
         if self.cuda:
-            self.fc = self.fc.to(self.device)
+            self.ci = self.ci.to(self.device)
 
         self.kinetic_method = kinetic
         if kinetic == 'jacobi':
@@ -116,11 +116,13 @@ class Orbital(WaveFunction):
         register_extra_attributes(self,
                                   ['ao', 'mo_scf',
                                    'mo', 'jastrow',
-                                   'pool', 'kinpool', 'fc'])
+                                   'pool', 'kinpool', 'ci'])
 
         self.log_data()
 
     def log_data(self):
+        """Log data about the wave function."""
+
         log.info('')
         log.info(' Wave Function')
         log.info('  Jastrow factor      : {0}', self.use_jastrow)
@@ -192,10 +194,10 @@ class Orbital(WaveFunction):
         x = self.pool(x)
 
         if self.use_jastrow:
-            return J * self.fc(x)
+            return J * self.ci(x)
 
         else:
-            return self.fc(x)
+            return self.ci(x)
 
     def ao2mo(self, ao):
         return self.mo(self.mo_scf(ao))
@@ -236,12 +238,12 @@ class Orbital(WaveFunction):
         # deprecated
         if kinpool:
             kin, psi = self.kinpool(mo, bkin)
-            return self.fc(kin) / self.fc(psi)
+            return self.ci(kin) / self.ci(psi)
 
         else:
             kin = self.pool.operator(mo, bkin)
             psi = self.pool(mo)
-            out = self.fc(kin * psi) / self.fc(psi)
+            out = self.ci(kin * psi) / self.ci(psi)
             return out
 
     def gradients_jacobi(self, x, out=None, pdf=False):
@@ -272,11 +274,11 @@ class Orbital(WaveFunction):
         dets = self.pool(mo)
 
         # CI sum
-        psi = self.fc(dets)
+        psi = self.cii(dets)
 
         # assemble the final values of
         # nabla psi / psi
-        grads = self.fc(grads * dets)
+        grads = self.ci(grads * dets)
         grads = grads.transpose(0, 1).squeeze()
 
         # multiply by psi to get the grads
@@ -373,3 +375,25 @@ class Orbital(WaveFunction):
                                       :].cpu().detach().numpy().tolist()
             d.append(xyz)
         return d
+
+    def freeze_parameters(self, freeze=None):
+        """Freeze the optimization of specified params.
+
+        Args:
+            freeze (list): list of param to freeze
+        """
+        if freeze is None:
+            return
+
+        if not isinstance(freeze, list):
+            freeze = [freeze]
+
+        for name in freeze:
+            if hasattr(self, name):
+                for param in self.__getattr__(name).parameters():
+                    param.requires_grad = False
+
+            else:
+                opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
+                raise ValueError(
+                    'Valid arguments for freeze are :', opt_freeze)
