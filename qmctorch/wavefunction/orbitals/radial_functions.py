@@ -1,5 +1,5 @@
 import torch
-from ..utils import fast_power
+from ...utils import fast_power
 
 
 def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
