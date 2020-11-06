@@ -4,7 +4,6 @@ from .electron_distance import ElectronDistance
 import itertools
 
 
-
 class TwoBodyJastrowFactorBase(nn.Module):
 
     def __init__(self, nup, ndown, cuda=False):
