@@ -85,7 +85,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         .. math::
 
-            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i 
+            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
 
         Args:
             r (torch.tensor): matrix of the e-e distances

@@ -1,6 +1,4 @@
-__all__ = ['WaveFunction', 'Orbital', 'Molecule']
+__all__ = ['WaveFunction', 'Orbital']
 
 from .wf_base import WaveFunction
 from .wf_orbital import Orbital
-from .molecule import Molecule
-
