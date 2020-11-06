@@ -10,16 +10,16 @@ from .. import log
 class Metropolis(SamplerBase):
 
     def __init__(self,
-                 nwalkers=100: int,
-                 nstep=1000: int,
-                 step_size=0.2: float,
-                 ntherm=-1: int,
-                 ndecor=1: int,
-                 nelec=1: int,
-                 ndim=3: int,
-                 init={'min': -5, 'max': 5}: dict,
-                 move={'type': 'all-elec', 'proba': 'normal'}: dict,
-                 cuda=False: bool):
+                 nwalkers: int = 100,
+                 nstep: int = 1000,
+                 step_size: float = 0.2,
+                 ntherm: int = -1,
+                 ndecor: int = 1,
+                 nelec: int = 1,
+                 ndim: int = 3,
+                 init: Dict = {'min': -5, 'max': 5},
+                 move: Dict = {'type': 'all-elec', 'proba': 'normal'},
+                 cuda: bool = False):
         """Metropolis Hasting generator
 
         Args:
@@ -63,8 +63,8 @@ class Metropolis(SamplerBase):
         log.info(
             '  Move proba          : {0}', self.movedict['proba'])
 
-    def __call__(self, pdf: Callable, pos=None: Union[None, torch.Tensor],
-                 with_tqdm=True: bool) -> torch.Tensor:
+    def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:

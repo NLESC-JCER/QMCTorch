@@ -7,14 +7,14 @@ from .. import log
 
 class Walkers(object):
 
-    def __init__(self, nwalkers=100: int, nelec=1: int, ndim=1: int,
-                 init=None: Dict, cuda=False: bool):
+    def __init__(self, nwalkers: int = 100, nelec: int = 1, ndim: int = 3,
+                 init: Union[Dict, None] = None, cuda: bool = False):
         """Creates Walkers for the sampler.
 
         Args:
             nwalkers (int, optional): Number of walkers. Defaults to 100.
             nelec (int, optional): number of electron. Defaults to 1.
-            ndim (int, optional): Number of dimensions. Defaults to 1.
+            ndim (int, optional): Number of dimensions. Defaults to 3.
             init (dict, optional): method to initialize the walkers. Defaults to None. (see Molecule.domain())
             cuda (bool, optional): turn cuda ON/OFF. Defaults to False
         """
@@ -33,7 +33,7 @@ class Walkers(object):
         else:
             self.device = torch.device('cpu')
 
-    def initialize(self, pos=None: Union[None, torch.Tensor]):
+    def initialize(self, pos: Union[None, torch.Tensor] = None):
         """Initalize the position of the walkers
 
         Args:
