@@ -1,4 +1,5 @@
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 from qmctorch.utils import set_torch_double_precision
 import numpy as np
 import torch

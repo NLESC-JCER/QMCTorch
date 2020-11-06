@@ -4,7 +4,8 @@ import torch
 from pyscf import gto
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

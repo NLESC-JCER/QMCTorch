@@ -6,7 +6,8 @@ import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverOrbital
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestLiH(unittest.TestCase):

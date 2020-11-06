@@ -3,7 +3,8 @@ import unittest
 import torch
 
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestSlater(unittest.TestCase):

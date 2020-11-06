@@ -6,7 +6,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 from .utils import PATH_TEST
 
@@ -56,7 +57,8 @@ class TestMOvaluesADF(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        path_hdf5 = (PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
         # define the wave function

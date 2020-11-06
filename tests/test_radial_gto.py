@@ -3,7 +3,8 @@ import unittest
 import numpy as np
 import torch
 
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 from .utils import second_derivative
 
@@ -48,7 +49,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 0]
             dz_r0_fd = np.gradient(r0, self.dx)
-            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -78,7 +80,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 1]
             dz_r0_fd = np.gradient(r0, self.dy)
-            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -108,7 +111,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 2]
             dz_r0_fd = np.gradient(r0, self.dz)
-            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)

@@ -6,7 +6,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable
 
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 from .utils import PATH_TEST
 

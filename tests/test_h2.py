@@ -10,7 +10,8 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_correlation_coefficient, plot_energy,
                             plot_integrated_autocorrelation_time,
                             plot_walkers_traj)
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestH2(unittest.TestCase):

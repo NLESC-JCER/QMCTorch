@@ -1,7 +1,7 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.fast_jastrow import TwoBodyJastrowFactor
-from qmctorch.wavefunction.jastrow import TwoBodyJastrowFactor as RefJastrowFactor
+from qmctorch.wavefunction.jastrows.fast_jastrow import TwoBodyJastrowFactor
+from qmctorch.wavefunction.jastrows.slow_jastrow import TwoBodyJastrowFactor as RefJastrowFactor
 import unittest
 
 torch.set_default_tensor_type(torch.DoubleTensor)

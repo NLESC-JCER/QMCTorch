@@ -1,13 +1,14 @@
 import numpy as np
 import torch
 from torch.distributions import MultivariateNormal
-
+from typing import Union, Dict
 from .. import log
 
 
-class Walkers:
+class Walkers(object):
 
-    def __init__(self, nwalkers=100, nelec=1, ndim=1, init=None, cuda=False):
+    def __init__(self, nwalkers=100: int, nelec=1: int, ndim=1: int,
+                 init=None: Dict, cuda=False: bool):
         """Creates Walkers for the sampler.
 
         Args:
@@ -32,7 +33,7 @@ class Walkers:
         else:
             self.device = torch.device('cpu')
 
-    def initialize(self, pos=None):
+    def initialize(self, pos=None: Union[None, torch.Tensor]):
         """Initalize the position of the walkers
 
         Args:

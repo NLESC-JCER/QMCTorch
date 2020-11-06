@@ -5,7 +5,8 @@ import torch
 
 from qmctorch.utils import (plot_block, plot_data, plot_energy,
                             plot_walkers_traj)
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 from .utils import PATH_TEST, second_derivative
 

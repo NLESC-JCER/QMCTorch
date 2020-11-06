@@ -6,7 +6,8 @@ import torch
 from pyscf import gto
 from torch.autograd import Variable
 
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestAOvaluesPyscf(unittest.TestCase):
