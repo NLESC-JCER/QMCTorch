@@ -75,7 +75,7 @@ def load_group(grp, parent_obj, grp_name):
 
 
 def load_data(grp, parent_obj, grp_name):
-    """Load object attribute from the hdf5 data
+    """Load data from the hdf5 data
 
     Arguments:
         grp {hdf5 group} -- the current group in the hdf5 architecture
@@ -83,9 +83,32 @@ def load_data(grp, parent_obj, grp_name):
         grp_name {str} -- name of the group
     """
     try:
-        parent_obj.__setattr__(grp_name, grp[()])
+        parent_obj.__setattr__(grp_name,
+                               cast_loaded_data(grp[()]))
     except:
         print_load_error(grp_name)
+
+
+def cast_loaded_data(data):
+    """cast the data before loading."""
+
+    cast_fn = {bytes: bytes2str}
+
+    if type(data) in cast_fn:
+        data = cast_fn[type(data)](data)
+
+    return data
+
+
+def bytes2str(bstr):
+    """Convert a bytes into string."""
+    if type(bstr) is bytes:
+        return bstr.decode('utf-8')
+    elif type(bstr) is str:
+        return bstr
+    else:
+        raise TypeError(
+            bstr, ' should be a bytes or str but got ', type(bstr), ' instead')
 
 
 def lookup_cast(ori_type, current_type):

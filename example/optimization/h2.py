@@ -1,6 +1,7 @@
 from torch import optim
 
-from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision

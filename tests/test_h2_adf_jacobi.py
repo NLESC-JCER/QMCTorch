@@ -6,7 +6,8 @@ import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverOrbital
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 from .utils import PATH_TEST
 
@@ -18,7 +19,8 @@ class TestH2ADFJacobi(unittest.TestCase):
         torch.manual_seed(0)
 
         # molecule
-        path_hdf5 = (PATH_TEST / 'hdf5/H2_adf_dzp.hdf5').absolute().as_posix()
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/H2_adf_dzp.hdf5').absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
         # wave function

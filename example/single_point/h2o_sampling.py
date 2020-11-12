@@ -1,4 +1,5 @@
-from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverOrbital
 from qmctorch.utils import plot_walkers_traj

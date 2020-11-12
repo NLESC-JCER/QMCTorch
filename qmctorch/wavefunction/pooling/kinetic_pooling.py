@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from ..utils import btrace
+from ...utils import btrace
 from .orbital_projector import OrbitalProjector
 
 

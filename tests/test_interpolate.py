@@ -4,7 +4,8 @@ import torch
 
 from qmctorch.utils import (InterpolateAtomicOrbitals,
                             InterpolateMolecularOrbitals)
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestInterpolate(unittest.TestCase):

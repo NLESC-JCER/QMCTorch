@@ -9,7 +9,7 @@ import h5py
 from .calculator.adf import CalculatorADF
 from .calculator.pyscf import CalculatorPySCF
 
-from ..utils import dump_to_hdf5, load_from_hdf5
+from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
 from .. import log
 
 
@@ -264,8 +264,10 @@ class Molecule:
         basis_grp = h5['molecule']['basis']
         self.basis = SimpleNamespace()
 
-        self.basis.radial_type = basis_grp['radial_type'][()]
-        self.basis.harmonics_type = basis_grp['harmonics_type'][()]
+        self.basis.radial_type = bytes2str(
+            basis_grp['radial_type'][()])
+        self.basis.harmonics_type = bytes2str(
+            basis_grp['harmonics_type'][()])
 
         self.basis.nao = int(basis_grp['nao'][()])
         self.basis.nmo = int(basis_grp['nmo'][()])
@@ -293,6 +295,12 @@ class Molecule:
             self.basis.bas_n = basis_grp['bas_n'][()]
             self.basis.bas_l = basis_grp['bas_l'][()]
             self.basis.bas_m = basis_grp['bas_m'][()]
+
+        else:
+            raise ValueError(
+                'Harmonics type should be cart or sph \
+                but %s was found in %s' % (self.basis.harmonics_type,
+                                           self.hdf5file))
 
         h5.close()
         return self.basis

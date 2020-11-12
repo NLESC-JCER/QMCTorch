@@ -6,7 +6,8 @@ import torch
 from qmctorch.sampler import GeneralizedMetropolis, Hamiltonian, Metropolis
 from qmctorch.sampler.walkers import Walkers
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestSampler(unittest.TestCase):

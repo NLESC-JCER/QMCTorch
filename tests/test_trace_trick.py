@@ -4,7 +4,8 @@ import torch
 from pyscf import gto
 from torch.autograd import Variable, grad
 
-from qmctorch.wavefunction import Molecule, Orbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 def btrace(M):

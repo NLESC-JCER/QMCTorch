@@ -1,5 +1,5 @@
 import torch
-from ..utils import fast_power
+from ...utils import fast_power
 
 
 class Harmonics:

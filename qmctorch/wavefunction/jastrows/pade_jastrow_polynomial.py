@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from ..utils import register_extra_attributes
+from ...utils import register_extra_attributes
 from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 

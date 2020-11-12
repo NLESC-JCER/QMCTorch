@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 
-from ..utils import register_extra_attributes
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ...utils import register_extra_attributes
+from .pade_jastrow import PadeJastrow
 
 
-class PadeJastrow(TwoBodyJastrowFactorBase):
+class ScaledPadeJastrow(PadeJastrow):
 
-    def __init__(self, nup, ndown, w=1., cuda=False):
+    def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -17,17 +17,19 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            w (float, optional): Value of the variational parameter. Defaults to 1..
+            w (float, optional): Value of the variational parameter. Defaults to 1.
+            kappa (float, optional): value of the scale parameter. Defaults to 0.6.
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
+        super(ScaledPadeJastrow, self).__init__(
+            nup, ndown, w, cuda)
 
         self.weight = nn.Parameter(
             torch.tensor([w]), requires_grad=True)
-        register_extra_attributes(self, ['weight'])
-
+        self.edist.kappa = kappa
         self.static_weight = self.get_static_weight()
+        register_extra_attributes(self, ['weight'])
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -57,7 +59,8 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
             torch.tensor: matrix of the jastrow kernels
                           Nbatch x Nelec x Nelec
         """
-        return self.static_weight * r / (1.0 + self.weight * r)
+        ur = self.edist.get_scaled_distance(r)
+        return self.static_weight * ur / (1.0 + self.weight * ur)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -82,10 +85,13 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
-        a = self.static_weight * dr * denom
-        b = - self.static_weight * self.weight * r_ * dr * denom**2
+        u = self.edist.get_scaled_distance(r).unsqueeze(1)
+        du = self.edist.get_der_scaled_distance(r, dr)
+
+        denom = 1. / (1.0 + self.weight * u)
+
+        a = self.static_weight * du * denom
+        b = - self.static_weight * self.weight * u * du * denom**2
 
         return (a + b)
 
@@ -102,25 +108,28 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
-        denom2 = denom**2
-        dr_square = dr*dr
+        u = self.edist.get_scaled_distance(r).unsqueeze(1)
+        du = self.edist.get_der_scaled_distance(r, dr)
+        d2u = self.edist.get_second_der_scaled_distance(r, dr, d2r)
 
-        a = self.static_weight * d2r * denom
-        b = -2 * self.static_weight * self.weight * dr_square * denom2
-        c = - self.static_weight * self.weight * r_ * d2r * denom2
-        d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
+        denom = 1. / (1.0 + self.weight * u)
+        denom2 = denom**2
+        du_square = du*du
+
+        a = self.static_weight * d2u * denom
+        b = -2 * self.static_weight * self.weight * du_square * denom2
+        c = - self.static_weight * self.weight * u * d2u * denom2
+        d = 2 * self.static_weight * self.weight**2 * u * du_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 

@@ -2,7 +2,7 @@
 import torch
 from torch import nn
 
-from ..utils import bdet2, btrace
+from ...utils import bdet2, btrace
 from .orbital_configurations import get_excitation, get_unique_excitation
 from .orbital_projector import ExcitationMask, OrbitalProjector
 
