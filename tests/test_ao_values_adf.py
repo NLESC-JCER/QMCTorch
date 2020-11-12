@@ -11,6 +11,8 @@ from qmctorch.wavefunction import Orbital
 
 from .utils import PATH_TEST
 
+__PLOT__ = False
+
 
 def read_cubefile(fname):
     with open(fname, 'r') as f:
@@ -74,7 +76,8 @@ class TestAOvaluesADF(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        path_hdf5 = (PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
@@ -104,15 +107,16 @@ class TestAOvaluesADF(unittest.TestCase):
 
             delta = np.abs(adf_ref_data - qmctorch_data)
 
-            plt.subplot(1, 3, 1)
-            plt.imshow(adf_ref_data)
+            if __PLOT__:
+                plt.subplot(1, 3, 1)
+                plt.imshow(adf_ref_data)
 
-            plt.subplot(1, 3, 2)
-            plt.imshow(qmctorch_data)
+                plt.subplot(1, 3, 2)
+                plt.imshow(qmctorch_data)
 
-            plt.subplot(1, 3, 3)
-            plt.imshow(delta)
-            plt.show()
+                plt.subplot(1, 3, 3)
+                plt.imshow(delta)
+                plt.show()
 
             assert(delta.mean() < 1E-3)
 

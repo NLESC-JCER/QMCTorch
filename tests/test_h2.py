@@ -13,6 +13,8 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 
+__PLOT__ = False
+
 
 class TestH2(unittest.TestCase):
 
@@ -118,7 +120,9 @@ class TestH2(unittest.TestCase):
         self.solver.configure(track=['local_energy'],
                               loss='energy', grad='auto')
         obs = self.solver.run(5)
-        plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
+        if __PLOT__:
+            plot_energy(obs.local_energy, e0=-
+                        1.1645, show_variance=True)
 
     def test4_geo_opt(self):
 
@@ -154,12 +158,13 @@ class TestH2(unittest.TestCase):
         pos = self.solver.sampler(self.solver.wf.pdf)
         obs = self.solver.sampling_traj(pos)
 
-        plot_walkers_traj(obs.local_energy)
-        plot_block(obs.local_energy)
+        if __PLOT__:
+            plot_walkers_traj(obs.local_energy)
+            plot_block(obs.local_energy)
 
-        plot_blocking_energy(obs.local_energy, block_size=10)
-        plot_correlation_coefficient(obs.local_energy)
-        plot_integrated_autocorrelation_time(obs.local_energy)
+            plot_blocking_energy(obs.local_energy, block_size=10)
+            plot_correlation_coefficient(obs.local_energy)
+            plot_integrated_autocorrelation_time(obs.local_energy)
 
 
 if __name__ == "__main__":
