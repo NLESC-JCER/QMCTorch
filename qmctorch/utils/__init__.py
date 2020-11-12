@@ -2,7 +2,7 @@
 
 from .algebra_utils import bdet2, bproj, btrace
 from .hdf5_utils import (add_group_attr, dump_to_hdf5, load_from_hdf5,
-                         register_extra_attributes)
+                         register_extra_attributes, bytes2str)
 from .interpolate import (InterpolateAtomicOrbitals,
                           InterpolateMolecularOrbitals)
 from .plot_data import (plot_block, plot_blocking_energy,
@@ -25,6 +25,7 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'set_torch_single_precision',
            'DataSet', 'Loss', 'OrthoReg',
            'dump_to_hdf5', 'load_from_hdf5',
+           'bytes2str',
            'register_extra_attributes',
            'fast_power',
            'InterpolateMolecularOrbitals',
