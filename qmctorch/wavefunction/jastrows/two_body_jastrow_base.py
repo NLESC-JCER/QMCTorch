@@ -190,7 +190,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-            return jast.prod(1).view(nbatch, 1)
+            return jast.prod(-1).unsqueeze(-1)
 
         elif derivative == 1:
             dr = self.extract_tri_up(self.edist(
@@ -232,25 +232,27 @@ class TwoBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
         if jacobian:
 
-            prod_val = jast.prod(1).unsqueeze(-1)
-            djast = self._get_der_jastrow_elements(r, dr).sum(1)
+            prod_val = jast.prod(-1).unsqueeze(-1)
+            djast = self._get_der_jastrow_elements(r, dr).sum(-2)
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
-            out = torch.zeros(nbatch, self.nelec).to(self.device)
-            out.index_add_(1, self.index_row, djast)
-            out.index_add_(1, self.index_col, -djast)
+            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            out = torch.zeros(out_shape).to(self.device)
+            out.index_add_(-1, self.index_row, djast)
+            out.index_add_(-1, self.index_col, -djast)
 
         else:
 
-            prod_val = jast.prod(1).unsqueeze(-1).unsqueeze(-1)
+            prod_val = jast.prod(-1).unsqueeze(-1).unsqueeze(-1)
             djast = self._get_der_jastrow_elements(r, dr)
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
-            out = torch.zeros(nbatch, 3, self.nelec).to(self.device)
-            out.index_add_(2, self.index_row, djast)
-            out.index_add_(2, self.index_col, -djast)
+            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            out = torch.zeros(out_shape).to(self.device)
+            out.index_add_(-1, self.index_row, djast)
+            out.index_add_(-1, self.index_col, -djast)
 
         return out
 
@@ -269,15 +271,16 @@ class TwoBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
 
         # pure second derivative terms
-        prod_val = jast.prod(1).unsqueeze(-1)
+        prod_val = jast.prod(-1).unsqueeze(-1)
 
         d2jast = self._get_second_der_jastrow_elements(
-            r, dr, d2r).sum(1)
+            r, dr, d2r).sum(-2)
 
         # might cause problems with backward cause in place operation
-        hess_jast = torch.zeros(nbatch, self.nelec).to(self.device)
-        hess_jast.index_add_(1, self.index_row, d2jast)
-        hess_jast.index_add_(1, self.index_col, d2jast)
+        hess_shape = list(d2jast.shape[:-1]) + [self.nelec]
+        hess_jast = torch.zeros(hess_shape).to(self.device)
+        hess_jast.index_add_(-1, self.index_row, d2jast)
+        hess_jast.index_add_(-1, self.index_col, d2jast)
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
@@ -378,12 +381,38 @@ class TwoBodyJastrowFactorBase(nn.Module):
             torch.tensor:
         """
 
-        nbatch = djast.shape[0]
         if len(self.idx_col_perm) > 0:
-            tmp = torch.zeros(nbatch, 3, self.nelec,
-                              self.nelec-1).to(self.device)
+            tmp_shape = list(
+                djast.shape[:-1]) + [self.nelec, self.nelec-1]
+            tmp = torch.zeros(tmp_shape).to(self.device)
             tmp[..., self.index_row, self.index_col-1] = djast
             tmp[..., self.index_col, self.index_row] = -djast
-            return tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
+            return tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
         else:
-            return torch.zeros(nbatch, self.nelec).to(self.device)
+            out_shape = list(
+                djast.shape[:-2]) + [self.nelec]
+            return torch.zeros(out_shape).to(self.device)
+
+    # def _partial_derivative_col_perm(self, djast):
+    #     """Get the product of the mixed second deriative terms using column permuatation.
+
+    #     .. math ::
+
+    #         d B_{ij} / d x_i * d B_{kl} / d x_k
+
+    #     Args:
+    #         djast (torch.tensor): first derivative of the jastrow kernels
+
+    #     Returns:
+    #         torch.tensor:
+    #     """
+
+    #     nbatch = djast.shape[0]
+    #     if len(self.idx_col_perm) > 0:
+    #         tmp = torch.zeros(nbatch, 3, self.nelec,
+    #                           self.nelec-1).to(self.device)
+    #         tmp[..., self.index_row, self.index_col-1] = djast
+    #         tmp[..., self.index_col, self.index_row] = -djast
+    #         return tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
+    #     else:
+    #         return torch.zeros(nbatch, self.nelec).to(self.device)
