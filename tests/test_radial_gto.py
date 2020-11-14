@@ -6,7 +6,7 @@ import torch
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 
-from .utils import second_derivative
+from .path_utils import second_derivative
 
 
 class TestRadialSlater(unittest.TestCase):
