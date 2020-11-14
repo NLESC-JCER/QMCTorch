@@ -6,7 +6,7 @@ from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-from .utils import PATH_TEST
+from .test_utils import PATH_TEST
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

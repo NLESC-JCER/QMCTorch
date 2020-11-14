@@ -7,8 +7,7 @@ from qmctorch.utils import (plot_block, plot_data, plot_energy,
                             plot_walkers_traj)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-
-from .utils import PATH_TEST, second_derivative
+from .test_utils import PATH_TEST, second_derivative
 
 
 class TestRadialSlater(unittest.TestCase):
@@ -18,7 +17,8 @@ class TestRadialSlater(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
 
-        path_hdf5 = (PATH_TEST / 'hdf5/CO2_adf_dzp.hdf5').absolute().as_posix()
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/CO2_adf_dzp.hdf5').absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
         # wave function
@@ -49,7 +49,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 0]
             dz_r0_fd = np.gradient(r0, self.dx)
-            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -79,7 +80,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 1]
             dz_r0_fd = np.gradient(r0, self.dy)
-            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -109,7 +111,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 2]
             dz_r0_fd = np.gradient(r0, self.dz)
-            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
