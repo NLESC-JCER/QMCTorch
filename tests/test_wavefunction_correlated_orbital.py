@@ -37,18 +37,19 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_forward(self):
 
         wfvals = self.wf(self.pos)
-        print(wfvals)
-        # ref = torch.tensor([[0.0522],
-        #                     [0.0826],
-        #                     [0.0774],
-        #                     [0.1321],
-        #                     [0.0459],
-        #                     [0.0421],
-        #                     [0.0551],
-        #                     [0.0764],
-        #                     [0.1164],
-        #                     [0.2506]])
-        # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
+
+        ref = torch.tensor([[0.1235],
+                            [0.0732],
+                            [0.0732],
+                            [0.1045],
+                            [0.0547],
+                            [0.0488],
+                            [0.0559],
+                            [0.0856],
+                            [0.0987],
+                            [0.2229]])
+
+        assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
     # def test_local_energy(self):
 
@@ -75,27 +76,27 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     #     assert torch.allclose(
     #         eloc_auto.data, eloc_jac.data, rtol=1E-4, atol=1E-4)
 
-    # def test_kinetic_energy(self):
+    def test_kinetic_energy(self):
 
-    #     eauto = self.wf.kinetic_energy_autograd(self.pos)
-    #     ejac = self.wf.kinetic_energy_jacobi(self.pos)
+        eauto = self.wf.kinetic_energy_autograd(self.pos)
+        ejac = self.wf.kinetic_energy_jacobi(self.pos)
 
-    #     ref = torch.tensor([[0.6099],
-    #                         [0.6438],
-    #                         [0.6313],
-    #                         [2.0512],
-    #                         [0.0838],
-    #                         [0.2699],
-    #                         [0.5190],
-    #                         [0.3381],
-    #                         [1.8489],
-    #                         [5.2226]])
+        # ref = torch.tensor([[0.6099],
+        #                     [0.6438],
+        #                     [0.6313],
+        #                     [2.0512],
+        #                     [0.0838],
+        #                     [0.2699],
+        #                     [0.5190],
+        #                     [0.3381],
+        #                     [1.8489],
+        #                     [5.2226]])
 
-    #     assert torch.allclose(
-    #         ejac.data, ref, rtol=1E-4, atol=1E-4)
+        # assert torch.allclose(
+        #     ejac.data, ref, rtol=1E-4, atol=1E-4)
 
-    #     assert torch.allclose(
-    #         eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
+        # assert torch.allclose(
+        #     eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
     # def test_gradients_wf(self):
 
@@ -117,5 +118,5 @@ if __name__ == "__main__":
     t = TestCorrelatedOrbitalWF()
     t.setUp()
     t.test_forward()
+    t.test_kinetic_energy()
     # t.test_local_energy()
-    # t.test_kinetic_energy()

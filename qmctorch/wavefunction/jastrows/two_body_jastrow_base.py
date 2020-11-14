@@ -213,7 +213,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
             d2r = self.extract_tri_up(self.edist(
                 pos, derivative=2)).view(nbatch, 3, -1)
 
-            return(jast.prod(1).view(nbatch, 1),
+            return(jast.prod(-1).unsqueeze(-1),
                    self._jastrow_derivative(r, dr, jast, jacobian),
                    self._jastrow_second_derivative(r, dr, d2r, jast))
 
