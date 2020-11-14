@@ -334,8 +334,8 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         00 01 02 03         . 0 1 2
         10 11 12 13         . . 3 4
-        20 21 22 23         . . . 5    
-        31 31 32 33         . . . . 
+        20 21 22 23         . . . 5
+        31 31 32 33         . . . .
 
         """
         n = self.nelec
@@ -392,27 +392,3 @@ class TwoBodyJastrowFactorBase(nn.Module):
             out_shape = list(
                 djast.shape[:-2]) + [self.nelec]
             return torch.zeros(out_shape).to(self.device)
-
-    # def _partial_derivative_col_perm(self, djast):
-    #     """Get the product of the mixed second deriative terms using column permuatation.
-
-    #     .. math ::
-
-    #         d B_{ij} / d x_i * d B_{kl} / d x_k
-
-    #     Args:
-    #         djast (torch.tensor): first derivative of the jastrow kernels
-
-    #     Returns:
-    #         torch.tensor:
-    #     """
-
-    #     nbatch = djast.shape[0]
-    #     if len(self.idx_col_perm) > 0:
-    #         tmp = torch.zeros(nbatch, 3, self.nelec,
-    #                           self.nelec-1).to(self.device)
-    #         tmp[..., self.index_row, self.index_col-1] = djast
-    #         tmp[..., self.index_col, self.index_row] = -djast
-    #         return tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
-    #     else:
-    #         return torch.zeros(nbatch, self.nelec).to(self.device)

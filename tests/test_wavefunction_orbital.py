@@ -8,7 +8,7 @@ import itertools
 import os
 
 
-class TestWaveFunction(unittest.TestCase):
+class TestOrbitalWF(unittest.TestCase):
 
     def setUp(self):
 

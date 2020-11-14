@@ -52,6 +52,7 @@ class TestPadeJastrowOrbital(unittest.TestCase):
 
     def test_jastrow(self):
         val = self.jastrow(self.pos)
+        print(val.shape)
 
     def test_grad_jastrow(self):
 

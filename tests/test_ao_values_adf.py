@@ -151,8 +151,8 @@ class TestAOvaluesADF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestAOvaluesADF()
-    t.setUp()
-    t.test_ao()
+    unittest.main()
+    # t = TestAOvaluesADF()
+    # t.setUp()
+    # t.test_ao()
     # t.test_mo()

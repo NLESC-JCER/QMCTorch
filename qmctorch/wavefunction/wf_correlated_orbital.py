@@ -14,10 +14,10 @@ from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .jastrows.jastrow import set_jastrow
 from .wf_orbital_base import OrbitalBase
-from .jastrows.jastrow import set_jastrow
+from .jastrows.jastrow import set_jastrow_correlated
 
 
-class Orbital(OrbitalBase):
+class CorrelatedOrbital(OrbitalBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -40,11 +40,46 @@ class Orbital(OrbitalBase):
             >>> wf = Orbital(mol, configs='cas(2,2)')
         """
 
-        super(Orbital, self).__init__(mol, configs, kinetic,
-                                      use_jastrow, jastrow_type, cuda, include_all_mo)
+        if use_jastrow is False:
+            raise ValueError('use_jastrow = False is invalid for CorrelatedOrbital wave functions, \
+                              use Orbital wave function if you do not want to use Jastrow factors')
 
-        self.jastrow = set_jastrow(
-            jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
+        super(CorrelatedOrbital, self).__init__(mol, configs,
+                                                kinetic, use_jastrow, jastrow_type,
+                                                cuda, include_all_mo)
+
+        self.jastrow_fn = set_jastrow_correlated(
+            jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda)
+
+    def jastrow(self, pos, derivative=0, jacobian=True):
+        """Returns the value of the jastrow with the correct dimensions
+
+        Args:
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+            derivative (int, optional): order of the derivative (0,1,2,).
+                            Defaults to 0.
+            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+                                       the derivatives) or the individual
+                                       terms. Defaults to True.
+                                       False only for derivative=1
+
+        Returns:
+            torch.tensor: value of the jastrow parameter for all confs
+        """
+        jast_vals = self.jastrow_fn(pos, derivative, jacobian)
+
+        def transpose(vals):
+            """transpose the data depending on it number of dim."""
+            if vals.ndim == 3:
+                return vals.transpose(1, 2, 0)
+            elif vals.ndim == 4:
+                return vals.transpose(1, 2, 3, 0)
+
+        if isinstance(jast_vals, tuple):
+            return tuple([transpose(v) for v in jast_vals])
+        else:
+            return transpose(jast_vals)
 
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
@@ -66,8 +101,8 @@ class Orbital(OrbitalBase):
             >>> vals = wf(pos)
         """
 
-        if self.use_jastrow:
-            J = self.jastrow(x)
+        # compute the jastrow from the pos
+        J = self.jastrow(x)
 
         # atomic orbital
         if ao is None:
@@ -78,20 +113,23 @@ class Orbital(OrbitalBase):
         # molecular orbitals
         x = self.mo_scf(x)
 
+        # jastrow for each orbital
+        x = J * x
+
         # mix the mos
         x = self.mo(x)
 
         # pool the mos
         x = self.pool(x)
 
-        if self.use_jastrow:
-            return J * self.fc(x)
+        # compute the CI and return
+        return self.fc(x)
 
+    def ao2mo(self, ao, jastrow=None):
+        if jastrow is None:
+            return self.mo(self.mo_scf(ao))
         else:
-            return self.fc(x)
-
-    def ao2mo(self, ao):
-        return self.mo(self.mo_scf(ao))
+            return self.mo(jastrow * self.mo_scf(ao))
 
     def pos2mo(self, x, derivative=0):
         """Get the values of MOs
@@ -105,7 +143,7 @@ class Orbital(OrbitalBase):
         Returns:
             torch.tensor -- MO matrix [nbatch, nelec, nmo]
         """
-        return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
+        return self.mo(self.jastrow(x)*self.mo_scf(self.ao(x, derivative=derivative)))
 
     def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
@@ -123,8 +161,13 @@ class Orbital(OrbitalBase):
         """
 
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
-        mo = self.ao2mo(ao)
-        bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
+
+        jast, djast, d2jast = self.jastrow(x,
+                                           derivative=[0, 1, 2],
+                                           jacobian=False)
+        mo = self.ao2mo(ao, jast)
+        bkin = self.get_kinetic_operator(
+            x, ao, dao, d2ao, mo, jast, djast, d2jast)
 
         if kinpool:
             kin, psi = self.kinpool(mo, bkin)
@@ -135,6 +178,31 @@ class Orbital(OrbitalBase):
             psi = self.pool(mo)
             out = self.fc(kin * psi) / self.fc(psi)
             return out
+
+    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo, jast, djast, d2jast):
+        """Compute the Bkin matrix
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            mo (torch.tensor, optional): precomputed values of the MOs
+
+        Returns:
+            torch.tensor: matrix of the kinetic operator
+        """
+
+        bkin = self.ao2mo(d2ao)
+
+        djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
+        d2jast = d2jast / jast
+
+        dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
+
+        djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
+        d2jast_mo = d2jast.unsqueeze(-1) * mo
+
+        bkin = bkin + 2 * djast_dmo + d2jast_mo
+
+        return -0.5 * bkin
 
     def gradients_jacobi(self, x, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
@@ -218,133 +286,3 @@ class Orbital(OrbitalBase):
             bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
 
         return bgrad
-
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
-        """Compute the Bkin matrix
-
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            mo (torch.tensor, optional): precomputed values of the MOs
-
-        Returns:
-            torch.tensor: matrix of the kinetic operator
-        """
-
-        bkin = self.ao2mo(d2ao)
-
-        if self.use_jastrow:
-
-            jast, djast, d2jast = self.jastrow(x,
-                                               derivative=[0, 1, 2],
-                                               jacobian=False)
-
-            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
-            d2jast = d2jast / jast
-
-            dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
-
-            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
-            d2jast_mo = d2jast.unsqueeze(-1) * mo
-
-            bkin = bkin + 2 * djast_dmo + d2jast_mo
-
-        return -0.5 * bkin
-
-    def geometry(self, pos):
-        """Returns the gemoetry of the system in xyz format
-
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
-
-        Returns:
-            list: list where each element is one line of the xyz file
-        """
-        d = []
-        for iat in range(self.natom):
-
-            xyz = self.ao.atom_coords[iat,
-                                      :].cpu().detach().numpy().tolist()
-            d.append(xyz)
-        return d
-
-    def gto2sto(self, plot=False):
-        """Fits the AO GTO to AO STO.
-            The SZ sto tht have only one basis function per ao
-        """
-
-        assert(self.ao.radial_type.startswith('gto'))
-        assert(self.ao.harmonics_type == 'cart')
-
-        log.info('  Fit GTOs to STOs  : ')
-
-        def sto(x, norm, alpha):
-            """Fitting function."""
-            return norm * np.exp(-alpha * np.abs(x))
-
-        # shortcut for nao
-        nao = self.mol.basis.nao
-
-        # create a new mol and a new basis
-        new_mol = deepcopy(self.mol)
-        basis = deepcopy(self.mol.basis)
-
-        # change basis to sto
-        basis.radial_type = 'sto_pure'
-        basis.nshells = self.ao.nao_per_atom.numpy()
-
-        # reset basis data
-        basis.index_ctr = np.arange(nao)
-        basis.bas_coeffs = np.ones(nao)
-        basis.bas_exp = np.zeros(nao)
-        basis.bas_norm = np.zeros(nao)
-        basis.bas_kr = np.zeros(nao)
-        basis.bas_kx = np.zeros(nao)
-        basis.bas_ky = np.zeros(nao)
-        basis.bas_kz = np.zeros(nao)
-
-        # 2D fit space
-        x = torch.linspace(-5, 5, 501)
-
-        # compute the values of the current AOs using GTO BAS
-        pos = x.reshape(-1, 1).repeat(1, self.ao.nbas).to(self.device)
-        gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
-        gto = gto.unsqueeze(1).repeat(1, self.nelec, 1)
-        ao = self.ao._contract(gto)[
-            :, 0, :].detach().cpu().numpy()
-
-        # loop over AOs
-        for iorb in range(self.ao.norb):
-
-            # fit AO with STO
-            xdata = x.numpy()
-            ydata = ao[:, iorb]
-            popt, pcov = curve_fit(sto, xdata, ydata)
-
-            # store new exp/norm
-            basis.bas_norm[iorb] = popt[0]
-            basis.bas_exp[iorb] = popt[1]
-
-            # determine k values
-            basis.bas_kx[iorb] = self.ao.harmonics.bas_kx[self.ao.index_ctr == iorb].unique(
-            ).item()
-            basis.bas_ky[iorb] = self.ao.harmonics.bas_ky[self.ao.index_ctr == iorb].unique(
-            ).item()
-            basis.bas_kz[iorb] = self.ao.harmonics.bas_kz[self.ao.index_ctr == iorb].unique(
-            ).item()
-
-            # plot if necessary
-            if plot:
-                plt.plot(xdata, ydata)
-                plt.plot(xdata, sto(xdata, *popt))
-                plt.show()
-
-        # update basis in new mole
-        new_mol.basis = basis
-
-        # returns new orbital instance
-        return Orbital(new_mol, configs=self.configs_method,
-                       kinetic=self.kinetic_method,
-                       use_jastrow=self.use_jastrow,
-                       jastrow_type=self.jastrow_type,
-                       cuda=self.cuda,
-                       include_all_mo=self.include_all_mo)
