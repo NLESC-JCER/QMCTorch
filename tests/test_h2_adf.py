@@ -9,7 +9,7 @@ from qmctorch.solver import SolverOrbital
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 
-from .test_utils import PATH_TEST
+from .path_utils import PATH_TEST
 
 
 class TestH2ADF(unittest.TestCase):
