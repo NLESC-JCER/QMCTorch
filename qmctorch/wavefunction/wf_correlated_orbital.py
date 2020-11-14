@@ -69,17 +69,17 @@ class CorrelatedOrbital(OrbitalBase):
         """
         jast_vals = self.jastrow_fn(pos, derivative, jacobian)
 
-        def transpose(vals):
+        def permute(vals):
             """transpose the data depending on it number of dim."""
             if vals.ndim == 3:
-                return vals.transpose(1, 2, 0)
+                return vals.permute(1, 2, 0)
             elif vals.ndim == 4:
-                return vals.transpose(1, 2, 3, 0)
+                return vals.permute(1, 2, 3, 0)
 
         if isinstance(jast_vals, tuple):
-            return tuple([transpose(v) for v in jast_vals])
+            return tuple([permute(v) for v in jast_vals])
         else:
-            return transpose(jast_vals)
+            return permute(jast_vals)
 
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
