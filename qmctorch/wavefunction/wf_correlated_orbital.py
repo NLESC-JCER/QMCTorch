@@ -66,6 +66,8 @@ class CorrelatedOrbital(OrbitalBase):
 
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
+                          Nbatch, Nelec, Nmo (jacobian = True)
+                          Nbatch, Nelec, Nmo, Ndim (jacobian = False)
         """
         jast_vals = self.jastrow_fn(pos, derivative, jacobian)
 
@@ -74,7 +76,7 @@ class CorrelatedOrbital(OrbitalBase):
             if vals.ndim == 3:
                 return vals.permute(1, 2, 0)
             elif vals.ndim == 4:
-                return vals.permute(1, 2, 3, 0)
+                return vals.permute(1, 3, 0, 2)
 
         if isinstance(jast_vals, tuple):
             return tuple([permute(v) for v in jast_vals])
@@ -113,11 +115,11 @@ class CorrelatedOrbital(OrbitalBase):
         # molecular orbitals
         x = self.mo_scf(x)
 
-        # jastrow for each orbital
-        x = J * x
-
         # mix the mos
         x = self.mo(x)
+
+        # jastrow for each orbital
+        x = J * x
 
         # pool the mos
         x = self.pool(x)
@@ -125,27 +127,66 @@ class CorrelatedOrbital(OrbitalBase):
         # compute the CI and return
         return self.fc(x)
 
-    def ao2mo(self, ao, jastrow=None):
-        if jastrow is None:
-            return self.mo(self.mo_scf(ao))
-        else:
-            return self.mo(jastrow * self.mo_scf(ao))
+    def ao2mo(self, ao):
+        return self.mo(self.mo_scf(ao))
+
+    def ao2cmo(self, ao, jastrow):
+        return jastrow * self.mo(self.mo_scf(ao))
 
     def pos2mo(self, x, derivative=0):
-        """Get the values of MOs
+        ao = self.ao(x, derivative=derivative)
+        return self.ao2mo(ao)
+
+    def pos2cmo(self, x, derivative=0):
+        """Get the values of correlated MOs
 
         Arguments:
             x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
 
-        Keyword Arguments:
-            derivative {int} -- order of the derivative (default: {0})
 
         Returns:
             torch.tensor -- MO matrix [nbatch, nelec, nmo]
         """
-        return self.mo(self.jastrow(x)*self.mo_scf(self.ao(x, derivative=derivative)))
+        if derivative == 0:
+            mo = self.pos2mo(x)
+            jast = self.jastrow(x)
+            return mo * jast
 
-    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
+        elif derivative == 1:
+
+            mo = self.pos2mo(x)
+            dmo = self.pos2mo(x, derivative=1)
+
+            jast = self.jastrow(x)
+            djast = self.jastrow(x, derivative=1)
+            print(jast)
+            print(djast)
+            return dmo * jast + djast * mo
+
+        elif derivative == 2:
+
+            # atomic orbital
+            ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
+
+            # bare molecular orbitals
+            mo = self.ao2mo(ao)
+            dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
+            d2mo = self.ao2mo(d2ao)
+
+            # jastrows
+            jast, djast, d2jast = self.jastrow(x,
+                                               derivative=[0, 1, 2],
+                                               jacobian=False)
+
+            # terms of the kin op
+            jast_d2mo = d2mo * jast
+            djast_dmo = (djast * dmo).sum(-1)
+            d2jast_mo = d2jast * mo
+
+            # assemble kin op
+            return jast_d2mo + 2 * djast_dmo + d2jast_mo
+
+    def kinetic_energy_jacobi(self, x,  **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -160,26 +201,15 @@ class CorrelatedOrbital(OrbitalBase):
             torch.tensor: values of the kinetic energy at each sampling points
         """
 
-        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
+        cmo, bkin = self.get_kinetic_operator(x)
 
-        jast, djast, d2jast = self.jastrow(x,
-                                           derivative=[0, 1, 2],
-                                           jacobian=False)
-        mo = self.ao2mo(ao, jast)
-        bkin = self.get_kinetic_operator(
-            x, ao, dao, d2ao, mo, jast, djast, d2jast)
+        kin = self.pool.operator(cmo, bkin)
+        psi = self.pool(cmo)
+        out = self.fc(kin * psi) / self.fc(psi)
 
-        if kinpool:
-            kin, psi = self.kinpool(mo, bkin)
-            return self.fc(kin) / self.fc(psi)
+        return out
 
-        else:
-            kin = self.pool.operator(mo, bkin)
-            psi = self.pool(mo)
-            out = self.fc(kin * psi) / self.fc(psi)
-            return out
-
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo, jast, djast, d2jast):
+    def get_kinetic_operator(self, x):
         """Compute the Bkin matrix
 
         Args:
@@ -190,19 +220,16 @@ class CorrelatedOrbital(OrbitalBase):
             torch.tensor: matrix of the kinetic operator
         """
 
-        bkin = self.ao2mo(d2ao)
+        # cmo
+        cmo = self.pos2cmo(x)
 
-        djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
-        d2jast = d2jast / jast
+        # hessian of correlated MO
+        d2cmo = self.pos2cmo(x, derivative=2)
 
-        dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
+        # assemble kin op
+        bkin = -0.5 * d2cmo
 
-        djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
-        d2jast_mo = d2jast.unsqueeze(-1) * mo
-
-        bkin = bkin + 2 * djast_dmo + d2jast_mo
-
-        return -0.5 * bkin
+        return cmo, bkin
 
     def gradients_jacobi(self, x, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula

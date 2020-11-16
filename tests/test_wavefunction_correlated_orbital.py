@@ -1,11 +1,42 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import CorrelatedOrbital
+from qmctorch.wavefunction import Orbital
 from qmctorch.utils import set_torch_double_precision
+
+from torch.autograd import grad, gradcheck, Variable
+
 import numpy as np
 import torch
 import unittest
 import itertools
 import os
+
+
+torch.set_default_tensor_type(torch.DoubleTensor)
+
+
+def hess(out, pos):
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, pos,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+
+    for idim in range(jacob.shape[1]):
+
+        tmp = grad(jacob[:, idim], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, idim] = tmp[:, idim]
+
+    return hess
 
 
 class TestCorrelatedOrbitalWF(unittest.TestCase):
@@ -26,7 +57,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             redo_scf=True)
 
         self.wf = CorrelatedOrbital(
-            mol, kinetic='auto', configs='single_double(2,2)')
+            mol, kinetic='auto', configs='cas(2,2)')
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -35,21 +66,67 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         self.pos.requires_grad = True
 
     def test_forward(self):
-
+        """Value of the wave function."""
         wfvals = self.wf(self.pos)
 
-        ref = torch.tensor([[0.1235],
-                            [0.0732],
-                            [0.0732],
-                            [0.1045],
-                            [0.0547],
-                            [0.0488],
-                            [0.0559],
-                            [0.0856],
-                            [0.0987],
-                            [0.2229]])
+        ref = torch.tensor([[0.0660], [0.0979], [0.0965], [0.1602], [0.0539],
+                            [0.0506], [0.0694], [0.0898], [0.1420], [0.2991]])
 
         assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
+
+    def test_grad_mo(self):
+        """Gradients of the uncorrelated MOs."""
+        mo = self.wf.pos2mo(self.pos)
+        dmo = self.wf.pos2mo(self.pos, derivative=1)
+        dmo_grad = grad(
+            mo, self.pos, grad_outputs=torch.ones_like(mo))[0]
+
+        gradcheck(self.wf.pos2mo, self.pos)
+
+        assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
+
+    def test_hess_mo(self):
+        """Hessian of the uncorrelated MOs."""
+        mo = self.wf.pos2mo(self.pos)
+        d2mo = self.wf.pos2mo(self.pos, derivative=2)
+
+        d2mo_grad = hess(mo, self.pos)
+
+        assert(torch.allclose(d2mo.sum(), d2mo_grad.sum()))
+
+    def test_grad_jast(self):
+        """Gradients of the jastrow values."""
+        jast = self.wf.jastrow(self.pos)
+        djast = self.wf.jastrow(self.pos, derivative=1)
+        djast_grad = grad(
+            jast, self.pos, grad_outputs=torch.ones_like(jast))[0]
+
+        gradcheck(self.wf.jastrow, self.pos)
+
+        assert(torch.allclose(djast.sum(-1).sum(-1), djast_grad.sum(-1)))
+        assert(torch.allclose(djast.sum(), djast_grad.sum()))
+
+    def test_grad_cmo(self):
+        """Gradients of the correlated MOs."""
+        cmo = self.wf.pos2cmo(self.pos)
+        dcmo = self.wf.pos2cmo(self.pos, derivative=1)
+        dcmo_grad = grad(
+            cmo,
+            self.pos,
+            grad_outputs=torch.ones_like(cmo))[0]
+
+        gradcheck(self.wf.pos2cmo, self.pos)
+        print(dcmo.sum())
+        print(dcmo_grad.sum())
+        assert(torch.allclose(dcmo.sum(), dcmo_grad.sum()))
+
+    def test_hess_cmo(self):
+        """Hessian of the correlated MOs."""
+        val = self.wf.pos2cmo(self.pos)
+        d2val_grad = hess(val, self.pos)
+        d2val = self.wf.pos2cmo(self.pos, derivative=2)
+
+        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
     # def test_local_energy(self):
 
@@ -94,9 +171,11 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
         # assert torch.allclose(
         #     ejac.data, ref, rtol=1E-4, atol=1E-4)
+        print(eauto)
+        print(ejac)
 
-        # assert torch.allclose(
-        #     eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(
+            eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
     # def test_gradients_wf(self):
 
@@ -114,9 +193,17 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+
+    set_torch_double_precision()
+
+    # unittest.main()
     t = TestCorrelatedOrbitalWF()
     t.setUp()
-    t.test_forward()
-    t.test_kinetic_energy()
+    # t.test_forward()
+    # t.test_grad_mo()
+    # t.test_hess_mo()
+    # t.test_grad_jast()
+    t.test_grad_cmo()
+    # t.test_hess_cmo()
+    # t.test_kinetic_energy()
     # t.test_local_energy()

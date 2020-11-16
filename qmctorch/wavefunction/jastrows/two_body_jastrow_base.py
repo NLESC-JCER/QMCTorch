@@ -180,6 +180,10 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
+                          derivative = 0  (Nmo) x Nbatch x 1
+                          derivative = 1  (Nmo) x Nbatch x Nelec (for jacobian = True)
+                          derivative = 1  (Nmo) x Nbatch x Ndim x Nelec (for jacobian = False)
+                          derivative = 2  (Nmo) x Nbatch x Nelec
         """
 
         size = pos.shape

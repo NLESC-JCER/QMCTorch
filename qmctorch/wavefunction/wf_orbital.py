@@ -68,7 +68,7 @@ class Orbital(OrbitalBase):
 
         if self.use_jastrow:
             J = self.jastrow(x)
-
+            print(J.shape)
         # atomic orbital
         if ao is None:
             x = self.ao(x)
