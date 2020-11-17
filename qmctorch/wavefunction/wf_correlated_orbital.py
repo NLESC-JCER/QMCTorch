@@ -150,7 +150,7 @@ class CorrelatedOrbital(OrbitalBase):
         if derivative == 0:
             mo = self.pos2mo(x)
             jast = self.jastrow(x)
-            return mo * jast
+            return jast * mo
 
         elif derivative == 1:
 
@@ -159,9 +159,9 @@ class CorrelatedOrbital(OrbitalBase):
 
             jast = self.jastrow(x)
             djast = self.jastrow(x, derivative=1)
-            print(jast)
-            print(djast)
-            return dmo * jast + djast * mo
+
+            # return mo * djast.sum(1).unsqueeze(1) + jast * dmo
+            return mo.sum(1).unsqueeze(1) * djast + jast * dmo
 
         elif derivative == 2:
 
@@ -181,7 +181,8 @@ class CorrelatedOrbital(OrbitalBase):
             # terms of the kin op
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
-            d2jast_mo = d2jast * mo
+            # d2jast_mo = d2jast.sum(1).unsqueeze(1) * mo
+            d2jast_mo = d2jast * mo.sum(1).unsqueeze(1)
 
             # assemble kin op
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
@@ -201,7 +202,8 @@ class CorrelatedOrbital(OrbitalBase):
             torch.tensor: values of the kinetic energy at each sampling points
         """
 
-        cmo, bkin = self.get_kinetic_operator(x)
+        cmo = self.pos2cmo(x)
+        bkin = self.get_kinetic_operator(x)
 
         kin = self.pool.operator(cmo, bkin)
         psi = self.pool(cmo)
@@ -220,16 +222,7 @@ class CorrelatedOrbital(OrbitalBase):
             torch.tensor: matrix of the kinetic operator
         """
 
-        # cmo
-        cmo = self.pos2cmo(x)
-
-        # hessian of correlated MO
-        d2cmo = self.pos2cmo(x, derivative=2)
-
-        # assemble kin op
-        bkin = -0.5 * d2cmo
-
-        return cmo, bkin
+        return -0.5 * self.pos2cmo(x, derivative=2)
 
     def gradients_jacobi(self, x, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula

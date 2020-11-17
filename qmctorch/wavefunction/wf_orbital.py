@@ -68,7 +68,7 @@ class Orbital(OrbitalBase):
 
         if self.use_jastrow:
             J = self.jastrow(x)
-            print(J.shape)
+
         # atomic orbital
         if ao is None:
             x = self.ao(x)
@@ -127,6 +127,7 @@ class Orbital(OrbitalBase):
         bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
 
         if kinpool:
+            log.info('   Warning : Kinpool energy calculation untested')
             kin, psi = self.kinpool(mo, bkin)
             return self.fc(kin) / self.fc(psi)
 
@@ -249,102 +250,3 @@ class Orbital(OrbitalBase):
             bkin = bkin + 2 * djast_dmo + d2jast_mo
 
         return -0.5 * bkin
-
-    def geometry(self, pos):
-        """Returns the gemoetry of the system in xyz format
-
-        Args:
-            pos (torch.tensor): sampling points (Nbatch, 3*Nelec)
-
-        Returns:
-            list: list where each element is one line of the xyz file
-        """
-        d = []
-        for iat in range(self.natom):
-
-            xyz = self.ao.atom_coords[iat,
-                                      :].cpu().detach().numpy().tolist()
-            d.append(xyz)
-        return d
-
-    def gto2sto(self, plot=False):
-        """Fits the AO GTO to AO STO.
-            The SZ sto tht have only one basis function per ao
-        """
-
-        assert(self.ao.radial_type.startswith('gto'))
-        assert(self.ao.harmonics_type == 'cart')
-
-        log.info('  Fit GTOs to STOs  : ')
-
-        def sto(x, norm, alpha):
-            """Fitting function."""
-            return norm * np.exp(-alpha * np.abs(x))
-
-        # shortcut for nao
-        nao = self.mol.basis.nao
-
-        # create a new mol and a new basis
-        new_mol = deepcopy(self.mol)
-        basis = deepcopy(self.mol.basis)
-
-        # change basis to sto
-        basis.radial_type = 'sto_pure'
-        basis.nshells = self.ao.nao_per_atom.numpy()
-
-        # reset basis data
-        basis.index_ctr = np.arange(nao)
-        basis.bas_coeffs = np.ones(nao)
-        basis.bas_exp = np.zeros(nao)
-        basis.bas_norm = np.zeros(nao)
-        basis.bas_kr = np.zeros(nao)
-        basis.bas_kx = np.zeros(nao)
-        basis.bas_ky = np.zeros(nao)
-        basis.bas_kz = np.zeros(nao)
-
-        # 2D fit space
-        x = torch.linspace(-5, 5, 501)
-
-        # compute the values of the current AOs using GTO BAS
-        pos = x.reshape(-1, 1).repeat(1, self.ao.nbas).to(self.device)
-        gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
-        gto = gto.unsqueeze(1).repeat(1, self.nelec, 1)
-        ao = self.ao._contract(gto)[
-            :, 0, :].detach().cpu().numpy()
-
-        # loop over AOs
-        for iorb in range(self.ao.norb):
-
-            # fit AO with STO
-            xdata = x.numpy()
-            ydata = ao[:, iorb]
-            popt, pcov = curve_fit(sto, xdata, ydata)
-
-            # store new exp/norm
-            basis.bas_norm[iorb] = popt[0]
-            basis.bas_exp[iorb] = popt[1]
-
-            # determine k values
-            basis.bas_kx[iorb] = self.ao.harmonics.bas_kx[self.ao.index_ctr == iorb].unique(
-            ).item()
-            basis.bas_ky[iorb] = self.ao.harmonics.bas_ky[self.ao.index_ctr == iorb].unique(
-            ).item()
-            basis.bas_kz[iorb] = self.ao.harmonics.bas_kz[self.ao.index_ctr == iorb].unique(
-            ).item()
-
-            # plot if necessary
-            if plot:
-                plt.plot(xdata, ydata)
-                plt.plot(xdata, sto(xdata, *popt))
-                plt.show()
-
-        # update basis in new mole
-        new_mol.basis = basis
-
-        # returns new orbital instance
-        return Orbital(new_mol, configs=self.configs_method,
-                       kinetic=self.kinetic_method,
-                       use_jastrow=self.use_jastrow,
-                       jastrow_type=self.jastrow_type,
-                       cuda=self.cuda,
-                       include_all_mo=self.include_all_mo)

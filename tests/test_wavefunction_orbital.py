@@ -1,11 +1,40 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 from qmctorch.utils import set_torch_double_precision
+
+from torch.autograd import grad, gradcheck, Variable
+
 import numpy as np
 import torch
 import unittest
 import itertools
 import os
+
+torch.set_default_tensor_type(torch.DoubleTensor)
+
+
+def hess(out, pos):
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, pos,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+
+    for idim in range(jacob.shape[1]):
+
+        tmp = grad(jacob[:, idim], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, idim] = tmp[:, idim]
+
+    return hess
 
 
 class TestOrbitalWF(unittest.TestCase):
@@ -48,6 +77,33 @@ class TestOrbitalWF(unittest.TestCase):
                             [0.2506]])
         assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
+    def test_grad_mo(self):
+        """Gradients of the MOs."""
+
+        mo = self.wf.pos2mo(self.pos)
+        dmo = self.wf.pos2mo(self.pos, derivative=1)
+
+        dmo_grad = grad(
+            mo,
+            self.pos,
+            grad_outputs=torch.ones_like(mo))[0]
+
+        gradcheck(self.wf.pos2mo, self.pos)
+
+        assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
+        assert(torch.allclose(dmo.sum(-1),
+                              dmo_grad.view(10, 2, 3).sum(-1)))
+
+    def test_hess_cmo(self):
+        """Hessian of the MOs."""
+        val = self.wf.pos2mo(self.pos)
+        d2val_grad = hess(val, self.pos)
+        d2val = self.wf.pos2mo(self.pos, derivative=2)
+
+        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+        assert(torch.allclose(d2val.sum(-1).sum(-1),
+                              d2val_grad.view(10, 2, 3).sum(-1).sum(-1)))
+
     def test_local_energy(self):
 
         self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
@@ -76,7 +132,7 @@ class TestOrbitalWF(unittest.TestCase):
     def test_kinetic_energy(self):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos)
+        ejac = self.wf.kinetic_energy_jacobi(self.pos, kinpool=False)
 
         ref = torch.tensor([[0.6099],
                             [0.6438],
@@ -111,9 +167,9 @@ class TestOrbitalWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestOrbitalWF()
-    t.setUp()
-    t.test_forward()
-    # t.test_local_energy()
-    # t.test_kinetic_energy()
+    unittest.main()
+    # t = TestOrbitalWF()
+    # t.setUp()
+    # t.test_forward()
+    # # t.test_local_energy()
+    # # t.test_kinetic_energy()

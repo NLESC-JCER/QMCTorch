@@ -260,7 +260,7 @@ class SlaterPooling(nn.Module):
 
         .. math::
             -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}
-            ( \Delta_{up} D_{up}  + \Delta_{down} D_{down} )
+            ( \Delta_{up} D_{up} / D_{up} + \Delta_{down} D_{down}  / D_{down} )
 
         Args:
             mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
@@ -287,7 +287,7 @@ class SlaterPooling(nn.Module):
             iAdown = iAdown.unsqueeze(1)
 
         # determinant product
-        det_prod = torch.det(Aup) * torch.det(Adown)
+        # det_prod = torch.det(Aup) * torch.det(Adown)
 
         # kinetic terms
         kinetic = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
@@ -338,11 +338,11 @@ class SlaterPooling(nn.Module):
 
         # occupied orbital matrix + det and inv on spin up
         Aocc_up = mo[:, :self.nup, :self.nup]
-        detAup = torch.det(Aocc_up)
+        #detAup = torch.det(Aocc_up)
 
         # occupied orbital matrix + det and inv on spin down
         Aocc_down = mo[:, self.nup:, :self.ndown]
-        detAdown = torch.det(Aocc_down)
+        #detAdown = torch.det(Aocc_down)
 
         # inverse of the
         invAup = torch.inverse(Aocc_up)

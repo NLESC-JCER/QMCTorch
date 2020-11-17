@@ -100,6 +100,10 @@ class OrbitalBase(WaveFunction):
         self.kinetic_method = kinetic
         if kinetic == 'jacobi':
             self.kinetic_energy = self.kinetic_energy_jacobi
+
+        gradients = 'auto'
+        self.gradients_method = gradients
+        if gradients == 'jacobi':
             self.gradients = self.gradients_jacobi
 
         if self.cuda:
