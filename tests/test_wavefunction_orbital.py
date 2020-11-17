@@ -94,15 +94,20 @@ class TestOrbitalWF(unittest.TestCase):
         assert(torch.allclose(dmo.sum(-1),
                               dmo_grad.view(10, 2, 3).sum(-1)))
 
-    def test_hess_cmo(self):
+    def test_hess_mo(self):
         """Hessian of the MOs."""
         val = self.wf.pos2mo(self.pos)
+
         d2val_grad = hess(val, self.pos)
         d2val = self.wf.pos2mo(self.pos, derivative=2)
 
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+
         assert(torch.allclose(d2val.sum(-1).sum(-1),
                               d2val_grad.view(10, 2, 3).sum(-1).sum(-1)))
+
+        assert(torch.allclose(d2val.sum(-1),
+                              d2val_grad.view(10, 2, 3).sum(-1)))
 
     def test_local_energy(self):
 

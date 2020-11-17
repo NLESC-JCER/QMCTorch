@@ -160,8 +160,8 @@ class CorrelatedOrbital(OrbitalBase):
             jast = self.jastrow(x)
             djast = self.jastrow(x, derivative=1)
 
-            # return mo * djast.sum(1).unsqueeze(1) + jast * dmo
-            return mo.sum(1).unsqueeze(1) * djast + jast * dmo
+            return mo * djast.sum(1).unsqueeze(1) + jast * dmo
+            # return mo.sum(1).unsqueeze(1) * djast + jast * dmo
 
         elif derivative == 2:
 
@@ -181,8 +181,8 @@ class CorrelatedOrbital(OrbitalBase):
             # terms of the kin op
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
-            # d2jast_mo = d2jast.sum(1).unsqueeze(1) * mo
-            d2jast_mo = d2jast * mo.sum(1).unsqueeze(1)
+            d2jast_mo = d2jast.sum(1).unsqueeze(1) * mo
+            # d2jast_mo = d2jast * mo.sum(1).unsqueeze(1)
 
             # assemble kin op
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
@@ -206,6 +206,7 @@ class CorrelatedOrbital(OrbitalBase):
         bkin = self.get_kinetic_operator(x)
 
         kin = self.pool.operator(cmo, bkin)
+        print(kin.shape)
         psi = self.pool(cmo)
         out = self.fc(kin * psi) / self.fc(psi)
 
