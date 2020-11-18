@@ -1,6 +1,6 @@
-
 import torch
 from torch import nn
+import operator as op
 
 from ...utils import bdet2, btrace
 from .orbital_configurations import get_excitation, get_unique_excitation
@@ -239,7 +239,7 @@ class SlaterPooling(nn.Module):
 
         return det_out_up, det_out_down
 
-    def operator(self, mo, bop):
+    def operator(self, mo, bop, op=op.add):
         """Computes the values of the kinetic energy
 
         Args:
@@ -251,9 +251,9 @@ class SlaterPooling(nn.Module):
         """
 
         if self.config_method.startswith('cas('):
-            return self.operator_explicit(mo, bop)
+            return op(*self.operator_explicit(mo, bop))
         else:
-            return self.operator_single_double(mo, bop)
+            return op(*self.operator_single_double(mo, bop))
 
     def operator_explicit(self, mo, bkin):
         r"""Computes the value of any operator using the trace trick for a product of spin up/down determinant.
@@ -290,15 +290,18 @@ class SlaterPooling(nn.Module):
         # det_prod = torch.det(Aup) * torch.det(Adown)
 
         # kinetic terms
-        kinetic = (btrace(iAup@Bup) + btrace(iAdown@Bdown))
+        op_val_up = btrace(iAup@Bup)
+        op_val_down = btrace(iAdown@Bdown)
 
         # reshape
         if multiple_op:
-            kinetic = kinetic.permute(1, 2, 0)
+            op_val_up = op_val_up.permute(1, 2, 0)
+            op_val_down = op_val_down.permute(1, 2, 0)
         else:
-            kinetic = kinetic.transpose(0, 1)
+            op_val_up = op_val_up.transpose(0, 1)
+            op_val_down = op_val_down.transpose(0, 1)
 
-        return kinetic
+        return (op_val_up, op_val_down)
 
     def operator_single_double(self, mo, bop):
         """Computes the value of any operator on gs + single + double
@@ -314,7 +317,7 @@ class SlaterPooling(nn.Module):
         op_up, op_down = self.operator_unique_single_double(
             mo, bop)
 
-        return (op_up[..., self.index_unique_excitation[0]] +
+        return (op_up[..., self.index_unique_excitation[0]],
                 op_down[..., self.index_unique_excitation[1]])
 
     def operator_unique_single_double(self, mo, bop):

@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from scipy.optimize import curve_fit
 from torch import nn
+import operator
 
 from .. import log
 from ..utils import register_extra_attributes
@@ -133,11 +134,16 @@ class CorrelatedOrbital(OrbitalBase):
     def ao2cmo(self, ao, jastrow):
         return jastrow * self.mo(self.mo_scf(ao))
 
-    def pos2mo(self, x, derivative=0):
-        ao = self.ao(x, derivative=derivative)
-        return self.ao2mo(ao)
+    def pos2mo(self, x, derivative=0, jacobian=True):
+        """Compute the uncorrelated MOs from the positions."""
 
-    def pos2cmo(self, x, derivative=0):
+        ao = self.ao(x, derivative=derivative, jacobian=jacobian)
+        if jacobian:
+            return self.ao2mo(ao)
+        else:
+            return self.ao2mo(transpose(2, 3)).transpose(2, 3)
+
+    def pos2cmo(self, x, derivative=0, jacobian=True):
         """Get the values of correlated MOs
 
         Arguments:
@@ -155,13 +161,16 @@ class CorrelatedOrbital(OrbitalBase):
         elif derivative == 1:
 
             mo = self.pos2mo(x)
-            dmo = self.pos2mo(x, derivative=1)
+            dmo = self.pos2mo(x, derivative=1, jacobian=jacobian)
 
             jast = self.jastrow(x)
-            djast = self.jastrow(x, derivative=1)
+            djast = self.jastrow(x, derivative=1, jacobian=jacobian)
 
-            return mo * djast.sum(1).unsqueeze(1) + jast * dmo
-            # return mo.sum(1).unsqueeze(1) * djast + jast * dmo
+            if jacobian:
+                return mo * djast.sum(1).unsqueeze(1) + jast * dmo
+                # return mo.sum(1).unsqueeze(1) * djast + jast * dmo
+            else:
+                return mo.unsqueeze(-1) * djast.sum(1).unsqueeze(1) + jast.unsqueeze(-1) * dmo
 
         elif derivative == 2:
 
@@ -202,12 +211,28 @@ class CorrelatedOrbital(OrbitalBase):
             torch.tensor: values of the kinetic energy at each sampling points
         """
 
+        # get the matrix of correlated orbitals for all elec
         cmo = self.pos2cmo(x)
-        bkin = self.get_kinetic_operator(x)
 
-        kin = self.pool.operator(cmo, bkin)
-        print(kin.shape)
+        # compute  -0.5 * \Delta A (A = matrix of the correlated MO)
+        bhess = self.get_kinetic_operator(x)
+
+        # compute -0.5* ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
+        hess = self.pool.operator(cmo, bhess)
+
+        # compute 2 * \nabla A
+        bgrad = self.get_gradient_opeator(x).permute(3, 0, 1, 2)
+
+        # compute 2 * (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
+        grad = self.pool.operator(cmo, bgrad, op=operator.mult)
+
+        # assemble the total kinetic values
+        kin = hess + grad
+
+        # compute the total wf
         psi = self.pool(cmo)
+
+        # assemble
         out = self.fc(kin * psi) / self.fc(psi)
 
         return out
@@ -224,6 +249,47 @@ class CorrelatedOrbital(OrbitalBase):
         """
 
         return -0.5 * self.pos2cmo(x, derivative=2)
+
+    def get_grad_operator(self, x):
+        """Compute the gradient operator
+
+        Args:
+            x ([type]): [description]
+            ao ([type]): [description]
+            dao ([type]): [description]
+        """
+
+        return 2 * self.pos2cmo(x, derivative=1, jacobian=False)
+
+    def _old_grad(x):
+
+        ao = self.ao(x)
+        grad_ao = self.ao(x, derivative=1, jacobian=False)
+        mo = self.ao2mo(ao)
+
+        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
+        bgrad = bgrad.permute(3, 0, 1, 2).repeat(2, 1, 1, 1)
+
+        for ielec in range(self.nelec):
+            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
+            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
+
+        if self.use_jastrow:
+
+            jast = self.jastrow(x)
+            grad_jast = self.jastrow(x,
+                                     derivative=1,
+                                     jacobian=False)
+            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
+
+            grad_jast = grad_jast.flatten(start_dim=1)
+            grad_jast = grad_jast.transpose(0, 1)
+
+            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
+
+            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
+
+        return bgrad
 
     def gradients_jacobi(self, x, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
@@ -274,36 +340,3 @@ class CorrelatedOrbital(OrbitalBase):
                 grads = grads*jast
 
         return grads
-
-    def get_grad_operator(self, x, ao, grad_ao, mo):
-        """Compute the gradient operator
-
-        Args:
-            x ([type]): [description]
-            ao ([type]): [description]
-            dao ([type]): [description]
-        """
-
-        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
-        bgrad = bgrad.permute(3, 0, 1, 2).repeat(2, 1, 1, 1)
-
-        for ielec in range(self.nelec):
-            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
-            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
-
-        if self.use_jastrow:
-
-            jast = self.jastrow(x)
-            grad_jast = self.jastrow(x,
-                                     derivative=1,
-                                     jacobian=False)
-            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
-
-            grad_jast = grad_jast.flatten(start_dim=1)
-            grad_jast = grad_jast.transpose(0, 1)
-
-            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
-
-            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
-
-        return bgrad
