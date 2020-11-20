@@ -162,7 +162,7 @@ class Orbital(OrbitalBase):
         # the grad of each determinants
         grads = self.pool.operator(mo, bgrad)
 
-        # comoute the determinants
+        # compute the determinants
         dets = self.pool(mo)
 
         # CI sum
@@ -197,7 +197,8 @@ class Orbital(OrbitalBase):
         """
 
         bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
-        bgrad = bgrad.permute(3, 0, 1, 2).repeat(2, 1, 1, 1)
+        bgrad = bgrad.permute(3, 0, 1, 2)
+        bgrad = bgrad.repeat(2, 1, 1, 1)
 
         for ielec in range(self.nelec):
             bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0

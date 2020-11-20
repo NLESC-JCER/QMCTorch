@@ -141,7 +141,7 @@ class CorrelatedOrbital(OrbitalBase):
         if jacobian:
             return self.ao2mo(ao)
         else:
-            return self.ao2mo(transpose(2, 3)).transpose(2, 3)
+            return self.ao2mo(ao.transpose(2, 3)).transpose(2, 3)
 
     def pos2cmo(self, x, derivative=0, jacobian=True):
         """Get the values of correlated MOs
@@ -168,7 +168,6 @@ class CorrelatedOrbital(OrbitalBase):
 
             if jacobian:
                 return mo * djast.sum(1).unsqueeze(1) + jast * dmo
-                # return mo.sum(1).unsqueeze(1) * djast + jast * dmo
             else:
                 return mo.unsqueeze(-1) * djast.sum(1).unsqueeze(1) + jast.unsqueeze(-1) * dmo
 
@@ -191,7 +190,6 @@ class CorrelatedOrbital(OrbitalBase):
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
             d2jast_mo = d2jast.sum(1).unsqueeze(1) * mo
-            # d2jast_mo = d2jast * mo.sum(1).unsqueeze(1)
 
             # assemble kin op
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
@@ -214,27 +212,54 @@ class CorrelatedOrbital(OrbitalBase):
         # get the matrix of correlated orbitals for all elec
         cmo = self.pos2cmo(x)
 
+        # compute the total wf
+        psi = self.pool(cmo)
+
         # compute  -0.5 * \Delta A (A = matrix of the correlated MO)
         bhess = self.get_kinetic_operator(x)
 
         # compute -0.5* ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
         hess = self.pool.operator(cmo, bhess)
 
-        # compute 2 * \nabla A
-        bgrad = self.get_gradient_opeator(x).permute(3, 0, 1, 2)
+        # compute \grad A
+        bgrad = self.get_gradient_operator(x)
 
-        # compute 2 * (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
-        grad = self.pool.operator(cmo, bgrad, op=operator.mult)
+        # compute (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
+        grad = self.pool.operator(cmo, bgrad, op=operator.mul)
 
         # assemble the total kinetic values
-        kin = hess + grad
+        # the minus sign comes from -0.5 * 2
+        kin = hess - grad.permute(1, 2, 0).sum(-1)
+
+        # assemble
+        return self.fc(kin * psi) / self.fc(psi)
+
+    def gradients_jacobi(self, x, jacobian=True):
+        """Computes the gradients of the wf using Jacobi's Formula
+
+        Args:
+            x ([type]): [description]
+        """
+
+        # get the CMO matrix
+        cmo = self.pos2cmo(x)
+
+        # get the grad of the wf
+        if jacobian:
+            bgrad = self.pos2cmo(x, derivative=1)
+        else:
+            bgrad = self.get_gradient_operator(x)
+
+        # compute the value of the grad using trace trick
+        grad = self.pool.operator(cmo, bgrad, op=operator.add)
 
         # compute the total wf
         psi = self.pool(cmo)
 
-        # assemble
-        out = self.fc(kin * psi) / self.fc(psi)
+        out = self.fc(grad * psi)
+        out = out.transpose(0, 1)
 
+        # assemble
         return out
 
     def get_kinetic_operator(self, x):
@@ -250,7 +275,7 @@ class CorrelatedOrbital(OrbitalBase):
 
         return -0.5 * self.pos2cmo(x, derivative=2)
 
-    def get_grad_operator(self, x):
+    def get_gradient_operator(self, x):
         """Compute the gradient operator
 
         Args:
@@ -259,84 +284,28 @@ class CorrelatedOrbital(OrbitalBase):
             dao ([type]): [description]
         """
 
-        return 2 * self.pos2cmo(x, derivative=1, jacobian=False)
+        mo = self.pos2mo(x)
+        dmo = self.pos2mo(x, derivative=1, jacobian=False)
 
-    def _old_grad(x):
+        jast = self.jastrow(x)
+        djast = self.jastrow(x, derivative=1, jacobian=False)
 
-        ao = self.ao(x)
-        grad_ao = self.ao(x, derivative=1, jacobian=False)
-        mo = self.ao2mo(ao)
+        # reformat to have Nelec, Ndim, Nbatch, 1, Nmo
+        djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
 
-        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
-        bgrad = bgrad.permute(3, 0, 1, 2).repeat(2, 1, 1, 1)
+        # reformat to have Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(3, 0, 1, 2)
 
-        for ielec in range(self.nelec):
-            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
-            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
+        # stride the tensor
+        eye = torch.eye(self.nelec).to(self.device)
+        dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
 
-        if self.use_jastrow:
+        # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(2, 0, 1, 3, 4)
 
-            jast = self.jastrow(x)
-            grad_jast = self.jastrow(x,
-                                     derivative=1,
-                                     jacobian=False)
-            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
+        # assemble the derivative
+        out = (mo * djast + dmo * jast)
 
-            grad_jast = grad_jast.flatten(start_dim=1)
-            grad_jast = grad_jast.transpose(0, 1)
-
-            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
-
-            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
-
-        return bgrad
-
-    def gradients_jacobi(self, x, pdf=False):
-        """Compute the gradients of the wave function (or density) using the Jacobi Formula
-        C. Filippi, Simple Formalism for Efficient Derivatives.
-
-        .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{grad})
-
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            pdf (bool, optional) : if true compute the grads of the density
-
-        Returns:
-            torch.tensor: values of the gradients wrt the walker pos at each sampling points
-        """
-
-        # compute the gradient operator matrix
-        ao = self.ao(x)
-        grad_ao = self.ao(x, derivative=1, jacobian=False)
-        mo = self.ao2mo(ao)
-        bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
-
-        # use the Jacobi formula to compute the value
-        # the grad of each determinants
-        grads = self.pool.operator(mo, bgrad)
-
-        # comoute the determinants
-        dets = self.pool(mo)
-
-        # CI sum
-        psi = self.fc(dets)
-
-        # assemble the final values of
-        # nabla psi / psi
-        grads = self.fc(grads * dets)
-        grads = grads.transpose(0, 1).squeeze()
-
-        # multiply by psi to get the grads
-        # grads = grads * psi
-        if self.use_jastrow:
-            jast = self.jastrow(x)
-            grads = grads * jast
-
-        # if we need the grads of the pdf
-        if pdf:
-            grads = 2*grads*psi
-            if self.use_jastrow:
-                grads = grads*jast
-
-        return grads
+        # collapse the first two dimensions
+        out = out.reshape(1, -1, *(out.shape[2:]))[0]
+        return out

@@ -52,9 +52,8 @@ class TestPadeJastrowOrbital(unittest.TestCase):
 
     def test_jastrow(self):
         val = self.jastrow(self.pos)
-        print(val.shape)
 
-    def test_grad_jastrow(self):
+    def test_jacobian_jastrow(self):
 
         val = self.jastrow(self.pos)
         dval = self.jastrow(self.pos, derivative=1)
@@ -69,6 +68,22 @@ class TestPadeJastrowOrbital(unittest.TestCase):
         gradcheck(self.jastrow, self.pos)
 
         assert torch.allclose(dval.sum(0), dval_grad)
+        assert(torch.allclose(dval.sum(), dval_grad.sum()))
+
+    def test_grad_jastrow(self):
+
+        val = self.jastrow(self.pos)
+        dval = self.jastrow(self.pos, derivative=1, jacobian=False)
+
+        dval_grad = grad(
+            val,
+            self.pos,
+            grad_outputs=torch.ones_like(val))[0]
+
+        dval_grad = dval_grad.reshape(
+            self.nbatch, self.nelec, 3)
+        gradcheck(self.jastrow, self.pos)
+
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
 
     def test_hess_jastrow(self):

@@ -160,7 +160,8 @@ class TestOrbitalWF(unittest.TestCase):
 
         grads = self.wf.gradients_jacobi(self.pos)
         grad_auto = self.wf.gradients_autograd(self.pos)
-
+        print(grads.shape)
+        print(grad_auto.shape)
         assert torch.allclose(grads, grad_auto)
 
     def test_gradients_pdf(self):
