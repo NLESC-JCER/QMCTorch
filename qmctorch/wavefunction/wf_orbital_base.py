@@ -174,7 +174,7 @@ class OrbitalBase(WaveFunction):
 
     def gto2sto(self, plot=False):
         """Fits the AO GTO to AO STO.
-            The SZ sto tht have only one basis function per ao
+            The SZ sto that have only one basis function per ao
         """
 
         assert(self.ao.radial_type.startswith('gto'))
@@ -247,12 +247,12 @@ class OrbitalBase(WaveFunction):
         new_mol.basis = basis
 
         # returns new orbital instance
-        return Orbital(new_mol, configs=self.configs_method,
-                       kinetic=self.kinetic_method,
-                       use_jastrow=self.use_jastrow,
-                       jastrow_type=self.jastrow_type,
-                       cuda=self.cuda,
-                       include_all_mo=self.include_all_mo)
+        return self.__class__(new_mol, configs=self.configs_method,
+                              kinetic=self.kinetic_method,
+                              use_jastrow=self.use_jastrow,
+                              jastrow_type=self.jastrow_type,
+                              cuda=self.cuda,
+                              include_all_mo=self.include_all_mo)
 
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
