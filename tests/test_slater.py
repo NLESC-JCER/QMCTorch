@@ -52,7 +52,8 @@ class TestSlater(unittest.TestCase):
         bkin = torch.rand(10, 22, 45)
         kin_explicit = self.wf.pool.operator_explicit(mo, bkin)
         kin = self.wf.pool.operator_single_double(mo, bkin)
-        assert(torch.allclose(kin_explicit, kin))
+        assert(torch.allclose(kin_explicit[0], kin[0]))
+        assert(torch.allclose(kin_explicit[1], kin[1]))
 
     def test_op_all_mo(self):
 
@@ -60,7 +61,8 @@ class TestSlater(unittest.TestCase):
         bkin = torch.rand(10, 22, 45)
         kin_explicit = self.wf_allmo.pool.operator_explicit(mo, bkin)
         kin = self.wf_allmo.pool.operator_single_double(mo, bkin)
-        assert(torch.allclose(kin_explicit, kin))
+        assert(torch.allclose(kin_explicit[0], kin[0]))
+        assert(torch.allclose(kin_explicit[1], kin[1]))
 
     def test_multiple_ops(self):
 
@@ -68,7 +70,8 @@ class TestSlater(unittest.TestCase):
         bop = torch.rand(6, 10, 22, 45)
         op_explicit = self.wf_allmo.pool.operator_explicit(mo, bop)
         op = self.wf_allmo.pool.operator_single_double(mo, bop)
-        assert(torch.allclose(op_explicit, op))
+        assert(torch.allclose(op_explicit[0], op[0]))
+        assert(torch.allclose(op_explicit[1], op[1]))
 
 
 if __name__ == "__main__":

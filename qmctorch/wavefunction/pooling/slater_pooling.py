@@ -357,10 +357,6 @@ class SlaterPooling(nn.Module):
         op_ground_down = btrace(
             invAdown @ bop[..., self.nup:, :self.ndown])
 
-        # xx = op_ground_up
-        # print(xx)
-        # print(xx.shape)
-
         op_ground_up.unsqueeze_(-1)
         op_ground_down.unsqueeze_(-1)
 
