@@ -101,12 +101,12 @@ class TestGenericJastrowOrbital(unittest.TestCase):
     def test_hess_jastrow(self):
 
         val = self.jastrow(self.pos)
-        d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
+        d2val_grad = hess(val, self.pos)
 
+        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
         assert torch.allclose(d2val.sum(0), d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))
-        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 
 if __name__ == "__main__":
@@ -115,4 +115,4 @@ if __name__ == "__main__":
     t.test_jastrow()
     t.test_grad_jastrow()
     t.test_jacobian_jastrow()
-    # t.test_hess_jastrow()
+    t.test_hess_jastrow()

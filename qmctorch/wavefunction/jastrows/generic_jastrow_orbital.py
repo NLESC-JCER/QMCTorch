@@ -69,7 +69,7 @@ class FullyConnectedJastrow(torch.nn.Module):
         # add the cusp weight
         # x = x + self.cusp_weights
 
-        return 2*x
+        return 2*x*x
 
 
 class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
@@ -199,7 +199,7 @@ class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
             jvals = jast(r)
             jhess, jgrads = self._hess(jvals, r)
             jhess = jhess.unsqueeze(
-                1) * dr2 + jgrads*unsqueeze(1) * d2r
+                1) * dr2 + jgrads.unsqueeze(1) * d2r
             jhess = jhess.unsqueeze(0)
 
             if out is None:
