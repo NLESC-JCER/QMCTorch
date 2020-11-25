@@ -74,6 +74,9 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
         gradcheck(self.jastrow, self.pos)
 
+        print(dval.sum())
+        print(dval_grad.sum())
+
         # Warning : using grad on a model made out of ModuleList
         # automatically summ the values of the grad of the different
         # modules in the list !
@@ -103,6 +106,9 @@ class TestGenericJastrowOrbital(unittest.TestCase):
         val = self.jastrow(self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
         d2val_grad = hess(val, self.pos)
+
+        print(d2val.sum())
+        print(d2val_grad.sum())
 
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
         assert torch.allclose(d2val.sum(0), d2val_grad.view(

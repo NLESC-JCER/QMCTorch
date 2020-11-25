@@ -15,9 +15,14 @@ class FullyConnectedJastrow(torch.nn.Module):
 
         self.cusp_weights = None
 
-        self.fc1 = nn.Linear(1, 128, bias=False)
-        self.fc2 = nn.Linear(128, 256, bias=False)
-        self.fc3 = nn.Linear(256, 1, bias=False)
+        self.fc1 = nn.Linear(1, 16, bias=False)
+        self.fc2 = nn.Linear(16, 8, bias=False)
+        self.fc3 = nn.Linear(8, 1, bias=False)
+
+        self.nl_func = torch.sigmoid
+        self.nl_func = lambda x:  x
+
+        self.prefac = torch.rand(1)
 
     @staticmethod
     def get_cusp_weights(npairs):
@@ -42,6 +47,14 @@ class FullyConnectedJastrow(torch.nn.Module):
         return weights
 
     def forward(self, x):
+
+        nbatch, npairs = x.shape
+        x = x.reshape(-1, 1)
+        x = self.prefac * self.nl_func(x*x*x)
+
+        return x.reshape(nbatch, npairs)
+
+    def _forward(self, x):
         """Compute the values of the individual f_ij=f(r_ij)
 
         Args:
@@ -59,17 +72,17 @@ class FullyConnectedJastrow(torch.nn.Module):
         # independently of each other
         x = x.reshape(-1, 1)
 
-        # x = self.fc1(x)
-        # x = self.fc2(x)
-        # x = self.fc3(x)
-        # x = 2*x
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.nl_func(self.fc3(x))
+
         # reshape to the original shape
         x = x.reshape(nbatch, npairs)
 
         # add the cusp weight
-        # x = x + self.cusp_weights
+        x = x + self.cusp_weights
 
-        return 2*x*x
+        return x
 
 
 class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
