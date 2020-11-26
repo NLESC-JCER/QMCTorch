@@ -52,7 +52,7 @@ class TestGenericJastrowOrbital(unittest.TestCase):
             self.nup, self.ndown, self.nmo, FullyConnectedJastrow, False)
         self.nbatch = 5
 
-        self.pos = 1E-3 * torch.rand(self.nbatch, self.nelec * 3)
+        self.pos = 1E-1 * torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
 
     def test_jastrow(self):
@@ -74,14 +74,11 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
         gradcheck(self.jastrow, self.pos)
 
-        print(dval.sum())
-        print(dval_grad.sum())
-
         # Warning : using grad on a model made out of ModuleList
         # automatically summ the values of the grad of the different
         # modules in the list !
-        assert(torch.allclose(dval.sum(), dval_grad.sum()))
         assert(torch.allclose(dval.sum(0), dval_grad))
+
 
     def test_jacobian_jastrow(self):
         """Checks the values of the gradients."""
@@ -98,8 +95,11 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
         gradcheck(self.jastrow, self.pos)
 
-        assert(torch.allclose(dval.sum(), dval_grad.sum()))
+        # Warning : using grad on a model made out of ModuleList
+        # automatically summ the values of the grad of the different
+        # modules in the list !
         assert torch.allclose(dval.sum(0), dval_grad)
+
 
     def test_hess_jastrow(self):
 
@@ -107,11 +107,10 @@ class TestGenericJastrowOrbital(unittest.TestCase):
         d2val = self.jastrow(self.pos, derivative=2)
         d2val_grad = hess(val, self.pos)
 
-        print(d2val.sum())
-        print(d2val_grad.sum())
-
-        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
-        assert torch.allclose(d2val.sum(0), d2val_grad.view(
+        # Warning : using grad on a model made out of ModuleList
+        # automatically summ the values of the grad of the different
+        # modules in the list !
+        assert torch.allclose(d2val.sum(0), d2val_grad.reshape(
             self.nbatch, self.nelec, 3).sum(2))
 
 
