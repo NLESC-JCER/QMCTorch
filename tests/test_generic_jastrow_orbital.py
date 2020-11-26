@@ -9,7 +9,7 @@ import torch
 from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.wavefunction.jastrows.generic_jastrow_orbital import GenericJastrowOrbitals
-from jastrow_network import FullyConnectedJastrow
+from qmctorch.wavefunction.jastrows.fully_connected_jastrow import FullyConnectedJastrow
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -79,7 +79,6 @@ class TestGenericJastrowOrbital(unittest.TestCase):
         # modules in the list !
         assert(torch.allclose(dval.sum(0), dval_grad))
 
-
     def test_jacobian_jastrow(self):
         """Checks the values of the gradients."""
         val = self.jastrow(self.pos)
@@ -99,7 +98,6 @@ class TestGenericJastrowOrbital(unittest.TestCase):
         # automatically summ the values of the grad of the different
         # modules in the list !
         assert torch.allclose(dval.sum(0), dval_grad)
-
 
     def test_hess_jastrow(self):
 
