@@ -6,6 +6,7 @@ import torch
 from scipy.optimize import curve_fit
 from torch import nn
 
+import torch
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals import AtomicOrbitals
@@ -119,11 +120,17 @@ class OrbitalBase(WaveFunction):
         self.log_data()
 
     def log_data(self):
+        """Print information abut the wave function."""
         log.info('')
         log.info(' Wave Function')
         log.info('  Jastrow factor      : {0}', self.use_jastrow)
         if self.use_jastrow:
-            log.info('  Jastrow type        : {0}', self.jastrow_type)
+            if isinstance(self.jastrow_type, str):
+                log.info(
+                    '  Jastrow type        : {0}', self.jastrow_type)
+            elif issubclass(self.jastrow_type, torch.nn.Module):
+                log.info(
+                    '  Jastrow type        : {0}', self.jastrow_type.__name__)
         log.info('  Highest MO included : {0}', self.nmo_opt)
         log.info('  Configurations      : {0}', self.configs_method)
         log.info('  Number of confs     : {0}', self.nci)

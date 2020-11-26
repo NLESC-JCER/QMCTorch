@@ -13,9 +13,8 @@ from .orbitals.atomic_orbitals import AtomicOrbitals
 from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
-from .jastrows.jastrow import set_jastrow
 from .wf_orbital_base import OrbitalBase
-from .jastrows.jastrow import set_jastrow_correlated
+from .jastrows.jastrow_correlated_orbitals import set_jastrow_correlated
 
 
 class CorrelatedOrbital(OrbitalBase):
@@ -25,7 +24,8 @@ class CorrelatedOrbital(OrbitalBase):
                  use_jastrow=True,
                  jastrow_type='pade_jastrow',
                  cuda=False,
-                 include_all_mo=True):
+                 include_all_mo=True,
+                 **kwargs):
         """Implementation of the QMC Network.
 
         Args:
@@ -50,7 +50,7 @@ class CorrelatedOrbital(OrbitalBase):
                                                 cuda, include_all_mo)
 
         self.jastrow_fn = set_jastrow_correlated(
-            jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda)
+            jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda, **kwargs)
 
     def jastrow(self, pos, derivative=0, jacobian=True):
         """Returns the value of the jastrow with the correct dimensions

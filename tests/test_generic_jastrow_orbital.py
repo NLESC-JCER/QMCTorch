@@ -9,7 +9,7 @@ import torch
 from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.wavefunction.jastrows.generic_jastrow_orbital import GenericJastrowOrbitals
-from qmctorch.wavefunction.jastrows.generic_jastrow_orbital import FullyConnectedJastrow
+from jastrow_network import FullyConnectedJastrow
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -49,7 +49,7 @@ class TestGenericJastrowOrbital(unittest.TestCase):
         self.nelec = self.nup + self.ndown
         self.nmo = 10
         self.jastrow = GenericJastrowOrbitals(
-            self.nup, self.ndown, self.nmo, FullyConnectedJastrow)
+            self.nup, self.ndown, self.nmo, FullyConnectedJastrow, False)
         self.nbatch = 5
 
         self.pos = 1E-3 * torch.rand(self.nbatch, self.nelec * 3)
