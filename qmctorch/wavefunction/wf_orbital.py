@@ -46,6 +46,8 @@ class Orbital(OrbitalBase):
         self.jastrow = set_jastrow(
             jastrow_type, self.mol.nup, self.mol.ndown, self.cuda).to(self.device)
 
+        self.log_data()
+
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
 

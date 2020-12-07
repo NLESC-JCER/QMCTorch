@@ -63,13 +63,12 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
                                     configs='single_double(2,2)',
                                     jastrow_type=FullyConnectedJastrow)
 
-        # self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
-        # self.wf.fc.weight.data = self.random_fc_weight
+        self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
+        self.wf.fc.weight.data = self.random_fc_weight
 
         self.nbatch = 10
         self.pos = torch.tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
-        # self.pos = torch.tensor([[1., 1., 1., -1., -1., -1.]])
         self.pos.requires_grad = True
 
     def test_forward(self):
@@ -117,35 +116,35 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_jacobian_jast(self):
         """Jacobian of the jastrow values."""
 
-        jast = self.wf.jastrow(self.pos)
-        djast = self.wf.jastrow(self.pos, derivative=1)
+        jast = self.wf.ordered_jastrow(self.pos)
+        djast = self.wf.ordered_jastrow(self.pos, derivative=1)
 
         djast_grad = grad(jast, self.pos,
                           grad_outputs=torch.ones_like(jast))[0]
 
-        gradcheck(self.wf.jastrow, self.pos)
+        gradcheck(self.wf.ordered_jastrow, self.pos)
 
         assert(torch.allclose(djast_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1),
                               djast.sum(-1)))
 
     def test_grad_jast(self):
         """Gradients of the jastrow values."""
-        jast = self.wf.jastrow(self.pos)
-        djast = self.wf.jastrow(
+        jast = self.wf.ordered_jastrow(self.pos)
+        djast = self.wf.ordered_jastrow(
             self.pos, derivative=1, jacobian=False)
 
         djast_grad = grad(jast, self.pos,
                           grad_outputs=torch.ones_like(jast))[0]
 
-        gradcheck(self.wf.jastrow, self.pos)
+        gradcheck(self.wf.ordered_jastrow, self.pos)
 
         assert(torch.allclose(djast_grad.view(self.nbatch, self.wf.nelec, 3),
                               djast.sum(-2)))
 
     def test_hess_jast(self):
         """Hessian of the jastrows."""
-        jast = self.wf.jastrow(self.pos)
-        d2jast = self.wf.jastrow(self.pos, derivative=2)
+        jast = self.wf.ordered_jastrow(self.pos)
+        d2jast = self.wf.ordered_jastrow(self.pos, derivative=2)
 
         d2jast_grad = hess(jast, self.pos)
         assert(torch.allclose(d2jast.sum(), d2jast_grad.sum()))

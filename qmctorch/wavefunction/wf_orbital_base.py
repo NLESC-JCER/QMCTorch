@@ -117,20 +117,14 @@ class OrbitalBase(WaveFunction):
                                    'mo', 'jastrow',
                                    'pool', 'kinpool', 'fc'])
 
-        self.log_data()
-
     def log_data(self):
         """Print information abut the wave function."""
         log.info('')
         log.info(' Wave Function')
         log.info('  Jastrow factor      : {0}', self.use_jastrow)
         if self.use_jastrow:
-            if isinstance(self.jastrow_type, str):
-                log.info(
-                    '  Jastrow type        : {0}', self.jastrow_type)
-            elif issubclass(self.jastrow_type, torch.nn.Module):
-                log.info(
-                    '  Jastrow type        : {0}', self.jastrow_type.__name__)
+            log.info(
+                '  Jastrow type        : {0}', self.jastrow_type)
         log.info('  Highest MO included : {0}', self.nmo_opt)
         log.info('  Configurations      : {0}', self.configs_method)
         log.info('  Number of confs     : {0}', self.nci)

@@ -49,10 +49,15 @@ class CorrelatedOrbital(OrbitalBase):
                                                 kinetic, use_jastrow, jastrow_type,
                                                 cuda, include_all_mo)
 
-        self.jastrow_fn = set_jastrow_correlated(
+        self.jastrow = set_jastrow_correlated(
             jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda, **kwargs)
 
-    def jastrow(self, pos, derivative=0, jacobian=True):
+        self.jastrow_type = self.jastrow.__class__.__name__.split('\n')[
+            0]
+
+        self.log_data()
+
+    def ordered_jastrow(self, pos, derivative=0, jacobian=True):
         """Returns the value of the jastrow with the correct dimensions
 
         Args:
@@ -70,7 +75,7 @@ class CorrelatedOrbital(OrbitalBase):
                           Nbatch, Nelec, Nmo (jacobian = True)
                           Nbatch, Nelec, Nmo, Ndim (jacobian = False)
         """
-        jast_vals = self.jastrow_fn(pos, derivative, jacobian)
+        jast_vals = self.jastrow(pos, derivative, jacobian)
 
         def permute(vals):
             """transpose the data depending on it number of dim."""
@@ -105,7 +110,7 @@ class CorrelatedOrbital(OrbitalBase):
         """
 
         # compute the jastrow from the pos
-        J = self.jastrow(x)
+        J = self.ordered_jastrow(x)
 
         # atomic orbital
         if ao is None:
@@ -155,7 +160,7 @@ class CorrelatedOrbital(OrbitalBase):
         """
         if derivative == 0:
             mo = self.pos2mo(x)
-            jast = self.jastrow(x)
+            jast = self.ordered_jastrow(x)
             return jast * mo
 
         elif derivative == 1:
@@ -163,8 +168,9 @@ class CorrelatedOrbital(OrbitalBase):
             mo = self.pos2mo(x)
             dmo = self.pos2mo(x, derivative=1, jacobian=jacobian)
 
-            jast = self.jastrow(x)
-            djast = self.jastrow(x, derivative=1, jacobian=jacobian)
+            jast = self.ordered_jastrow(x)
+            djast = self.ordered_jastrow(
+                x, derivative=1, jacobian=jacobian)
 
             if jacobian:
                 return mo * djast.sum(1).unsqueeze(1) + jast * dmo
@@ -182,9 +188,10 @@ class CorrelatedOrbital(OrbitalBase):
             d2mo = self.ao2mo(d2ao)
 
             # jastrows
-            jast, djast, d2jast = self.jastrow(x,
-                                               derivative=[0, 1, 2],
-                                               jacobian=False)
+            jast, djast, d2jast = self.ordered_jastrow(x,
+                                                       derivative=[
+                                                           0, 1, 2],
+                                                       jacobian=False)
 
             # terms of the kin op
             jast_d2mo = d2mo * jast
@@ -287,8 +294,8 @@ class CorrelatedOrbital(OrbitalBase):
         mo = self.pos2mo(x)
         dmo = self.pos2mo(x, derivative=1, jacobian=False)
 
-        jast = self.jastrow(x)
-        djast = self.jastrow(x, derivative=1, jacobian=False)
+        jast = self.ordered_jastrow(x)
+        djast = self.ordered_jastrow(x, derivative=1, jacobian=False)
 
         # reformat to have Nelec, Ndim, Nbatch, 1, Nmo
         djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
