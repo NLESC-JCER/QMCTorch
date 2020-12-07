@@ -44,7 +44,10 @@ class Orbital(OrbitalBase):
                                       use_jastrow, jastrow_type, cuda, include_all_mo)
 
         self.jastrow = set_jastrow(
-            jastrow_type, self.mol.nup, self.mol.ndown, self.cuda).to(self.device)
+            jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
+
+        if self.cuda:
+            self.jastrow = self.jastrow.to(self.device)
 
         self.log_data()
 

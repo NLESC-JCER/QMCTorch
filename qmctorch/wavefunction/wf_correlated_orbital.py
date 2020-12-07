@@ -52,8 +52,10 @@ class CorrelatedOrbital(OrbitalBase):
         self.jastrow = set_jastrow_correlated(
             jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda, **kwargs)
 
-        self.jastrow_type = self.jastrow.__class__.__name__.split('\n')[
-            0]
+        if self.cuda:
+            self.jastrow = self.jastrow.to(self.device)
+
+        self.jastrow_type = self.jastrow.__class__.__name__
 
         self.log_data()
 
