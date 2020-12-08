@@ -77,13 +77,14 @@ class TestH2Correlated(unittest.TestCase):
         # sample and compute observables
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
-
+        print(e.item())
+        print(v.item())
         # values on different arch
-        expected_energy = [-1.1464850902557373,
+        expected_energy = [-1.1286007165908813,
                            -1.14937478612449]
 
         # values on different arch
-        expected_variance = [0.9279592633247375,
+        expected_variance = [0.45748308300971985,
                              0.7445300449383236]
 
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
@@ -125,11 +126,10 @@ class TestH2Correlated(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestH2Correlated()
-    t.setUp()
-    t.test1_single_point()
+    unittest.main()
+    # t = TestH2Correlated()
+    # t.setUp()
+    # t.test1_single_point()
     # t.test2_single_point_hmc()
-
     # # t.test3_wf_opt()
     # t.test5_sampling_traj()
