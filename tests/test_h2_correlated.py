@@ -81,11 +81,11 @@ class TestH2Correlated(unittest.TestCase):
         print(v.item())
         # values on different arch
         expected_energy = [-1.1286007165908813,
-                           -1.14937478612449]
+                           -1.099538658544285]
 
         # values on different arch
         expected_variance = [0.45748308300971985,
-                             0.7445300449383236]
+                             0.5163105076990828]
 
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
@@ -107,10 +107,12 @@ class TestH2Correlated(unittest.TestCase):
 
         self.solver.configure(track=['local_energy'],
                               loss='energy', grad='auto')
-        self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
+        self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5,
+                            hdf5_group='geo_opt_correlated')
 
         # load the best model
-        self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
+        self.solver.wf.load(self.solver.hdf5file,
+                            'geo_opt_correlated')
         self.solver.wf.eval()
 
         # sample and compute variables
