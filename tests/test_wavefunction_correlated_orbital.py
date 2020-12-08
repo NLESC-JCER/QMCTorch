@@ -113,35 +113,35 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_jacobian_jast(self):
         """Jacobian of the jastrow values."""
 
-        jast = self.wf.jastrow(self.pos)
-        djast = self.wf.jastrow(self.pos, derivative=1)
+        jast = self.wf.ordered_jastrow(self.pos)
+        djast = self.wf.ordered_jastrow(self.pos, derivative=1)
 
         djast_grad = grad(jast, self.pos,
                           grad_outputs=torch.ones_like(jast))[0]
 
-        gradcheck(self.wf.jastrow, self.pos)
+        gradcheck(self.wf.ordered_jastrow, self.pos)
 
         assert(torch.allclose(djast_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1),
                               djast.sum(-1)))
 
     def test_grad_jast(self):
         """Gradients of the jastrow values."""
-        jast = self.wf.jastrow(self.pos)
-        djast = self.wf.jastrow(
+        jast = self.wf.ordered_jastrow(self.pos)
+        djast = self.wf.ordered_jastrow(
             self.pos, derivative=1, jacobian=False)
 
         djast_grad = grad(jast, self.pos,
                           grad_outputs=torch.ones_like(jast))[0]
 
-        gradcheck(self.wf.jastrow, self.pos)
+        gradcheck(self.wf.ordered_jastrow, self.pos)
 
         assert(torch.allclose(djast_grad.view(self.nbatch, self.wf.nelec, 3),
                               djast.sum(-2)))
 
     def test_hess_jast(self):
         """Hessian of the jastrows."""
-        jast = self.wf.jastrow(self.pos)
-        d2jast = self.wf.jastrow(self.pos, derivative=2)
+        jast = self.wf.ordered_jastrow(self.pos)
+        d2jast = self.wf.ordered_jastrow(self.pos, derivative=2)
 
         d2jast_grad = hess(jast, self.pos)
 
@@ -201,9 +201,6 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
-
-        print(eauto)
-        print(ejac)
 
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
