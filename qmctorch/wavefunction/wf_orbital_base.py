@@ -71,9 +71,10 @@ class OrbitalBase(WaveFunction):
             self.mo_scf.to(self.device)
 
         # define the mo mixing layer
-        self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
+        # self.mo = nn.Linear(mol.basis.nmo, self.nmo_opt, bias=False)
+        self.mo = nn.Linear(self.nmo_opt, self.nmo_opt, bias=False)
         self.mo.weight = nn.Parameter(
-            torch.eye(mol.basis.nmo, self.nmo_opt))
+            torch.eye(self.nmo_opt, self.nmo_opt))
         if self.cuda:
             self.mo.to(self.device)
 
