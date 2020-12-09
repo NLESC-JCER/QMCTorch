@@ -57,25 +57,29 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             redo_scf=True)
 
         self.wf = CorrelatedOrbital(
-            mol, kinetic='auto', configs='single_double(2,2)')
+            mol,
+            kinetic='auto',
+            jastrow_type='pade_jastrow',
+            configs='single_double(2,2)')
 
-        # self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
-        # self.wf.fc.weight.data = self.random_fc_weight
+        self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
+        self.wf.fc.weight.data = self.random_fc_weight
 
         self.nbatch = 10
         self.pos = torch.tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
-        # self.pos = torch.tensor([[1., 1., 1., -1., -1., -1.]])
+
         self.pos.requires_grad = True
 
     def test_forward(self):
         """Value of the wave function."""
         wfvals = self.wf(self.pos)
 
-        ref = torch.tensor([[0.2339], [0.2092], [0.3335], [0.2806], [0.1317],
-                            [0.0996], [0.1210], [0.1406], [0.2626], [0.4675]])
+        ref = torch.tensor([[0.1235], [0.0732], [0.0732], [0.1045],
+                            [0.0547], [0.0488], [0.0559], [0.0856],
+                            [0.0987], [0.2229]])
 
-        # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
     def test_jacobian_mo(self):
         """Jacobian of the uncorrelated MOs."""
@@ -205,30 +209,30 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
-    # def test_local_energy(self):
+    def test_local_energy(self):
 
-    #     self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
-    #     eloc_auto = self.wf.local_energy(self.pos)
+        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
+        eloc_auto = self.wf.local_energy(self.pos)
 
-    #     self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
-    #     eloc_jac = self.wf.local_energy(self.pos)
+        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
+        eloc_jac = self.wf.local_energy(self.pos)
 
-    #     ref = torch.tensor([[-1.6567],
-    #                         [-0.8790],
-    #                         [-2.8136],
-    #                         [-0.3644],
-    #                         [-0.4477],
-    #                         [-0.2709],
-    #                         [-0.6964],
-    #                         [-0.3993],
-    #                         [-0.4777],
-    #                         [-0.0579]])
+        ref = torch.tensor([[-1.4986],
+                            [-1.4440],
+                            [-1.8240],
+                            [-0.9403],
+                            [-1.1899],
+                            [-0.6654],
+                            [-0.7242],
+                            [-1.1938],
+                            [-1.0271],
+                            [-1.3117]])
 
-    #     assert torch.allclose(
-    #         eloc_auto.data, ref, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(
+            eloc_auto.data, ref, rtol=1E-4, atol=1E-4)
 
-    #     assert torch.allclose(
-    #         eloc_auto.data, eloc_jac.data, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(
+            eloc_auto.data, eloc_jac.data, rtol=1E-4, atol=1E-4)
 
 
 if __name__ == "__main__":
@@ -255,4 +259,4 @@ if __name__ == "__main__":
     t.test_grad_wf()
 
     t.test_kinetic_energy()
-    # t.test_local_energy()
+    t.test_local_energy()

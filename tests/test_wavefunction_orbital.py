@@ -54,7 +54,7 @@ class TestOrbitalWF(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = Orbital(mol, kinetic='auto', configs='cas(2,2)')
+        self.wf = Orbital(mol, kinetic='auto', configs='ground_state')
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -173,9 +173,9 @@ class TestOrbitalWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestOrbitalWF()
-    # t.setUp()
+    # unittest.main()
+    t = TestOrbitalWF()
+    t.setUp()
     # t.test_forward()
     # # t.test_local_energy()
     # # t.test_kinetic_energy()
