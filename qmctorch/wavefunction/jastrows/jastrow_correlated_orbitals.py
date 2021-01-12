@@ -1,5 +1,6 @@
 import torch
 from .pade_jastrow_orbital import PadeJastrowOrbital
+from .unity_jastrow_orbital import UnityJastrowOrbital
 from .generic_jastrow_orbital import GenericJastrowOrbitals
 from ... import log
 
@@ -14,7 +15,7 @@ def set_jastrow_correlated(jastrow_type, nup, ndown, nmo, cuda, **kwargs):
         cuda (bool): use cuda
     """
 
-    valid_specialized_names = ['pade_jastrow']
+    valid_specialized_names = ['pade_jastrow', 'unity']
     #    'pade_jastrow_(n)',
     #    'scaled_pade_jastrow']
 
@@ -22,6 +23,9 @@ def set_jastrow_correlated(jastrow_type, nup, ndown, nmo, cuda, **kwargs):
     if isinstance(jastrow_type, str):
         if jastrow_type == 'pade_jastrow':
             return PadeJastrowOrbital(nup, ndown, nmo, w=1., cuda=cuda)
+
+        elif jastrow_type == 'unity':
+            return UnityJastrowOrbital(nup, ndown, nmo, cuda=cuda)
 
         else:
             log.info(

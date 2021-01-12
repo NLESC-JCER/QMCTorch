@@ -13,7 +13,10 @@ import torch
 import unittest
 import itertools
 import os
+
+
 import operator
+
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -29,7 +32,7 @@ class TestCorrelatedOrbitalWF(BaseTestCorrelatedOrbitalWF):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 0; H 0 0 1.',
+            atom='Li 0 0 0; H 0 0 3.015',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
@@ -39,13 +42,11 @@ class TestCorrelatedOrbitalWF(BaseTestCorrelatedOrbitalWF):
             mol,
             kinetic='auto',
             jastrow_type='pade_jastrow',
-            configs='ground_state')
+            configs='ground_state',
+            include_all_mo=True)
 
-        self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
-        self.wf.fc.weight.data = self.random_fc_weight
-
-        self.wf.jastrow.weight.data = torch.rand(
-            self.wf.jastrow.weight.shape)
+        # self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
+        # self.wf.fc.weight.data = self.random_fc_weight
 
         self.nbatch = 10
         self.pos = torch.tensor(np.random.rand(
@@ -56,10 +57,10 @@ class TestCorrelatedOrbitalWF(BaseTestCorrelatedOrbitalWF):
     def test_forward(self):
         """Value of the wave function."""
         wfvals = self.wf(self.pos)
-
-        ref = torch.tensor([[0.1235], [0.0732], [0.0732], [0.1045],
-                            [0.0547], [0.0488], [0.0559], [0.0856],
-                            [0.0987], [0.2229]])
+        ref = torch.tensor([[-1.0935e-02], [6.4874e-02], [1.7879e-04],
+                            [1.5797e-02], [7.4684e-02], [-4.4445e-02],
+                            [-4.8149e-04], [-3.0355e-03], [-2.0027e-02],
+                            [5.1957e-05]])
 
         # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 

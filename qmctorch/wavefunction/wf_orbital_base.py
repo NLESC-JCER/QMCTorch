@@ -332,7 +332,7 @@ class OrbitalBase(WaveFunction):
         raise NotImplementedError(
             'Implement a gradient_jacobi method')
 
-    def get_grad_operator(self, x, ao, grad_ao, mo):
+    def get_gradient_operator(self, x, ao, grad_ao, mo):
         """Compute the gradient operator
 
         Args:
@@ -344,7 +344,7 @@ class OrbitalBase(WaveFunction):
         raise NotImplementedError(
             'Implement a get_grad_operator method')
 
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
+    def get_hessian_operator(self, x, ao, dao, d2ao,  mo):
         """Compute the Bkin matrix
 
         Args:

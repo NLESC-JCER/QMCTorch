@@ -80,7 +80,7 @@ class CorrelatedOrbital(OrbitalBase):
         jast_vals = self.jastrow(pos, derivative, jacobian)
 
         def permute(vals):
-            """transpose the data depending on it number of dim."""
+            """transpose the data depending on the number of dim."""
             if vals.ndim == 3:
                 return vals.permute(1, 2, 0)
             elif vals.ndim == 4:
@@ -195,6 +195,12 @@ class CorrelatedOrbital(OrbitalBase):
                                                            0, 1, 2],
                                                        jacobian=False)
 
+            print('dmo', dmo.shape)
+            print('d2mo', d2mo.shape)
+
+            print('djast', djast.shape)
+            print('d2jast', d2jast.shape)
+
             # terms of the kin op
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
@@ -221,13 +227,13 @@ class CorrelatedOrbital(OrbitalBase):
         # get the matrix of correlated orbitals for all elec
         cmo = self.pos2cmo(x)
 
-        # compute the total wf
-        psi = self.pool(cmo)
+        # compute the value of the slater det
+        slater_dets = self.pool(cmo)
 
-        # compute  -0.5 * \Delta A (A = matrix of the correlated MO)
-        bhess = self.get_kinetic_operator(x)
+        # compute  \Delta A (A = matrix of the correlated MO)
+        bhess = self.get_hessian_operator(x)
 
-        # compute -0.5* ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
+        # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
         hess = self.pool.operator(cmo, bhess)
 
         # compute \grad A
@@ -237,11 +243,10 @@ class CorrelatedOrbital(OrbitalBase):
         grad = self.pool.operator(cmo, bgrad, op=operator.mul)
 
         # assemble the total kinetic values
-        # the minus sign comes from -0.5 * 2
-        kin = hess - grad.permute(1, 2, 0).sum(-1)
+        kin = -0.5 * (hess + 2 * grad.sum(0))
 
         # assemble
-        return self.fc(kin * psi) / self.fc(psi)
+        return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
     def gradients_jacobi(self, x, jacobian=True):
         """Computes the gradients of the wf using Jacobi's Formula
@@ -255,7 +260,8 @@ class CorrelatedOrbital(OrbitalBase):
 
         # get the grad of the wf
         if jacobian:
-            bgrad = self.pos2cmo(x, derivative=1)
+            # bgrad = self.pos2cmo(x, derivative=1)
+            bgrad = self.get_gradient_operator(x).sum(0)
         else:
             bgrad = self.get_gradient_operator(x)
 
@@ -271,7 +277,7 @@ class CorrelatedOrbital(OrbitalBase):
         # assemble
         return out
 
-    def get_kinetic_operator(self, x):
+    def get_hessian_operator(self, x):
         """Compute the Bkin matrix
 
         Args:
@@ -282,7 +288,49 @@ class CorrelatedOrbital(OrbitalBase):
             torch.tensor: matrix of the kinetic operator
         """
 
-        return -0.5 * self.pos2cmo(x, derivative=2)
+        mo = self.pos2mo(x)
+        dmo = self.pos2mo(x, derivative=1, jacobian=False)
+        d2mo = self.pos2mo(x, derivative=2)
+
+        jast = self.ordered_jastrow(x)
+        djast = self.ordered_jastrow(x, derivative=1, jacobian=False)
+        d2jast = self.ordered_jastrow(x, derivative=2)
+
+        # \Delta_n J * MO
+        d2jast_mo = d2jast.permute(1, 0, 2).unsqueeze(2) * mo
+
+        # stride d2mo
+        eye = torch.eye(self.nelec).to(self.device)
+        d2mo = d2mo.unsqueeze(2) * eye.unsqueeze(-1)
+
+        # reshape d2mo to nelec, nbatch, nelec, nmo
+        d2mo = d2mo.permute(1, 0, 2, 3)
+
+        # \Delta_n MO * J
+        d2mo_jast = d2mo * jast.repeat(1, self.nelec, 1)
+
+        # reformat to have Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(3, 0, 1, 2)
+
+        # stride
+        eye = torch.eye(self.nelec).to(self.device)
+        dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
+
+        # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(2, 0, 1, 3, 4)
+
+        # reshape djast to Nelec, Ndim, Nbatch, 1, Nmo
+        djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
+
+        # \nabla jast \nabla mo
+        djast_dmo = (djast * dmo)
+
+        # sum over ndim -> Nelec, Nbatch, Nelec, Nmo
+        djast_dmo = djast_dmo.sum(1)
+
+        return d2mo_jast + d2jast_mo + 2*djast_dmo
+
+        # return self.pos2cmo(x, derivative=2)
 
     def get_gradient_operator(self, x):
         """Compute the gradient operator
@@ -316,5 +364,5 @@ class CorrelatedOrbital(OrbitalBase):
         out = (mo * djast + dmo * jast)
 
         # collapse the first two dimensions
-        out = out.reshape(1, -1, *(out.shape[2:]))[0]
+        out = out.reshape(-1, *(out.shape[2:]))
         return out

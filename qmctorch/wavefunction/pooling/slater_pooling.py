@@ -245,15 +245,31 @@ class SlaterPooling(nn.Module):
         Args:
             mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
             bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
+            op (operator): how to combine the up/down determinant
 
         Returns:
             torch.tensor: kinetic energy
         """
 
-        if self.config_method.startswith('cas('):
-            return op(*self.operator_explicit(mo, bop))
+        # get the values of the operator
+        if self.config_method == 'ground_state':
+            op_vals = self.operator_ground_state(mo, bop)
+
+        elif self.config_method.startswith('single_double('):
+            op_vals = self.operator_single_double(mo, bop)
+
+        elif self.config_method.startswith('cas('):
+            op_vals = self.operator_explicit(mo, bop)
+
         else:
-            return op(*self.operator_single_double(mo, bop))
+            raise ValueError(
+                'Configuration %s not recognized' % self.config_method)
+
+        # combine the values is necessary
+        if op is not None:
+            return op(*op_vals)
+        else:
+            return op_vals
 
     def operator_explicit(self, mo, bkin):
         r"""Computes the value of any operator using the trace trick for a product of spin up/down determinant.
@@ -286,9 +302,6 @@ class SlaterPooling(nn.Module):
             iAup = iAup.unsqueeze(1)
             iAdown = iAdown.unsqueeze(1)
 
-        # determinant product
-        # det_prod = torch.det(Aup) * torch.det(Adown)
-
         # kinetic terms
         op_val_up = btrace(iAup@Bup)
         op_val_down = btrace(iAdown@Bdown)
@@ -302,6 +315,38 @@ class SlaterPooling(nn.Module):
             op_val_down = op_val_down.transpose(0, 1)
 
         return (op_val_up, op_val_down)
+
+    def operator_ground_state(self, mo, bop):
+        """Computes the values of any operator on gs only
+
+        Args:
+            mo (torch.tensor): matrix of molecular orbitals
+            bkin (torch.tensor): matrix of kinetic operator
+
+        Returns:
+            torch.tensor: operator values
+        """
+
+        # occupied orbital matrix + det and inv on spin up
+        Aocc_up = mo[:, :self.nup, :self.nup]
+
+        # occupied orbital matrix + det and inv on spin down
+        Aocc_down = mo[:, self.nup:, :self.ndown]
+
+        # inverse of the
+        invAup = torch.inverse(Aocc_up)
+        invAdown = torch.inverse(Aocc_down)
+
+        # ground state operator
+        op_ground_up = btrace(
+            invAup @ bop[..., :self.nup, :self.nup])
+        op_ground_down = btrace(
+            invAdown @ bop[..., self.nup:, :self.ndown])
+
+        op_ground_up.unsqueeze_(-1)
+        op_ground_down.unsqueeze_(-1)
+
+        return op_ground_up, op_ground_down
 
     def operator_single_double(self, mo, bop):
         """Computes the value of any operator on gs + single + double
@@ -341,11 +386,9 @@ class SlaterPooling(nn.Module):
 
         # occupied orbital matrix + det and inv on spin up
         Aocc_up = mo[:, :self.nup, :self.nup]
-        #detAup = torch.det(Aocc_up)
 
         # occupied orbital matrix + det and inv on spin down
         Aocc_down = mo[:, self.nup:, :self.ndown]
-        #detAdown = torch.det(Aocc_down)
 
         # inverse of the
         invAup = torch.inverse(Aocc_up)
@@ -363,9 +406,6 @@ class SlaterPooling(nn.Module):
         # store the kin terms we need
         op_out_up = op_ground_up.clone()
         op_out_down = op_ground_down.clone()
-
-        if self.config_method == 'ground_state':
-            return op_out_up, op_out_down
 
         # virtual orbital matrices spin up/down
         Avirt_up = mo[:, :self.nup, self.nup:self.index_max_orb_up]

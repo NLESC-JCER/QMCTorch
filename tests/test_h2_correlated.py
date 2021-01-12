@@ -15,6 +15,7 @@ from qmctorch.wavefunction.jastrows.fully_connected_jastrow import FullyConnecte
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import CorrelatedOrbital
+from qmctorch.utils import set_torch_double_precision
 
 __PLOT__ = False
 
@@ -25,6 +26,7 @@ class TestH2Correlated(unittest.TestCase):
 
         torch.manual_seed(0)
         np.random.seed(0)
+        set_torch_double_precision()
 
         # optimal parameters
         self.opt_r = 0.69  # the two h are at +0.69 and -0.69
@@ -68,6 +70,20 @@ class TestH2Correlated(unittest.TestCase):
         # ground state pos
         self.ground_state_pos = 0.69
 
+    def test_0_wavefunction(self):
+
+        # artificial pos
+        self.nbatch = 10
+        self.pos = torch.tensor(np.random.rand(
+            self.nbatch, self.wf.nelec*3))
+        self.pos.requires_grad = True
+
+        eauto = self.wf.kinetic_energy_autograd(self.pos)
+        ejac = self.wf.kinetic_energy_jacobi(self.pos)
+        print(torch.stack([eauto, ejac], axis=1).squeeze())
+        assert torch.allclose(
+            eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
+
     def test1_single_point(self):
 
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
@@ -77,8 +93,7 @@ class TestH2Correlated(unittest.TestCase):
         # sample and compute observables
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
-        print(e.item())
-        print(v.item())
+
         # values on different arch
         expected_energy = [-1.1286007165908813,
                            -1.099538658544285]
@@ -128,9 +143,10 @@ class TestH2Correlated(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestH2Correlated()
-    # t.setUp()
+    # unittest.main()
+    t = TestH2Correlated()
+    t.setUp()
+    t.test_0_wavefunction()
     # t.test1_single_point()
     # t.test2_single_point_hmc()
     # # t.test3_wf_opt()

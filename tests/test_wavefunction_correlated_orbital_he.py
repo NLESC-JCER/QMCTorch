@@ -29,7 +29,7 @@ class TestCorrelatedOrbitalWF(BaseTestCorrelatedOrbitalWF):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 0; H 0 0 1.',
+            atom='He 0 0 10',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
@@ -83,14 +83,10 @@ if __name__ == "__main__":
     t.test_grad_cmo()
     t.test_hess_cmo()
 
-    t.test_grad_manual()
-    t.test_hess_manual()
-
     t.test_jacobian_wf()
     t.test_grad_wf()
 
     t.test_grad_slater_det()
-    t.test_hess_slater_det_manual()
     t.test_hess_slater_det()
 
     # t.test_kinetic_energy()
