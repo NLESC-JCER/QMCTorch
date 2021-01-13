@@ -48,7 +48,10 @@ class TestCorrelatedOrbitalWF(BaseTestCorrelatedOrbitalWF):
         # self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         # self.wf.fc.weight.data = self.random_fc_weight
 
-        self.nbatch = 10
+        self.wf.jastrow.weight.data = torch.rand(
+            self.wf.jastrow.weight.shape)
+
+        self.nbatch = 3
         self.pos = torch.tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
 
@@ -71,28 +74,30 @@ if __name__ == "__main__":
 
     t = TestCorrelatedOrbitalWF()
     t.setUp()
-    t.test_forward()
+    # t.test_forward()
 
-    t.test_jacobian_mo()
-    t.test_grad_mo()
-    t.test_hess_mo()
+    # t.test_jacobian_mo()
+    # t.test_grad_mo()
+    # t.test_hess_mo()
 
-    t.test_jacobian_jast()
-    t.test_grad_jast()
-    t.test_hess_jast()
+    # t.test_jacobian_jast()
+    # t.test_grad_jast()
+    # t.test_hess_jast()
 
-    t.test_grad_cmo()
-    t.test_hess_cmo()
+    # t.test_grad_cmo()
+    # t.test_hess_cmo()
+    # t.test_hess_single_cmo()
+    t.test_hess_subset_cmo()
 
-    t.test_grad_manual()
+    # t.test_grad_manual()
     t.test_hess_manual()
 
-    t.test_jacobian_wf()
-    t.test_grad_wf()
+    # t.test_jacobian_wf()
+    # t.test_grad_wf()
 
-    t.test_grad_slater_det()
-    t.test_hess_slater_det_manual()
-    t.test_hess_slater_det()
+    # t.test_grad_slater_det()
+    # t.test_hess_slater_det_manual()
+    # t.test_hess_slater_det()
 
     # t.test_kinetic_energy()
     # t.test_local_energy()

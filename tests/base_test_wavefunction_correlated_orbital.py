@@ -131,12 +131,40 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         d2val_grad = hess(val, self.pos)
 
         d2val = self.wf.get_hessian_operator(self.pos)
-        print('d2val', d2val.shape)
-
         d2val = d2val.permute(1, 2, 0, 3).sum(1)
-        print('d2val', d2val.shape)
+
         assert(torch.allclose(d2val.sum(-1),
                               d2val_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1)))
+
+    def test_hess_single_cmo(self):
+        """Hessian of the correlated MOs."""
+        nup = 1
+        i, j = 0, 1
+        val = self.wf.pos2cmo(self.pos)
+        val = val[:, i, j]
+        d2val_grad = hess(val, self.pos).sum(-1)
+        print('single d2val_grad', d2val_grad.shape)
+
+        d2val = self.get_hess_operator_local()
+        d2val = d2val[:, i, j]
+        print('single d2val', d2val.shape)
+
+        assert(torch.allclose(d2val, d2val_grad))
+
+    def test_hess_subset_cmo(self):
+        """Hessian of the correlated MOs."""
+        nup = 2
+
+        val = self.wf.pos2cmo(self.pos)
+        val = val[:, :nup, :nup]
+        d2val_grad = hess(val, self.pos).sum(-1)
+        print('single d2val_grad', d2val_grad.shape)
+
+        d2val = self.get_hess_operator_local()
+        d2val = d2val[:, :nup, :nup].sum(-1).sum(-1)
+        print('single d2val', d2val.shape)
+
+        assert(torch.allclose(d2val, d2val_grad))
 
     def test_grad_manual(self):
 
@@ -164,12 +192,42 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         print(grad_jacobi.sum())
         assert(torch.allclose(grad_jacobi, grad_auto))
 
+    def get_hess_operator_local(self):
+
+        mo = self.wf.pos2mo(self.pos)
+        dmo = self.wf.pos2mo(self.pos, derivative=1, jacobian=False)
+        d2mo = self.wf.pos2mo(self.pos, derivative=2)
+
+        jast = self.wf.ordered_jastrow(self.pos)
+        djast = self.wf.ordered_jastrow(
+            self.pos, derivative=1, jacobian=False)
+        d2jast = self.wf.ordered_jastrow(self.pos, derivative=2)
+
+        d2jast_mo = d2jast.sum(1).unsqueeze(1) * mo
+        d2mo_jast = d2mo * jast
+        djast_dmo = (djast * dmo).sum(-1)
+
+        return d2jast_mo + d2mo_jast + 2*djast_dmo
+
+    @staticmethod
+    def adjugate_2by2(inp):
+        out = torch.zeros_like(inp)
+        out[:, 0, 0] = inp[:, 1, 1]
+        out[:, 1, 1] = inp[:, 0, 0]
+        out[:, 1, 0] = -inp[:, 1, 0]
+        out[:, 0, 1] = -inp[:, 0, 1]
+        return out
+
     def test_hess_manual(self):
 
         nup = self.wf.mol.nup
+        nup = 2
+        i, j = 1, 1
 
         # compute the cmos
         cmo = self.wf.pos2cmo(self.pos)
+
+        # aup = cmo[:, i, j].view(-1, 1, 1)
         aup = cmo[:, :nup, :nup]
         iaup = torch.inverse(aup)
         sd = torch.det(aup)
@@ -177,21 +235,19 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         # get the hessian of that
         hess_auto = hess(sd, self.pos).sum(-1) / sd
 
-        # get th matrix of hess
-        ophess = self.wf.get_hessian_operator(
-            self.pos)
-        print(ophess.shape)
-        ophess_up = ophess[:, :, :nup, :nup]
-        hess_jacobi = btrace(iaup @ ophess_up).sum(0)
+        # get the matrix of hess
+        ophess = self.wf.pos2cmo(self.pos, derivative=2)
+        # ophess = self.wf.get_hessian_operator(
+        #     self.pos).sum(0)
+        # ophess = self.get_hess_operator_local()
 
-        # # get the matrix of hess
-        # ophess = self.wf.pos2cmo(self.pos, derivative=2)
-        # print(ophess.shape)
-        # ophess_up = ophess[:, :nup, :nup]
-        # hess_jacobi = btrace(iaup @ ophess_up)
+        # ophess_up = ophess[:, i, j].view(-1, 1, 1)
+        ophess_up = ophess[:, :nup, :nup]
+        hess_jacobi = btrace(iaup @ ophess_up)
 
-        print(hess_auto.sum())
         print(hess_jacobi.sum())
+        print(hess_auto.sum())
+        assert(torch.allclose(hess_jacobi.sum(), hess_auto.sum()))
         assert(torch.allclose(hess_jacobi, hess_auto))
 
     def test_grad_slater_det(self):
@@ -208,6 +264,58 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         sd_grad = sd_grad.sum(-1) / sd
 
         assert(torch.allclose(grad_gs, sd_grad))
+
+    def test_hess_slater_det_manual(self):
+
+        nup = self.wf.mol.nup
+        # nup = 1
+        ntot = 2*nup
+
+        # compute the cmos
+        cmo = self.wf.pos2cmo(self.pos)
+
+        # extract up./down matrices
+        aup = cmo[:, :nup, :nup]
+        adown = cmo[:, nup:ntot, :nup]
+
+        # compute inverse
+        iaup = torch.inverse(aup)
+        iadown = torch.inverse(adown)
+
+        # get the slater det prod
+        sd = torch.det(aup)*torch.det(adown)
+
+        # get the hessian of that
+        hess_auto = hess(sd, self.pos).sum(-1) / sd
+
+        # get the matrix of the gradients
+        opgrad = self.wf.get_gradient_operator(self.pos)
+
+        # get up/down op grad
+        opgrad_up = opgrad[:, :, :nup, :nup]
+        opgrad_down = opgrad[:, :, nup:ntot, :nup]
+
+        # get up/dpwn grad vals
+        grad_up = btrace(iaup @ opgrad_up)
+        grad_down = btrace(iadown @ opgrad_down)
+
+        # get th matrix of hess
+        ophess = self.wf.get_hessian_operator(self.pos)
+
+        # get up/down hess op
+        ophess_up = ophess[:, :, :nup, :nup]
+        ophess_down = ophess[:, :, nup:ntot, :nup]
+
+        # get up/dpwn grad vals
+        hess_up = btrace(iaup @ ophess_up)
+        hess_down = btrace(iadown @ ophess_down)
+
+        hess_jacobi = (hess_up.sum(0) + hess_down.sum(0) +
+                       2 * (grad_up*grad_down).sum(0))
+
+        print(hess_auto.sum())
+        print(hess_jacobi.sum())
+        assert(torch.allclose(hess_jacobi, hess_auto))
 
     def test_hess_slater_det(self):
         """hessian of the slater determinant."""
@@ -240,56 +348,6 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         print(check.sum())
         assert(torch.allclose(hess_jac, check))
 
-    def test_hess_slater_det_manual(self):
-
-        nup = self.wf.mol.nup
-
-        # compute the cmos
-        cmo = self.wf.pos2cmo(self.pos)
-
-        # extract up./down matrices
-        aup = cmo[:, :nup, :nup]
-        adown = cmo[:, nup:, :nup]
-
-        # compute inverse
-        iaup = torch.inverse(aup)
-        iadown = torch.inverse(adown)
-
-        # get the slater det prod
-        sd = torch.det(aup)*torch.det(adown)
-
-        # get the hessian of that
-        hess_auto = hess(sd, self.pos).sum(-1) / sd
-
-        # get the matrix of the gradients
-        opgrad = self.wf.get_gradient_operator(self.pos)
-
-        # get up/down op grad
-        opgrad_up = opgrad[:, :, :nup, :nup]
-        opgrad_down = opgrad[:, :, nup:, :nup]
-
-        # get up/dpwn grad vals
-        grad_up = btrace(iaup @ opgrad_up)
-        grad_down = btrace(iadown @ opgrad_down)
-
-        # get th matrix of hess
-        ophess = self.wf.get_hessian_operator(self.pos)
-
-        # get up/down hess op
-        ophess_up = ophess[:, :, :nup, :nup]
-        ophess_down = ophess[:, :, nup:, :nup]
-
-        # get up/dpwn grad vals
-        hess_up = btrace(iaup @ ophess_up)
-        hess_down = btrace(iadown @ ophess_down)
-
-        hess_jacobi = (hess_up.sum(0) + hess_down.sum(0) +
-                       2 * (grad_up*grad_down).sum(0))
-
-        print(hess_auto.sum())
-        print(hess_jacobi.sum())
-        assert(torch.allclose(hess_jacobi, hess_auto))
-
     def test_jacobian_wf(self):
         """Jacobian of det(CMO).
             \nabla det(CMOup) / det(CMOup) +  \nabla det(CMOup) / det(CMOup) """
@@ -307,8 +365,9 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
     def test_kinetic_energy(self):
         """Kinetic energty."""
         eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos)
-
+        ejac = self.wf.kinetic_energy_jacobi(self.pos).sum(0)
+        print(eauto)
+        print(ejac)
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
