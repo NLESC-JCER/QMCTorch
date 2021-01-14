@@ -221,13 +221,10 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
     def test_hess_manual(self):
 
         nup = self.wf.mol.nup
-        nup = 2
-        i, j = 1, 1
 
         # compute the cmos
         cmo = self.wf.pos2cmo(self.pos)
 
-        # aup = cmo[:, i, j].view(-1, 1, 1)
         aup = cmo[:, :nup, :nup]
         iaup = torch.inverse(aup)
         sd = torch.det(aup)
@@ -236,17 +233,33 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         hess_auto = hess(sd, self.pos).sum(-1) / sd
 
         # get the matrix of hess
-        ophess = self.wf.pos2cmo(self.pos, derivative=2)
-        # ophess = self.wf.get_hessian_operator(
-        #     self.pos).sum(0)
+        # ophess = self.wf.pos2cmo(self.pos, derivative=2)
+        ophess = self.wf.get_hessian_operator(
+            self.pos).sum(0)
         # ophess = self.get_hess_operator_local()
 
-        # ophess_up = ophess[:, i, j].view(-1, 1, 1)
         ophess_up = ophess[:, :nup, :nup]
         hess_jacobi = btrace(iaup @ ophess_up)
 
-        print(hess_jacobi.sum())
-        print(hess_auto.sum())
+        mat = self.wf.pos2cmo(self.pos)[:, :nup, :nup]
+        dmat = self.wf.get_gradient_operator(
+            self.pos)[:, :, :nup, :nup]
+        d2mat = self.wf.pos2cmo(self.pos, derivative=2)[:, :nup, :nup]
+
+        hess_manual = d2mat[:, 0, 0] * mat[:, 1, 1] + d2mat[:, 1, 1] * \
+            mat[:, 0, 0] + 2*(dmat[:, :, 0, 0] *
+                              dmat[:, :, 1, 1]).sum(0)
+        hess_manual -= (d2mat[:, 0, 1]*mat[:, 1, 0] + d2mat[:, 1, 0] *
+                        mat[:, 0, 1] + 2*(dmat[:, :, 0, 1]*dmat[:, :, 1, 0]).sum(0))
+        hess_manual /= torch.det(mat)
+
+        print('hess jacobi', hess_jacobi.sum())
+        print('hess auto', hess_auto.sum())
+        print('hess manual', hess_manual.sum())
+
+        print(hess_auto)
+        print(hess_manual)
+
         assert(torch.allclose(hess_jacobi.sum(), hess_auto.sum()))
         assert(torch.allclose(hess_jacobi, hess_auto))
 
@@ -323,9 +336,7 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         sd = self.wf.pool(cmo)[:, 0]
 
         bhess = self.wf.get_hessian_operator(self.pos)
-        print(bhess.shape)
         hess_gs = (self.wf.pool.operator(cmo, bhess).sum(0))[:, 0]
-        print(hess_gs.shape)
 
         # bhess = self.wf.pos2cmo(self.pos, derivative=2)
         # print(bhess.shape)
@@ -333,11 +344,8 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         # print(hess_gs.shape)
 
         bgrad = self.wf.get_gradient_operator(self.pos)
-        print(bgrad.shape)
         grad_gs = self.wf.pool.operator(cmo, bgrad, op=operator.mul)
-        print(grad_gs.shape)
         grad_gs = grad_gs.sum(0)
-        print(grad_gs.shape)
         grad_gs = grad_gs[:, 0]
 
         check = hess(sd, self.pos)
