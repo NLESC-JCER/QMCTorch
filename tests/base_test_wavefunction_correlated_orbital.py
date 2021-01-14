@@ -235,15 +235,16 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         # get the matrix of hess
         # ophess = self.wf.pos2cmo(self.pos, derivative=2)
         ophess = self.wf.get_hessian_operator(
-            self.pos).sum(0)
+            self.pos)
         # ophess = self.get_hess_operator_local()
 
-        ophess_up = ophess[:, :nup, :nup]
-        hess_jacobi = btrace(iaup @ ophess_up)
+        ophess_up = ophess[:, :, :nup, :nup]
+        hess_jacobi = btrace(iaup @ ophess_up).sum(0)
 
         mat = self.wf.pos2cmo(self.pos)[:, :nup, :nup]
         dmat = self.wf.get_gradient_operator(
             self.pos)[:, :, :nup, :nup]
+
         d2mat = self.wf.pos2cmo(self.pos, derivative=2)[:, :nup, :nup]
 
         hess_manual = d2mat[:, 0, 0] * mat[:, 1, 1] + d2mat[:, 1, 1] * \
