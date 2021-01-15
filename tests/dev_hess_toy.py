@@ -1,5 +1,6 @@
 import torch
 from torch.autograd import grad, gradcheck, Variable
+from qmctorch.utils import btrace
 
 
 def hess(out, pos):
@@ -171,11 +172,42 @@ class WF(object):
             dphi = self.phi(x, der=1)
             d2phi = self.phi(x, der=2)
 
-            jast_d2phi = d2phi * jast
-            djast_dphi = djast * dphi
-            d2jast_phi = d2jast.sum(0).unsqueeze(0) * phi
+            if not manual:
+                jast_d2phi = d2phi * jast
+                djast_dphi = djast * dphi
+                d2jast_phi = d2jast.sum(0).unsqueeze(0) * phi
 
-            return jast_d2phi + 2 * djast_dphi + d2jast_phi
+                return jast_d2phi + 2 * djast_dphi + d2jast_phi
+
+            else:
+
+                out = torch.zeros(2, 2, 2)
+
+                out[0, 0, 0] = d2jast[0, 0] * phi[0, 0] + \
+                    d2phi[0, 0] * jast[0] +  \
+                    2 * djast[0, 0] * dphi[0, 0]
+
+                out[1, 0, 0] = d2jast[1, 0] * phi[0, 0]
+
+                out[0, 0, 1] = d2jast[0, 1] * phi[0, 1] + \
+                    d2phi[0, 1] * jast[1] + \
+                    2 * djast[0, 1] * dphi[0, 1]
+
+                out[1, 0, 1] = d2jast[1, 1] * phi[0, 1]
+
+                out[0, 1, 0] = d2jast[0, 0] * phi[1, 0]
+
+                out[1, 1, 0] = d2jast[1, 0] * phi[1, 0] + \
+                    d2phi[1, 0] * jast[0] + \
+                    2 * djast[1, 0] * dphi[1, 0]
+
+                out[0, 1, 1] = d2jast[0, 1] * phi[1, 1]
+
+                out[1, 1, 1] = d2jast[1, 1] * phi[1, 1] + \
+                    d2phi[1, 1] * jast[1] + \
+                    2 * djast[1, 1] * dphi[1, 1]
+
+                return out
 
     def grad_auto(self, x, size):
         mat = self(x, der=0)[:size, :size]
@@ -201,9 +233,24 @@ class WF(object):
 
         mat = self(x, der=0)[:size, :size]
         imat = torch.inverse(mat)
-        ophess = self(x, der=2)[:size, :size]
+        ophess = self(x, der=2, manual=True)
 
-        return torch.trace(imat @ ophess)
+        return torch.trace(imat @ ophess[0]) + torch.trace(imat @ ophess[1])
+
+    def hess_jacobi_2(self, x):
+
+        mat = self(x, der=0)
+        dmat = self(x, 1, manual=True)
+        d2mat = self(x, 2, manual=False)
+        imat = torch.inverse(mat)
+
+        imat_dmat = imat @ dmat
+
+        a = (btrace(imat_dmat)**2).sum()
+        b = btrace(imat_dmat @ imat_dmat).sum()
+        c = btrace(imat @ d2mat)
+
+        return a - b + c
 
     def hess_2_manual(self, x):
 
@@ -233,8 +280,12 @@ if __name__ == "__main__":
 
     hess_auto = wf.hess_auto(x, size=2)
     hess_jacobi = wf.hess_jacobi(x, size=2)
+    hess_jacobi_2 = wf.hess_jacobi_2(x)
     hess_manual = wf.hess_2_manual(x)
 
     print(hess_manual)
     print(hess_auto)
     print(hess_jacobi)
+    print(hess_jacobi_2)
+
+    print(hess_auto/hess_jacobi)

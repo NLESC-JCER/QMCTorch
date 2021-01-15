@@ -51,7 +51,7 @@ class TestCorrelatedOrbitalWF(BaseTestCorrelatedOrbitalWF):
         self.wf.jastrow.weight.data = torch.rand(
             self.wf.jastrow.weight.shape)
 
-        self.nbatch = 3
+        self.nbatch = 10
         self.pos = torch.tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
 
@@ -85,18 +85,18 @@ if __name__ == "__main__":
     # t.test_hess_jast()
 
     # t.test_grad_cmo()
-    # t.test_hess_cmo()
-    # t.test_hess_single_cmo()
+    t.test_hess_cmo()
+    t.test_hess_single_cmo()
     t.test_hess_subset_cmo()
 
-    # t.test_grad_manual()
+    t.test_grad_manual()
     t.test_hess_manual()
 
-    # t.test_jacobian_wf()
-    # t.test_grad_wf()
+    t.test_jacobian_wf()
+    t.test_grad_wf()
 
-    # t.test_grad_slater_det()
-    # t.test_hess_slater_det_manual()
+    t.test_grad_slater_det()
+    t.test_hess_slater_det_manual()
     # t.test_hess_slater_det()
 
     # t.test_kinetic_energy()

@@ -145,7 +145,7 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         d2val_grad = hess(val, self.pos).sum(-1)
         print('single d2val_grad', d2val_grad.shape)
 
-        d2val = self.get_hess_operator_local()
+        d2val = self.wf.get_hessian_operator(self.pos).sum(0)
         d2val = d2val[:, i, j]
         print('single d2val', d2val.shape)
 
@@ -160,7 +160,7 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         d2val_grad = hess(val, self.pos).sum(-1)
         print('single d2val_grad', d2val_grad.shape)
 
-        d2val = self.get_hess_operator_local()
+        d2val = self.wf.get_hessian_operator(self.pos).sum(0)
         d2val = d2val[:, :nup, :nup].sum(-1).sum(-1)
         print('single d2val', d2val.shape)
 
@@ -184,39 +184,11 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         # get th matrix of hess
         opgrad = self.wf.get_gradient_operator(
             self.pos)
-        print(opgrad.shape)
+
         opgrad_up = opgrad[:, :, :nup, :nup]
         grad_jacobi = btrace(iaup @ opgrad_up).sum(0)
 
-        print(grad_auto.sum())
-        print(grad_jacobi.sum())
         assert(torch.allclose(grad_jacobi, grad_auto))
-
-    def get_hess_operator_local(self):
-
-        mo = self.wf.pos2mo(self.pos)
-        dmo = self.wf.pos2mo(self.pos, derivative=1, jacobian=False)
-        d2mo = self.wf.pos2mo(self.pos, derivative=2)
-
-        jast = self.wf.ordered_jastrow(self.pos)
-        djast = self.wf.ordered_jastrow(
-            self.pos, derivative=1, jacobian=False)
-        d2jast = self.wf.ordered_jastrow(self.pos, derivative=2)
-
-        d2jast_mo = d2jast.sum(1).unsqueeze(1) * mo
-        d2mo_jast = d2mo * jast
-        djast_dmo = (djast * dmo).sum(-1)
-
-        return d2jast_mo + d2mo_jast + 2*djast_dmo
-
-    @staticmethod
-    def adjugate_2by2(inp):
-        out = torch.zeros_like(inp)
-        out[:, 0, 0] = inp[:, 1, 1]
-        out[:, 1, 1] = inp[:, 0, 0]
-        out[:, 1, 0] = -inp[:, 1, 0]
-        out[:, 0, 1] = -inp[:, 0, 1]
-        return out
 
     def test_hess_manual(self):
 
@@ -233,33 +205,20 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
         hess_auto = hess(sd, self.pos).sum(-1) / sd
 
         # get the matrix of hess
-        # ophess = self.wf.pos2cmo(self.pos, derivative=2)
-        ophess = self.wf.get_hessian_operator(
-            self.pos)
-        # ophess = self.get_hess_operator_local()
+        ophess = self.wf.pos2cmo(self.pos, derivative=2)[
+            :, :nup, :nup]
 
-        ophess_up = ophess[:, :, :nup, :nup]
-        hess_jacobi = btrace(iaup @ ophess_up).sum(0)
+        # get the grad operator
+        opgrad = self.wf.get_gradient_operator(self.pos)[
+            :, :, :nup, :nup]
 
-        mat = self.wf.pos2cmo(self.pos)[:, :nup, :nup]
-        dmat = self.wf.get_gradient_operator(
-            self.pos)[:, :, :nup, :nup]
+        # precompute the iaup x grad
+        iaup_grad = iaup @ opgrad
 
-        d2mat = self.wf.pos2cmo(self.pos, derivative=2)[:, :nup, :nup]
-
-        hess_manual = d2mat[:, 0, 0] * mat[:, 1, 1] + d2mat[:, 1, 1] * \
-            mat[:, 0, 0] + 2*(dmat[:, :, 0, 0] *
-                              dmat[:, :, 1, 1]).sum(0)
-        hess_manual -= (d2mat[:, 0, 1]*mat[:, 1, 0] + d2mat[:, 1, 0] *
-                        mat[:, 0, 1] + 2*(dmat[:, :, 0, 1]*dmat[:, :, 1, 0]).sum(0))
-        hess_manual /= torch.det(mat)
-
-        print('hess jacobi', hess_jacobi.sum())
-        print('hess auto', hess_auto.sum())
-        print('hess manual', hess_manual.sum())
-
-        print(hess_auto)
-        print(hess_manual)
+        # assemble the hessian
+        hess_jacobi = btrace(iaup @ ophess)
+        hess_jacobi += (btrace(iaup_grad)**2).sum(0)
+        hess_jacobi -= btrace(iaup_grad @ iaup_grad).sum(0)
 
         assert(torch.allclose(hess_jacobi.sum(), hess_auto.sum()))
         assert(torch.allclose(hess_jacobi, hess_auto))
@@ -282,15 +241,13 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
     def test_hess_slater_det_manual(self):
 
         nup = self.wf.mol.nup
-        # nup = 1
-        ntot = 2*nup
 
         # compute the cmos
         cmo = self.wf.pos2cmo(self.pos)
 
         # extract up./down matrices
         aup = cmo[:, :nup, :nup]
-        adown = cmo[:, nup:ntot, :nup]
+        adown = cmo[:, nup:, :nup]
 
         # compute inverse
         iaup = torch.inverse(aup)
@@ -307,28 +264,35 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
 
         # get up/down op grad
         opgrad_up = opgrad[:, :, :nup, :nup]
-        opgrad_down = opgrad[:, :, nup:ntot, :nup]
+        opgrad_down = opgrad[:, :, nup:, :nup]
 
         # get up/dpwn grad vals
         grad_up = btrace(iaup @ opgrad_up)
         grad_down = btrace(iadown @ opgrad_down)
 
-        # get th matrix of hess
-        ophess = self.wf.get_hessian_operator(self.pos)
+        # get the matrix of hess
+        ophess = self.wf.pos2cmo(self.pos, derivative=2)
 
         # get up/down hess op
-        ophess_up = ophess[:, :, :nup, :nup]
-        ophess_down = ophess[:, :, nup:ntot, :nup]
+        ophess_up = ophess[:, :nup, :nup]
+        ophess_down = ophess[:, nup:, :nup]
 
-        # get up/dpwn grad vals
+        # get up hess vals
+        iaup_gradup = iaup @ opgrad_up
         hess_up = btrace(iaup @ ophess_up)
-        hess_down = btrace(iadown @ ophess_down)
+        hess_up += (btrace(iaup_gradup)**2).sum(0)
+        hess_up -= btrace(iaup_gradup @ iaup_gradup).sum(0)
 
-        hess_jacobi = (hess_up.sum(0) + hess_down.sum(0) +
+        # get the down hess vals
+        iadown_graddown = iadown @ opgrad_down
+        hess_down = btrace(iadown @ ophess_down)
+        hess_down += (btrace(iadown_graddown)**2).sum(0)
+        hess_down -= btrace(iadown_graddown @ iadown_graddown).sum(0)
+
+        # assemble the entire hessian
+        hess_jacobi = (hess_up + hess_down +
                        2 * (grad_up*grad_down).sum(0))
 
-        print(hess_auto.sum())
-        print(hess_jacobi.sum())
         assert(torch.allclose(hess_jacobi, hess_auto))
 
     def test_hess_slater_det(self):

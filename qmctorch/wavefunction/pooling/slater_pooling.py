@@ -366,7 +366,7 @@ class SlaterPooling(nn.Module):
                 op_down[..., self.index_unique_excitation[1]])
 
     def operator_unique_single_double(self, mo, bop):
-        """Compute the kinetic energy of the unique single/double conformation
+        """Compute the operator value of the unique single/double conformation
 
         Args:
             mo ([type]): [description]
