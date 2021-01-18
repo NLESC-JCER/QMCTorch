@@ -225,6 +225,7 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
 
     def test_grad_slater_det(self):
         """gradients of the slater determinant."""
+
         cmo = self.wf.pos2cmo(self.pos)
         sd = self.wf.pool(cmo)[:, 0]
 
@@ -295,31 +296,32 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
 
         assert(torch.allclose(hess_jacobi, hess_auto))
 
-    def test_hess_slater_det(self):
+    def test_hess_slater_det_products(self):
         """hessian of the slater determinant."""
+
         cmo = self.wf.pos2cmo(self.pos)
-        sd = self.wf.pool(cmo)[:, 0]
+        sd = self.wf.pool(cmo)
 
-        bhess = self.wf.get_hessian_operator(self.pos)
-        hess_gs = (self.wf.pool.operator(cmo, bhess).sum(0))[:, 0]
+        check = hess(sd, self.pos).sum(-1)
+        check = check.view(-1, 1)
+        check = check / sd
 
-        # bhess = self.wf.pos2cmo(self.pos, derivative=2)
-        # print(bhess.shape)
-        # hess_gs = self.wf.pool.operator(cmo, bhess)[:, 0]
-        # print(hess_gs.shape)
+        bhess = self.wf.pos2cmo(self.pos, 2)
+        hess_vals = self.wf.pool.operator(cmo, bhess)
 
         bgrad = self.wf.get_gradient_operator(self.pos)
-        grad_gs = self.wf.pool.operator(cmo, bgrad, op=operator.mul)
-        grad_gs = grad_gs.sum(0)
-        grad_gs = grad_gs[:, 0]
+        grad_vals = self.wf.pool.operator(cmo, bgrad, op=None)
+        grad_vals_squared = self.wf.pool.operator(
+            cmo, bgrad, op_squared=True)
 
-        check = hess(sd, self.pos)
-        check = check.sum(-1) / sd
+        hess_jacobi = hess_vals
+        hess_jacobi += operator.add(*[(g**2).sum(0)
+                                      for g in grad_vals])
 
-        hess_jac = hess_gs+2*grad_gs
-        print(hess_jac.sum())
-        print(check.sum())
-        assert(torch.allclose(hess_jac, check))
+        hess_jacobi -= grad_vals_squared.sum(0)
+        hess_jacobi += 2 * operator.mul(*grad_vals).sum(0)
+
+        assert(torch.allclose(hess_jacobi, check))
 
     def test_jacobian_wf(self):
         """Jacobian of det(CMO).
@@ -338,9 +340,8 @@ class BaseTestCorrelatedOrbitalWF(unittest.TestCase):
     def test_kinetic_energy(self):
         """Kinetic energty."""
         eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos).sum(0)
-        print(eauto)
-        print(ejac)
+        ejac = self.wf.kinetic_energy_jacobi(self.pos)
+
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 

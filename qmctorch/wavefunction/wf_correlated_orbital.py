@@ -224,7 +224,7 @@ class CorrelatedOrbital(OrbitalBase):
         slater_dets = self.pool(cmo)
 
         # compute  \Delta A (A = matrix of the correlated MO)
-        bhess = self.get_hessian_operator(x)
+        bhess = self.pos2cmo(x, 2)
 
         # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
         hess = self.pool.operator(cmo, bhess)
@@ -233,10 +233,14 @@ class CorrelatedOrbital(OrbitalBase):
         bgrad = self.get_gradient_operator(x)
 
         # compute (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
-        grad = self.pool.operator(cmo, bgrad, op=operator.mul)
+        grad = self.pool.operator(cmo, bgrad, op=None)
+        grad2 = self.pool.operator(cmo, bgrad, op_squared=True)
 
         # assemble the total kinetic values
-        kin = -0.5 * (hess + 2 * grad.sum(0))
+        kin = - 0.5 * (hess
+                       + operator.add(*[(g**2).sum(0) for g in grad])
+                       - grad2.sum(0)
+                       + 2 * operator.mul(*grad).sum(0))
 
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)

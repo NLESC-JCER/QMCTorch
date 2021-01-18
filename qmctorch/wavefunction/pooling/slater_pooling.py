@@ -203,11 +203,6 @@ class SlaterPooling(nn.Module):
             det_single_down = detAdown.unsqueeze(-1) * \
                 det_single_down.view(nbatch, -1)
 
-            # if the orbital in configs are in increasing order
-            # we should deal with that better ...
-            # det_up *= self.exc_mask.sign_unique_single_up
-            # det_down *= self.exc_mask.sign_unique_single_down
-
             # accumulate the dets
             det_out_up = torch.cat((det_out_up, det_single_up), dim=1)
             det_out_down = torch.cat(
@@ -239,13 +234,14 @@ class SlaterPooling(nn.Module):
 
         return det_out_up, det_out_down
 
-    def operator(self, mo, bop, op=op.add):
-        """Computes the values of the kinetic energy
+    def operator(self, mo, bop, op=op.add, op_squared=False):
+        """Computes the values of an opearator applied to the procuts of determinant
 
         Args:
             mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
             bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
-            op (operator): how to combine the up/down determinant
+            op (operator): how to combine the up/down contribution
+            op_squared (bool, optional) return the trace of the square of the product if True
 
         Returns:
             torch.tensor: kinetic energy
@@ -253,13 +249,16 @@ class SlaterPooling(nn.Module):
 
         # get the values of the operator
         if self.config_method == 'ground_state':
-            op_vals = self.operator_ground_state(mo, bop)
+            op_vals = self.operator_ground_state(mo, bop, op_squared)
 
         elif self.config_method.startswith('single_double('):
+            if op_squared:
+                raise ValueError(
+                    'Squared of operator cannot be computed on single double using the table method')
             op_vals = self.operator_single_double(mo, bop)
 
         elif self.config_method.startswith('cas('):
-            op_vals = self.operator_explicit(mo, bop)
+            op_vals = self.operator_explicit(mo, bop, op_squared)
 
         else:
             raise ValueError(
@@ -271,8 +270,48 @@ class SlaterPooling(nn.Module):
         else:
             return op_vals
 
-    def operator_explicit(self, mo, bkin):
-        r"""Computes the value of any operator using the trace trick for a product of spin up/down determinant.
+    def operator_ground_state(self, mo, bop, op_squared=False):
+        """Computes the values of any operator on gs only
+
+        Args:
+            mo (torch.tensor): matrix of molecular orbitals
+            bkin (torch.tensor): matrix of kinetic operator
+            op_squared (bool, optional) return the trace of the square of the product if True
+
+        Returns:
+            torch.tensor: operator values
+        """
+
+        # occupied orbital matrix + det and inv on spin up
+        Aocc_up = mo[:, :self.nup, :self.nup]
+
+        # occupied orbital matrix + det and inv on spin down
+        Aocc_down = mo[:, self.nup:, :self.ndown]
+
+        # inverse of the
+        invAup = torch.inverse(Aocc_up)
+        invAdown = torch.inverse(Aocc_down)
+
+        # precompute the product A^{-1} B
+        op_ground_up = invAup @ bop[..., :self.nup, :self.nup]
+        op_ground_down = invAdown @ bop[..., self.nup:, :self.ndown]
+
+        if op_squared:
+            op_ground_up = op_ground_up @ op_ground_up
+            op_ground_down = op_ground_down @ op_ground_down
+
+        # ground state operator
+        op_ground_up = btrace(op_ground_up)
+        op_ground_down = btrace(op_ground_down)
+
+        op_ground_up.unsqueeze_(-1)
+        op_ground_down.unsqueeze_(-1)
+
+        return op_ground_up, op_ground_down
+
+    def operator_explicit(self, mo, bkin, op_squared=False):
+        r"""Computes the value of any operator using the trace trick for a product
+            of spin up/down determinant.
 
         .. math::
             -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}
@@ -281,6 +320,7 @@ class SlaterPooling(nn.Module):
         Args:
             mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
             bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
+            op_squared (bool, optional) return the trace of the square of the product if True
 
         Returns:
             torch.tensor: kinetic energy
@@ -302,9 +342,17 @@ class SlaterPooling(nn.Module):
             iAup = iAup.unsqueeze(1)
             iAdown = iAdown.unsqueeze(1)
 
+        # precompute product invA x B
+        op_val_up = iAup @ Bup
+        op_val_down = iAdown @ Bdown
+
+        if op_squared:
+            op_val_up = op_val_up @ op_val_up
+            op_val_down = op_val_down @ op_val_down
+
         # kinetic terms
-        op_val_up = btrace(iAup@Bup)
-        op_val_down = btrace(iAdown@Bdown)
+        op_val_up = btrace(op_val_up)
+        op_val_down = btrace(op_val_down)
 
         # reshape
         if multiple_op:
@@ -315,38 +363,6 @@ class SlaterPooling(nn.Module):
             op_val_down = op_val_down.transpose(0, 1)
 
         return (op_val_up, op_val_down)
-
-    def operator_ground_state(self, mo, bop):
-        """Computes the values of any operator on gs only
-
-        Args:
-            mo (torch.tensor): matrix of molecular orbitals
-            bkin (torch.tensor): matrix of kinetic operator
-
-        Returns:
-            torch.tensor: operator values
-        """
-
-        # occupied orbital matrix + det and inv on spin up
-        Aocc_up = mo[:, :self.nup, :self.nup]
-
-        # occupied orbital matrix + det and inv on spin down
-        Aocc_down = mo[:, self.nup:, :self.ndown]
-
-        # inverse of the
-        invAup = torch.inverse(Aocc_up)
-        invAdown = torch.inverse(Aocc_down)
-
-        # ground state operator
-        op_ground_up = btrace(
-            invAup @ bop[..., :self.nup, :self.nup])
-        op_ground_down = btrace(
-            invAdown @ bop[..., self.nup:, :self.ndown])
-
-        op_ground_up.unsqueeze_(-1)
-        op_ground_down.unsqueeze_(-1)
-
-        return op_ground_up, op_ground_down
 
     def operator_single_double(self, mo, bop):
         """Computes the value of any operator on gs + single + double

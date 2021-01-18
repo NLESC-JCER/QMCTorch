@@ -74,17 +74,17 @@ if __name__ == "__main__":
 
     t = TestCorrelatedOrbitalWF()
     t.setUp()
-    # t.test_forward()
+    t.test_forward()
 
-    # t.test_jacobian_mo()
-    # t.test_grad_mo()
-    # t.test_hess_mo()
+    t.test_jacobian_mo()
+    t.test_grad_mo()
+    t.test_hess_mo()
 
-    # t.test_jacobian_jast()
-    # t.test_grad_jast()
-    # t.test_hess_jast()
+    t.test_jacobian_jast()
+    t.test_grad_jast()
+    t.test_hess_jast()
 
-    # t.test_grad_cmo()
+    t.test_grad_cmo()
     t.test_hess_cmo()
     t.test_hess_single_cmo()
     t.test_hess_subset_cmo()
@@ -97,7 +97,7 @@ if __name__ == "__main__":
 
     t.test_grad_slater_det()
     t.test_hess_slater_det_manual()
-    # t.test_hess_slater_det()
+    t.test_hess_slater_det_products()
 
-    # t.test_kinetic_energy()
-    # t.test_local_energy()
+    t.test_kinetic_energy()
+    t.test_local_energy()
