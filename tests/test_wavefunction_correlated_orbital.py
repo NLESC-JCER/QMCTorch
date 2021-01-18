@@ -37,9 +37,6 @@ def hess(out, pos):
     return hess
 
 
-torch.set_default_tensor_type(torch.DoubleTensor)
-
-
 class TestCorrelatedOrbitalWF(unittest.TestCase):
 
     def setUp(self):
