@@ -45,6 +45,11 @@ class OrbitalBase(WaveFunction):
         if not torch.cuda.is_available and self.cuda:
             raise ValueError('Cuda not available, use cuda=False')
 
+        # check for conf/mo size
+        if not include_all_mo and configs.startswith('cas('):
+            raise ValueError(
+                'CAS calculation only possible with include_all_mo=True')
+
         # number of atoms
         self.mol = mol
         self.atoms = mol.atoms

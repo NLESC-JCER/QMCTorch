@@ -53,9 +53,9 @@ mol = Molecule(
 
 wf = CorrelatedOrbital(
     mol,
-    kinetic='auto',
+    kinetic='jacobi',
     jastrow_type='pade_jastrow',
-    configs='ground_state')
+    configs='cas(2,2)')
 
 wf.jastrow.weight.data = torch.rand(wf.jastrow.weight.shape)
 

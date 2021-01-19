@@ -58,11 +58,11 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             mol,
             kinetic='auto',
             jastrow_type='pade_jastrow',
-            configs='ground_state',
+            configs='cas(2,2)',
             include_all_mo=True)
 
-        # self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
-        # self.wf.fc.weight.data = self.random_fc_weight
+        self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
+        self.wf.fc.weight.data = self.random_fc_weight
 
         self.wf.jastrow.weight.data = torch.rand(
             self.wf.jastrow.weight.shape)
