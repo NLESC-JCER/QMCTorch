@@ -251,7 +251,7 @@ class SlaterPooling(nn.Module):
         if self.config_method == 'ground_state':
             op_vals = self.operator_ground_state(mo, bop, op_squared)
 
-        elif self.config_method.startswith('single_double('):
+        elif self.config_method.startswith('single'):
             if op_squared:
                 raise ValueError(
                     'Squared of operator cannot be computed on single double using the table method')
