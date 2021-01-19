@@ -1,14 +1,18 @@
 import torch
 
 
-Atot = torch.rand(3, 5)
-Btot = torch.rand(3, 5)
+Atot = torch.rand(4, 6)
+Btot = torch.rand(4, 6)
 
-A0 = Atot[:, :3]
-B0 = Btot[:, :3]
+A = Atot[:, :4]
+B = Btot[:, :4]
 
-Abar = Atot[:, [0, 1, 3]]
-Bbar = Btot[:, [0, 1, 3]]
+Abar = Atot[:, [0, 4, 2, 5]]
+Bbar = Btot[:, [0, 4, 2, 5]]
 
-P = torch.zeros(3, 3)
-P[2, 2] = 1
+P = torch.zeros(4, 4)
+P[1, 1] = 1
+P[3, 3] = 1
+
+Ax = Abar - A
+invA = torch.inverse(A)

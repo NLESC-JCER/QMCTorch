@@ -42,8 +42,9 @@ class TestH2Correlated(unittest.TestCase):
         # wave function
         self.wf = CorrelatedOrbital(self.mol,
                                     kinetic='auto',
-                                    configs='single_double(2,2)',
-                                    jastrow_type=FullyConnectedJastrow)
+                                    configs='cas(2,2)',
+                                    jastrow_type=FullyConnectedJastrow,
+                                    include_all_mo=True)
 
         # sampler
         self.sampler = Metropolis(

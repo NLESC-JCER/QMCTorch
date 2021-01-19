@@ -27,8 +27,8 @@ class TestLiHCorrelated(unittest.TestCase):
 
         # wave function
         self.wf = CorrelatedOrbital(self.mol, kinetic='jacobi',
-                                    configs='single_double(2,2)',
-                                    include_all_mo=False)
+                                    configs='cas(2,2)',
+                                    include_all_mo=True)
 
         # fc weights
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
