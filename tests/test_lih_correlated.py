@@ -10,6 +10,8 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction import CorrelatedOrbital
 from qmctorch.utils import set_torch_double_precision
 
+from .path_utils import PATH_TEST
+
 
 class TestLiHCorrelated(unittest.TestCase):
 
@@ -18,12 +20,11 @@ class TestLiHCorrelated(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
         set_torch_double_precision()
+
         # molecule
-        self.mol = Molecule(
-            atom='Li 0 0 0; H 0 0 3.015',
-            unit='bohr',
-            calculator='adf',
-            basis='dz')
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/LiH_adf_dz.hdf5').absolute().as_posix()
+        self.mol = Molecule(load=path_hdf5)
 
         # wave function
         self.wf = CorrelatedOrbital(self.mol, kinetic='jacobi',
