@@ -252,10 +252,7 @@ class SlaterPooling(nn.Module):
             op_vals = self.operator_ground_state(mo, bop, op_squared)
 
         elif self.config_method.startswith('single'):
-            if op_squared:
-                raise ValueError(
-                    'Squared of operator cannot be computed on single double using the table method')
-            op_vals = self.operator_single_double(mo, bop)
+            op_vals = self.operator_single_double(mo, bop, op_squared)
 
         elif self.config_method.startswith('cas('):
             op_vals = self.operator_explicit(mo, bop, op_squared)
@@ -364,29 +361,31 @@ class SlaterPooling(nn.Module):
 
         return (op_val_up, op_val_down)
 
-    def operator_single_double(self, mo, bop):
+    def operator_single_double(self, mo, bop, op_squared=False):
         """Computes the value of any operator on gs + single + double
 
         Args:
             mo (torch.tensor): matrix of molecular orbitals
             bkin (torch.tensor): matrix of kinetic operator
+            op_squared (bool, optional) return the trace of the square of the product if True
 
         Returns:
             torch.tensor: kinetic energy values
         """
 
         op_up, op_down = self.operator_unique_single_double(
-            mo, bop)
+            mo, bop, op_squared)
 
         return (op_up[..., self.index_unique_excitation[0]],
                 op_down[..., self.index_unique_excitation[1]])
 
-    def operator_unique_single_double(self, mo, bop):
+    def operator_unique_single_double(self, mo, bop, op_squared):
         """Compute the operator value of the unique single/double conformation
 
         Args:
             mo ([type]): [description]
             bkin ([type]): [description]
+            op_squared (bool) return the trace of the square of the product
         """
 
         nbatch = mo.shape[0]
@@ -410,11 +409,17 @@ class SlaterPooling(nn.Module):
         invAup = torch.inverse(Aocc_up)
         invAdown = torch.inverse(Aocc_down)
 
+        # precompute invA @ B
+        invAB_up = invAup @ bop[..., :self.nup, :self.nup]
+        invAB_down = invAdown @ bop[..., self.nup:, :self.ndown]
+
         # ground state operator
-        op_ground_up = btrace(
-            invAup @ bop[..., :self.nup, :self.nup])
-        op_ground_down = btrace(
-            invAdown @ bop[..., self.nup:, :self.ndown])
+        if op_squared:
+            op_ground_up = btrace(invAB_up@invAB_up)
+            op_ground_down = btrace(invAB_down@invAB_down)
+        else:
+            op_ground_up = btrace(invAB_up)
+            op_ground_down = btrace(invAB_down)
 
         op_ground_up.unsqueeze_(-1)
         op_ground_down.unsqueeze_(-1)
@@ -428,7 +433,7 @@ class SlaterPooling(nn.Module):
         Avirt_down = mo[:, self.nup:,
                         self.ndown: self.index_max_orb_down]
 
-        # compute the products of Ain and B
+        # compute the products of invA and Btilde
         mat_exc_up = (invAup @ Avirt_up)
         mat_exc_down = (invAdown @ Avirt_down)
 
@@ -446,51 +451,249 @@ class SlaterPooling(nn.Module):
         Mdown = invAdown @ bop_virt_down - \
             invAdown @ bop_occ_down @ invAdown @ Avirt_down
 
-        # reshape the M matrices
-        Mup = Mup.view(*Mup.shape[:-2], -1)
-        Mdown = Mdown.view(*Mdown.shape[:-2], -1)
+        # if we only want the normal value of the op and not its squared
+        if not op_squared:
 
-        if do_single:
+            # reshape the M matrices
+            Mup = Mup.view(*Mup.shape[:-2], -1)
+            Mdown = Mdown.view(*Mdown.shape[:-2], -1)
 
-            op_sin_up = (1. / mat_exc_up.view(nbatch, -1)[:, self.exc_mask.index_unique_single_up]) * \
-                Mup[..., self.exc_mask.index_unique_single_up]
-            op_sin_up += op_ground_up
+            if do_single:
 
-            op_sin_down = (1. / mat_exc_down.view(nbatch, -1)[:, self.exc_mask.index_unique_single_down]) * \
-                Mdown[..., self.exc_mask.index_unique_single_down]
-            op_sin_down += op_ground_down
+                # spin up
+                op_sin_up = self.op_single(op_ground_up, mat_exc_up, Mup,
+                                           self.exc_mask.index_unique_single_up, nbatch)
 
-            # store the terms we need
-            op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
-            op_out_down = torch.cat(
-                (op_out_down, op_sin_down), dim=-1)
+                # spin down
+                op_sin_down = self.op_single(op_ground_down, mat_exc_down, Mdown,
+                                             self.exc_mask.index_unique_single_down, nbatch)
 
-        if do_double:
+                # store the terms we need
+                op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
+                op_out_down = torch.cat(
+                    (op_out_down, op_sin_down), dim=-1)
 
-            op_dbl_up = mat_exc_up.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_double_up]
+            if do_double:
 
-            _ext_shape = (*op_dbl_up.shape[:-1], -1, 2, 2)
-            _m_shape = (*Mup.shape[:-1], -1, 2, 2)
+                # spin up
+                op_dbl_up = self.op_multiexcitation(op_ground_up, mat_exc_up, Mup,
+                                                    self.exc_mask.index_unique_double_up,
+                                                    2, nbatch)
 
-            op_dbl_up = torch.inverse(op_dbl_up.view(_ext_shape))
-            op_dbl_up = op_dbl_up @ (
-                Mup[..., self.exc_mask.index_unique_double_up]).view(_m_shape)
-            op_dbl_up = btrace(op_dbl_up)
-            op_dbl_up += op_ground_up
+                # spin down
+                op_dbl_down = self.op_multiexcitation(op_ground_down, mat_exc_down, Mdown,
+                                                      self.exc_mask.index_unique_double_down,
+                                                      2, nbatch)
 
-            op_dbl_down = mat_exc_down.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_double_down]
-            op_dbl_down = torch.inverse(
-                op_dbl_down.view(_ext_shape))
-            op_dbl_down = op_dbl_down @ (
-                Mdown[..., self.exc_mask.index_unique_double_down]).view(_m_shape)
-            op_dbl_down = btrace(op_dbl_down)
-            op_dbl_down += op_ground_down
+                # store the terms we need
+                op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
+                op_out_down = torch.cat(
+                    (op_out_down, op_dbl_down), dim=-1)
 
-            # store the terms we need
-            op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
-            op_out_down = torch.cat(
-                (op_out_down, op_dbl_down), dim=-1)
+            return op_out_up, op_out_down
 
-        return op_out_up, op_out_down
+        # if we watn the squre of the operatore
+        # typically trace(ABAB)
+        else:
+
+            # compute A^-1 B M
+            Yup = invAB_up @ Mup
+            Ydown = invAB_down @ Mdown
+
+            # reshape the M matrices
+            Mup = Mup.view(*Mup.shape[:-2], -1)
+            Mdown = Mdown.view(*Mdown.shape[:-2], -1)
+
+            # reshape the Y matrices
+            Yup = Yup.view(*Yup.shape[:-2], -1)
+            Ydown = Ydown.view(*Ydown.shape[:-2], -1)
+
+            if do_single:
+
+                # spin up
+                op_sin_up = self.op_squared_single(op_ground_up, mat_exc_up,
+                                                   Mup, Yup,
+                                                   self.exc_mask.index_unique_single_up,
+                                                   nbatch)
+
+                # spin down
+                op_sin_down = self.op_squared_single(op_ground_down, mat_exc_down,
+                                                     Mdown, Ydown,
+                                                     self.exc_mask.index_unique_single_down,
+                                                     nbatch)
+
+                # store the terms we need
+                op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
+                op_out_down = torch.cat(
+                    (op_out_down, op_sin_down), dim=-1)
+
+            if do_double:
+
+                # spin up values
+                op_dbl_up = self.op_squared_multiexcitation(op_ground_up, mat_exc_up,
+                                                            Mup, Yup,
+                                                            self.exc_mask.index_unique_double_down,
+                                                            2, nbatch)
+
+                # spin down values
+                op_dbl_down = self.op_squared_multiexcitation(op_ground_down, mat_exc_down,
+                                                              Mdown, Ydown,
+                                                              self.exc_mask.index_unique_double_down,
+                                                              2, nbatch)
+
+                # store the terms we need
+                op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
+                op_out_down = torch.cat(
+                    (op_out_down, op_dbl_down), dim=-1)
+
+            return op_out_up, op_out_down
+
+    @staticmethod
+    def op_single(baseterm, mat_exc, M, index, nbatch):
+        r"""Computes the operator values for single excitation
+
+        .. math::
+            Tr( \bar{A}^{-1} \bar{B}) = Tr(A^{-1} B) + Tr( T M )
+            T = P ( A^{-1} \bar{A})^{-1} P
+            M = A^{-1}\bar{B} - A^{-1}BA^{-1}\bar{A}
+
+        Args:
+            baseterm (torch.tensor): trace(A B)
+            mat_exc (torch.tensor): invA @ Abar
+            M (torch.tensor): invA Bbar - inv A B inv A Abar
+            index(List): list of index of the excitations
+            nbatch : batch size
+        """
+
+        # compute the values of T
+        T = (1. / mat_exc.view(nbatch, -1)[:, index])
+
+        # computes trace(T M)
+        op_vals = T * M[..., index]
+
+        # add the base terms
+        op_vals += baseterm
+
+        return op_vals
+
+    @staticmethod
+    def op_multiexcitation(baseterm, mat_exc, M, index, size, nbatch):
+        r"""Computes the operator values for single excitation
+
+        .. math::
+            Tr( \bar{A}^{-1} \bar{B}) = Tr(A^{-1} B) + Tr( T M )
+            T = P ( A^{-1} \bar{A})^{-1} P
+            M = A^{-1}\bar{B} - A^{-1}BA^{-1}\bar{A}
+
+        Args:
+            baseterm (torch.tensor): trace(A B)
+            mat_exc (torch.tensor): invA @ Abar
+            M (torch.tensor): invA Bbar - inv A B inv A Abar
+            index(List): list of index of the excitations
+            size(int) : number of excitation
+            nbatch : batch size
+        """
+
+        # get the values of the excitation matrix invA Abar
+        T = mat_exc.view(nbatch, -1)[:, index]
+
+        # get the shapes of the size x size matrices
+        _ext_shape = (*T.shape[:-1], -1, size, size)
+        _m_shape = (*M.shape[:-1], -1, size, size)
+
+        # computes the inverse of invA Abar
+        T = torch.inverse(T.view(_ext_shape))
+
+        # computes T @ M (after reshaping M as size x size matrices)
+        op_vals = T @ (M[..., index]).view(_m_shape)
+
+        # compute the trace
+        op_vals = btrace(op_vals)
+
+        # add the base term
+        op_vals += baseterm
+
+        return op_vals
+
+    @staticmethod
+    def op_squared_single(baseterm, mat_exc, M, Y, index, nbatch):
+        r"""Computes the operator squared for single excitation
+
+        .. math::
+            Tr( (\bar{A}^{-1} \bar{B})^2) = Tr((A^{-1} B)^2) + Tr( (T M)^2 ) + 2 Tr(T Y)
+            T = P ( A^{-1} \bar{A})^{-1} P -> mat_exc in the code
+            M = A^{-1}\bar{B} - A^{-1}BA^{-1}\bar{A}
+            Y = A^{-1} B M
+
+        Args:
+            baseterm (torch.tensor): trace(A B A B)
+            mat_exc (torch.tensor): invA @ Abar
+            M (torch.tensor): invA Bbar - inv A B inv A Abar
+            Y (torch.tensor): invA B M
+            index(List): list of index of the excitations
+            nbatch : batch size
+        """
+
+        # get the values of the inverse excitation matrix
+        T = 1. / (mat_exc.view(nbatch, -1)[:, index])
+
+        # compute  trace(( T M )^2)
+        tmp = (T * M[..., index])
+        op_vals = tmp*tmp
+
+        # trace(T Y)
+        tmp = (T * Y[..., index])
+        op_vals += 2 * tmp
+
+        # add the base term
+        op_vals += baseterm
+
+        return op_vals
+
+    @staticmethod
+    def op_squared_multiexcitation(baseterm, mat_exc, M, Y, index, size, nbatch):
+        r"""Computes the operator squared for multiple excitation
+
+        .. math::
+            Tr( (\bar{A}^{-1} \bar{B})^2) = Tr((A^{-1} B)^2) + Tr( (T M)^2 ) + 2 Tr(T Y)
+            T = P ( A^{-1} \bar{A})^{-1} P -> mat_exc in the code
+            M = A^{-1}\bar{B} - A^{-1}BA^{-1}\bar{A}
+            Y = A^{-1} B M
+
+        Args:
+            baseterm (torch.tensor): trace(A B A B)
+            mat_exc (torch.tensor): invA @ Abar
+            M (torch.tensor): invA Bbar - inv A B inv A Abar
+            Y (torch.tensor): invA B M
+            index(List): list of index of the excitations
+            nbatch : batch size
+            size(int): number of excitation
+        """
+
+        # get the values of the excitation matrix invA Abar
+        T = mat_exc.view(nbatch, -1)[:, index]
+
+        # get the shape as a series of size x size matrices
+        _ext_shape = (*T.shape[:-1], -1, size, size)
+        _m_shape = (*M.shape[:-1], -1, size, size)
+        _y_shape = (*Y.shape[:-1], -1, size, size)
+
+        # reshape T and take the inverse of the matrices
+        T = torch.inverse(T.view(_ext_shape))
+
+        # compute  trace(( T M )^2)
+        tmp = T @ (M[..., index]).view(_m_shape)
+
+        # take the trace of that and add to base value
+        tmp = btrace(tmp @ tmp)
+        op_vals = tmp
+
+        # compute trace( T Y )
+        tmp = T @ (Y[..., index]).view(_y_shape)
+        tmp = btrace(tmp)
+        op_vals += 2*tmp
+
+        # add the base term
+        op_vals += baseterm
+
+        return op_vals

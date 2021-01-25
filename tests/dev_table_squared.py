@@ -11,9 +11,13 @@ def get_trace_square(A, B):
     return torch.trace(mat@mat)
 
 
+def proj(A, Pleft, Pright):
+    return Pleft.T@A@Pright
+
+
 # total matrix
-Atot = 0.1*torch.rand(4, 6)
-Btot = 0.1*torch.rand(4, 6)
+Atot = 0.1*torch.rand(4, 8)
+Btot = 0.1*torch.rand(4, 8)
 
 # occupied state
 A = Atot[:, :4]
@@ -24,8 +28,8 @@ Atilde = Atot[:, 4:]
 Btilde = Btot[:, 4:]
 
 # excited matrices
-Abar = Atot[:, [0, 4, 2, 5]]
-Bbar = Btot[:, [0, 4, 2, 5]]
+Abar = Atot[:, [0, 4, 2, 6]]
+Bbar = Btot[:, [0, 4, 2, 6]]
 
 # size conserving projector
 P = torch.zeros(4, 4)
@@ -168,3 +172,29 @@ gp = trace(P)
 
 print(out, alpha1 + gm + 2*gp)
 assert(torch.allclose(out, alpha1 + gm + 2*gp))
+
+
+Mtilde = invA@Btilde - invA@B@invA@Atilde
+
+Ptilde_left = torch.zeros(4, 2)
+Ptilde_left[1, 0] = 1
+Ptilde_left[3, 1] = 1
+
+Ptilde_right = torch.zeros(4, 2)
+Ptilde_right[0, 0] = 1
+Ptilde_right[2, 1] = 1
+
+AA = inverse(proj(invA@Atilde, Ptilde_left, Ptilde_right))
+Mproj = proj(Mtilde, Ptilde_left, Ptilde_right)
+
+AAM = AA@Mproj
+
+gm_ = trace(AAM@AAM)
+
+
+ABM = proj(invA@B@Mtilde, Ptilde_left, Ptilde_right)
+
+gp_ = trace(AA@ABM)
+
+print(out)
+print(alpha1+gm_+2*gp_)
