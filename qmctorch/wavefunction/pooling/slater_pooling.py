@@ -414,8 +414,12 @@ class SlaterPooling(nn.Module):
         invAB_down = invAdown @ bop[..., self.nup:, :self.ndown]
 
         # ground state operator
-        op_ground_up = btrace(invAB_up)
-        op_ground_down = btrace(invAB_down)
+        if op_squared:
+            op_ground_up = btrace(invAB_up@invAB_up)
+            op_ground_down = btrace(invAB_down@invAB_down)
+        else:
+            op_ground_up = btrace(invAB_up)
+            op_ground_down = btrace(invAB_down)
 
         op_ground_up.unsqueeze_(-1)
         op_ground_down.unsqueeze_(-1)
@@ -465,8 +469,6 @@ class SlaterPooling(nn.Module):
                                              self.exc_mask.index_unique_single_down, nbatch)
 
                 # store the terms we need
-                print(op_out_up.shape)
-                print(op_sin_up.shape)
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat(
                     (op_out_down, op_sin_down), dim=-1)
@@ -506,26 +508,21 @@ class SlaterPooling(nn.Module):
             Yup = Yup.view(*Yup.shape[:-2], -1)
             Ydown = Ydown.view(*Ydown.shape[:-2], -1)
 
-            # precompute trace( (A^-1 B)^2 )
-            op_base_term_up = btrace(invAB_up@invAB_up)
-            op_base_term_down = btrace(invAB_down@invAB_down)
-
             if do_single:
 
                 # spin up
-                op_sin_up = self.op_squared_single(op_base_term_up, mat_exc_up, Mup, Yup,
+                op_sin_up = self.op_squared_single(op_ground_up, mat_exc_up,
+                                                   Mup, Yup,
                                                    self.exc_mask.index_unique_single_up,
                                                    nbatch)
 
                 # spin down
-                op_sin_down = self.op_squared_single(op_base_term_down, mat_exc_down,
+                op_sin_down = self.op_squared_single(op_ground_down, mat_exc_down,
                                                      Mdown, Ydown,
                                                      self.exc_mask.index_unique_single_down,
                                                      nbatch)
 
                 # store the terms we need
-                print(op_out_up.shape)
-                print(op_sin_up.shape)
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat(
                     (op_out_down, op_sin_down), dim=-1)
@@ -533,15 +530,15 @@ class SlaterPooling(nn.Module):
             if do_double:
 
                 # spin up values
-                op_dbl_up = self.op_squared_multiexcitation(op_base_term_up, mat_exc_up,
+                op_dbl_up = self.op_squared_multiexcitation(op_ground_up, mat_exc_up,
                                                             Mup, Yup,
-                                                            self.exc_mask.index_unique_single_up,
+                                                            self.exc_mask.index_unique_double_down,
                                                             2, nbatch)
 
                 # spin down values
-                op_dbl_down = self.op_squared_multiexcitation(op_base_term_down, mat_exc_down,
+                op_dbl_down = self.op_squared_multiexcitation(op_ground_down, mat_exc_down,
                                                               Mdown, Ydown,
-                                                              self.exc_mask.index_unique_single_down,
+                                                              self.exc_mask.index_unique_double_down,
                                                               2, nbatch)
 
                 # store the terms we need
@@ -567,15 +564,15 @@ class SlaterPooling(nn.Module):
             index(List): list of index of the excitations
             nbatch : batch size
         """
-        # start with the base term
-        op_vals = baseterm.clone()
 
-        # compute the values of B
+        # compute the values of T
         T = (1. / mat_exc.view(nbatch, -1)[:, index])
 
         # computes trace(T M)
-        tmp = T * M[..., index]
-        op_vals += tmp
+        op_vals = T * M[..., index]
+
+        # add the base terms
+        op_vals += baseterm
 
         return op_vals
 
@@ -597,8 +594,6 @@ class SlaterPooling(nn.Module):
             nbatch : batch size
         """
 
-        op_vals = baseterm.clone()
-
         # get the values of the excitation matrix invA Abar
         T = mat_exc.view(nbatch, -1)[:, index]
 
@@ -610,13 +605,13 @@ class SlaterPooling(nn.Module):
         T = torch.inverse(T.view(_ext_shape))
 
         # computes T @ M (after reshaping M as size x size matrices)
-        tmp = T @ (M[..., index]).view(_m_shape)
+        op_vals = T @ (M[..., index]).view(_m_shape)
 
         # compute the trace
-        tmp = btrace(tmp)
+        op_vals = btrace(op_vals)
 
-        # add that to the final values
-        op_vals += tmp
+        # add the base term
+        op_vals += baseterm
 
         return op_vals
 
@@ -639,19 +634,19 @@ class SlaterPooling(nn.Module):
             nbatch : batch size
         """
 
-        # base term
-        op_vals = baseterm.clone()
-
         # get the values of the inverse excitation matrix
         T = 1. / (mat_exc.view(nbatch, -1)[:, index])
 
         # compute  trace(( T M )^2)
         tmp = (T * M[..., index])
-        op_vals += tmp*tmp
+        op_vals = tmp*tmp
 
         # trace(T Y)
         tmp = (T * Y[..., index])
         op_vals += 2 * tmp
+
+        # add the base term
+        op_vals += baseterm
 
         return op_vals
 
@@ -675,9 +670,6 @@ class SlaterPooling(nn.Module):
             size(int): number of excitation
         """
 
-        # trace(invA B invA B)
-        op_vals = baseterm.clone()
-
         # get the values of the excitation matrix invA Abar
         T = mat_exc.view(nbatch, -1)[:, index]
 
@@ -693,12 +685,15 @@ class SlaterPooling(nn.Module):
         tmp = T @ (M[..., index]).view(_m_shape)
 
         # take the trace of that and add to base value
-        tmp = btrace(tmp@tmp)
-        op_vals += tmp
+        tmp = btrace(tmp @ tmp)
+        op_vals = tmp
 
         # compute trace( T Y )
         tmp = T @ (Y[..., index]).view(_y_shape)
         tmp = btrace(tmp)
         op_vals += 2*tmp
+
+        # add the base term
+        op_vals += baseterm
 
         return op_vals

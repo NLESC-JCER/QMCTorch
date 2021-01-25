@@ -54,11 +54,11 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = Orbital(
+        self.wf = CorrelatedOrbital(
             mol,
             kinetic='auto',
             jastrow_type='pade_jastrow',
-            configs='single_double(2,4)',
+            configs='single_double(2,2)',
             include_all_mo=True)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
@@ -67,7 +67,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         self.wf.jastrow.weight.data = torch.rand(
             self.wf.jastrow.weight.shape)
 
-        self.nbatch = 10
+        self.nbatch = 3
         self.pos = torch.tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
 
@@ -189,6 +189,9 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         """Kinetic energty."""
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
+
+        print(eauto)
+        print(ejac)
 
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
