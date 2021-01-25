@@ -207,25 +207,26 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
 if __name__ == "__main__":
 
-    set_torch_double_precision()
+    unittest.main()
 
-    t = TestCorrelatedOrbitalWF()
-    t.setUp()
-    t.test_forward()
+    # set_torch_double_precision()
+    # t = TestCorrelatedOrbitalWF()
+    # t.setUp()
+    # t.test_forward()
 
-    t.test_jacobian_mo()
-    t.test_grad_mo()
-    t.test_hess_mo()
+    # t.test_jacobian_mo()
+    # t.test_grad_mo()
+    # t.test_hess_mo()
 
-    t.test_jacobian_jast()
-    t.test_grad_jast()
-    t.test_hess_jast()
+    # t.test_jacobian_jast()
+    # t.test_grad_jast()
+    # t.test_hess_jast()
 
-    t.test_grad_cmo()
-    t.test_hess_cmo()
+    # t.test_grad_cmo()
+    # t.test_hess_cmo()
 
-    t.test_jacobian_wf()
-    t.test_grad_wf()
+    # t.test_jacobian_wf()
+    # t.test_grad_wf()
 
-    t.test_kinetic_energy()
-    t.test_local_energy()
+    # t.test_kinetic_energy()
+    # t.test_local_energy()
