@@ -252,10 +252,7 @@ class SlaterPooling(nn.Module):
             op_vals = self.operator_ground_state(mo, bop, op_squared)
 
         elif self.config_method.startswith('single'):
-            if op_squared:
-                raise ValueError(
-                    'Squared of operator cannot be computed on single double using the table method')
-            op_vals = self.operator_single_double(mo, bop)
+            op_vals = self.operator_single_double(mo, bop, op_squared)
 
         elif self.config_method.startswith('cas('):
             op_vals = self.operator_explicit(mo, bop, op_squared)
@@ -468,6 +465,8 @@ class SlaterPooling(nn.Module):
                                              self.exc_mask.index_unique_single_down, nbatch)
 
                 # store the terms we need
+                print(op_out_up.shape)
+                print(op_sin_up.shape)
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat(
                     (op_out_down, op_sin_down), dim=-1)
@@ -496,16 +495,16 @@ class SlaterPooling(nn.Module):
         else:
 
             # compute A^-1 B M
-            Y_up = invAB_up @ Mup
-            Y_down = invAB_down @ Mdown
+            Yup = invAB_up @ Mup
+            Ydown = invAB_down @ Mdown
 
             # reshape the M matrices
             Mup = Mup.view(*Mup.shape[:-2], -1)
             Mdown = Mdown.view(*Mdown.shape[:-2], -1)
 
             # reshape the Y matrices
-            Yup = Yup.view(*Mup.shape[:-2], -1)
-            Ydown = Ydown.view(*Mdown.shape[:-2], -1)
+            Yup = Yup.view(*Yup.shape[:-2], -1)
+            Ydown = Ydown.view(*Ydown.shape[:-2], -1)
 
             # precompute trace( (A^-1 B)^2 )
             op_base_term_up = btrace(invAB_up@invAB_up)
@@ -525,6 +524,8 @@ class SlaterPooling(nn.Module):
                                                      nbatch)
 
                 # store the terms we need
+                print(op_out_up.shape)
+                print(op_sin_up.shape)
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat(
                     (op_out_down, op_sin_down), dim=-1)
@@ -570,10 +571,10 @@ class SlaterPooling(nn.Module):
         op_vals = baseterm.clone()
 
         # compute the values of B
-        T = (1. / mat_exc_up.view(nbatch, -1)[:, index])
+        T = (1. / mat_exc.view(nbatch, -1)[:, index])
 
         # computes trace(T M)
-        tmp = btrace(T * M[..., index])
+        tmp = T * M[..., index]
         op_vals += tmp
 
         return op_vals
@@ -645,11 +646,11 @@ class SlaterPooling(nn.Module):
         T = 1. / (mat_exc.view(nbatch, -1)[:, index])
 
         # compute  trace(( T M )^2)
-        tmp = T * M[..., index]
+        tmp = (T * M[..., index])
         op_vals += tmp*tmp
 
         # trace(T Y)
-        tmp = T * Y[..., index]
+        tmp = (T * Y[..., index])
         op_vals += 2 * tmp
 
         return op_vals
