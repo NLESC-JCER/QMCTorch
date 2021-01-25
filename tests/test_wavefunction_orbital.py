@@ -57,7 +57,7 @@ class TestOrbitalWF(unittest.TestCase):
         self.wf = Orbital(mol,
                           kinetic='auto',
                           include_all_mo=False,
-                          configs='single_double(2,4)')
+                          configs='single_double(2,2)')
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
