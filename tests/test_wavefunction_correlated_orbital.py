@@ -58,7 +58,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             mol,
             kinetic='auto',
             jastrow_type='pade_jastrow',
-            configs='single_double(2,2)',
+            configs='single_double(2,4)',
             include_all_mo=True)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
