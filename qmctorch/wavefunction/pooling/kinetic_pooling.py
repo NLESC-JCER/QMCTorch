@@ -9,6 +9,10 @@ class KineticPooling(nn.Module):
     def __init__(self, configs, mol, cuda=False):
         """Computes the kinetic energy using the Jacobi formula
 
+            WARNING : This is very memory intesive as it stores
+                      explicit projector matrices to extract
+                      submatrices. Prefer the pooling methods
+                      implemented in slater_pooling.py
         Args:
             configs (list): list of slater determinants
             mol (Molecule): instance of a Molecule object
@@ -34,7 +38,7 @@ class KineticPooling(nn.Module):
         r"""Compute the kinetic energy using the trace trick for a product of spin up/down determinant.
 
         .. math::
-            -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}  
+            -\\frac{1}{2} \Delta \Psi = -\\frac{1}{2}  D_{up} D_{down}
             ( \Delta_{up} D_{up}  + \Delta_{down} D_{down} )
 
         Args:

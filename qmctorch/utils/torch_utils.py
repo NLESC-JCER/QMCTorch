@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.autograd import grad
 from torch.utils.data import Dataset
 
 
@@ -46,6 +47,56 @@ def fast_power(x, k, mask0=None, mask2=None):
         out = x**k
 
     return out
+
+
+def gradients(out, inp):
+    """Return the gradients of out wrt inp
+
+    Args:
+        out ([type]): [description]
+        inp ([type]): [description]
+    """
+    return grad(out, inp, grad_outputs=torch.ones_like(out))
+
+
+def diagonal_hessian(out, inp, return_grads=False):
+    """return the diagonal hessian of out wrt to inp
+
+    Args:
+        out ([type]): [description]
+        inp ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, inp,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    if return_grads:
+        grads = jacob.detach()
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+
+    for idim in range(jacob.shape[1]):
+
+        tmp = grad(jacob[:, idim], inp,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, idim] = tmp[:, idim]
+
+    if return_grads:
+        return hess, grads
+
+    else:
+        return hess
 
 
 class DataSet(Dataset):

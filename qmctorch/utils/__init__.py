@@ -15,7 +15,8 @@ from .stat_utils import (blocking, correlation_coefficient,
 from .time_utils import timeit, timeline
 from .torch_utils import (DataSet, Loss, OrthoReg, fast_power,
                           set_torch_double_precision,
-                          set_torch_single_precision)
+                          set_torch_single_precision,
+                          diagonal_hessian, gradients)
 
 __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'plot_walkers_traj',
@@ -30,4 +31,6 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'fast_power',
            'InterpolateMolecularOrbitals',
            'InterpolateAtomicOrbitals',
-           'btrace', 'bdet2', 'bproj', 'timeit', 'timeline']
+           'btrace', 'bdet2', 'bproj',
+           'timeit', 'timeline',
+           'diagonal_hessian', 'gradients']

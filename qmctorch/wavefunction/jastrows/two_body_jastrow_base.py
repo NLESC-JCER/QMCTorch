@@ -180,6 +180,10 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
+                          derivative = 0  (Nmo) x Nbatch x 1
+                          derivative = 1  (Nmo) x Nbatch x Nelec (for jacobian = True)
+                          derivative = 1  (Nmo) x Nbatch x Ndim x Nelec (for jacobian = False)
+                          derivative = 2  (Nmo) x Nbatch x Nelec
         """
 
         size = pos.shape
@@ -190,7 +194,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-            return jast.prod(1).view(nbatch, 1)
+            return jast.prod(-1).unsqueeze(-1)
 
         elif derivative == 1:
             dr = self.extract_tri_up(self.edist(
@@ -213,7 +217,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
             d2r = self.extract_tri_up(self.edist(
                 pos, derivative=2)).view(nbatch, 3, -1)
 
-            return(jast.prod(1).view(nbatch, 1),
+            return(jast.prod(-1).unsqueeze(-1),
                    self._jastrow_derivative(r, dr, jast, jacobian),
                    self._jastrow_second_derivative(r, dr, d2r, jast))
 
@@ -232,25 +236,27 @@ class TwoBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
         if jacobian:
 
-            prod_val = jast.prod(1).unsqueeze(-1)
-            djast = self._get_der_jastrow_elements(r, dr).sum(1)
+            prod_val = jast.prod(-1).unsqueeze(-1)
+            djast = self._get_der_jastrow_elements(r, dr).sum(-2)
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
-            out = torch.zeros(nbatch, self.nelec).to(self.device)
-            out.index_add_(1, self.index_row, djast)
-            out.index_add_(1, self.index_col, -djast)
+            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            out = torch.zeros(out_shape).to(self.device)
+            out.index_add_(-1, self.index_row, djast)
+            out.index_add_(-1, self.index_col, -djast)
 
         else:
 
-            prod_val = jast.prod(1).unsqueeze(-1).unsqueeze(-1)
+            prod_val = jast.prod(-1).unsqueeze(-1).unsqueeze(-1)
             djast = self._get_der_jastrow_elements(r, dr)
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
-            out = torch.zeros(nbatch, 3, self.nelec).to(self.device)
-            out.index_add_(2, self.index_row, djast)
-            out.index_add_(2, self.index_col, -djast)
+            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            out = torch.zeros(out_shape).to(self.device)
+            out.index_add_(-1, self.index_row, djast)
+            out.index_add_(-1, self.index_col, -djast)
 
         return out
 
@@ -269,15 +275,16 @@ class TwoBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
 
         # pure second derivative terms
-        prod_val = jast.prod(1).unsqueeze(-1)
+        prod_val = jast.prod(-1).unsqueeze(-1)
 
         d2jast = self._get_second_der_jastrow_elements(
-            r, dr, d2r).sum(1)
+            r, dr, d2r).sum(-2)
 
         # might cause problems with backward cause in place operation
-        hess_jast = torch.zeros(nbatch, self.nelec).to(self.device)
-        hess_jast.index_add_(1, self.index_row, d2jast)
-        hess_jast.index_add_(1, self.index_col, d2jast)
+        hess_shape = list(d2jast.shape[:-1]) + [self.nelec]
+        hess_jast = torch.zeros(hess_shape).to(self.device)
+        hess_jast.index_add_(-1, self.index_row, d2jast)
+        hess_jast.index_add_(-1, self.index_col, d2jast)
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
@@ -331,8 +338,8 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         00 01 02 03         . 0 1 2
         10 11 12 13         . . 3 4
-        20 21 22 23         . . . 5    
-        31 31 32 33         . . . . 
+        20 21 22 23         . . . 5
+        31 31 32 33         . . . .
 
         """
         n = self.nelec
@@ -378,12 +385,14 @@ class TwoBodyJastrowFactorBase(nn.Module):
             torch.tensor:
         """
 
-        nbatch = djast.shape[0]
         if len(self.idx_col_perm) > 0:
-            tmp = torch.zeros(nbatch, 3, self.nelec,
-                              self.nelec-1).to(self.device)
+            tmp_shape = list(
+                djast.shape[:-1]) + [self.nelec, self.nelec-1]
+            tmp = torch.zeros(tmp_shape).to(self.device)
             tmp[..., self.index_row, self.index_col-1] = djast
             tmp[..., self.index_col, self.index_row] = -djast
-            return tmp[..., self.idx_col_perm].prod(-1).sum(1).sum(-1)
+            return tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
         else:
-            return torch.zeros(nbatch, self.nelec).to(self.device)
+            out_shape = list(
+                djast.shape[:-2]) + [self.nelec]
+            return torch.zeros(out_shape).to(self.device)

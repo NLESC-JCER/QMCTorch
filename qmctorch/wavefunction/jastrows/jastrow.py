@@ -1,6 +1,8 @@
+
 from .pade_jastrow import PadeJastrow
 from .pade_jastrow_polynomial import PadeJastrowPolynomial
 from .scaled_pade_jastrow import ScaledPadeJastrow
+
 from ... import log
 
 
