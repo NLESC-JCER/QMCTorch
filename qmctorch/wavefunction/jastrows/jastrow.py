@@ -1,12 +1,14 @@
 
+import torch
 from .pade_jastrow import PadeJastrow
 from .pade_jastrow_polynomial import PadeJastrowPolynomial
 from .scaled_pade_jastrow import ScaledPadeJastrow
+from .generic_jastrow import GenericJastrow
 
 from ... import log
 
 
-def set_jastrow(jastrow_type, nup, ndown, cuda):
+def set_jastrow(jastrow_type, nup, ndown, cuda, **kwargs):
     """Set the jastrow calculator
 
     Args:
@@ -16,15 +18,20 @@ def set_jastrow(jastrow_type, nup, ndown, cuda):
         cuda (bool): use cuda
     """
 
-    if jastrow_type == 'pade_jastrow':
-        return PadeJastrow(nup, ndown, w=1., cuda=cuda)
+    if isinstance(jastrow_type, str):
+        if jastrow_type == 'pade_jastrow':
+            return PadeJastrow(nup, ndown, w=1., cuda=cuda)
 
-    elif jastrow_type.startswith('pade_jastrow('):
-        order = int(jastrow_type.split('(')[1][0])
-        return PadeJastrowPolynomial(nup, ndown, order, cuda=cuda)
+        elif jastrow_type.startswith('pade_jastrow('):
+            order = int(jastrow_type.split('(')[1][0])
+            return PadeJastrowPolynomial(nup, ndown, order, cuda=cuda)
 
-    elif jastrow_type == 'scaled_pade_jastrow':
-        return ScaledPadeJastrow(nup, ndown, w=1., kappa=0.6, cuda=cuda)
+        elif jastrow_type == 'scaled_pade_jastrow':
+            return ScaledPadeJastrow(nup, ndown, w=1., kappa=0.6, cuda=cuda)
+
+    # load generic jastrow without args
+    elif issubclass(jastrow_type, torch.nn.Module):
+        return GenericJastrow(nup, ndown, jastrow_type, cuda, **kwargs)
 
     else:
         valid_names = ['pade_jastrow',
@@ -34,4 +41,6 @@ def set_jastrow(jastrow_type, nup, ndown, cuda):
             '   Error : Jastrow form not recognized. Options are :')
         for n in valid_names:
             log.info('         : {0}', n)
+        log.info(
+            '         : if generic jastrow it should be subclass nn.Module')
         raise ValueError('Jastrow type not supported')

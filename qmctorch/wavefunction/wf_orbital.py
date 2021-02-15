@@ -203,7 +203,8 @@ class Orbital(OrbitalBase):
 
         bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
         bgrad = bgrad.permute(3, 0, 1, 2)
-        bgrad = bgrad.repeat(2, 1, 1, 1)
+        bgrad = bgrad.repeat(self.nelec, 1, 1, 1)
+        # bgrad = bgrad.repeat(2, 1, 1, 1)
 
         for ielec in range(self.nelec):
             bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
@@ -221,7 +222,6 @@ class Orbital(OrbitalBase):
             grad_jast = grad_jast.transpose(0, 1)
 
             grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
-
             bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
 
         return bgrad

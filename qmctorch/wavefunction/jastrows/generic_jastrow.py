@@ -6,9 +6,9 @@ from ...utils import register_extra_attributes, diagonal_hessian
 from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 
-class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
+class GenericJastrow(TwoBodyJastrowFactorBase):
 
-    def __init__(self, nup, ndown, nmo, JastrowFunction, cuda, **kwargs):
+    def __init__(self, nup, ndown, JastrowFunction, cuda, **kwargs):
         r"""Computes generic jastrow factor per MO
 
         .. math::
@@ -23,11 +23,9 @@ class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
 
         assert issubclass(JastrowFunction, torch.nn.Module)
 
-        super(GenericJastrowOrbitals, self).__init__(
+        super(GenericJastrow, self).__init__(
             nup, ndown, cuda)
-        self.nmo = nmo
-        self.jastrow_functions = nn.ModuleList(
-            [JastrowFunction(**kwargs) for imo in range(self.nmo)])
+        self.jastrow_function = JastrowFunction(**kwargs)
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -58,14 +56,7 @@ class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
             torch.tensor: matrix of the jastrow kernels
                           Nmo x Nbatch x Nelec_pair
         """
-        out = None
-        for jast in self.jastrow_functions:
-            jvals = jast(r).unsqueeze(0)
-            if out is None:
-                out = jvals
-            else:
-                out = torch.cat((out, jvals), axis=0)
-        return out
+        return self.jastrow_function(r)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -90,20 +81,10 @@ class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
                           Nmo x Nbatch x Ndim x  Nelec_pair
         """
 
-        out = None
-        for jast in self.jastrow_functions:
+        kernel = self.jastrow_function(r)
+        ker_grad = self._grads(kernel, r)
 
-            kernel = jast(r)
-            ker_grad = self._grads(kernel, r)
-            ker_grad = ker_grad.unsqueeze(1) * dr
-            ker_grad = ker_grad.unsqueeze(0).detach().clone()
-
-            if out is None:
-                out = ker_grad
-            else:
-                out = torch.cat((out, ker_grad), axis=0)
-
-        return out
+        return ker_grad.unsqueeze(1) * dr
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -129,23 +110,14 @@ class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
         """
         dr2 = dr * dr
 
-        out = None
-        for jast in self.jastrow_functions:
+        kernel = self.jastrow_function(r)
+        ker_hess, ker_grad = self._hess(kernel, r)
+        ker_grad_2 = ker_grad * ker_grad
 
-            kernel = jast(r)
-            ker_hess, ker_grad = self._hess(kernel, r)
-            ker_grad_2 = ker_grad * ker_grad
+        jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
+            dr2 + ker_grad.unsqueeze(1) * d2r
 
-            jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
-                dr2 + ker_grad.unsqueeze(1) * d2r
-            jhess = jhess.unsqueeze(0)
-
-            if out is None:
-                out = jhess
-            else:
-                out = torch.cat((out, jhess))
-
-        return out
+        return jhess
 
     @staticmethod
     def _grads(val, pos):

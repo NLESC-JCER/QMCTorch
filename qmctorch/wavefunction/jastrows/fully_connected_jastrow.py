@@ -16,6 +16,10 @@ class FullyConnectedJastrow(torch.nn.Module):
         self.fc2 = nn.Linear(16, 8, bias=False)
         self.fc3 = nn.Linear(8, 1, bias=False)
 
+        self.fc1.weight.data.fill_(1E-3)
+        self.fc2.weight.data.fill_(1E-3)
+        self.fc3.weight.data.fill_(1E-3)
+
         self.nl_func = torch.nn.Sigmoid()
         # self.nl_func = lambda x:  x
 
@@ -42,14 +46,6 @@ class FullyConnectedJastrow(torch.nn.Module):
                     weights[ip] = 0.5
                 ip += 1
         return weights
-
-    def _forward(self, x):
-
-        nbatch, npairs = x.shape
-        x = x.reshape(-1, 1)
-        x = self.prefac * self.nl_func(x*x)
-
-        return x.reshape(nbatch, npairs)
 
     def forward(self, x):
         """Compute the values of the individual f_ij=f(r_ij)

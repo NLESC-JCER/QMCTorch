@@ -1,6 +1,8 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-from qmctorch.utils import set_torch_double_precision
+from qmctorch.utils import set_torch_double_precision, btrace
+
+from qmctorch.wavefunction.jastrows.fully_connected_jastrow import FullyConnectedJastrow
 
 from torch.autograd import grad, gradcheck, Variable
 
@@ -9,6 +11,7 @@ import torch
 import unittest
 import itertools
 import os
+
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -37,7 +40,7 @@ def hess(out, pos):
     return hess
 
 
-class TestOrbitalWF(unittest.TestCase):
+class TestGenericJastrowWF(unittest.TestCase):
 
     def setUp(self):
 
@@ -48,7 +51,7 @@ class TestOrbitalWF(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 0; H 0 0 1.',
+            atom='Li 0 0 0; H 0 0 1.',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
@@ -56,28 +59,30 @@ class TestOrbitalWF(unittest.TestCase):
 
         self.wf = Orbital(mol,
                           kinetic='auto',
-                          include_all_mo=False,
-                          configs='single_double(2,2)')
+                          configs='ground_state',
+                          jastrow_type=FullyConnectedJastrow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
-        self.pos = torch.tensor(np.random.rand(10,  self.wf.nelec*3))
+        self.nbatch = 10
+        self.pos = 1E-2 * torch.tensor(np.random.rand(
+            self.nbatch, self.wf.nelec*3))
         self.pos.requires_grad = True
 
     def test_forward(self):
 
         wfvals = self.wf(self.pos)
-        ref = torch.tensor([[0.0977],
-                            [0.0618],
-                            [0.0587],
-                            [0.0861],
-                            [0.0466],
-                            [0.0406],
-                            [0.0444],
-                            [0.0728],
-                            [0.0809],
-                            [0.1868]])
+        # ref = torch.tensor([[0.0977],
+        #                     [0.0618],
+        #                     [0.0587],
+        #                     [0.0861],
+        #                     [0.0466],
+        #                     [0.0406],
+        #                     [0.0444],
+        #                     [0.0728],
+        #                     [0.0809],
+        #                     [0.1868]])
         # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
     def test_grad_mo(self):
@@ -95,7 +100,7 @@ class TestOrbitalWF(unittest.TestCase):
 
         assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
         assert(torch.allclose(dmo.sum(-1),
-                              dmo_grad.view(10, self.wf.nelec, 3).sum(-1)))
+                              dmo_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1)))
 
     def test_hess_mo(self):
         """Hessian of the MOs."""
@@ -107,10 +112,10 @@ class TestOrbitalWF(unittest.TestCase):
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
         assert(torch.allclose(d2val.sum(-1).sum(-1),
-                              d2val_grad.view(10, self.wf.nelec, 3).sum(-1).sum(-1)))
+                              d2val_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1).sum(-1)))
 
         assert(torch.allclose(d2val.sum(-1),
-                              d2val_grad.view(10, self.wf.nelec, 3).sum(-1)))
+                              d2val_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1)))
 
     def test_local_energy(self):
 
@@ -148,9 +153,10 @@ class TestOrbitalWF(unittest.TestCase):
 
 if __name__ == "__main__":
     # unittest.main()
-    t = TestOrbitalWF()
+    t = TestGenericJastrowWF()
     t.setUp()
     # t.test_forward()
     # # t.test_local_energy()
     # # t.test_kinetic_energy()
     t.test_gradients_wf()
+    t.test_gradients_pdf()
