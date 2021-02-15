@@ -276,9 +276,6 @@ class SolverOrbital(SolverBase):
         if batchsize is None:
             batchsize = len(pos)
 
-        # get the initial observable
-        self.store_observable(pos)
-
         # change the number of steps/walker size
         self.save_sampling_parameters(pos)
 
@@ -286,6 +283,9 @@ class SolverOrbital(SolverBase):
         self.dataset = DataSet(pos)
         self.dataloader = DataLoader(
             self.dataset, batch_size=batchsize)
+
+        for ibatch, data in enumerate(self.dataloader):
+            self.store_observable(data, ibatch=ibatch)
 
         # chkpt
         self.chkpt_every = chkpt_every
