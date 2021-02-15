@@ -71,19 +71,7 @@ class TestGenericJastrowWF(unittest.TestCase):
         self.pos.requires_grad = True
 
     def test_forward(self):
-
         wfvals = self.wf(self.pos)
-        # ref = torch.tensor([[0.0977],
-        #                     [0.0618],
-        #                     [0.0587],
-        #                     [0.0861],
-        #                     [0.0466],
-        #                     [0.0406],
-        #                     [0.0444],
-        #                     [0.0728],
-        #                     [0.0809],
-        #                     [0.1868]])
-        # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
     def test_grad_mo(self):
         """Gradients of the MOs."""

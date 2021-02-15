@@ -72,8 +72,6 @@ class TestGenericJastrowOrbital(unittest.TestCase):
         dval_grad = dval_grad.reshape(
             self.nbatch, self.nelec, 3).permute(0, 2, 1)
 
-        gradcheck(self.jastrow, self.pos)
-
         # Warning : using grad on a model made out of ModuleList
         # automatically summ the values of the grad of the different
         # modules in the list !
@@ -91,8 +89,6 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
         dval_grad = dval_grad.reshape(
             self.nbatch, self.nelec, 3).permute(0, 2, 1).sum(-2)
-
-        gradcheck(self.jastrow, self.pos)
 
         # Warning : using grad on a model made out of ModuleList
         # automatically summ the values of the grad of the different

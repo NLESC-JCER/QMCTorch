@@ -71,8 +71,6 @@ class TestGenericJastrow(unittest.TestCase):
         dval_grad = dval_grad.reshape(
             self.nbatch, self.nelec, 3).permute(0, 2, 1)
 
-        gradcheck(self.jastrow, self.pos)
-
         assert(torch.allclose(dval, dval_grad))
 
     def test_jacobian_jastrow(self):
@@ -88,8 +86,6 @@ class TestGenericJastrow(unittest.TestCase):
         dval_grad = dval_grad.reshape(
             self.nbatch, self.nelec, 3).permute(0, 2, 1).sum(-2)
 
-        gradcheck(self.jastrow, self.pos)
-
         assert torch.allclose(dval, dval_grad)
 
     def test_hess_jastrow(self):
@@ -104,9 +100,9 @@ class TestGenericJastrow(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    t = TestGenericJastrow()
-    t.setUp()
-    t.test_jastrow()
-    t.test_grad_jastrow()
-    t.test_jacobian_jastrow()
-    t.test_hess_jastrow()
+    # t = TestGenericJastrow()
+    # t.setUp()
+    # t.test_jastrow()
+    # t.test_grad_jastrow()
+    # t.test_jacobian_jastrow()
+    # t.test_hess_jastrow()
