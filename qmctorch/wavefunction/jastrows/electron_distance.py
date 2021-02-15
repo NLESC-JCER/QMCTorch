@@ -4,7 +4,7 @@ from torch import nn
 
 class ElectronDistance(nn.Module):
 
-    def __init__(self, nelec, ndim, scale=0.6):
+    def __init__(self, nelec, ndim=3, scale=0.6):
         """Computes the electron-electron distances
 
         Args:
