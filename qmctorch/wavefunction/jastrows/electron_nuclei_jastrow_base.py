@@ -81,7 +81,7 @@ class ElectronNucleiJastrowFactorBase(nn.Module):
         elif derivative == [0, 1, 2]:
 
             dr = self.edist(pos, derivative=1)
-            d2r = self.edist(pos, derivative=2).view(nbatch, 3, -1)
+            d2r = self.edist(pos, derivative=2)
 
             return(jast.prod(-1).prod(-1).unsqueeze(-1),
                    self._jastrow_derivative(r, dr, jast, jacobian),

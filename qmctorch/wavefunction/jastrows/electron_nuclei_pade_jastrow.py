@@ -17,6 +17,7 @@ class ElectronNucleiPadeJastrow(ElectronNucleiJastrowFactorBase):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
+            atoms (torch.tensor): atomic positions of the atoms
             w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
