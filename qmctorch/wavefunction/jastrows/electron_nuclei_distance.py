@@ -27,7 +27,7 @@ class ElectronNucleiDistance(nn.Module):
         self.ndim = ndim
         self.kappa = scale
 
-    def forward(self, inp, derivative=0):
+    def forward(self, input, derivative=0):
         """Compute the pairwise distance between the electrons
         or its derivative. \n
 
@@ -49,37 +49,38 @@ class ElectronNucleiDistance(nn.Module):
 
         Returns:
             torch.tensor: distance (or derivative) matrix \n
-                          Nbatch x Nelec x Nelec if derivative = 0 \n
-                          Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
+                          Nbatch x Nelec x Natom if derivative = 0 \n
+                          Nbatch x Ndim x  Nelec x Natom if derivative = 1,2
 
         """
 
         # get the distance matrices
         input_ = input.view(-1, self.nelec, self.ndim)
-        dist = self._get_distance_quadratic(input_)
+        dist = self._get_distance_quadratic(input_, self.atoms)
+        dist = torch.sqrt(dist)
 
         if derivative == 0:
             return dist
 
         elif derivative == 1:
-
-            invr = (1. / dist).unsqueeze(1)
-            diff_axis = input_.transpose(1, 2).unsqueeze(3)
-            diff_axis = diff_axis - diff_axis.transpose(2, 3)
-            return diff_axis * invr
+            invr = (1. / dist).unsqueeze(-1)
+            diff_axis = (input_.unsqueeze(-1) -
+                         self.atoms.T).transpose(2, 3)
+            return (diff_axis * invr).permute(0, 3, 1, 2)
 
         elif derivative == 2:
 
             invr3 = (1. / (dist**3)).unsqueeze(1)
             diff_axis = input_.transpose(1, 2).unsqueeze(3)
-            diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
+            diff_axis = (diff_axis - self.atoms.T.unsqueeze(1))**2
 
             diff_axis = diff_axis[:, [
                 [1, 2], [2, 0], [0, 1]], ...].sum(2)
+
             return (diff_axis * invr3)
 
     @staticmethod
-    def _get_distance_quadratic(input):
+    def _get_distance_quadratic(elec_pos, atom_pos):
         """Compute the distance following a quadratic expansion
 
         Arguments:
@@ -88,8 +89,7 @@ class ElectronNucleiDistance(nn.Module):
         Returns:
             torch.tensor -- distance matrices nbatch x nelec x ndim]
         """
-
-        norm = (input**2).sum(-1).unsqueeze(-1)
-        norm_atom = (self.atoms)**2.unsqueeze(-1).T
-        dist = (norm + norm_atom - 2.0 * input@self.atoms.T)
+        norm = (elec_pos**2).sum(-1).unsqueeze(-1)
+        norm_atom = (atom_pos**2).sum(-1).unsqueeze(-1).T
+        dist = (norm + norm_atom - 2.0 * elec_pos@atom_pos.T)
         return dist

@@ -118,23 +118,6 @@ class ElectronDistance(nn.Module):
                 torch.bmm(input, input.transpose(1, 2)))
         return dist
 
-    def _get_distance_diff(self, input):
-        """Compute the distance following a difference scheme
-
-        Arguments:
-            input {torch.tensor} -- electron position [nbatch x nelec x ndim]
-
-        Returns:
-            torch.tensor -- distance matrices nbatch x nelec x ndim]
-        """
-        nbatch = input.shape[0]
-        in1 = input.unsqueeze(1).expand(
-            nbatch, self.nelec, self.nelec, self.ndim)
-        in2 = input.unsqueeze(2).expand(
-            nbatch, self.nelec, self.nelec, self.ndim)
-        dist = torch.pow(in1 - in2, 2).sum(3)
-        return dist
-
     def get_scaled_distance(self, r):
         """compute the scaled distance 
         .. math::

@@ -25,6 +25,7 @@ class ElectronNucleiJastrowFactorBase(nn.Module):
         self.ndown = ndown
         self.nelec = nup + ndown
         self.atoms = atomic_pos
+        self.natoms = atomic_pos.shape[0]
         self.ndim = 3
 
         self.cuda = cuda
@@ -67,29 +68,102 @@ class ElectronNucleiJastrowFactorBase(nn.Module):
             return jast.prod(-1).prod(-1).unsqueeze(-1)
 
         elif derivative == 1:
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
+            dr = self.edist(pos, derivative=1)
             return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
 
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
-            d2r = self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            dr = self.edist(pos, derivative=1)
+            d2r = self.edist(pos, derivative=2)
 
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
 
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
-            d2r = self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            dr = self.edist(pos, derivative=1)
+            d2r = self.edist(pos, derivative=2).view(nbatch, 3, -1)
 
-            return(jast.prod(-1).unsqueeze(-1),
+            return(jast.prod(-1).prod(-1).unsqueeze(-1),
                    self._jastrow_derivative(r, dr, jast, jacobian),
                    self._jastrow_second_derivative(r, dr, d2r, jast))
+
+    def _jastrow_derivative(self, r, dr, jast, jacobian):
+        """Compute the value of the derivative of the Jastrow factor
+
+        Args:
+            r (torch.tensor): ee distance matrix Nbatch x Nelec x Nelec
+            jast (torch.tensor): values of the jastrow elements
+                                 Nbatch x Nelec x Natom
+
+        Returns:
+            torch.tensor: gradient of the jastrow factors
+                          Nbatch x Ndim x Nelec
+        """
+        nbatch = r.shape[0]
+        if jacobian:
+
+            prod_val = jast.view(nbatch, -1).prod(-1, keepdim=True)
+            djast = self._get_der_jastrow_elements(r, dr).sum((1, 3))
+
+        else:
+            prod_val = jast.view(
+                nbatch, -1).prod(-1, keepdim=True).unsqueeze(-1)
+            djast = self._get_der_jastrow_elements(r, dr).sum(3)
+
+        return djast * prod_val
+
+    def _jastrow_second_derivative(self, r, dr, d2r, jast):
+        """Compute the value of the pure 2nd derivative of the Jastrow factor
+
+        Args:
+            r (torch.tensor): ee distance matrix Nbatch x Nelec x Nelec
+            jast (torch.tensor): values of the ajstrow elements
+                                 Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: diagonal hessian of the jastrow factors
+                          Nbatch x Nelec x Ndim
+        """
+        nbatch = r.shape[0]
+
+        # pure second derivative terms
+        prod_val = jast.view(nbatch, -1).prod(-1, keepdim=True)
+
+        d2jast = self._get_second_der_jastrow_elements(
+            r, dr, d2r).sum((1, 3))
+
+        # mixed terms
+        djast = self._get_der_jastrow_elements(r, dr)
+
+        # add partial derivative
+        hess_jast = d2jast + 2 * \
+            self.partial_derivative(djast)
+
+        return hess_jast * prod_val
+
+    def partial_derivative(self, djast):
+        """Get the sum of the  product of the mixed
+           second deriative terms
+
+        .. math ::
+
+            d B_{ij} / d x_i * d B_{kl} / d x_k
+
+        Args:
+            djast (torch.tensor): first derivative of the jastrow kernels
+
+        Returns:
+            torch.tensor:
+        """
+
+        # get the index of pairs
+        idx = list(itertools.combinations(range(self.natoms), 2))
+
+        # compute the sum of the product
+        out = djast[..., idx].prod(-1).sum(-1)
+
+        # return the sum over the dims
+        return out.sum(1)
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
