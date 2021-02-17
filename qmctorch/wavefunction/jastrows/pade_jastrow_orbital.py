@@ -25,11 +25,14 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
         self.weight = nn.Parameter(
             w*torch.ones(nmo), requires_grad=True)
-        register_extra_attributes(self, ['weight'])
+
         self.nmo = nmo
         self.wcusp = nn.Parameter(
             torch.tensor(wcusp), requires_grad=True).view(2, 1, 1).to(self.device)
         self.idx_spin = self.get_idx_spin().to(self.device)
+
+        register_extra_attributes(self, ['weight'])
+        register_extra_attributes(self, ['wcusp'])
 
     def get_idx_spin(self):
         """Computes the matrix indicating which spins are
