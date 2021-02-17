@@ -7,7 +7,7 @@ from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
-    def __init__(self, nup, ndown, nmo, w=1., wcusp=[0.25, 0.5] cuda=False):
+    def __init__(self, nup, ndown, nmo, w=1., wcusp=[0.25, 0.5], cuda=False):
         r"""Computes Pade jastrow factor per MO
 
         .. math::
@@ -28,7 +28,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         register_extra_attributes(self, ['weight'])
         self.nmo = nmo
         self.wcusp = nn.Parameter(
-            torch.tensor(wcusp), requires_grad=True).to(self.device)
+            torch.tensor(wcusp), requires_grad=True).view(2, 1, 1).to(self.device)
         self.idx_spin = self.get_idx_spin().to(self.device)
 
     def get_idx_spin(self):
