@@ -7,7 +7,7 @@ from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
-    def __init__(self, nup, ndown, nmo, w=1., cuda=False):
+    def __init__(self, nup, ndown, nmo, w=1., wcusp=[0.25, 0.5] cuda=False):
         r"""Computes Pade jastrow factor per MO
 
         .. math::
@@ -27,7 +27,36 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
             w*torch.ones(nmo), requires_grad=True)
         register_extra_attributes(self, ['weight'])
         self.nmo = nmo
-        self.static_weight = self.get_static_weight()
+        self.wcusp = nn.Parameter(
+            torch.tensor(wcusp), requires_grad=True).to(self.device)
+        self.idx_spin = self.get_idx_spin().to(self.device)
+
+    def get_idx_spin(self):
+        """Computes the matrix indicating which spins are
+        parallel/opposite."""
+
+        # matrices indicating spin parralelism
+        idx_spin = torch.zeros(2, self.nelec, self.nelec)
+
+        # create matrix of same spin terms
+        idx_spin[0, :self.nup, :self.nup] = 1.
+        idx_spin[0, self.nup:, self.nup:] = 1.
+
+        # create matrix of opposite spin terms
+        idx_spin[1, :self.nup, self.nup:] = 1.
+        idx_spin[1, self.nup:, :self.nup] = 1.
+
+        return idx_spin
+
+    def get_cusp_weight(self):
+        """Compute the static weight matrix dynamically
+           to allow the optimization of the coefficients."""
+        return (self.wcusp * self.idx_spin).sum(0).masked_select(self.mask_tri_up)
+
+    def get_static_weight(self):
+        """Make sure we can' t use that method for orbital dependent jastrow."""
+        raise NotImplementedError(
+            'Orbital Dependent Jastrow do not have static weight')
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -62,7 +91,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
         denom = 1. / \
             (1. + self.weight.view(self.nmo, 1, 1) * r.unsqueeze(0))
-        return self.static_weight * r * denom
+        return self.get_cusp_weight() * r * denom
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -94,8 +123,9 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         dr_ = dr[None, ...]
 
         denom = 1. / (1.0 + w * r_)
-        a = self.static_weight * dr_ * denom
-        b = - self.static_weight * w * r_ * dr_ * denom**2
+        wcusp = self.get_cusp_weight()
+        a = wcusp * dr_ * denom
+        b = - wcusp * w * r_ * dr_ * denom**2
 
         return (a + b)
 
@@ -133,10 +163,11 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         denom2 = denom**2
         dr_square = dr_*dr_
 
-        a = self.static_weight * d2r_ * denom
-        b = -2 * self.static_weight * w * dr_square * denom2
-        c = - self.static_weight * w * r_ * d2r_ * denom2
-        d = 2 * self.static_weight * w**2 * r_ * dr_square * denom**3
+        wcusp = self.get_cusp_weight()
+        a = wcusp * d2r_ * denom
+        b = -2 * wcusp * w * dr_square * denom2
+        c = - wcusp * w * r_ * d2r_ * denom2
+        d = 2 * wcusp * w**2 * r_ * dr_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 

@@ -163,7 +163,8 @@ class TwoBodyJastrowFactorBase(nn.Module):
         self.to(self.device)
         attrs = ['static_weight']
         for at in attrs:
-            self.__dict__[at] = self.__dict__[at].to(self.device)
+            if at in self.__dict__:
+                self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, pos, derivative=0, jacobian=True):
         """Compute the Jastrow factors.
