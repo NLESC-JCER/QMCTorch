@@ -64,8 +64,7 @@ class SolverOrbital(SolverBase):
 
         # track the observable we want
         if track is not None:
-            if not hasattr(self, 'observable'):
-                self.track_observable(track)
+            self.track_observable(track)
 
         # define the grad calulation
         if grad is not None:

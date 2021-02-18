@@ -175,8 +175,12 @@ class SolverBase:
 
             # store variational parameter
             elif obs in self.wf.state_dict():
-                layer, param = obs.split('.')
-                p = self.wf.__getattr__(layer).__getattr__(param)
+
+                p = self.wf.state_dict()[obs]
+                # obs_repr = obs.split('.')
+                # layer = obs_repr[0]
+                # param = '_'.join(obs_repr[1:])
+
                 self.observable.__getattribute__(
                     obs).append(p.data.cpu().numpy())
 
