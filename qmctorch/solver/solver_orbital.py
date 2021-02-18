@@ -231,7 +231,7 @@ class SolverOrbital(SolverBase):
         return self.observable
 
     def run(self, nepoch, batchsize=None,
-            hdf5_group=None, chkpt_every=None):
+            hdf5_group=None, chkpt_every=None, tqdm=False):
         """Run a wave function optimization
 
         Args:
@@ -246,7 +246,7 @@ class SolverOrbital(SolverBase):
         """
 
         # prepare the optimization
-        self.prepare_optimization(batchsize, chkpt_every)
+        self.prepare_optimization(batchsize, chkpt_every, tqdm)
         self.log_data_opt(nepoch, 'wave function optimization')
 
         # run the epochs
@@ -260,7 +260,7 @@ class SolverOrbital(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every):
+    def prepare_optimization(self, batchsize, chkpt_every, tqdm):
         """Prepare the optimization process
 
         Args:
@@ -269,7 +269,7 @@ class SolverOrbital(SolverBase):
         """
 
         # sample the wave function
-        pos = self.sampler(self.wf.pdf)
+        pos = self.sampler(self.wf.pdf, with_tqdm=tqdm)
 
         # handle the batch size
         if batchsize is None:
