@@ -27,7 +27,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
             w*torch.ones(nmo), requires_grad=True)
 
         self.nmo = nmo
-        wcusp = torch.tensor(wcusp).view(1, 2).repeat(8, 1)
+        wcusp = torch.tensor(wcusp).view(1, 2).repeat(self.nmo, 1)
         self.wcusp = nn.Parameter(wcusp, requires_grad=True)
 
         self.idx_spin = self.get_idx_spin().to(self.device)

@@ -210,12 +210,12 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
 if __name__ == "__main__":
 
-    unittest.main()
+    # unittest.main()
 
     # set_torch_double_precision()
-    # t = TestCorrelatedOrbitalWF()
-    # t.setUp()
-    # t.test_forward()
+    t = TestCorrelatedOrbitalWF()
+    t.setUp()
+    t.test_forward()
 
     # t.test_jacobian_mo()
     # t.test_grad_mo()
