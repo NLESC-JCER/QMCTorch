@@ -27,8 +27,9 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
             w*torch.ones(nmo), requires_grad=True)
 
         self.nmo = nmo
-        self.wcusp = nn.Parameter(
-            torch.tensor(wcusp), requires_grad=True)
+        wcusp = torch.tensor(wcusp).view(1, 2).repeat(self.nmo, 1)
+        self.wcusp = nn.Parameter(wcusp, requires_grad=True)
+
         self.idx_spin = self.get_idx_spin().to(self.device)
 
         register_extra_attributes(self, ['weight'])
@@ -54,7 +55,11 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
     def get_cusp_weight(self):
         """Compute the static weight matrix dynamically
            to allow the optimization of the coefficients."""
-        return (self.wcusp.view(2, 1, 1) * self.idx_spin).sum(0).masked_select(self.mask_tri_up)
+        out = self.wcusp.view(self.nmo, 2, 1, 1) * self.idx_spin
+        out = out.sum(1)
+        out = out.masked_select(self.mask_tri_up)
+        out = out.view(self.nmo, 1, -1)
+        return out
 
     def get_static_weight(self):
         """Make sure we can' t use that method for orbital dependent jastrow."""
@@ -94,6 +99,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
         denom = 1. / \
             (1. + self.weight.view(self.nmo, 1, 1) * r.unsqueeze(0))
+
         return self.get_cusp_weight() * r * denom
 
     def _get_der_jastrow_elements(self, r, dr):
@@ -126,7 +132,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         dr_ = dr[None, ...]
 
         denom = 1. / (1.0 + w * r_)
-        wcusp = self.get_cusp_weight()
+        wcusp = self.get_cusp_weight().unsqueeze(1)
         a = wcusp * dr_ * denom
         b = - wcusp * w * r_ * dr_ * denom**2
 
@@ -166,7 +172,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         denom2 = denom**2
         dr_square = dr_*dr_
 
-        wcusp = self.get_cusp_weight()
+        wcusp = self.get_cusp_weight().unsqueeze(1)
         a = wcusp * d2r_ * denom
         b = -2 * wcusp * w * dr_square * denom2
         c = - wcusp * w * r_ * d2r_ * denom2
