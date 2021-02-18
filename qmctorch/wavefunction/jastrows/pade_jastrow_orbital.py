@@ -28,7 +28,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
         self.nmo = nmo
         self.wcusp = nn.Parameter(
-            torch.tensor(wcusp), requires_grad=True).view(2, 1, 1).to(self.device)
+            torch.tensor(wcusp), requires_grad=True)
         self.idx_spin = self.get_idx_spin().to(self.device)
 
         register_extra_attributes(self, ['weight'])
@@ -54,7 +54,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
     def get_cusp_weight(self):
         """Compute the static weight matrix dynamically
            to allow the optimization of the coefficients."""
-        return (self.wcusp * self.idx_spin).sum(0).masked_select(self.mask_tri_up)
+        return (self.wcusp.view(2, 1, 1) * self.idx_spin).sum(0).masked_select(self.mask_tri_up)
 
     def get_static_weight(self):
         """Make sure we can' t use that method for orbital dependent jastrow."""

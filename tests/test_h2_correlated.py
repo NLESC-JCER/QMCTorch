@@ -109,9 +109,8 @@ class TestH2Correlated(unittest.TestCase):
 
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
+        self.solver.configure(
+            track=['local_energy', 'parameters'], loss='energy', grad='auto')
         obs = self.solver.run(5)
         if __PLOT__:
             plot_energy(obs.local_energy, e0=-
@@ -149,7 +148,7 @@ if __name__ == "__main__":
     t = TestH2Correlated()
     t.setUp()
     # t.test_0_wavefunction()
-    t.test1_single_point()
+    # t.test1_single_point()
     # t.test2_single_point_hmc()
-    # # t.test3_wf_opt()
+    t.test3_wf_opt()
     # t.test5_sampling_traj()

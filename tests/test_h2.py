@@ -117,7 +117,7 @@ class TestH2(unittest.TestCase):
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(track=['local_energy'],
+        self.solver.configure(track=['local_energy', 'parameters'],
                               loss='energy', grad='auto')
         obs = self.solver.run(5)
         if __PLOT__:
@@ -168,10 +168,10 @@ class TestH2(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestH2()
-    # t.setUp()
+    # unittest.main()
+    t = TestH2()
+    t.setUp()
     # t.test2_single_point_hmc()
     # t.test1_single_point()
-    # # t.test3_wf_opt()
+    t.test3_wf_opt()
     # t.test5_sampling_traj()
