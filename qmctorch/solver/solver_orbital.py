@@ -158,7 +158,7 @@ class SolverOrbital(SolverBase):
 
     def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
                 nepoch_wf_init=100, nepoch_wf_update=50,
-                hdf5_group=None, chkpt_every=None):
+                hdf5_group=None, chkpt_every=None, tqdm=False):
         """optimize the geometry of the molecule
 
         Args:
@@ -184,7 +184,7 @@ class SolverOrbital(SolverBase):
         eval_grad_wf = self.evaluate_gradient
 
         # log data
-        self.prepare_optimization(batchsize, None)
+        self.prepare_optimization(batchsize, None, tqdm)
         self.log_data_opt(nepoch, 'geometry optimization')
 
         # init the traj
