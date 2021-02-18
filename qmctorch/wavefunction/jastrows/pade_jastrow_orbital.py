@@ -28,9 +28,8 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
         self.nmo = nmo
         wcusp = torch.tensor(wcusp).view(1, 2).repeat(8, 1)
-        self.wcusp = nn.Parameter(
-            torch.tensor(wcusp), requires_grad=True)
-        print(self.wcusp.shape)
+        self.wcusp = nn.Parameter(wcusp, requires_grad=True)
+
         self.idx_spin = self.get_idx_spin().to(self.device)
 
         register_extra_attributes(self, ['weight'])
@@ -60,7 +59,6 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         out = out.sum(1)
         out = out.masked_select(self.mask_tri_up)
         out = out.view(self.nmo, 1, -1)
-        print(out.shape)
         return out
 
     def get_static_weight(self):
@@ -134,7 +132,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         dr_ = dr[None, ...]
 
         denom = 1. / (1.0 + w * r_)
-        wcusp = self.get_cusp_weight()
+        wcusp = self.get_cusp_weight().unsqueeze(1)
         a = wcusp * dr_ * denom
         b = - wcusp * w * r_ * dr_ * denom**2
 
@@ -174,7 +172,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         denom2 = denom**2
         dr_square = dr_*dr_
 
-        wcusp = self.get_cusp_weight()
+        wcusp = self.get_cusp_weight().unsqueeze(1)
         a = wcusp * d2r_ * denom
         b = -2 * wcusp * w * dr_square * denom2
         c = - wcusp * w * r_ * d2r_ * denom2
