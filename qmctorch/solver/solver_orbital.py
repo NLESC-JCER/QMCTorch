@@ -331,7 +331,8 @@ class SolverOrbital(SolverBase):
 
                 # check for nan
                 if torch.isnan(eloc).any():
-                    raise ValueError("Nan detected in local energy")
+                    log.info('Error : Nan detected in local energy')
+                    return cumulative_loss
 
                 # optimize the parameters
                 self.optimization_step(lpos)
