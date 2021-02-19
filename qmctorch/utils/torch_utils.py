@@ -196,7 +196,7 @@ class Loss(nn.Module):
             mask = self.get_clipping_mask(local_energies)
 
             # sampling_weight
-            weight = self.get_sampling_weights()
+            weight = self.get_sampling_weights(deactivate_weight)
 
             # compute the loss
             loss = self.loss_fn((weight * local_energies)[mask])
@@ -233,7 +233,7 @@ class Loss(nn.Module):
 
         return mask
 
-    def get_sampling_weights(self):
+    def get_sampling_weights(self, deactivate_weight):
         """Get the weight needed when resampling is not
             done at every step
         """
