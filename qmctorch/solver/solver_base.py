@@ -177,10 +177,6 @@ class SolverBase:
             elif obs in self.wf.state_dict():
 
                 p = self.wf.state_dict()[obs]
-                # obs_repr = obs.split('.')
-                # layer = obs_repr[0]
-                # param = '_'.join(obs_repr[1:])
-
                 self.observable.__getattribute__(
                     obs).append(p.data.cpu().numpy())
 

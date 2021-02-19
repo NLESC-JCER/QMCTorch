@@ -329,6 +329,10 @@ class SolverOrbital(SolverBase):
                 loss, eloc = self.evaluate_gradient(lpos)
                 cumulative_loss += loss
 
+                # check for nan
+                if torch.isnan(eloc).any():
+                    raise ValueError("Nan detected in local energy")
+
                 # optimize the parameters
                 self.optimization_step(lpos)
 
