@@ -40,7 +40,7 @@ class SolverOrbital(SolverBase):
 
     def configure(self, track=None, freeze=None,
                   loss=None, grad=None,
-                  ortho_mo=None, clip_loss=None,
+                  ortho_mo=None, clip_loss=False,
                   resampling=None):
         """Configure the solver
 
@@ -53,8 +53,9 @@ class SolverOrbital(SolverBase):
                                   Defaults to 'auto'.
             ortho_mo (bool, optional): apply regularization to orthogonalize the MOs.
                                        Defaults to False.
-            clip_loss (bool, optional): Clip the loss values at +/- 5std.
-                                        Defaults to False.
+            clip_loss (bool, optional): Clip the loss values at +/- X std. X defined in Loss
+                                        as clip_num_std (default 5)
+                                        Defaults to False. 
         """
 
         # set the parameters we want to optimize/freeze
