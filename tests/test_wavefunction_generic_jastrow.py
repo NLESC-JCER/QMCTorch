@@ -140,11 +140,11 @@ class TestGenericJastrowWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestGenericJastrowWF()
-    t.setUp()
-    # t.test_forward()
-    # # t.test_local_energy()
-    # # t.test_kinetic_energy()
-    t.test_gradients_wf()
-    t.test_gradients_pdf()
+    unittest.main()
+    # t = TestGenericJastrowWF()
+    # t.setUp()
+    # # t.test_forward()
+    # # # t.test_local_energy()
+    # # # t.test_kinetic_energy()
+    # t.test_gradients_wf()
+    # t.test_gradients_pdf()
