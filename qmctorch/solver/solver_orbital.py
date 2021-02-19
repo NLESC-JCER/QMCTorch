@@ -261,7 +261,7 @@ class SolverOrbital(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every, tqdm):
+    def prepare_optimization(self, batchsize, chkpt_every, tqdm=False):
         """Prepare the optimization process
 
         Args:
