@@ -406,6 +406,9 @@ class SolverOrbital(SolverBase):
         if self.wf.kinetic_method == 'auto':
             no_grad_eloc = False
 
+        if self.wf.jastrow.__repr__().startswith('GenericJastrow'):
+            no_grad_eloc = False
+
         if self.loss.method in ['energy', 'weighted-energy']:
 
             ''' Get the gradient of the total energy
