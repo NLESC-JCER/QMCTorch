@@ -176,9 +176,9 @@ class SolverBase:
             # store variational parameter
             elif obs in self.wf.state_dict():
 
-                p = self.wf.state_dict()[obs]
+                p = self.wf.state_dict()[obs].clone()
                 self.observable.__getattribute__(
-                    obs).append(p.data.cpu().numpy())
+                    obs).append(p.data.cpu().detach().numpy())
 
                 if obs+'.grad' in self.observable.__dict__.keys():
                     if p.grad is not None:

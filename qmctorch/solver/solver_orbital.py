@@ -352,7 +352,7 @@ class SolverOrbital(SolverBase):
                 if (n > 0) and (n % self.chkpt_every == 0):
                     self.save_checkpoint(n, cumulative_loss)
 
-            self.print_observable(cumulative_loss)
+            self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
             self.dataset.data = self.resample(n, self.dataset.data)
