@@ -77,3 +77,45 @@ class FullyConnectedJastrow(torch.nn.Module):
         x = x + self.cusp_weights
 
         return x
+
+
+class FullyConnectedJastrowElecNuc(torch.nn.Module):
+    def __init__(self):
+        """Defines a fully connected jastrow factors."""
+
+        super(FullyConnectedJastrowElecNuc, self).__init__()
+
+        self.fc1 = nn.Linear(1, 16, bias=False)
+        self.fc2 = nn.Linear(16, 8, bias=False)
+        self.fc3 = nn.Linear(8, 1, bias=False)
+
+        self.fc1.weight.data.fill_(1E-3)
+        self.fc2.weight.data.fill_(1E-3)
+        self.fc3.weight.data.fill_(1E-3)
+
+        self.nl_func = torch.nn.Sigmoid()
+
+    def forward(self, x):
+        """Compute the values of the individual f_ij=f(r_ij)
+
+        Args:
+            x (torch.tensor): e-e distance Nbatch, Nele_pairs
+
+        Returns:
+            torch.tensor: values of the f_ij
+        """
+        original_shape = x.shape
+
+        # reshape the input so that all elements
+        # are considered independently of each other
+        x = x.reshape(-1, 1)
+
+        x = self.fc1(x)
+        x = self.fc2(x)
+        x = self.fc3(x)
+        x = self.nl_func(x)
+
+        # reshape to the original shape
+        x = x.reshape(*original_shape)
+
+        return x

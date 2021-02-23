@@ -1,13 +1,13 @@
 import torch
 from torch import nn
-
+from torch.autograd import grad
 from ...utils import register_extra_attributes
 from .electron_nuclei_jastrow_base import ElectronNucleiJastrowFactorBase
 
 
 class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
 
-    def __init__(self, nup, ndown, atoms, JastrowFunction, cuda=False):
+    def __init__(self, nup, ndown, atoms, JastrowFunction, cuda, **kwargs):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -151,14 +151,3 @@ class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
                     grad_outputs=torch.ones_like(gval))[0]
 
         return hval, gval
-
-
-if __name__ == "__main__":
-    nup, ndown = 4, 4
-    nelec = nup + ndown
-    atoms = torch.rand(4, 3)
-    jastrow = ElectronNucleiPadeJastrow(nup, ndown, atoms)
-    nbatch = 5
-
-    pos = torch.rand(nbatch, nelec * 3)
-    pos.requires_grad = True
