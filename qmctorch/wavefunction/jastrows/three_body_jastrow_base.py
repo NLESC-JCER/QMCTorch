@@ -142,43 +142,87 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         index_row = torch.LongTensor(index_row).to(self.device)
         return mask, index_col, index_row
 
-    def extract_tri_up(self, input):
+    def extract_tri_up(self, inp):
         r"""extract the upper triangular elements
 
         Args:
-            input (torch.tensor): input matrices (nbatch, nelec, nelec)
+            input (torch.tensor): input matrices (..., nelec, nelec)
 
         Returns:
-            torch.tensor: triangular up element (nbatch, nelec_pair)
+            torch.tensor: triangular up element (..., nelec_pair)
         """
-        nbatch = input.shape[0]
-        return input.masked_select(self.mask_tri_up).view(nbatch, -1)
+        shape = list(inp.shape)
+        out = inp.masked_select(self.mask_tri_up)
+        return out.view(*(shape[:-2] + [-1]))
 
     def extract_elec_nuc_dist(self, en_dist):
         r"""Organize the elec nuc distances
 
         Args:
-            en_dist (torch.tensor): electron-nuclei distances nbatch x nelec x natom
+            en_dist (torch.tensor): electron-nuclei distances 
+                                    nbatch x nelec x natom or
+                                    nbatch x 3 x nelec x natom (dr)
 
         Returns:
-            torch.tensor: nbatch x natom x nelec_pair x 2
+            torch.tensor: nbatch x natom x nelec_pair x 2 or
+            torch.tensor: nbatch x 3 x natom x nelec_pair x 2 (dr)
         """
-        return en_dist[:, self.index_elec, :].permute(0, 3, 2, 1)
+        out = en_dist[..., self.index_elec, :]
+        if en_dist.ndim == 3:
+            return out.permute(0, 3, 2, 1)
+        elif en_dist.ndim == 4:
+            return out.permute(0, 1, 4, 3, 2)
+        else:
+            raise ValueError(
+                'elec-nuc distance matrix should have 3 or 4 dim')
 
-    def assemble_dist(self, ren, ree):
+    def assemble_dist(self, pos):
         """Assemle the different distances for easy calculations
 
         Args:
-            ren (torch.tensor): matrix of el-nuc distance nbatch x natom x nelec_pair x 2
-            ree (torch.tensor): matrix of el-el  distance nbatch x nelec_pair
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
 
         Returns:
             torch.tensor : nbatch, natom, nelec_pair, 3
 
         """
+
+        # get the elec-elec distance matrix
+        ree = self.extract_tri_up(self.elel_dist(pos))
         ree = ree.unsqueeze(1).unsqueeze(-1)
         ree = ree.repeat(1, self.natoms, 1, 1)
+
+        # get the elec-nuc distance matrix
+        ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
+
+        # cat both
         return torch.cat((ren, ree), -1)
+
+    def assemble_dist_deriv(self, pos, derivative=1):
+        """Assemle the different distances for easy calculations
+
+        Args:
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+
+        Returns:
+            torch.tensor : nbatch, 3 x natom, nelec_pair, 3
+
+        """
+
+        # get the elec-elec distance derivative
+        dree = self.elel_dist(pos, derivative)
+        dree = self.extract_tri_up(dree)
+        dree = dree.unsqueeze(2).unsqueeze(-1)
+        dree = dree.repeat(1, 1, self.natoms, 1, 1)
+
+        # get the elec-nuc distance derivative
+        dren = self.elnu_dist(pos, derivative)
+        dren = self.extract_elec_nuc_dist(dren)
+
+        # assemble
+        return torch.cat((dren, dree), -1)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -215,35 +259,27 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         assert size[1] == self.nelec * self.ndim
         nbatch = size[0]
 
-        ree = self.extract_tri_up(self.elel_dist(pos))
-        ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
-        r = self.assemble_dist(ren, ree)
-
+        r = self.assemble_dist(pos)
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-            return jast.prod(-1).unsqueeze(-1)
+            return jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
 
         elif derivative == 1:
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
+            dr = self.assemble_dist_deriv(pos, 1)
             return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
 
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
-            d2r = self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            dr = self.assemble_dist_deriv(pos, 1)
+            d2r = self.assemble_dist_deriv(pos, 2)
 
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
 
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
-            d2r = self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            dr = self.assemble_dist_deriv(pos, 1)
+            d2r = self.assemble_dist_deriv(pos, 2)
 
             return(jast.prod(-1).unsqueeze(-1),
                    self._jastrow_derivative(r, dr, jast, jacobian),
@@ -264,8 +300,10 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
         if jacobian:
 
-            prod_val = jast.prod(-1).unsqueeze(-1)
+            prod_val = jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
             djast = self._get_der_jastrow_elements(r, dr).sum(-2)
+            print(djast.shape)
+            print(prod_val.shape)
             djast = djast * prod_val
 
             # might cause problems with backward cause in place operation
