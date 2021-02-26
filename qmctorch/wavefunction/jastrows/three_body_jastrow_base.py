@@ -35,7 +35,7 @@ class ThreeBodyJastrowFactorBase(nn.Module):
 
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
         self.index_elec = [
-            self.index_col.tolist(), self.index_row.tolist()]
+            self.index_row.tolist(), self.index_col.tolist()]
 
         self.elel_dist = ElectronDistance(self.nelec, self.ndim)
         self.elnu_dist = ElectronNucleiDistance(
@@ -159,7 +159,7 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         r"""Organize the elec nuc distances
 
         Args:
-            en_dist (torch.tensor): electron-nuclei distances 
+            en_dist (torch.tensor): electron-nuclei distances
                                     nbatch x nelec x natom or
                                     nbatch x 3 x nelec x natom (dr)
 
@@ -300,29 +300,57 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
         if jacobian:
 
-            prod_val = jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
-            djast = self._get_der_jastrow_elements(r, dr).sum(-2)
-            print(djast.shape)
-            print(prod_val.shape)
-            djast = djast * prod_val
+            prod_val = jast.view(nbatch, -1).prod(-1)
 
-            # might cause problems with backward cause in place operation
-            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            # derivative of the jastrow elements
+            # nbatch x ndim x natom x nelec_pair x 3
+            # last dim is (ria rja rij)
+            djast = self._get_der_jastrow_elements(r, dr)
+
+            # sum dim and atom
+            djast = djast.sum([1, 2])
+
+            # multiply with the product of jastrow el values
+            djast = djast * prod_val.unsqueeze(-1).unsqueeze(-1)
+
+            # create the output vector with size nbatch x nelec
+            out_shape = list(djast.shape[:-2]) + [self.nelec]
             out = torch.zeros(out_shape).to(self.device)
-            out.index_add_(-1, self.index_row, djast)
-            out.index_add_(-1, self.index_col, -djast)
+
+            # add the elec-elec term
+            out.index_add_(-1, self.index_row, djast[..., 2])
+            out.index_add_(-1, self.index_col, -djast[..., 2])
+
+            # add the elec-nuc terms
+            out.index_add_(-1, self.index_row, djast[..., 0])
+            out.index_add_(-1, self.index_col, djast[..., 1])
 
         else:
 
-            prod_val = jast.prod(-1).unsqueeze(-1).unsqueeze(-1)
+            # product of jastrow terms
+            prod_val = jast.view(nbatch, -1).prod(-1)
+
+            # derivative of the jastrow elements
+            # nbatch x ndim x natom x nelec_pair x 3
+            # last dim is (ria rja rij)
             djast = self._get_der_jastrow_elements(r, dr)
-            djast = djast * prod_val
+
+            # sum atom
+            djast = djast.sum(2)
+            djast = djast * \
+                prod_val.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
             # might cause problems with backward cause in place operation
-            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            out_shape = list(djast.shape[:-2]) + [self.nelec]
             out = torch.zeros(out_shape).to(self.device)
-            out.index_add_(-1, self.index_row, djast)
-            out.index_add_(-1, self.index_col, -djast)
+
+            # add electronic terms
+            out.index_add_(-1, self.index_row, djast[..., 2])
+            out.index_add_(-1, self.index_col, -djast[..., 2])
+
+            # add elec-nuc terms
+            out.index_add_(-1, self.index_row, djast[..., 0])
+            out.index_add_(-1, self.index_col, djast[..., 1])
 
         return out
 

@@ -86,7 +86,8 @@ class TestThreeBodyGeneric(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.atoms = torch.rand(4, 3)
+        self.natom = 4
+        self.atoms = torch.rand(self.natom, 3)
         self.jastrow = ThreeBodyJastrowFactorGeneric(
             self.nup, self.ndown, self.atoms, FullyConnected, False)
         self.nbatch = 5
@@ -94,7 +95,7 @@ class TestThreeBodyGeneric(unittest.TestCase):
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
 
-    def test_grad_distance(self):
+    def test_grad_elel_distance(self):
 
         r = self.jastrow.elel_dist(self.pos)
         dr = self.jastrow.elel_dist(self.pos, derivative=1)
@@ -103,9 +104,26 @@ class TestThreeBodyGeneric(unittest.TestCase):
             self.pos,
             grad_outputs=torch.ones_like(r))[0]
 
-        assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
+        dr_grad = dr_grad.reshape(self.nbatch, self.nelec, 3)
+        dr = dr.sum(-1).permute(0, 2, 1)
 
-    def test_grad_jastrow(self):
+        assert(torch.allclose(2*dr, dr_grad, atol=1E-5))
+
+    def test_grad_elnu_distance(self):
+
+        r = self.jastrow.elnu_dist(self.pos)
+        dr = self.jastrow.elnu_dist(self.pos, derivative=1)
+        dr_grad = grad(
+            r,
+            self.pos,
+            grad_outputs=torch.ones_like(r))[0]
+
+        dr_grad = dr_grad.reshape(self.nbatch, self.nelec, 3)
+        dr = dr.sum(-1).permute(0, 2, 1)
+
+        assert(torch.allclose(dr, dr_grad, atol=1E-5))
+
+    def test_jacobian_jastrow(self):
 
         val = self.jastrow(self.pos)
         dval = self.jastrow(self.pos, derivative=1)
@@ -117,41 +135,62 @@ class TestThreeBodyGeneric(unittest.TestCase):
         dval_grad = dval_grad.view(
             self.nbatch, self.nelec, 3).sum(2)
 
-        assert torch.allclose(dval, dval_grad)
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
+        assert torch.allclose(dval, dval_grad)
 
-    def test_hess_jastrow(self):
+    def test_grad_jastrow(self):
 
         val = self.jastrow(self.pos)
-        d2val_grad = hess(val, self.pos)
-        d2val = self.jastrow(self.pos, derivative=2)
+        dval = self.jastrow(self.pos, derivative=1, jacobian=False)
+        dval_grad = grad(
+            val,
+            self.pos,
+            grad_outputs=torch.ones_like(val))[0]
 
-        assert torch.allclose(d2val, d2val_grad.view(
-            self.nbatch, self.nelec, 3).sum(2))
-        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+        dval_grad = dval_grad.view(
+            self.nbatch, self.nelec, 3)
+
+        assert(torch.allclose(dval.sum(), dval_grad.sum()))
+        assert torch.allclose(dval.permute(0, 2, 1), dval_grad)
+
+    # def test_hess_jastrow(self):
+
+    #     val = self.jastrow(self.pos)
+    #     d2val_grad = hess(val, self.pos)
+    #     d2val = self.jastrow(self.pos, derivative=2)
+
+    #     assert torch.allclose(d2val, d2val_grad.view(
+    #         self.nbatch, self.nelec, 3).sum(2))
+    #     assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 
 if __name__ == "__main__":
     # unittest.main()
-    t = TestThreeBodyGeneric()
-    t.setUp()
-    t.test_grad_distance()
-    t.test_grad_jastrow()
-    # nup, ndown = 4, 4
-    # nelec = nup + ndown
-    # atoms = torch.rand(4, 3)
-    # jastrow = ThreeBodyJastrowFactorGeneric(
-    #     nup, ndown, atoms, FullyConnected, False)
-    # nbatch = 5
+    if 1:
+        t = TestThreeBodyGeneric()
+        t.setUp()
+        t.test_grad_elel_distance()
+        t.test_grad_elnu_distance()
+        t.test_jacobian_jastrow()
+        t.test_grad_jastrow()
 
-    # pos = torch.rand(nbatch, nelec * 3)
-    # pos.requires_grad = True
+    if 1:
+        nup, ndown = 4, 4
+        nelec = nup + ndown
+        atoms = torch.rand(4, 3)
+        jastrow = ThreeBodyJastrowFactorGeneric(
+            nup, ndown, atoms, FullyConnected, False)
+        nbatch = 5
 
-    # ree = jastrow.extract_tri_up(jastrow.elel_dist(pos))
-    # ren = jastrow.extract_elec_nuc_dist(jastrow.elnu_dist(pos))
-    # r = jastrow.assemble_dist(pos)
+        pos = torch.rand(nbatch, nelec * 3)
+        pos.requires_grad = True
 
-    # val = jastrow.jastrow_function(r)
-    # gval = jastrow._grads(val, r)
+        ree = jastrow.extract_tri_up(jastrow.elel_dist(pos))
+        ren = jastrow.extract_elec_nuc_dist(jastrow.elnu_dist(pos))
+        r = jastrow.assemble_dist(pos)
 
-    # dr = jastrow.assemble_dist_deriv(pos)
+        jast = jastrow._get_jastrow_elements(r)
+        jast = jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
+
+        dr = jastrow.assemble_dist_deriv(pos)
+        djast = jastrow._get_der_jastrow_elements(r, dr)

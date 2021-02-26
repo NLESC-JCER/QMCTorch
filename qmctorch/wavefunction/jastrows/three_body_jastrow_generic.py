@@ -83,12 +83,11 @@ class ThreeBodyJastrowFactorGeneric(ThreeBodyJastrowFactorBase):
         kernel = self.jastrow_function(r)
         ker_grad = self._grads(kernel, r)
 
-        # only consider the dria and drij terms
-        idx = [0, 2]
-        out = ker_grad.unsqueeze(1)[..., idx] * dr[..., idx]
+        # return the ker * dr
+        out = ker_grad.unsqueeze(1) * dr
 
-        # sum over the dria and drij and over all atoms
-        return out.sum(-1).sum(2)
+        # sum over the atoms
+        return out
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels

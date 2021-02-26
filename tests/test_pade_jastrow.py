@@ -38,7 +38,7 @@ class TestPadeJastrow(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
 
-        self.nup, self.ndown = 4, 4
+        self.nup, self.ndown = 1, 1
         self.nelec = self.nup + self.ndown
         self.jastrow = PadeJastrow(self.nup, self.ndown)
         self.nbatch = 5
@@ -86,4 +86,13 @@ class TestPadeJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+
+    nup, ndown = 2, 2
+    nelec = nup + ndown
+
+    jastrow = PadeJastrow(nup, ndown)
+    nbatch = 1
+
+    pos = torch.rand(nbatch, nelec * 3)
+    pos.requires_grad = True
