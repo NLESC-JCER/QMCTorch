@@ -368,20 +368,32 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         """
         nbatch = r.shape[0]
 
-        # pure second derivative terms
-        prod_val = jast.prod(-1).unsqueeze(-1)
+        # product of the jast
+        prod_val = jast.view(nbatch, -1).prod(-1)
 
-        d2jast = self._get_second_der_jastrow_elements(
-            r, dr, d2r).sum(-2)
+        # puresecond derivative of the jast el
+        # nbatch x ndim x natom x nelec_pair x 3
+        # last dim is (ria rja rij)
+        d2jast = self._get_second_der_jastrow_elements(r, dr, d2r)
+
+        # sum over the dim and the atom
+        d2jast = d2jast.sum([1, 2])
 
         # might cause problems with backward cause in place operation
-        hess_shape = list(d2jast.shape[:-1]) + [self.nelec]
+        hess_shape = list(d2jast.shape[:-2]) + [self.nelec]
         hess_jast = torch.zeros(hess_shape).to(self.device)
-        hess_jast.index_add_(-1, self.index_row, d2jast)
-        hess_jast.index_add_(-1, self.index_col, d2jast)
+
+        # add elec-elec terms
+        hess_jast.index_add_(-1, self.index_row, d2jast[..., 2])
+        hess_jast.index_add_(-1, self.index_col, d2jast[..., 2])
+
+        # add elec-nu terms
+        hess_jast.index_add_(-1, self.index_row, d2jast[..., 0])
+        hess_jast.index_add_(-1, self.index_col, d2jast[..., 1])
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
+        print(djast.shape)
 
         # add partial derivative
         hess_jast = hess_jast + 2 * \

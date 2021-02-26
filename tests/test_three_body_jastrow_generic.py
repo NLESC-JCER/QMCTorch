@@ -153,15 +153,15 @@ class TestThreeBodyGeneric(unittest.TestCase):
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
         assert torch.allclose(dval.permute(0, 2, 1), dval_grad)
 
-    # def test_hess_jastrow(self):
+    def test_hess_jastrow(self):
 
-    #     val = self.jastrow(self.pos)
-    #     d2val_grad = hess(val, self.pos)
-    #     d2val = self.jastrow(self.pos, derivative=2)
+        val = self.jastrow(self.pos)
+        d2val_grad = hess(val, self.pos)
+        d2val = self.jastrow(self.pos, derivative=2)
 
-    #     assert torch.allclose(d2val, d2val_grad.view(
-    #         self.nbatch, self.nelec, 3).sum(2))
-    #     assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+        assert torch.allclose(d2val, d2val_grad.view(
+            self.nbatch, self.nelec, 3).sum(2))
+        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 
 if __name__ == "__main__":
@@ -173,6 +173,7 @@ if __name__ == "__main__":
         t.test_grad_elnu_distance()
         t.test_jacobian_jastrow()
         t.test_grad_jastrow()
+        t.test_hess_jastrow()
 
     if 1:
         nup, ndown = 4, 4

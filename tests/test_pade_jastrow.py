@@ -86,13 +86,13 @@ class TestPadeJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
+    unittest.main()
 
-    nup, ndown = 2, 2
-    nelec = nup + ndown
+    # nup, ndown = 2, 2
+    # nelec = nup + ndown
 
-    jastrow = PadeJastrow(nup, ndown)
-    nbatch = 1
+    # jastrow = PadeJastrow(nup, ndown)
+    # nbatch = 1
 
-    pos = torch.rand(nbatch, nelec * 3)
-    pos.requires_grad = True
+    # pos = torch.rand(nbatch, nelec * 3)
+    # pos.requires_grad = True
