@@ -8,23 +8,36 @@ from qmctorch.wavefunction.jastrows.three_body_jastrow_generic import ThreeBodyJ
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
+class DummyJastrow(torch.nn.Module):
+    def __init__(self):
+        """Defines a fully connected jastrow factors."""
+
+        super(DummyJastrow, self).__init__()
+
+    def forward(self, x):
+        out_shape = list(x.shape)[:-1] + [1]
+        x = x.reshape(-1, 3)
+        x = (0.5*torch.cos(x**4)).sum(-1)
+        return x.reshape(*out_shape)
+
+
 class FullyConnected(torch.nn.Module):
     def __init__(self):
         """Defines a fully connected jastrow factors."""
 
         super(FullyConnected, self).__init__()
 
-        self.fc1 = torch.nn.Linear(3, 16, bias=True)
-        self.fc2 = torch.nn.Linear(16, 8, bias=True)
-        self.fc3 = torch.nn.Linear(8, 1, bias=True)
+        self.fc1 = torch.nn.Linear(3, 9, bias=True)
+        self.fc2 = torch.nn.Linear(9, 3, bias=True)
+        self.fc3 = torch.nn.Linear(3, 1, bias=True)
 
-        torch.nn.init.xavier_uniform_(self.fc1.weight)
-        torch.nn.init.xavier_uniform_(self.fc2.weight)
-        torch.nn.init.xavier_uniform_(self.fc2.weight)
+        torch.nn.init.uniform_(self.fc1.weight)
+        torch.nn.init.uniform_(self.fc2.weight)
+        torch.nn.init.uniform_(self.fc2.weight)
 
-        # self.fc1.weight.data.fill_(1E-3)
-        # self.fc2.weight.data.fill_(1E-3)
-        # self.fc3.weight.data.fill_(1E-3)
+        self.fc1.weight.data *= 1E-3
+        self.fc2.weight.data *= 1E-3
+        self.fc3.weight.data *= 1E-3
 
         self.nl_func = torch.nn.Sigmoid()
 
@@ -87,12 +100,12 @@ class TestThreeBodyGeneric(unittest.TestCase):
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         self.natom = 4
-        self.atoms = torch.rand(self.natom, 3)
+        self.atoms = 0.1*torch.rand(self.natom, 3)
         self.jastrow = ThreeBodyJastrowFactorGeneric(
             self.nup, self.ndown, self.atoms, FullyConnected, False)
         self.nbatch = 5
 
-        self.pos = torch.rand(self.nbatch, self.nelec * 3)
+        self.pos = 0.1*torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
 
     def test_grad_elel_distance(self):
@@ -156,17 +169,18 @@ class TestThreeBodyGeneric(unittest.TestCase):
     def test_hess_jastrow(self):
 
         val = self.jastrow(self.pos)
-        d2val_grad = hess(val, self.pos)
+        d2val_grad = hess(val, self.pos).view(
+            self.nbatch, self.nelec, 3).sum(2)
         d2val = self.jastrow(self.pos, derivative=2)
-
-        assert torch.allclose(d2val, d2val_grad.view(
-            self.nbatch, self.nelec, 3).sum(2))
+        print(d2val_grad)
+        print(d2val)
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
+        assert torch.allclose(d2val, d2val_grad)
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    if 1:
+    unittest.main()
+    if 0:
         t = TestThreeBodyGeneric()
         t.setUp()
         t.test_grad_elel_distance()
@@ -175,7 +189,7 @@ if __name__ == "__main__":
         t.test_grad_jastrow()
         t.test_hess_jastrow()
 
-    if 1:
+    if 0:
         nup, ndown = 4, 4
         nelec = nup + ndown
         atoms = torch.rand(4, 3)
