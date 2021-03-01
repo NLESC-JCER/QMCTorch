@@ -124,4 +124,4 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
 
         e = self._get_der_jastrow_elements(r, dr)
 
-        return a + b + c + d + e**2
+        return a + b + c + d  # + e**2

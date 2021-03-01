@@ -171,7 +171,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(
             denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
 
-        return out + self._get_der_jastrow_elements(r, dr)**2
+        return out  # + self._get_der_jastrow_elements(r, dr)**2
 
     def _compute_polynoms(self, r):
         """Compute the num and denom polynomials.

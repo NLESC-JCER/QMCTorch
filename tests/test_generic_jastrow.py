@@ -75,8 +75,11 @@ class FullyConnectedJastrow(torch.nn.Module):
         x = x.reshape(-1, 1)
 
         x = self.fc1(x)
+        x = self.nl_func(x)
         x = self.fc2(x)
+        x = self.nl_func(x)
         x = self.fc3(x)
+        x = self.nl_func(x)
         x = self.nl_func(x)
 
         # reshape to the original shape
@@ -167,7 +170,9 @@ class TestGenericJastrow(unittest.TestCase):
         val = self.jastrow(self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
         d2val_grad = hess(val, self.pos)
-
+        # print(d2val)
+        # print(d2val_grad.reshape(
+        #     self.nbatch, self.nelec, 3).sum(2))
         assert torch.allclose(d2val, d2val_grad.reshape(
             self.nbatch, self.nelec, 3).sum(2))
 

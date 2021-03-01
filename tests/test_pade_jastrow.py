@@ -38,7 +38,7 @@ class TestPadeJastrow(unittest.TestCase):
         torch.manual_seed(0)
         np.random.seed(0)
 
-        self.nup, self.ndown = 1, 1
+        self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
         self.jastrow = PadeJastrow(self.nup, self.ndown)
         self.nbatch = 5
@@ -80,19 +80,27 @@ class TestPadeJastrow(unittest.TestCase):
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
 
+        print(d2val)
+        print(d2val_grad.view(
+            self.nbatch, self.nelec, 3).sum(2))
+
         assert torch.allclose(d2val, d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))
+
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 
 if __name__ == "__main__":
     unittest.main()
 
+    # torch.manual_seed(0)
+    # np.random.seed(0)
+
     # nup, ndown = 2, 2
     # nelec = nup + ndown
 
     # jastrow = PadeJastrow(nup, ndown)
-    # nbatch = 1
+    # nbatch = 5
 
     # pos = torch.rand(nbatch, nelec * 3)
     # pos.requires_grad = True

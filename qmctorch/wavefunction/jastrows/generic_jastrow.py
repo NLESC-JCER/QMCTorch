@@ -112,9 +112,12 @@ class GenericJastrow(TwoBodyJastrowFactorBase):
 
         kernel = self.jastrow_function(r)
         ker_hess, ker_grad = self._hess(kernel, r)
-        ker_grad_2 = ker_grad * ker_grad
 
-        jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
+        # ker_grad_2 = ker_grad * ker_grad
+        # jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
+        #     dr2 + ker_grad.unsqueeze(1) * d2r
+
+        jhess = (ker_hess).unsqueeze(1) * \
             dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess

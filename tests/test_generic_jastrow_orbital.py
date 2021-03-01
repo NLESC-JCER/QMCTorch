@@ -184,9 +184,11 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    t = TestGenericJastrowOrbital()
-    t.setUp()
-    t.test_jastrow()
-    t.test_grad_jastrow()
-    t.test_jacobian_jastrow()
-    t.test_hess_jastrow()
+    unittest.main()
+
+    # t = TestGenericJastrowOrbital()
+    # t.setUp()
+    # t.test_jastrow()
+    # t.test_grad_jastrow()
+    # t.test_jacobian_jastrow()
+    # t.test_hess_jastrow()

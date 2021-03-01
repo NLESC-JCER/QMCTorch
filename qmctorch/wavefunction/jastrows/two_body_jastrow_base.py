@@ -35,14 +35,12 @@ class TwoBodyJastrowFactorBase(nn.Module):
         self.edist = ElectronDistance(self.nelec, self.ndim)
 
         # choose the partial derivative method
-        method = 'col_perm'
-        dict_method = {'index': self._partial_derivative_index,
-                       'col_perm': self._partial_derivative_col_perm}
+        method = 'square'
+        dict_method = {'col_perm': self._partial_derivative_col_perm,
+                       'square': self._partial_dervivative_square}
         self.partial_derivative_method = dict_method[method]
 
-        if method == 'index':
-            self._get_index_partial_derivative()
-        elif method == 'col_perm':
+        if method == 'col_perm':
             self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
                 range(self.nelec-1), 2))).to(self.device)
 
@@ -291,45 +289,9 @@ class TwoBodyJastrowFactorBase(nn.Module):
         djast = self._get_der_jastrow_elements(r, dr)
 
         # add partial derivative
-        hess_jast = hess_jast + 2 * \
-            self.partial_derivative_method(djast)
+        hess_jast = hess_jast + self.partial_derivative_method(djast)
 
         return hess_jast * prod_val
-
-    def _get_index_partial_derivative(self):
-        """Computes the index of the pair of djast elements
-        that need to me multplued to get the mixed second derivatives.
-        """
-
-        self.index_partial_der = []
-        self.weight_partial_der = []
-        self.index_partial_der_to_elec = []
-
-        for idx in range(self.nelec):
-            index_pairs = [(idx, j, 1.) for j in range(
-                idx + 1, self.nelec)] + [(j, idx, -1.) for j in range(0, idx)]
-
-            for p1 in range(len(index_pairs) - 1):
-                i1, j1, w1 = index_pairs[p1]
-
-                for p2 in range(p1 + 1, len(index_pairs)):
-                    i2, j2, w2 = index_pairs[p2]
-
-                    idx1 = self._single_index(i1, j1)
-                    idx2 = self._single_index(i2, j2)
-
-                    self.index_partial_der.append([idx1, idx2])
-                    self.weight_partial_der.append(w1*w2)
-                    self.index_partial_der_to_elec.append(idx)
-
-        self.weight_partial_der = torch.tensor(
-            self.weight_partial_der).to(self.device)
-
-        self.index_partial_der_to_elec = torch.LongTensor(
-            self.index_partial_der_to_elec).to(self.device)
-
-        if self.weight_partial_der.shape[0] == 0:
-            self.weight_partial_der = 1.
 
     def _single_index(self, i, j):
         """Compute the from the i,j index of a [nelec, nelec] matrix
@@ -345,32 +307,6 @@ class TwoBodyJastrowFactorBase(nn.Module):
         """
         n = self.nelec
         return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
-
-    def _partial_derivative_index(self, djast):
-        """Get the product of the mixed second deriative terms using indexing of the pairs
-
-        .. math ::
-
-            d B_{ij} / d x_i * d B_{kl} / d x_k
-
-        Args:
-            djast (torch.tensor): first derivative of the jastrow kernels
-
-        Returns:
-            torch.tensor:
-        """
-
-        nbatch = djast.shape[0]
-        out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
-
-        if len(self.index_partial_der) > 0:
-            x = djast[..., self.index_partial_der]
-            x = x.prod(-1)
-            x = x * self.weight_partial_der
-            x = x.sum(1)
-            out_mat.index_add_(1, self.index_partial_der_to_elec, x)
-
-        return out_mat
 
     def _partial_derivative_col_perm(self, djast):
         """Get the product of the mixed second deriative terms using column permuatation.
@@ -392,8 +328,21 @@ class TwoBodyJastrowFactorBase(nn.Module):
             tmp = torch.zeros(tmp_shape).to(self.device)
             tmp[..., self.index_row, self.index_col-1] = djast
             tmp[..., self.index_col, self.index_row] = -djast
-            return tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
+            return 2*tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
         else:
             out_shape = list(
                 djast.shape[:-2]) + [self.nelec]
             return torch.zeros(out_shape).to(self.device)
+
+    def _partial_dervivative_square(self, djast):
+        """[summary]
+
+        Args:
+            djast ([type]): [description]
+        """
+
+        out_shape = list(djast.shape[:-1]) + [self.nelec]
+        out = torch.zeros(out_shape).to(self.device)
+        out.index_add_(-1, self.index_row, djast)
+        out.index_add_(-1, self.index_col, -djast)
+        return (out**2).sum(-2)
