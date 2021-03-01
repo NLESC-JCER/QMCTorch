@@ -41,6 +41,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
         self.partial_derivative_method = dict_method[method]
 
         if method == 'col_perm':
+            raise ValueError('col_perm is deprecated')
             self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
                 range(self.nelec-1), 2))).to(self.device)
 

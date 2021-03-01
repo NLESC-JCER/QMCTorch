@@ -41,8 +41,16 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         self.elnu_dist = ElectronNucleiDistance(
             self.nelec, self.atoms, self.ndim)
 
-        self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
-            range(self.nelec-1), 2))).to(self.device)
+        # choose the partial derivative method
+        method = 'square'
+        dict_method = {'col_perm': self._partial_derivative_col_perm,
+                       'square': self._partial_dervivative_square}
+        self.partial_derivative = dict_method[method]
+
+        if method == 'col_perm':
+            raise ValueError(' col_perm is deprecated')
+            self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
+                range(self.nelec-1), 2))).to(self.device)
 
     def get_static_weight(self):
         """Get the matrix of static weights
@@ -393,15 +401,13 @@ class ThreeBodyJastrowFactorBase(nn.Module):
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
-        print(djast.shape)
 
         # add partial derivative
-        hess_jast = hess_jast + 2 * \
-            self.partial_derivative(djast)
+        hess_jast = hess_jast + self.partial_derivative(djast)
 
-        return hess_jast * prod_val
+        return hess_jast * prod_val.unsqueeze(-1)
 
-    def partial_derivative(self, djast):
+    def _partial_derivative_col_perm(self, djast):
         """Get the product of the mixed second deriative terms using column permuatation.
 
         .. math ::
@@ -421,8 +427,29 @@ class ThreeBodyJastrowFactorBase(nn.Module):
             tmp = torch.zeros(tmp_shape).to(self.device)
             tmp[..., self.index_row, self.index_col-1] = djast
             tmp[..., self.index_col, self.index_row] = -djast
-            return tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
+            return 2*tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
         else:
             out_shape = list(
                 djast.shape[:-2]) + [self.nelec]
             return torch.zeros(out_shape).to(self.device)
+
+    def _partial_dervivative_square(self, djast):
+        """[summary]
+
+        Args:
+            djast ([type]): [description]
+        """
+
+        # create the output vector with size nbatch x nelec
+        out_shape = list(djast.shape[:-2]) + [self.nelec]
+        out = torch.zeros(out_shape).to(self.device)
+
+        # add the elec-elec term
+        out.index_add_(-1, self.index_row, djast[..., 2])
+        out.index_add_(-1, self.index_col, -djast[..., 2])
+
+        # add the elec-nuc terms
+        out.index_add_(-1, self.index_row, djast[..., 0])
+        out.index_add_(-1, self.index_col, djast[..., 1])
+
+        return ((out.sum(2))**2).sum(1)
