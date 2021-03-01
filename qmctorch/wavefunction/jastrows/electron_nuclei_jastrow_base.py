@@ -134,14 +134,14 @@ class ElectronNucleiJastrowFactorBase(nn.Module):
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
+        djast = ((djast.sum(3))**2).sum(1)
 
         # add partial derivative
-        hess_jast = d2jast + 2 * \
-            self.partial_derivative(djast)
+        hess_jast = d2jast + djast
 
         return hess_jast * prod_val
 
-    def partial_derivative(self, djast):
+    def partial_derivative_col_perm(self, djast):
         """Get the sum of the  product of the mixed
            second deriative terms
 
@@ -163,7 +163,7 @@ class ElectronNucleiJastrowFactorBase(nn.Module):
         out = djast[..., idx].prod(-1).sum(-1)
 
         # return the sum over the dims
-        return out.sum(1)
+        return 2*out.sum(1)
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :

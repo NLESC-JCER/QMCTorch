@@ -18,9 +18,13 @@ class FullyConnectedJastrowElecNuc(torch.nn.Module):
         self.fc2 = torch.nn.Linear(16, 8, bias=False)
         self.fc3 = torch.nn.Linear(8, 1, bias=False)
 
-        self.fc1.weight.data.fill_(1E-3)
-        self.fc2.weight.data.fill_(1E-3)
-        self.fc3.weight.data.fill_(1E-3)
+        torch.nn.init.uniform_(self.fc1.weight)
+        torch.nn.init.uniform_(self.fc2.weight)
+        torch.nn.init.uniform_(self.fc2.weight)
+
+        # self.fc1.weight.data *= 1E-3
+        # self.fc2.weight.data *= 1E-3
+        # self.fc3.weight.data *= 1E-3
 
         self.nl_func = torch.nn.Sigmoid()
 
@@ -40,7 +44,9 @@ class FullyConnectedJastrowElecNuc(torch.nn.Module):
         x = x.reshape(-1, 1)
 
         x = self.fc1(x)
+        x = self.nl_func(x)
         x = self.fc2(x)
+        x = self.nl_func(x)
         x = self.fc3(x)
         x = self.nl_func(x)
 
