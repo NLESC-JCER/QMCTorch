@@ -1,14 +1,17 @@
-import torch
-from torch.autograd import Variable
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
-
-import numpy as np
+import os
 import unittest
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.autograd import Variable
 
-import os
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
+
+from .path_utils import PATH_TEST
+
+__PLOT__ = False
 
 
 def read_cubefile(fname):
@@ -56,7 +59,9 @@ class TestMOvaluesADF(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        self.mol = Molecule(load='hdf5/C_adf_dzp.hdf5')
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
+        self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
         self.wf = Orbital(self.mol, include_all_mo=True)
@@ -65,7 +70,7 @@ class TestMOvaluesADF(unittest.TestCase):
         self.npts = 21
         pts = get_pts(self.npts)
 
-        self.pos = 10*torch.ones(self.npts**2, self.mol.nelec * 3)
+        self.pos = 10 * torch.ones(self.npts ** 2, self.mol.nelec * 3)
         self.pos[:, :3] = pts
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
@@ -75,8 +80,8 @@ class TestMOvaluesADF(unittest.TestCase):
         movals = self.wf.mo_scf(self.wf.ao(self.pos)).detach().numpy()
 
         for iorb in range(self.mol.basis.nmo):
-
-            fname = 'cube/C_MO_%%SCF_A%%%d.cub' % (iorb+1)
+            path_cube = PATH_TEST / f'cube/C_MO_%SCF_A%{iorb + 1}.cub'
+            fname = path_cube.absolute().as_posix()
             adf_ref_data = np.array(read_cubefile(
                 fname)).reshape(self.npts, self.npts)**2
             qmctorch_data = (movals[:, 0, iorb]).reshape(
@@ -84,15 +89,16 @@ class TestMOvaluesADF(unittest.TestCase):
 
             delta = np.abs(adf_ref_data - qmctorch_data)
 
-            plt.subplot(1, 3, 1)
-            plt.imshow(adf_ref_data)
+            if __PLOT__:
+                plt.subplot(1, 3, 1)
+                plt.imshow(adf_ref_data)
 
-            plt.subplot(1, 3, 2)
-            plt.imshow(qmctorch_data)
+                plt.subplot(1, 3, 2)
+                plt.imshow(qmctorch_data)
 
-            plt.subplot(1, 3, 3)
-            plt.imshow(delta)
-            plt.show()
+                plt.subplot(1, 3, 3)
+                plt.imshow(delta)
+                plt.show()
 
             # the 0,0 point is much larger due to num instabilities
             delta = np.sort(delta.flatten())

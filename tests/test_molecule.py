@@ -1,4 +1,4 @@
-from qmctorch.wavefunction import Molecule
+from qmctorch.scf import Molecule
 import numpy as np
 import unittest
 

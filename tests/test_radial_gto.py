@@ -1,19 +1,12 @@
-import torch
-import torch.optim as optim
-
-from qmctorch.wavefunction import Orbital, Molecule
-from qmctorch.solver import SolverOrbital
-from qmctorch.sampler import Metropolis, Hamiltonian
-from qmctorch.utils import plot_energy, plot_data, plot_walkers_traj, plot_block
-
-import platform
-import matplotlib.pyplot as plt
-import numpy as np
 import unittest
 
+import numpy as np
+import torch
 
-def second_derivative(xm1, x0, xp1, eps):
-    return (xm1 - 2*x0 + xp1) / eps/eps
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
+
+from .path_utils import second_derivative
 
 
 class TestRadialSlater(unittest.TestCase):
@@ -56,7 +49,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 0]
             dz_r0_fd = np.gradient(r0, self.dx)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -86,7 +80,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 1]
             dz_r0_fd = np.gradient(r0, self.dy)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -116,7 +111,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 2]
             dz_r0_fd = np.gradient(r0, self.dz)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -154,11 +150,11 @@ class TestRadialSlater(unittest.TestCase):
 
         for iorb in range(7):
 
-            lap_analytic = np.zeros(npts-2)
-            lap_fd = np.zeros(npts-2)
+            lap_analytic = np.zeros(npts - 2)
+            lap_fd = np.zeros(npts - 2)
 
-            for i in range(1, npts-1):
-                lap_analytic[i-1] = d2R[i, 0, iorb]
+            for i in range(1, npts - 1):
+                lap_analytic[i - 1] = d2R[i, 0, iorb]
 
                 r0 = R[i, 0, iorb].detach().numpy()
                 rpz = R[i+1, 0, iorb].detach().numpy()
@@ -175,11 +171,11 @@ class TestRadialSlater(unittest.TestCase):
                 rmy = R[i, 4, iorb]
                 d2y = second_derivative(rmy, r0, rpy, eps)
 
-                lap_fd[i-1] = d2x + d2y + d2z
+                lap_fd[i - 1] = d2x + d2y + d2z
 
             m = np.abs(lap_analytic).max()
             delta = np.delete(
-                np.abs(lap_analytic-lap_fd)/m, np.s_[450:550])
+                np.abs(lap_analytic - lap_fd) / m, np.s_[450:550])
 
             assert(np.all(delta < 5E-3))
             # plt.plot(lap_analytic, linewidth=2)

@@ -31,21 +31,22 @@ setup(
     keywords='qmctorch',
     scripts=['bin/qmctorch'],
     classifiers=[
-        'Development Status :: 2 - Pre-Alpha',
-        'Intended Audience :: Developers',
+        'Development Status :: 4 - Beta',
+        'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.8',
         'Topic :: Scientific/Engineering :: Chemistry'
     ],
     test_suite='tests',
-    install_requires=['autograd', 'cython', 'matplotlib', 'numpy', 'argparse',
-                      'pyyaml>=5.1', 'schema', 'scipy', 'tqdm', 'torch',
-                      'pyscf', 'mendeleev', 'twiggy', 'mpi4py', 'horovod'],
+    install_requires=['matplotlib', 'numpy', 'argparse',
+                      'scipy', 'tqdm', 'torch',
+                      'plams@git+https://github.com/SCM-NV/PLAMS@master',
+                      'pyscf', 'mendeleev', 'twiggy', 'mpi4py'],
 
-    # 'horovod'], fails so far ...
     extras_require={
-        'dev': ['prospector[with_pyroma]', 'yapf', 'isort'],
+        'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
         'test': ['coverage', 'pycodestyle', 'pytest', 'pytest-cov',
                  'pytest-runner'],

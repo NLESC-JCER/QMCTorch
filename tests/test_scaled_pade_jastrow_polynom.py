@@ -1,8 +1,11 @@
+import unittest
+
+import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.scaled_pade_jastrow_polynomial import ScaledPadeJastrowPolynomial
-import unittest
-import numpy as np
+
+from qmctorch.wavefunction.jastrows.scaled_pade_jastrow_polynomial import \
+    ScaledPadeJastrowPolynomial
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

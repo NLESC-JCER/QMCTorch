@@ -1,14 +1,12 @@
-import torch
-from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
 
-import numpy as np
 import unittest
+import torch
 
-import matplotlib.pyplot as plt
+from torch.autograd import Variable, grad, gradcheck
 
-import os
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
+from .path_utils import PATH_TEST
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -42,7 +40,8 @@ class TestAOderivativesADF(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        self.mol = Molecule(load='hdf5/C_adf_dzp.hdf5')
+        path_hdf5 = PATH_TEST / 'hdf5/C_adf_dzp.hdf5'
+        self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
         self.wf = Orbital(self.mol, include_all_mo=True)

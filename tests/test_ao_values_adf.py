@@ -1,14 +1,17 @@
-import torch
-from torch.autograd import Variable
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
-
-import numpy as np
+import os
 import unittest
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from torch.autograd import Variable
 
-import os
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
+
+from .path_utils import PATH_TEST
+
+__PLOT__ = False
 
 
 def read_cubefile(fname):
@@ -30,7 +33,7 @@ def get_pts(npts):
 
 def generate_cube_files(t21file):
 
-    nao = create_ao_variable_in(t21file)
+    nao = create_ao_variable_in_t21(t21file)
     create_densf_input_file(t21file, nao)
     os.system('$ADFBIN/densf < densf_input')
 
@@ -42,7 +45,7 @@ def create_ao_variable_in_t21(t21file):
         nao = kf.read('Basis', 'naos')
         for iao in range(nao):
 
-            var = [0.]*naos
+            var = [0.] * nao
             var[iao] = 1.
             name = 'AO%d' % iao
             kf.write('Basis', name, var)
@@ -73,7 +76,9 @@ class TestAOvaluesADF(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        self.mol = Molecule(load='hdf5/C_adf_dzp.hdf5')
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/C_adf_dzp.hdf5').absolute().as_posix()
+        self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
         self.wf = Orbital(self.mol, include_all_mo=True)
@@ -93,7 +98,8 @@ class TestAOvaluesADF(unittest.TestCase):
 
         for iorb in range(self.mol.basis.nao):
 
-            fname = 'cube/C_AO_%%Basis%%AO%d.cub' % (iorb)
+            path_cube = PATH_TEST / f'cube/C_AO_%Basis%AO{iorb}.cub'
+            fname = path_cube.absolute().as_posix()
             adf_ref_data = np.array(read_cubefile(
                 fname)).reshape(self.npts, self.npts)
             qmctorch_data = (aovals[:, 0, iorb]).reshape(
@@ -101,15 +107,16 @@ class TestAOvaluesADF(unittest.TestCase):
 
             delta = np.abs(adf_ref_data - qmctorch_data)
 
-            plt.subplot(1, 3, 1)
-            plt.imshow(adf_ref_data)
+            if __PLOT__:
+                plt.subplot(1, 3, 1)
+                plt.imshow(adf_ref_data)
 
-            plt.subplot(1, 3, 2)
-            plt.imshow(qmctorch_data)
+                plt.subplot(1, 3, 2)
+                plt.imshow(qmctorch_data)
 
-            plt.subplot(1, 3, 3)
-            plt.imshow(delta)
-            plt.show()
+                plt.subplot(1, 3, 3)
+                plt.imshow(delta)
+                plt.show()
 
             assert(delta.mean() < 1E-3)
 
@@ -144,8 +151,8 @@ class TestAOvaluesADF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestAOvaluesADF()
-    t.setUp()
-    t.test_ao()
+    unittest.main()
+    # t = TestAOvaluesADF()
+    # t.setUp()
+    # t.test_ao()
     # t.test_mo()

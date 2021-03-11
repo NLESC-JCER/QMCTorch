@@ -1,8 +1,11 @@
-import torch
-from torch.autograd import Variable, grad
-from pyscf import gto
-from qmctorch.wavefunction import Molecule, Orbital
 import unittest
+
+import torch
+from pyscf import gto
+from torch.autograd import Variable, grad
+
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 def btrace(M):

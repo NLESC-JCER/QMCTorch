@@ -1,15 +1,11 @@
-import torch
-from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
-
-import numpy as np
 import unittest
+
+import torch
 from pyscf import gto
+from torch.autograd import Variable, grad, gradcheck
 
-import matplotlib.pyplot as plt
-
-import os
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

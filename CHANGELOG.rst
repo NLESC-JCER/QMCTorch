@@ -1,14 +1,17 @@
-###########
+##########
 Change Log
-###########
+##########
 
-All notable changes to this project will be documented in this file.
-This project adheres to `Semantic Versioning <http://semver.org/>`_.
+0.1.1 [Unreleased]
+******************
 
-[Unreleased]
-************
+Change
+------
 
-Added
------
+* Make `Horovod optional <https://github.com/horovod/horovod>`_ (#57)
 
-* Empty Python project directory structure
+
+Add
+---
+* GitHub Actions CI (#58)
+* `Plams dependency <https://github.com/SCM-NV/PLAMS>`_ (#63)

@@ -2,19 +2,24 @@ from tqdm import tqdm
 import torch
 from torch.distributions import MultivariateNormal
 from time import time
+from typing import Callable, Union, Dict
 from .sampler_base import SamplerBase
 from .. import log
 
 
 class Metropolis(SamplerBase):
 
-    def __init__(self, nwalkers=100,
-                 nstep=1000, step_size=0.2,
-                 ntherm=-1, ndecor=1,
-                 nelec=1, ndim=3,
-                 init={'min': -5, 'max': 5},
-                 move={'type': 'all-elec', 'proba': 'normal'},
-                 cuda=False):
+    def __init__(self,
+                 nwalkers: int = 100,
+                 nstep: int = 1000,
+                 step_size: float = 0.2,
+                 ntherm: int = -1,
+                 ndecor: int = 1,
+                 nelec: int = 1,
+                 ndim: int = 3,
+                 init: Dict = {'min': -5, 'max': 5},
+                 move: Dict = {'type': 'all-elec', 'proba': 'normal'},
+                 cuda: bool = False):
         """Metropolis Hasting generator
 
         Args:
@@ -58,7 +63,8 @@ class Metropolis(SamplerBase):
         log.info(
             '  Move proba          : {0}', self.movedict['proba'])
 
-    def __call__(self, pdf, pos=None, with_tqdm=True):
+    def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
@@ -136,7 +142,7 @@ class Metropolis(SamplerBase):
 
         return torch.cat(pos).requires_grad_()
 
-    def configure_move(self, move):
+    def configure_move(self, move: Dict):
         """Configure the electron moves
 
         Args:
@@ -182,7 +188,7 @@ class Metropolis(SamplerBase):
         else:
             self.fixed_id_elec_list = [None]
 
-    def move(self, pdf, id_elec):
+    def move(self, pdf: Callable, id_elec: int) -> torch.Tensor:
         """Move electron one at a time in a vectorized way.
 
         Args:
@@ -215,16 +221,14 @@ class Metropolis(SamplerBase):
 
             return new_pos.view(self.nwalkers, self.nelec * self.ndim)
 
-    def _move(self, num_elec):
-        """Return a random array of length size between
-        [-step_size,step_size]
+    def _move(self, num_elec: int) -> torch.Tensor:
+        """propose a move for the electrons
 
         Args:
-            step_size (float): boundary of the array
-            size (int): number of points in the array
+            num_elec (int): number of electrons to move
 
         Returns:
-            torch.tensor: random array
+            torch.tensor: new positions of the walkers
         """
         if self.movedict['proba'] == 'uniform':
             d = torch.rand(
@@ -238,17 +242,17 @@ class Metropolis(SamplerBase):
             return displacement.view(
                 self.nwalkers, num_elec * self.ndim)
 
-    def _accept(self, P):
+    def _accept(self, proba: torch.Tensor) -> torch.Tensor:
         """accept the move or not
 
         Args:
-            P (torch.tensor): probability of each move
+            proba (torch.tensor): probability of each move
 
         Returns:
             t0rch.tensor: the indx of the accepted moves
         """
 
-        P[P > 1] = 1.0
-        tau = torch.rand_like(P)
-        index = (P - tau >= 0).reshape(-1)
+        proba[proba > 1] = 1.0
+        tau = torch.rand_like(proba)
+        index = (proba - tau >= 0).reshape(-1)
         return index.type(torch.bool)

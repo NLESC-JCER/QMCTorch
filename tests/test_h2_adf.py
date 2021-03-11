@@ -1,13 +1,15 @@
+import unittest
+
+import numpy as np
 import torch
 import torch.optim as optim
 
-from qmctorch.wavefunction import Orbital, Molecule
-from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis
-from qmctorch.utils import plot_energy
+from qmctorch.solver import SolverOrbital
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
-import numpy as np
-import unittest
+from .path_utils import PATH_TEST
 
 
 class TestH2ADF(unittest.TestCase):
@@ -17,7 +19,9 @@ class TestH2ADF(unittest.TestCase):
         torch.manual_seed(0)
 
         # molecule
-        self.mol = Molecule(load='hdf5/H2_adf_dzp.hdf5')
+        path_hdf5 = (
+            PATH_TEST / 'hdf5/H2_adf_dzp.hdf5').absolute().as_posix()
+        self.mol = Molecule(load=path_hdf5)
 
         # wave function
         self.wf = Orbital(self.mol, kinetic='auto',

@@ -1,18 +1,19 @@
-import torch
 from types import SimpleNamespace
-from tqdm import tqdm
+
 import numpy as np
+import torch
+from tqdm import tqdm
 
-from ..utils import dump_to_hdf5, add_group_attr
 from .. import log
+from ..utils import add_group_attr, dump_to_hdf5
 
 
-class SolverBase(object):
+class SolverBase:
 
     def __init__(self, wf=None, sampler=None,
                  optimizer=None, scheduler=None,
                  output=None, rank=0):
-        """Base Class for QMC solver 
+        """Base Class for QMC solver
 
         Args:
             wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
@@ -174,10 +175,10 @@ class SolverBase(object):
 
             # store variational parameter
             elif obs in self.wf.state_dict():
-                layer, param = obs.split('.')
-                p = self.wf.__getattr__(layer).__getattr__(param)
+
+                p = self.wf.state_dict()[obs].clone()
                 self.observable.__getattribute__(
-                    obs).append(p.data.cpu().numpy())
+                    obs).append(p.data.cpu().detach().numpy())
 
                 if obs+'.grad' in self.observable.__dict__.keys():
                     if p.grad is not None:
@@ -193,7 +194,13 @@ class SolverBase(object):
                 data = func(pos)
                 if isinstance(data, torch.Tensor):
                     data = data.cpu().detach().numpy()
-                self.observable.__getattribute__(obs).append(data)
+                    if (ibatch is None) or (ibatch == 0):
+                        self.observable.__getattribute__(
+                            obs).append(data)
+                    else:
+                        self.observable.__getattribute__(
+                            obs)[-1] = np.append(self.observable.__getattribute__(
+                                obs)[-1], data)
 
     def print_observable(self, cumulative_loss, verbose=False):
         """Print the observalbe to csreen

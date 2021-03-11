@@ -1,14 +1,15 @@
-import torch
-from torch.autograd import Variable
-from qmctorch.wavefunction import Orbital, Molecule
-from pyscf import gto
-
-import numpy as np
 import unittest
 
 import matplotlib.pyplot as plt
+import numpy as np
+import torch
+from pyscf import gto
+from torch.autograd import Variable
 
-import os
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
+
+__PLOT__ = False
 
 
 class TestAOvaluesPyscf(unittest.TestCase):
@@ -49,9 +50,11 @@ class TestAOvaluesPyscf(unittest.TestCase):
 
         for iorb in range(self.mol.basis.nao):
 
-            plt.plot(self.x, aovals[:, 0, iorb])
-            plt.plot(self.x, aovals_ref[:, iorb])
-            plt.show()
+            if __PLOT__:
+
+                plt.plot(self.x, aovals[:, 0, iorb])
+                plt.plot(self.x, aovals_ref[:, iorb])
+                plt.show()
 
             assert np.allclose(
                 aovals[:, 0, iorb], aovals_ref[:, iorb])
@@ -69,9 +72,10 @@ class TestAOvaluesPyscf(unittest.TestCase):
 
         for iorb in range(self.mol.basis.nao):
 
-            plt.plot(self.x, daovals[:, 0, iorb])
-            plt.plot(self.x, daovals_ref[:, iorb])
-            plt.show()
+            if __PLOT__:
+                plt.plot(self.x, daovals[:, 0, iorb])
+                plt.plot(self.x, daovals_ref[:, iorb])
+                plt.show()
 
             assert np.allclose(
                 daovals[:, 0, iorb], daovals_ref[:, iorb])

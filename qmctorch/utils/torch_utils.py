@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from torch.autograd import grad
 from torch.utils.data import Dataset
 
 
@@ -46,6 +47,56 @@ def fast_power(x, k, mask0=None, mask2=None):
         out = x**k
 
     return out
+
+
+def gradients(out, inp):
+    """Return the gradients of out wrt inp
+
+    Args:
+        out ([type]): [description]
+        inp ([type]): [description]
+    """
+    return grad(out, inp, grad_outputs=torch.ones_like(out))
+
+
+def diagonal_hessian(out, inp, return_grads=False):
+    """return the diagonal hessian of out wrt to inp
+
+    Args:
+        out ([type]): [description]
+        inp ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, inp,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    if return_grads:
+        grads = jacob.detach()
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+
+    for idim in range(jacob.shape[1]):
+
+        tmp = grad(jacob[:, idim], inp,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, idim] = tmp[:, idim]
+
+    if return_grads:
+        return hess, grads
+
+    else:
+        return hess
 
 
 class DataSet(Dataset):
@@ -104,11 +155,21 @@ class Loss(nn.Module):
         self.wf = wf
         self.method = method
         self.clip = clip
+
+        # by default we use weights
+        # that are needed if we do
+        # not resample at every time step
         self.use_weight = True
 
+        # number of +/- std for clipping
+        # Excludes values + /- Nstd x std the mean of the eloc
+        self.clip_num_std = 5
+
+        # select loss function
         self.loss_fn = {'energy': torch.mean,
                         'variance': torch.var}[method]
 
+        # init values of the weights
         self.weight = {'psi': None, 'psi0': None}
 
     def forward(self, pos, no_grad=False, deactivate_weight=False):
@@ -135,9 +196,7 @@ class Loss(nn.Module):
             mask = self.get_clipping_mask(local_energies)
 
             # sampling_weight
-            local_use_weight = self.use_weight * \
-                (not deactivate_weight)
-            weight = self.get_sampling_weights(local_use_weight)
+            weight = self.get_sampling_weights(deactivate_weight)
 
             # compute the loss
             loss = self.loss_fn((weight * local_energies)[mask])
@@ -154,18 +213,17 @@ class Loss(nn.Module):
 
         return torch.no_grad() if no_grad else torch.enable_grad()
 
-    def get_clipping_mask(self, local_energies, Nstd=5):
+    def get_clipping_mask(self, local_energies):
         """computes the clipping mask
 
         Arguments:
             local_energies {torch.tensor} -- values of the local energies
-            Nstd {int} -- Excludes values +/- Nstd x std the mean of the eloc
         """
         if self.clip:
             median = torch.median(local_energies)
             std = torch.std(local_energies)
-            emax = median + Nstd * std
-            emin = median - Nstd * std
+            emax = median + self.clip_num_std * std
+            emin = median - self.clip_num_std * std
             mask = (
                 local_energies < emax) & (
                 local_energies > emin)
@@ -175,11 +233,15 @@ class Loss(nn.Module):
 
         return mask
 
-    def get_sampling_weights(self, use_weight):
+    def get_sampling_weights(self, deactivate_weight):
         """Get the weight needed when resampling is not
             done at every step
         """
-        if use_weight:
+
+        local_use_weight = self.use_weight * \
+            (not deactivate_weight)
+
+        if local_use_weight:
 
             # computes the weights
             self.weight['psi'] = self.wf(pos)

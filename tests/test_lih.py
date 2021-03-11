@@ -1,15 +1,13 @@
+import unittest
+
+import numpy as np
 import torch
 import torch.optim as optim
 
-from qmctorch.wavefunction import Orbital, Molecule
+from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverOrbital
-from qmctorch.sampler import Metropolis, Hamiltonian
-from qmctorch.utils import plot_energy, plot_data, plot_walkers_traj, plot_block
-
-import platform
-
-import numpy as np
-import unittest
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import Orbital
 
 
 class TestLiH(unittest.TestCase):

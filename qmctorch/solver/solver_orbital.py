@@ -1,11 +1,14 @@
+from copy import deepcopy
+from time import time
+
 import torch
 from torch.utils.data import DataLoader
-from time import time
-from copy import deepcopy
-from .solver_base import SolverBase
-from qmctorch.utils import (
-    DataSet, Loss, OrthoReg, dump_to_hdf5, add_group_attr)
+
+from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
+                            dump_to_hdf5)
+
 from .. import log
+from .solver_base import SolverBase
 
 
 class SolverOrbital(SolverBase):
@@ -37,7 +40,7 @@ class SolverOrbital(SolverBase):
 
     def configure(self, track=None, freeze=None,
                   loss=None, grad=None,
-                  ortho_mo=None, clip_loss=None,
+                  ortho_mo=None, clip_loss=False,
                   resampling=None):
         """Configure the solver
 
@@ -50,8 +53,9 @@ class SolverOrbital(SolverBase):
                                   Defaults to 'auto'.
             ortho_mo (bool, optional): apply regularization to orthogonalize the MOs.
                                        Defaults to False.
-            clip_loss (bool, optional): Clip the loss values at +/- 5std.
-                                        Defaults to False.
+            clip_loss (bool, optional): Clip the loss values at +/- X std. X defined in Loss
+                                        as clip_num_std (default 5)
+                                        Defaults to False. 
         """
 
         # set the parameters we want to optimize/freeze
@@ -61,8 +65,7 @@ class SolverOrbital(SolverBase):
 
         # track the observable we want
         if track is not None:
-            if not hasattr(self, 'observable'):
-                self.track_observable(track)
+            self.track_observable(track)
 
         # define the grad calulation
         if grad is not None:
@@ -156,7 +159,7 @@ class SolverOrbital(SolverBase):
 
     def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
                 nepoch_wf_init=100, nepoch_wf_update=50,
-                hdf5_group=None, chkpt_every=None):
+                hdf5_group=None, chkpt_every=None, tqdm=False):
         """optimize the geometry of the molecule
 
         Args:
@@ -182,7 +185,7 @@ class SolverOrbital(SolverBase):
         eval_grad_wf = self.evaluate_gradient
 
         # log data
-        self.prepare_optimization(batchsize, None)
+        self.prepare_optimization(batchsize, None, tqdm)
         self.log_data_opt(nepoch, 'geometry optimization')
 
         # init the traj
@@ -229,7 +232,7 @@ class SolverOrbital(SolverBase):
         return self.observable
 
     def run(self, nepoch, batchsize=None,
-            hdf5_group=None, chkpt_every=None):
+            hdf5_group=None, chkpt_every=None, tqdm=False):
         """Run a wave function optimization
 
         Args:
@@ -244,7 +247,7 @@ class SolverOrbital(SolverBase):
         """
 
         # prepare the optimization
-        self.prepare_optimization(batchsize, chkpt_every)
+        self.prepare_optimization(batchsize, chkpt_every, tqdm)
         self.log_data_opt(nepoch, 'wave function optimization')
 
         # run the epochs
@@ -258,7 +261,7 @@ class SolverOrbital(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every):
+    def prepare_optimization(self, batchsize, chkpt_every, tqdm=False):
         """Prepare the optimization process
 
         Args:
@@ -267,14 +270,11 @@ class SolverOrbital(SolverBase):
         """
 
         # sample the wave function
-        pos = self.sampler(self.wf.pdf)
+        pos = self.sampler(self.wf.pdf, with_tqdm=tqdm)
 
         # handle the batch size
         if batchsize is None:
             batchsize = len(pos)
-
-        # get the initial observable
-        self.store_observable(pos)
 
         # change the number of steps/walker size
         self.save_sampling_parameters(pos)
@@ -283,6 +283,9 @@ class SolverOrbital(SolverBase):
         self.dataset = DataSet(pos)
         self.dataloader = DataLoader(
             self.dataset, batch_size=batchsize)
+
+        for ibatch, data in enumerate(self.dataloader):
+            self.store_observable(data, ibatch=ibatch)
 
         # chkpt
         self.chkpt_every = chkpt_every
@@ -326,6 +329,11 @@ class SolverOrbital(SolverBase):
                 loss, eloc = self.evaluate_gradient(lpos)
                 cumulative_loss += loss
 
+                # check for nan
+                if torch.isnan(eloc).any():
+                    log.info('Error : Nan detected in local energy')
+                    return cumulative_loss
+
                 # optimize the parameters
                 self.optimization_step(lpos)
 
@@ -344,7 +352,7 @@ class SolverOrbital(SolverBase):
                 if (n > 0) and (n % self.chkpt_every == 0):
                     self.save_checkpoint(n, cumulative_loss)
 
-            self.print_observable(cumulative_loss)
+            self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
             self.dataset.data = self.resample(n, self.dataset.data)
@@ -396,6 +404,9 @@ class SolverOrbital(SolverBase):
         # determine if we need the grad of eloc
         no_grad_eloc = True
         if self.wf.kinetic_method == 'auto':
+            no_grad_eloc = False
+
+        if self.wf.jastrow.__repr__().startswith('GenericJastrow'):
             no_grad_eloc = False
 
         if self.loss.method in ['energy', 'weighted-energy']:
