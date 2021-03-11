@@ -30,10 +30,9 @@ class SolverBase:
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device('cpu')
-        self.task = None
 
         # if pos are needed for the optimizer (obsolete ?)
-        if 'lpos_needed' not in self.opt.__dict__.keys():
+        if self.opt is not None and 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
 
         # distributed model
@@ -61,11 +60,11 @@ class SolverBase:
         """Configure the resampling
 
         Args:
-            mode (str, optional): method to resample : 'full', 'update', 'never' 
+            mode (str, optional): method to resample : 'full', 'update', 'never'
                                   Defaults to 'update'.
             resample_every (int, optional): Number of optimization steps between resampling
                                  Defaults to 1.
-            nstep_update (int, optional): Number of MC steps in update mode. 
+            nstep_update (int, optional): Number of MC steps in update mode.
                                           Defaults to 25.
         """
 
@@ -115,9 +114,6 @@ class SolverBase:
         # add the energy of the sytem
         if 'energy' not in obs_name:
             obs_name += ['energy']
-
-        if self.task == 'geo_opt' and 'geometry' not in obs_name:
-            obs_name += ['geometry']
 
         for k in obs_name:
 
@@ -326,9 +322,6 @@ class SolverBase:
             epoch (int): epoch
             loss (float): current value of the loss
             filename (str): name to save the file
-
-        Returns:
-            float: loss (?)
         """
         filename = 'checkpoint_epoch%d.pth' % epoch
         torch.save({

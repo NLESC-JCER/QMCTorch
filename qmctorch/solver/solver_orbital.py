@@ -15,7 +15,7 @@ class SolverOrbital(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None, output=None, rank=0):
-        """Basic QMC solver 
+        """Basic QMC solver
 
         Args:
             wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
@@ -55,7 +55,7 @@ class SolverOrbital(SolverBase):
                                        Defaults to False.
             clip_loss (bool, optional): Clip the loss values at +/- X std. X defined in Loss
                                         as clip_num_std (default 5)
-                                        Defaults to False. 
+                                        Defaults to False.
         """
 
         # set the parameters we want to optimize/freeze
@@ -159,7 +159,7 @@ class SolverOrbital(SolverBase):
 
     def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
                 nepoch_wf_init=100, nepoch_wf_update=50,
-                hdf5_group=None, chkpt_every=None, tqdm=False):
+                hdf5_group='geo_opt', chkpt_every=None, tqdm=False):
         """optimize the geometry of the molecule
 
         Args:
@@ -168,7 +168,7 @@ class SolverOrbital(SolverBase):
                                        If None, all samples are used.
                                        Defaults to Never.
             hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                        Defaults to wf.task.
+                                        Defaults to 'geo_opt'.
             chkpt_every (int, optional): save a checkpoint every every iteration.
                                          Defaults to half the number of epoch
         """
@@ -186,7 +186,7 @@ class SolverOrbital(SolverBase):
 
         # log data
         self.prepare_optimization(batchsize, None, tqdm)
-        self.log_data_opt(nepoch, 'geometry optimization')
+        self.log_data_opt(nepoch, hdf5_group)
 
         # init the traj
         xyz = [self.wf.geometry(None)]
@@ -227,12 +227,12 @@ class SolverOrbital(SolverBase):
 
         # dump
         self.observable.geometry = xyz
-        self.save_data(hdf5_group or 'geo_opt')
+        self.save_data(hdf5_group)
 
         return self.observable
 
     def run(self, nepoch, batchsize=None,
-            hdf5_group=None, chkpt_every=None, tqdm=False):
+            hdf5_group='wf_opt', chkpt_every=None, tqdm=False):
         """Run a wave function optimization
 
         Args:
@@ -241,14 +241,14 @@ class SolverOrbital(SolverBase):
                                        If None, all samples are used.
                                        Defaults to Never.
             hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                        Defaults to wf.task.
+                                        Defaults to 'wf_opt'.
             chkpt_every (int, optional): save a checkpoint every every iteration.
                                          Defaults to half the number of epoch
         """
 
         # prepare the optimization
         self.prepare_optimization(batchsize, chkpt_every, tqdm)
-        self.log_data_opt(nepoch, 'wave function optimization')
+        self.log_data_opt(nepoch, hdf5_group)
 
         # run the epochs
         self.run_epochs(nepoch)
@@ -257,7 +257,7 @@ class SolverOrbital(SolverBase):
         self.restore_sampling_parameters()
 
         # dump
-        self.save_data(hdf5_group or 'wf_opt')
+        self.save_data(hdf5_group)
 
         return self.observable
 
@@ -266,7 +266,7 @@ class SolverOrbital(SolverBase):
 
         Args:
             batchsize (int or None): batchsize
-            chkpt_every (int or none): save a chkpt file every 
+            chkpt_every (int or none): save a chkpt file every
         """
 
         # sample the wave function
@@ -459,5 +459,5 @@ class SolverOrbital(SolverBase):
         log.info(
             '  Output file         : {0}', self.hdf5file)
         log.info(
-            '  Checkpoint every    : {0}', self.chkpt_every)
+            '  Checkpoint every    : {0}', getattr(self, 'chkpt_every', None))
         log.info('')
