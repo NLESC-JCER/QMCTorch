@@ -115,6 +115,10 @@ class SolverBase:
         if 'energy' not in obs_name:
             obs_name += ['energy']
 
+        # add the geometry of the system
+        if 'geometry' not in obs_name:
+            obs_name += ['geometry']
+
         for k in obs_name:
 
             if k == 'parameters':

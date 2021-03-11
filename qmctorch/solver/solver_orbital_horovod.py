@@ -96,6 +96,7 @@ class SolverOrbitalHorovod(SolverOrbital):
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
 
+        self.prepare_optimization(batchsize, chkpt_every)
         # log data
         if hvd.rank() == 0:
             self.log_data_opt(nepoch, hdf5_group)
@@ -138,7 +139,6 @@ class SolverOrbitalHorovod(SolverOrbital):
         self.dataloader = DataLoader(self.dataset,
                                      batch_size=batchsize,
                                      **kwargs)
-        cumulative_loss = []
         min_loss = 1E3
 
         for n in range(nepoch):
@@ -171,13 +171,15 @@ class SolverOrbitalHorovod(SolverOrbital):
                                                   'cum_loss')
 
             if hvd.rank() == 0:
-                if cumulative_loss < min_loss:
+                if n == 0 or cumulative_loss < min_loss:
                     self.observable.models.best = dict(
                         self.wf.state_dict())
-                    self.save_checkpoint(n, cumulative_loss)
-                    min_loss = cumulative_loss
+                min_loss = cumulative_loss
 
-            if hvd.rank() == 0:
+                if self.chkpt_every is not None:
+                    if (n > 0) and (n % chkpt_every == 0):
+                        self.save_checkpoint(n, cumulative_loss)
+
                 self.print_observable(cumulative_loss)
 
             # resample the data

@@ -186,7 +186,7 @@ class SolverOrbital(SolverBase):
 
         # log data
         self.prepare_optimization(batchsize, None, tqdm)
-        self.log_data_opt(nepoch, hdf5_group)
+        self.log_data_opt(nepoch, 'geometry optimization')
 
         # init the traj
         xyz = [self.wf.geometry(None)]
@@ -248,7 +248,7 @@ class SolverOrbital(SolverBase):
 
         # prepare the optimization
         self.prepare_optimization(batchsize, chkpt_every, tqdm)
-        self.log_data_opt(nepoch, hdf5_group)
+        self.log_data_opt(nepoch, 'wave function optimization')
 
         # run the epochs
         self.run_epochs(nepoch)
@@ -459,5 +459,5 @@ class SolverOrbital(SolverBase):
         log.info(
             '  Output file         : {0}', self.hdf5file)
         log.info(
-            '  Checkpoint every    : {0}', getattr(self, 'chkpt_every', None))
+            '  Checkpoint every    : {0}', self.chkpt_every)
         log.info('')
