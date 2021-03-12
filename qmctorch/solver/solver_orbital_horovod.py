@@ -47,7 +47,7 @@ class SolverOrbitalHorovod(SolverOrbital):
         self.sampler.walkers.nwalkers //= hvd.size()
 
     def run(self, nepoch, batchsize=None, loss='energy',
-            clip_loss=False, grad='manual', hdf5_group='optimization',
+            clip_loss=False, grad='manual', hdf5_group='wf_opt',
             num_threads=1, chkpt_every=None):
         """Run the optimization
 
@@ -63,7 +63,7 @@ class SolverOrbitalHorovod(SolverOrbital):
             grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
                                   Defaults to 'auto'.
             hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                    Defaults to 'optimization'
+                                    Defaults to 'wf_opt'
         """
 
         logd(hvd.rank(), '')
@@ -99,7 +99,7 @@ class SolverOrbitalHorovod(SolverOrbital):
         self.prepare_optimization(batchsize, chkpt_every)
         # log data
         if hvd.rank() == 0:
-            self.log_data_opt(nepoch, hdf5_group)
+            self.log_data_opt(nepoch, 'wave function optimization')
 
         # sample the wave function
         if hvd.rank() == 0:
