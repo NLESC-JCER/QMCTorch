@@ -44,4 +44,4 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        pytest horovod_tests/test_hvd.py -n 2
+        pytest horovod_tests -n 2
