@@ -27,6 +27,7 @@ jobs:
     - run: conda --version
     - run: which python
     - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
+    - run: pip install horovod
 
     - name: Install the package
       run: pip install .[test]
@@ -38,3 +39,9 @@ jobs:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
         pytest --cov-config setup.cfg
+
+    - name: Test with multithreading
+      env:
+        CONDA_PREFIX: /usr/share/miniconda
+      run: |
+        pytest horovod_tests/test_hvd.py -n 2

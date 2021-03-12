@@ -49,6 +49,6 @@ setup(
         'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
         'test': ['coverage', 'pycodestyle', 'pytest', 'pytest-cov',
-                 'pytest-runner'],
+                 'pytest-runner', 'pytest-xdist'],
     }
 )
