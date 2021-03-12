@@ -44,4 +44,4 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        pytest --cov-config horovod_tests -n 2
+        pytest horovod_tests -n 2 --cov-config setup.cfg
