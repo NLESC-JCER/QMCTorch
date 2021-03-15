@@ -48,11 +48,11 @@ jobs:
     - run: find -follow | grep coverage
 
     - name: Coveralls Parallel
-      uses: AndreMiras/coveralls-python-action@develop
-      with:
-        github-token: ${{ secrets.github_token }}
-        flag-name: python-${{ matrix.version }}
-        parallel: true
+      run: coveralls
+      env:
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+        COVERALLS_FLAG_NAME: python-${{ matrix.version }}
+        COVERALLS_PARALLEL: true
 
   finish:
     needs: build
