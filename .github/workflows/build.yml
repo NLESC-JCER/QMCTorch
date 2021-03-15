@@ -53,7 +53,7 @@ jobs:
         github-token: ${{ secrets.github_token }}
         flag-name: python-${{ matrix.version }}
         parallel: true
-        path-to-lcov: ./coverage.json
+        path-to-lcov: ./coverage.xml
 
   finish:
     needs: build
