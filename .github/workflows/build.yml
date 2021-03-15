@@ -48,7 +48,7 @@ jobs:
     - run: find -follow | grep coverage
 
     - name: Coveralls Parallel
-      uses: coverallsapp/github-action@master
+      uses: AndreMiras/coveralls-python-action@develop
       with:
         github-token: ${{ secrets.github_token }}
         flag-name: python-${{ matrix.version }}
