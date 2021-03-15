@@ -1,10 +1,10 @@
 name: build
 
-on: [push]
+on: [push, pull_request]
 
 jobs:
   build:
-
+    name: build and test
     runs-on: ubuntu-latest
 
     strategy:
@@ -38,10 +38,27 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        pytest --cov-config setup.cfg
+        pytest test --cov-config setup.cfg
 
     - name: Test with multithreading
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
         pytest horovod_tests -n 2 --cov-config setup.cfg
+
+    - name: Coveralls Parallel
+      uses: coverallsapp/github-action@master
+      with:
+        github-token: ${{ secrets.github_token }}
+        flag-name: python-${{ matrix.version }}
+        parallel: true
+
+  finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          parallel-finished: true
