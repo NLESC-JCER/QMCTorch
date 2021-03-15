@@ -27,10 +27,9 @@ jobs:
     - run: conda --version
     - run: which python
     - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
-    - run: pip install horovod
 
     - name: Install the package
-      run: pip install .[test]
+      run: pip install .[test,hpc]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
@@ -46,12 +45,15 @@ jobs:
       run: |
         pytest horovod_tests -n 2 --cov-config setup.cfg
 
+    - run: find -follow | grep coverage
+
     - name: Coveralls Parallel
       uses: coverallsapp/github-action@master
       with:
         github-token: ${{ secrets.github_token }}
         flag-name: python-${{ matrix.version }}
         parallel: true
+        path-to-lcov: ./coverage.json
 
   finish:
     needs: build
