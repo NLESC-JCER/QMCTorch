@@ -45,8 +45,6 @@ jobs:
       run: |
         pytest horovod_tests -n 2 --cov-config setup.cfg
 
-    - run: find -follow | grep coverage
-
     - name: Coveralls Parallel
       run: coveralls --service=github
       env:
