@@ -1,6 +1,6 @@
 name: build
 
-on: [push, pull_request]
+on: [push]
 
 jobs:
   build:
@@ -38,7 +38,7 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        pytest test --cov-config setup.cfg
+        pytest tests --cov-config setup.cfg
 
     - name: Test with multithreading
       env:
