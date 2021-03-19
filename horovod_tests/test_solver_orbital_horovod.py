@@ -10,6 +10,7 @@ import numpy as np
 import torch
 from torch import optim
 
+import os
 import sys
 
 
@@ -48,6 +49,10 @@ class TestSolverOribitalHorovod(unittest.TestCase):
 
         self.solver = SolverOrbitalHorovod(wf=self.wf, sampler=self.sampler,
                                            optimizer=self.opt, rank=hvd.rank())
+
+    def tearDown(self):
+        os.remove(self.wf.mol.hdf5file)
+        os.remove(self.solver.hdf5file)
 
     def test_single_point(self):
 
