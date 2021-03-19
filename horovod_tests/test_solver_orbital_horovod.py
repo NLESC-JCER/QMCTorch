@@ -1,3 +1,8 @@
+from qmctorch.wavefunction import Orbital
+from qmctorch.utils import set_torch_double_precision
+from qmctorch.solver import SolverOrbitalHorovod
+from qmctorch.scf import Molecule
+from qmctorch.sampler import Metropolis
 import unittest
 
 import horovod.torch as hvd
@@ -6,15 +11,6 @@ import torch
 from torch import optim
 
 import sys
-
-sys.path.append('/home/matthijs/esc/QMCTorch')
-sys.path.append('/home/matthijs/esc/QMCTorch/qmctorch')
-
-from qmctorch.sampler import Metropolis
-from qmctorch.scf import Molecule
-from qmctorch.solver import SolverOrbitalHorovod
-from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction import Orbital
 
 
 class TestSolverOribitalHorovod(unittest.TestCase):
@@ -40,7 +36,8 @@ class TestSolverOribitalHorovod(unittest.TestCase):
         self.sampler = Metropolis(nwalkers=20,
                                   nstep=20, step_size=0.2,
                                   ntherm=-1, ndecor=100,
-                                  nelec=self.wf.nelec, init=mol.domain('atomic'),
+                                  nelec=self.wf.nelec, init=mol.domain(
+                                      'atomic'),
                                   move={'type': 'all-elec', 'proba': 'normal'})
 
         lr_dict = [{'params': self.wf.jastrow.parameters(), 'lr': 3E-3},
@@ -49,11 +46,12 @@ class TestSolverOribitalHorovod(unittest.TestCase):
                    {'params': self.wf.fc.parameters(), 'lr': 2E-3}]
         self.opt = optim.Adam(lr_dict, lr=1E-3)
 
-    def test_single_point(self):
-        solver = SolverOrbitalHorovod(wf=self.wf, sampler=self.sampler,
-                                      optimizer=self.opt, rank=hvd.rank())
+        self.solver = SolverOrbitalHorovod(wf=self.wf, sampler=self.sampler,
+                                           optimizer=self.opt, rank=hvd.rank())
 
-        obs = solver.single_point(with_tqdm=False)
+    def test_single_point(self):
+
+        obs = self.solver.single_point(with_tqdm=False)
 
         ref_energy = torch.tensor([-1.0595])
         ref_error = torch.tensor([0.1169])
@@ -64,8 +62,15 @@ class TestSolverOribitalHorovod(unittest.TestCase):
         assert torch.isclose(obs.variance, ref_variance, 0.5E1)
         assert len(obs.local_energy) == 20
 
+    def test_wf_opt(self):
+
+        self.solver.configure(track=['local_energy', 'parameters'],
+                              loss='energy', grad='auto')
+        _ = self.solver.run(5)
+
 
 if __name__ == "__main__":
     t = TestSolverOribitalHorovod()
     t.setUp()
     t.test_single_point()
+    t.test_wf_opt()
