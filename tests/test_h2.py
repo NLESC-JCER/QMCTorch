@@ -13,7 +13,7 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 
-__PLOT__ = False
+__PLOT__ = True
 
 
 class TestH2(unittest.TestCase):
