@@ -6,7 +6,6 @@ from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 
 class PadeJastrow(TwoBodyJastrowFactorBase):
-
     def __init__(self, nup, ndown, w=1., cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
@@ -23,8 +22,8 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
 
         super(PadeJastrow, self).__init__(nup, ndown, cuda)
 
-        self.weight = nn.Parameter(
-            torch.tensor([w]), requires_grad=True).to(self.device)
+        self.weight = nn.Parameter(torch.tensor([w]),
+                                   requires_grad=True).to(self.device)
         register_extra_attributes(self, ['weight'])
 
         self.static_weight = self.get_static_weight()
@@ -85,7 +84,7 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         r_ = r.unsqueeze(1)
         denom = 1. / (1.0 + self.weight * r_)
         a = self.static_weight * dr * denom
-        b = - self.static_weight * self.weight * r_ * dr * denom**2
+        b = -self.static_weight * self.weight * r_ * dr * denom**2
 
         return (a + b)
 
@@ -102,12 +101,12 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nbatch x Ndim x Nelec x Nelec
         """
@@ -115,13 +114,13 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         r_ = r.unsqueeze(1)
         denom = 1. / (1.0 + self.weight * r_)
         denom2 = denom**2
-        dr_square = dr*dr
+        dr_square = dr * dr
 
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom2
-        c = - self.static_weight * self.weight * r_ * d2r * denom2
+        c = -self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 
-        return a + b + c + d  # + e**2
+        return a + b + c + d

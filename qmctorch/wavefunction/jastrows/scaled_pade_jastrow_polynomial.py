@@ -4,8 +4,14 @@ from .pade_jastrow_polynomial import PadeJastrowPolynomial
 
 
 class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
-
-    def __init__(self, nup, ndown, order, kappa=0.6, weight_a=None, weight_b=None, cuda=False):
+    def __init__(self,
+                 nup,
+                 ndown,
+                 order,
+                 kappa=0.6,
+                 weight_a=None,
+                 weight_b=None,
+                 cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -111,7 +117,7 @@ class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
 
         der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
-        return (der_num * denom - num * der_denom)/(denom*denom)
+        return (der_num * denom - num * der_denom) / (denom * denom)
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -146,10 +152,10 @@ class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
 
         der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
-        d2_num, d2_denom = self._compute_polynom_second_derivative(
-            u, du, d2u)
+        d2_num, d2_denom = self._compute_polynom_second_derivative(u, du, d2u)
 
-        out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(
-            denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
+        out = d2_num / denom - (2 * der_num * der_denom + num * d2_denom) / (
+            denom * denom) + 2 * num * der_denom * der_denom / (denom * denom *
+                                                                denom)
 
-        return out  # + self._get_der_jastrow_elements(r, dr)**2
+        return out

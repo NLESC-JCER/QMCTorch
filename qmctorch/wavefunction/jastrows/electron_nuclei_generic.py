@@ -6,7 +6,6 @@ from .electron_nuclei_jastrow_base import ElectronNucleiJastrowFactorBase
 
 
 class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
-
     def __init__(self, nup, ndown, atoms, JastrowFunction, cuda, **kwargs):
         r"""Computes the Simple Pade-Jastrow factor
 
@@ -22,8 +21,7 @@ class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ElectronNucleiGeneric,
-              self).__init__(nup, ndown, atoms, cuda)
+        super(ElectronNucleiGeneric, self).__init__(nup, ndown, atoms, cuda)
 
         self.jastrow_function = JastrowFunction(**kwargs)
 
@@ -98,12 +96,12 @@ class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nbatch x Ndim x Nelec x Nelec
         """
@@ -111,10 +109,8 @@ class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
         dr2 = dr * dr
 
         kernel = self.jastrow_function(r)
+
         ker_hess, ker_grad = self._hess(kernel, r)
-        # ker_grad_2 = ker_grad * ker_grad
-        # jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
-        #     dr2 + ker_grad.unsqueeze(1) * d2r
 
         jhess = (ker_hess).unsqueeze(1) * \
             dr2 + ker_grad.unsqueeze(1) * d2r
@@ -145,11 +141,11 @@ class ElectronNucleiGeneric(ElectronNucleiJastrowFactorBase):
             pos ([type]): [description]
         """
 
-        gval = grad(val, pos,
+        gval = grad(val,
+                    pos,
                     grad_outputs=torch.ones_like(val),
                     create_graph=True)[0]
 
-        hval = grad(gval, pos,
-                    grad_outputs=torch.ones_like(gval))[0]
+        hval = grad(gval, pos, grad_outputs=torch.ones_like(gval))[0]
 
         return hval, gval

@@ -6,8 +6,13 @@ from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
 
 class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
-
-    def __init__(self, nup, ndown, order, weight_a=None, weight_b=None, cuda=False):
+    def __init__(self,
+                 nup,
+                 ndown,
+                 order,
+                 weight_a=None,
+                 weight_b=None,
+                 cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -49,13 +54,13 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             assert weight_a.shape[0] == self.porder
             self.weight_a = nn.Parameter(weight_a)
         else:
-            self.weight_a = nn.Parameter(w0*torch.ones(self.porder))
+            self.weight_a = nn.Parameter(w0 * torch.ones(self.porder))
 
         if weight_b is not None:
             assert weight_b.shape[0] == self.porder
             self.weight_b = nn.Parameter(weight_b)
         else:
-            self.weight_b = nn.Parameter(w0*torch.ones(self.porder))
+            self.weight_b = nn.Parameter(w0 * torch.ones(self.porder))
             self.weight_b.data[0] = 1.
 
         register_extra_attributes(self, ['weight_a'])
@@ -134,7 +139,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         der_num, der_denom = self._compute_polynom_derivatives(r, dr)
 
-        return (der_num * denom - num * der_denom)/(denom*denom)
+        return (der_num * denom - num * der_denom) / (denom * denom)
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -165,13 +170,13 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         der_num, der_denom = self._compute_polynom_derivatives(r, dr)
 
-        d2_num, d2_denom = self._compute_polynom_second_derivative(
-            r, dr, d2r)
+        d2_num, d2_denom = self._compute_polynom_second_derivative(r, dr, d2r)
 
-        out = d2_num/denom - (2*der_num*der_denom + num*d2_denom)/(
-            denom*denom) + 2 * num*der_denom*der_denom/(denom*denom*denom)
+        out = d2_num / denom - (2 * der_num * der_denom + num * d2_denom) / (
+            denom * denom) + 2 * num * der_denom * der_denom / (denom * denom *
+                                                                denom)
 
-        return out  # + self._get_der_jastrow_elements(r, dr)**2
+        return out
 
     def _compute_polynoms(self, r):
         """Compute the num and denom polynomials.
@@ -219,7 +224,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         for iord in range(1, self.porder):
 
-            fact = (iord+1) * dr * riord
+            fact = (iord + 1) * dr * riord
             der_num += self.weight_a[iord] * fact
             der_denom += self.weight_b[iord] * fact
             riord = riord * r_
@@ -246,7 +251,7 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         d2_num = self.static_weight * d2r
         d2_denom = self.weight_b[0] * d2r
 
-        dr2 = dr*dr
+        dr2 = dr * dr
 
         r_ = r.unsqueeze(1)
         rnm1 = r.unsqueeze(1)
@@ -254,8 +259,8 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         for iord in range(1, self.porder):
 
-            n = iord+1
-            fact = n * (d2r * rnm1 + iord * dr2*rnm2)
+            n = iord + 1
+            fact = n * (d2r * rnm1 + iord * dr2 * rnm2)
             d2_num += self.weight_a[iord] * fact
             d2_denom += self.weight_b[iord] * fact
 

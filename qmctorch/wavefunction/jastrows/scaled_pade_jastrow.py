@@ -6,7 +6,6 @@ from .pade_jastrow import PadeJastrow
 
 
 class ScaledPadeJastrow(PadeJastrow):
-
     def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
@@ -22,11 +21,9 @@ class ScaledPadeJastrow(PadeJastrow):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ScaledPadeJastrow, self).__init__(
-            nup, ndown, w, cuda)
+        super(ScaledPadeJastrow, self).__init__(nup, ndown, w, cuda)
 
-        self.weight = nn.Parameter(
-            torch.tensor([w]), requires_grad=True)
+        self.weight = nn.Parameter(torch.tensor([w]), requires_grad=True)
         self.edist.kappa = kappa
         self.static_weight = self.get_static_weight()
         register_extra_attributes(self, ['weight'])
@@ -91,7 +88,7 @@ class ScaledPadeJastrow(PadeJastrow):
         denom = 1. / (1.0 + self.weight * u)
 
         a = self.static_weight * du * denom
-        b = - self.static_weight * self.weight * u * du * denom**2
+        b = -self.static_weight * self.weight * u * du * denom**2
 
         return (a + b)
 
@@ -124,13 +121,13 @@ class ScaledPadeJastrow(PadeJastrow):
 
         denom = 1. / (1.0 + self.weight * u)
         denom2 = denom**2
-        du_square = du*du
+        du_square = du * du
 
         a = self.static_weight * d2u * denom
         b = -2 * self.static_weight * self.weight * du_square * denom2
-        c = - self.static_weight * self.weight * u * d2u * denom2
+        c = -self.static_weight * self.weight * u * d2u * denom2
         d = 2 * self.static_weight * self.weight**2 * u * du_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 
-        return a + b + c + d  # + e**2
+        return a + b + c + d
