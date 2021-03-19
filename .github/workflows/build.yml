@@ -4,7 +4,7 @@ on: [push]
 
 jobs:
   build:
-
+    name: build and test
     runs-on: ubuntu-latest
 
     strategy:
@@ -29,7 +29,7 @@ jobs:
     - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
 
     - name: Install the package
-      run: pip install .[test]
+      run: pip install .[test,hpc]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
@@ -37,4 +37,27 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        pytest --cov-config setup.cfg
+        pytest tests --cov-config setup.cfg
+
+    - name: Test with multithreading
+      env:
+        CONDA_PREFIX: /usr/share/miniconda
+      run: |
+        pytest horovod_tests -n 2 --cov-config setup.cfg
+
+    - name: Coveralls Parallel
+      run: coveralls --service=github
+      env:
+        GITHUB_TOKEN: ${{ secrets.github_token }}
+        COVERALLS_FLAG_NAME: python-${{ matrix.version }}
+        COVERALLS_PARALLEL: true
+
+  finish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Coveralls Finished
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.github_token }}
+          parallel-finished: true

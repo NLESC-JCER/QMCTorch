@@ -10,7 +10,7 @@ mol = Molecule(atom='water.xyz', unit='angs',
 
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
-             configs='ground_State',
+             configs='ground_state',
              use_jastrow=True)
 
 # sampler

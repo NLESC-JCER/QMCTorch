@@ -58,7 +58,7 @@ def plot_data(observable, obsname):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    data = np.array(observable.__getattribute__(obsname)).flatten()
+    data = np.array(observable.models.best[obsname]).flatten()
     epoch = np.arange(len(data))
     ax.plot(epoch, data, color='#144477')
 
