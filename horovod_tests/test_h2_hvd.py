@@ -59,8 +59,7 @@ class TestH2Hvd(unittest.TestCase):
         self.scheduler = optim.lr_scheduler.StepLR(self.opt, step_size=100, gamma=0.90)
         # solver
         self.solver = SolverOrbitalHorovod(wf=self.wf, sampler=self.sampler,
-                                           optimizer=self.opt, scheduler=self.scheduler,
-                                           rank=hvd.rank())
+                                           optimizer=self.opt, rank=hvd.rank())
 
         # ground state energy
         self.ground_state_energy = -1.16
@@ -76,12 +75,11 @@ class TestH2Hvd(unittest.TestCase):
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
 
-        print("test_single_point")
         e = e.data.item()
         v = v.data.item()
 
         assert np.isclose(e, -1.15, 0.2)
-        assert 0 < v < 1
+        assert 0 < v < 2
 
     def test_wf_opt(self):
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
@@ -108,7 +106,7 @@ class TestH2Hvd(unittest.TestCase):
         v = v.data.numpy()
 
         assert np.isclose(e, -1.15, 0.2)
-        assert 0 < v < 1
+        assert 0 < v < 2
 
     # def test_geo_opt(self):
     #     self.solver.wf.ao.atom_coords[0, 2].data = torch.tensor(-0.37)

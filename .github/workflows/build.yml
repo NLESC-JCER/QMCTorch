@@ -33,17 +33,17 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
+    - name: Test with multithreading
+      env:
+        CONDA_PREFIX: /usr/share/miniconda
+      run: |
+        mpirun -np 2 pytest horovod_tests --cov-config setup.cfg -s
+
     - name: Test with pytest
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
         pytest tests --cov-config setup.cfg
-
-    - name: Test with multithreading
-      env:
-        CONDA_PREFIX: /usr/share/miniconda
-      run: |
-        pytest horovod_tests -n 2 --cov-config setup.cfg
 
     - name: Coveralls Parallel
       run: coveralls --service=github
