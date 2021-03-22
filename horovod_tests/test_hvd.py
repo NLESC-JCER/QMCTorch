@@ -8,8 +8,7 @@ class TestHVD(unittest.TestCase):
         hvd.init()
 
     def test_mpi_support(self):
-        if hvd.rank() == 0:
-            assert hvd.mpi_threads_supported()
+        assert hvd.mpi_threads_supported()
 
     def test_horovod_allreduce(self):
         rank = hvd.rank()
