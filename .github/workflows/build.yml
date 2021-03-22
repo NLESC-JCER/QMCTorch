@@ -37,7 +37,7 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        mpirun -np 2 pytest horovod_tests --cov-config setup.cfg -s
+        mpirun -np 2 pytest horovod_tests --cov-config setup.cfg
 
     - name: Test with pytest
       env:
