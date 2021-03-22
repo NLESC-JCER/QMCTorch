@@ -39,11 +39,11 @@ jobs:
       run: |
         mpirun -np 2 pytest horovod_tests --cov-config setup.cfg
 
-    - name: Test with pytest
+    - name: Test with single thread
       env:
         CONDA_PREFIX: /usr/share/miniconda
       run: |
-        pytest tests --cov-config setup.cfg
+        pytest tests --cov-config setup.cfg --cov-append
 
     - name: Coveralls Parallel
       run: coveralls --service=github
