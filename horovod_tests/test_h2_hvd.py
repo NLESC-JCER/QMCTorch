@@ -1,7 +1,3 @@
-import sys
-
-sys.path.append('/home/matthijs/esc/QMCTorch')
-
 import unittest
 
 import numpy as np
