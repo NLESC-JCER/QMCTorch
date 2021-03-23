@@ -36,15 +36,17 @@ jobs:
     - name: Test with multithreading
       env:
         CONDA_PREFIX: /usr/share/miniconda
-      run: |
-        mpirun -np 2 pytest horovod_tests --cov-config setup.cfg
-      continue-on-error: true
+      run: mpirun -np 2 coverage run -m pytest horovod_tests
 
     - name: Test with single thread
       env:
         CONDA_PREFIX: /usr/share/miniconda
-      run: |
-        pytest tests --cov-config setup.cfg --cov-append
+      run: coverage -m pytest tests
+
+    - name: Combine all coverage results
+      run: coverage combine
+
+    - run: coverage report
 
     - name: Coveralls Parallel
       run: coveralls --service=github
