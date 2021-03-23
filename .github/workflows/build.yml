@@ -44,7 +44,7 @@ jobs:
       run: coverage run -m pytest tests
 
     - name: Print coverage files
-    - run: find . -maxdepth 1 -name ".coverage*" -print
+      run: find . -maxdepth 1 -name ".coverage*" -print
 
     - name: Combine all coverage results
       run: coverage combine
