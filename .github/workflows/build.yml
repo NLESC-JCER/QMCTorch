@@ -41,7 +41,7 @@ jobs:
     - name: Test with single thread
       env:
         CONDA_PREFIX: /usr/share/miniconda
-      run: coverage -m pytest tests
+      run: coverage run -m pytest tests
 
     - name: Combine all coverage results
       run: coverage combine
