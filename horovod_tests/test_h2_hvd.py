@@ -56,7 +56,6 @@ class TestH2Hvd(unittest.TestCase):
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
-        self.scheduler = optim.lr_scheduler.StepLR(self.opt, step_size=100, gamma=0.90)
         # solver
         self.solver = SolverOrbitalHorovod(wf=self.wf, sampler=self.sampler,
                                            optimizer=self.opt, rank=hvd.rank())
