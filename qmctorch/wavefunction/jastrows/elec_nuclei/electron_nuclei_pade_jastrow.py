@@ -1,12 +1,13 @@
 import torch
 from torch import nn
 
-from ...utils import register_extra_attributes
-from .pade_jastrow import PadeJastrow
+from ....utils import register_extra_attributes
+from .electron_nuclei_base import ElectronNucleiBase
 
 
-class ScaledPadeJastrow(PadeJastrow):
-    def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
+class ElectronNucleiPadeJastrow(ElectronNucleiBase):
+
+    def __init__(self, nup, ndown, atoms, w=1., cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -16,17 +17,19 @@ class ScaledPadeJastrow(PadeJastrow):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            w (float, optional): Value of the variational parameter. Defaults to 1.
-            kappa (float, optional): value of the scale parameter. Defaults to 0.6.
+            atoms (torch.tensor): atomic positions of the atoms
+            w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ScaledPadeJastrow, self).__init__(nup, ndown, w, cuda)
+        super(ElectronNucleiPadeJastrow,
+              self).__init__(nup, ndown, atoms, cuda)
 
-        self.weight = nn.Parameter(torch.tensor([w]), requires_grad=True)
-        self.edist.kappa = kappa
-        self.static_weight = self.get_static_weight()
+        self.weight = nn.Parameter(
+            torch.tensor([w]), requires_grad=True).to(self.device)
         register_extra_attributes(self, ['weight'])
+
+        self.static_weight = torch.tensor([1.])
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -56,8 +59,7 @@ class ScaledPadeJastrow(PadeJastrow):
             torch.tensor: matrix of the jastrow kernels
                           Nbatch x Nelec x Nelec
         """
-        ur = self.edist.get_scaled_distance(r)
-        return self.static_weight * ur / (1.0 + self.weight * ur)
+        return self.static_weight * r / (1.0 + self.weight * r)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -82,13 +84,10 @@ class ScaledPadeJastrow(PadeJastrow):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self.edist.get_scaled_distance(r).unsqueeze(1)
-        du = self.edist.get_der_scaled_distance(r, dr)
-
-        denom = 1. / (1.0 + self.weight * u)
-
-        a = self.static_weight * du * denom
-        b = -self.static_weight * self.weight * u * du * denom**2
+        r_ = r.unsqueeze(1)
+        denom = 1. / (1.0 + self.weight * r_)
+        a = self.static_weight * dr * denom
+        b = - self.static_weight * self.weight * r_ * dr * denom**2
 
         return (a + b)
 
@@ -115,19 +114,27 @@ class ScaledPadeJastrow(PadeJastrow):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self.edist.get_scaled_distance(r).unsqueeze(1)
-        du = self.edist.get_der_scaled_distance(r, dr)
-        d2u = self.edist.get_second_der_scaled_distance(r, dr, d2r)
-
-        denom = 1. / (1.0 + self.weight * u)
+        r_ = r.unsqueeze(1)
+        denom = 1. / (1.0 + self.weight * r_)
         denom2 = denom**2
-        du_square = du * du
+        dr_square = dr*dr
 
-        a = self.static_weight * d2u * denom
-        b = -2 * self.static_weight * self.weight * du_square * denom2
-        c = -self.static_weight * self.weight * u * d2u * denom2
-        d = 2 * self.static_weight * self.weight**2 * u * du_square * denom**3
+        a = self.static_weight * d2r * denom
+        b = -2 * self.static_weight * self.weight * dr_square * denom2
+        c = - self.static_weight * self.weight * r_ * d2r * denom2
+        d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
         e = self._get_der_jastrow_elements(r, dr)
 
-        return a + b + c + d
+        return a + b + c + d  # + e**2
+
+
+if __name__ == "__main__":
+    nup, ndown = 4, 4
+    nelec = nup + ndown
+    atoms = torch.rand(4, 3)
+    jastrow = ElectronNucleiPadeJastrow(nup, ndown, atoms)
+    nbatch = 5
+
+    pos = torch.rand(nbatch, nelec * 3)
+    pos.requires_grad = True

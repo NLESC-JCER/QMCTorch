@@ -1,12 +1,12 @@
 import torch
 from torch import nn
+from torch.autograd import grad
+from ....utils import register_extra_attributes
+from .electron_nuclei_base import ElectronNucleiBase
 
-from ...utils import register_extra_attributes
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
 
-
-class PadeJastrow(TwoBodyJastrowFactorBase):
-    def __init__(self, nup, ndown, w=1., cuda=False):
+class ElectronNucleiGeneric(ElectronNucleiBase):
+    def __init__(self, nup, ndown, atoms, JastrowFunction, cuda, **kwargs):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -16,17 +16,15 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
+            atoms (torch.tensor): atomic positions of the atoms
             w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
+        super(ElectronNucleiGeneric, self).__init__(
+            nup, ndown, atoms, cuda)
 
-        self.weight = nn.Parameter(torch.tensor([w]),
-                                   requires_grad=True).to(self.device)
-        register_extra_attributes(self, ['weight'])
-
-        self.static_weight = self.get_static_weight()
+        self.jastrow_function = JastrowFunction(**kwargs)
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -56,7 +54,7 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
             torch.tensor: matrix of the jastrow kernels
                           Nbatch x Nelec x Nelec
         """
-        return self.static_weight * r / (1.0 + self.weight * r)
+        return self.jastrow_function(r)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -81,12 +79,10 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
-        a = self.static_weight * dr * denom
-        b = -self.static_weight * self.weight * r_ * dr * denom**2
+        kernel = self.jastrow_function(r)
+        ker_grad = self._grads(kernel, r)
 
-        return (a + b)
+        return ker_grad.unsqueeze(1) * dr
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -111,16 +107,46 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
-        denom2 = denom**2
-        dr_square = dr * dr
+        dr2 = dr * dr
 
-        a = self.static_weight * d2r * denom
-        b = -2 * self.static_weight * self.weight * dr_square * denom2
-        c = -self.static_weight * self.weight * r_ * d2r * denom2
-        d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
+        kernel = self.jastrow_function(r)
 
-        e = self._get_der_jastrow_elements(r, dr)
+        ker_hess, ker_grad = self._hess(kernel, r)
 
-        return a + b + c + d
+        jhess = (ker_hess).unsqueeze(1) * \
+            dr2 + ker_grad.unsqueeze(1) * d2r
+
+        return jhess
+
+    @staticmethod
+    def _grads(val, pos):
+        """Get the gradients of the jastrow values
+        of a given orbital terms
+
+        Args:
+            pos ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+
+    @staticmethod
+    def _hess(val, pos):
+        """get the hessian of the jastrow values.
+        of a given orbital terms
+        Warning thos work only because the orbital term are dependent
+        of a single rij term, i.e. fij = f(rij)
+
+        Args:
+            pos ([type]): [description]
+        """
+
+        gval = grad(val,
+                    pos,
+                    grad_outputs=torch.ones_like(val),
+                    create_graph=True)[0]
+
+        hval = grad(gval, pos, grad_outputs=torch.ones_like(gval))[0]
+
+        return hval, gval

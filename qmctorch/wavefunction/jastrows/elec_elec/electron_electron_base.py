@@ -1,10 +1,10 @@
 import torch
 from torch import nn
-from .electron_distance import ElectronDistance
+from ..distance.electron_electron_distance import ElectronElectronDistance
 import itertools
 
 
-class TwoBodyJastrowFactorBase(nn.Module):
+class ElectronElectronBase(nn.Module):
 
     def __init__(self, nup, ndown, cuda=False):
         r"""Base class for two body jastrow of the form:
@@ -18,7 +18,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(TwoBodyJastrowFactorBase, self).__init__()
+        super(ElectronElectronBase, self).__init__()
 
         self.nup = nup
         self.ndown = ndown
@@ -32,7 +32,7 @@ class TwoBodyJastrowFactorBase(nn.Module):
 
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
-        self.edist = ElectronDistance(self.nelec, self.ndim)
+        self.edist = ElectronElectronDistance(self.nelec, self.ndim)
 
         # choose the partial derivative method
         method = 'square'

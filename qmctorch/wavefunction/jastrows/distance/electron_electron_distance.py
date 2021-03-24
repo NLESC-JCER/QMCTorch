@@ -2,7 +2,7 @@ import torch
 from torch import nn
 
 
-class ElectronDistance(nn.Module):
+class ElectronElectronDistance(nn.Module):
 
     def __init__(self, nelec, ndim=3, scale=0.6):
         """Computes the electron-electron distances
@@ -119,9 +119,9 @@ class ElectronDistance(nn.Module):
         return dist
 
     def get_scaled_distance(self, r):
-        """compute the scaled distance 
+        """compute the scaled distance
         .. math::
-            u = \frac{1+e^{-kr}}{k}      
+            u = \frac{1+e^{-kr}}{k}
 
         Args:
             r (torch.tensor): matrix of the e-e distances
