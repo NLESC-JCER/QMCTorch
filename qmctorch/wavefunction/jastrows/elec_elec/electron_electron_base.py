@@ -143,7 +143,7 @@ class ElectronElectronBase(nn.Module):
         index_row = torch.LongTensor(index_row).to(self.device)
         return mask, index_col, index_row
 
-    def extract_tri_up(self, input):
+    def extract_tri_up(self, inp):
         r"""extract the upper triangular elements
 
         Args:
@@ -152,8 +152,8 @@ class ElectronElectronBase(nn.Module):
         Returns:
             torch.tensor: triangular up element (nbatch, -1)
         """
-        nbatch = input.shape[0]
-        return input.masked_select(self.mask_tri_up).view(nbatch, -1)
+        nbatch = inp.shape[0]
+        return inp.masked_select(self.mask_tri_up).view(nbatch, -1)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -233,7 +233,7 @@ class ElectronElectronBase(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
-        nbatch = r.shape[0]
+
         if jacobian:
 
             prod_val = jast.prod(-1).unsqueeze(-1)
@@ -272,7 +272,6 @@ class ElectronElectronBase(nn.Module):
             torch.tensor: diagonal hessian of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
-        nbatch = r.shape[0]
 
         # pure second derivative terms
         prod_val = jast.prod(-1).unsqueeze(-1)

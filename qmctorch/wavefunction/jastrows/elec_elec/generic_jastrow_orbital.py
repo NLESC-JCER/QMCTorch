@@ -2,11 +2,11 @@ import torch
 from torch import nn
 from torch.autograd import grad
 import numpy as np
-from ...utils import register_extra_attributes, diagonal_hessian
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ....utils import register_extra_attributes, diagonal_hessian
+from .electron_electron_base import ElectronElectronBase
 
 
-class GenericJastrowOrbitals(TwoBodyJastrowFactorBase):
+class GenericJastrowOrbitals(ElectronElectronBase):
 
     def __init__(self, nup, ndown, nmo, JastrowFunction, cuda, **kwargs):
         r"""Computes generic jastrow factor per MO

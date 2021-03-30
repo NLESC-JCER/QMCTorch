@@ -124,9 +124,7 @@ class ElectronNucleiPadeJastrow(ElectronNucleiBase):
         c = - self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
-        e = self._get_der_jastrow_elements(r, dr)
-
-        return a + b + c + d  # + e**2
+        return a + b + c + d
 
 
 if __name__ == "__main__":

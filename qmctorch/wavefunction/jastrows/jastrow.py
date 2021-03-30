@@ -1,10 +1,9 @@
 
 import torch
-from .pade_jastrow import PadeJastrow
-from .pade_jastrow_polynomial import PadeJastrowPolynomial
-from .scaled_pade_jastrow import ScaledPadeJastrow
-from .generic_jastrow import GenericJastrow
-
+from .elec_elec.pade_jastrow import PadeJastrow
+from .elec_elec.pade_jastrow_polynomial import PadeJastrowPolynomial
+from .elec_elec.scaled_pade_jastrow import ScaledPadeJastrow
+from .elec_elec.electron_electron_generic import ElectronElectronGeneric
 from ... import log
 
 
@@ -31,7 +30,7 @@ def set_jastrow(jastrow_type, nup, ndown, cuda, **kwargs):
 
     # load generic jastrow without args
     elif issubclass(jastrow_type, torch.nn.Module):
-        return GenericJastrow(nup, ndown, jastrow_type, cuda, **kwargs)
+        return ElectronElectronGeneric(nup, ndown, jastrow_type, cuda, **kwargs)
 
     else:
         valid_names = ['pade_jastrow',

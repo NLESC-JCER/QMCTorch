@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 
-from ...utils import register_extra_attributes
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ....utils import register_extra_attributes
+from .electron_electron_base import ElectronElectronBase
 
 
-class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
+class PadeJastrowPolynomial(ElectronElectronBase):
     def __init__(self,
                  nup,
                  ndown,
@@ -26,8 +26,8 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
             order (int): degree of the polynomial
-            weight_a (torch.tensor, optional): Value of the weight on the numerator
-            weight_b (torch.tensor, optional): Value of the weight on the numerator
+            weight_a (torch.tensor, optional): Value of the weight
+            weight_b (torch.tensor, optional): Value of the weight
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
@@ -42,8 +42,8 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
         """Define the initial values of the variational weights.
 
         Args:
-            weight_a (torch.tensor or None): Value of the weight on the numerator
-            weight_b (torch.tensor or None): Value of the weight on the numerator
+            weight_a (torch.tensor or None): Value of the weight
+            weight_b (torch.tensor or None): Value of the weight
 
         """
 
@@ -170,7 +170,8 @@ class PadeJastrowPolynomial(TwoBodyJastrowFactorBase):
 
         der_num, der_denom = self._compute_polynom_derivatives(r, dr)
 
-        d2_num, d2_denom = self._compute_polynom_second_derivative(r, dr, d2r)
+        d2_num, d2_denom = self._compute_polynom_second_derivative(
+            r, dr, d2r)
 
         out = d2_num / denom - (2 * der_num * der_denom + num * d2_denom) / (
             denom * denom) + 2 * num * der_denom * der_denom / (denom * denom *

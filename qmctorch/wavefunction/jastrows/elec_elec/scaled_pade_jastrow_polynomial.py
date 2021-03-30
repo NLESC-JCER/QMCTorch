@@ -25,9 +25,10 @@ class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
             order (int): degree of the polynomial
-            kappa (float, optional): value of the scale parameter. Defaults to 0.6.
-            weight_a (torch.tensor, optional): Value of the weight on the numerator
-            weight_b (torch.tensor, optional): Value of the weight on the numerator
+            kappa (float, optional): value of the scale parameter.
+                                     Defaults to 0.6.
+            weight_a (torch.tensor, optional): Value of the weight
+            weight_b (torch.tensor, optional): Value of the weight
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
@@ -152,7 +153,8 @@ class ScaledPadeJastrowPolynomial(PadeJastrowPolynomial):
 
         der_num, der_denom = self._compute_polynom_derivatives(u, du)
 
-        d2_num, d2_denom = self._compute_polynom_second_derivative(u, du, d2u)
+        d2_num, d2_denom = self._compute_polynom_second_derivative(
+            u, du, d2u)
 
         out = d2_num / denom - (2 * der_num * der_denom + num * d2_denom) / (
             denom * denom) + 2 * num * der_denom * der_denom / (denom * denom *
