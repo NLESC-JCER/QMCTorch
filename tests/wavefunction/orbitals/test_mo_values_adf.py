@@ -9,7 +9,7 @@ from torch.autograd import Variable
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 
-from .path_utils import PATH_TEST
+from ...path_utils import PATH_TEST
 
 __PLOT__ = False
 

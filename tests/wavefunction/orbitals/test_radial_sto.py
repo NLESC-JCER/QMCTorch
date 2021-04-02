@@ -3,10 +3,12 @@ import unittest
 import numpy as np
 import torch
 
+from qmctorch.utils import (plot_block, plot_data, plot_energy,
+                            plot_walkers_traj)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-
-from .path_utils import PATH_TEST, second_derivative
+from ...path_utils import PATH_TEST
+from .second_derivative import second_derivative
 
 
 class TestRadialSlater(unittest.TestCase):
@@ -34,8 +36,11 @@ class TestRadialSlater(unittest.TestCase):
         self.dx = self.pos[1, 0] - self.pos[0, 0]
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], jacobian=False)
+        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp,
+                                  xyz=xyz,
+                                  derivative=[0, 1],
+                                  jacobian=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -45,7 +50,8 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 0]
             dz_r0_fd = np.gradient(r0, self.dx)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
@@ -61,8 +67,11 @@ class TestRadialSlater(unittest.TestCase):
         self.dy = self.pos[1, 1] - self.pos[0, 1]
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], jacobian=False)
+        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp,
+                                  xyz=xyz,
+                                  derivative=[0, 1],
+                                  jacobian=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -89,9 +98,11 @@ class TestRadialSlater(unittest.TestCase):
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], jacobian=False)
-
+        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                  self.wf.ao.bas_exp,
+                                  xyz=xyz,
+                                  derivative=[0, 1],
+                                  jacobian=False)
         R = R.detach().numpy()
         dR = dR.detach().numpy()
         ielec = 0
@@ -101,9 +112,9 @@ class TestRadialSlater(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 2]
             dz_r0_fd = np.gradient(r0, self.dz)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(
+                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
-            # plt.plot(r0)
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
             # plt.show()
@@ -133,8 +144,11 @@ class TestRadialSlater(unittest.TestCase):
         self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
         xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR, d2R = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1, 2], jacobian=False)
+        R, dR, d2R = self.wf.ao.radial(r, self.wf.ao.bas_n,
+                                       self.wf.ao.bas_exp,
+                                       xyz=xyz,
+                                       derivative=[0, 1, 2],
+                                       jacobian=False)
 
         for iorb in range(7):
 
@@ -142,7 +156,7 @@ class TestRadialSlater(unittest.TestCase):
             lap_fd = np.zeros(npts - 2)
 
             for i in range(1, npts - 1):
-                lap_analytic[i - 1] = d2R[i, 0, iorb]
+                lap_analytic[i-1] = d2R[i, 0, iorb]
 
                 r0 = R[i, 0, iorb].detach().numpy()
                 rpz = R[i+1, 0, iorb].detach().numpy()
