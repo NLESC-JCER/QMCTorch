@@ -6,12 +6,11 @@ from .electron_electron_base import ElectronElectronBase
 
 
 class PadeJastrowPolynomial(ElectronElectronBase):
-    def __init__(self,
-                 nup,
-                 ndown,
+    def __init__(self, nup, ndown,
                  order,
-                 weight_a=None,
-                 weight_b=None,
+                 weight_a=None, weight_b=None,
+                 scale=False,
+                 scale_factor=0.6,
                  cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
@@ -31,7 +30,7 @@ class PadeJastrowPolynomial(ElectronElectronBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super().__init__(nup, ndown, cuda)
+        super().__init__(nup, ndown, scale, scale_factor, cuda)
         self.porder = order
 
         self.set_variational_weights(weight_a, weight_b)
@@ -104,6 +103,7 @@ class PadeJastrowPolynomial(ElectronElectronBase):
             torch.tensor: matrix fof the jastrow elements
                           Nbatch x Nelec x Nelec
         """
+
         return torch.exp(self._compute_kernel(r))
 
     def _get_der_jastrow_elements(self, r, dr):

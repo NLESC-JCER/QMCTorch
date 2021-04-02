@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
+from qmctorch.wavefunction.jastrows.elec_nuc.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

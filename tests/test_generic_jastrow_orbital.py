@@ -8,7 +8,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.generic_jastrow_orbital import GenericJastrowOrbitals
+from qmctorch.wavefunction.jastrows.elec_elec.generic_jastrow_orbital import GenericJastrowOrbitals
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

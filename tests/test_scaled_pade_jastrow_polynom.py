@@ -4,8 +4,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.scaled_pade_jastrow_polynomial import \
-    ScaledPadeJastrowPolynomial
+from qmctorch.wavefunction.jastrows.elec_elec.pade_jastrow_polynomial import \
+    PadeJastrowPolynomial
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -44,10 +44,13 @@ class TestScaledPadeJastrowPolynom(unittest.TestCase):
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         order = 1
-        self.jastrow = ScaledPadeJastrowPolynomial(
+
+        self.jastrow = PadeJastrowPolynomial(
             self.nup, self.ndown, order=order,
             weight_a=0.1*torch.ones(order),
-            weight_b=0.1*torch.ones(order))
+            weight_b=0.1*torch.ones(order),
+            scale=True, scale_factor=0.6)
+
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)

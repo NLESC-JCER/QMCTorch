@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.generic_jastrow import GenericJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.generic_jastrow import GenericJastrow
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

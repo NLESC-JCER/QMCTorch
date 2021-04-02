@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.pade_jastrow_polynomial import PadeJastrowPolynomial
+from qmctorch.wavefunction.jastrowselec_elec.pade_jastrow_polynomial import PadeJastrowPolynomial
 import unittest
 import numpy as np
 

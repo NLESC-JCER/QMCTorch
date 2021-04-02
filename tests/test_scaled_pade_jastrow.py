@@ -78,6 +78,3 @@ class TestScaledPadeJastrow(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # t = TestScaledPadeJastrow()
-    # t.setUp()
-    # t.test_jastrow()

@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.three_body_jastrow_generic import ThreeBodyJastrowFactorGeneric
+from qmctorch.wavefunction.jastrows.elec_elec_nuc.three_body_jastrow_generic import ThreeBodyJastrowFactorGeneric
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
