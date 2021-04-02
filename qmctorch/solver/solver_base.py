@@ -31,6 +31,11 @@ class SolverBase:
         self.cuda = False
         self.device = torch.device('cpu')
 
+        # member defined in the child and or method
+        self.dataloader = None
+        self.loss = None
+        self.obs_dict = None
+
         # if pos are needed for the optimizer (obsolete ?)
         if self.opt is not None and 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False

@@ -47,7 +47,7 @@ During the MC sampling each walker performs 500 steps of 0.25 atomic units. We h
 We can now assemble the solver.
 
 >>> # solver
->>> solver = SolverOrbital(wf=wf, sampler=sampler)
+>>> solver = SolverSlaterJastrow(wf=wf, sampler=sampler)
 
 We can first perform  a single point calculation.
 In this calculation the solver will sample the wave function and compute the energy of the system.

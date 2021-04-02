@@ -1,5 +1,6 @@
-__all__ = ['SolverBase', 'SolverOrbital', 'SolverOrbitalHorovod']
+__all__ = ['SolverBase', 'SolverSlaterJastrow',
+           'SolverSlaterJastrowHorovod']
 
 from .solver_base import SolverBase
-from .solver_orbital import SolverOrbital
-from .solver_orbital_horovod import SolverOrbitalHorovod
+from .solver_slater_jastrow import SolverSlaterJastrow
+from .solver_slater_jastrow_horovod import SolverSlaterJastrowHorovod

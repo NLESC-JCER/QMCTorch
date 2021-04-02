@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowOrbital
 from qmctorch.utils import set_torch_double_precision
@@ -54,8 +54,8 @@ class TestLiHCorrelated(unittest.TestCase):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverOrbital(wf=self.wf, sampler=self.sampler,
-                                    optimizer=self.opt)
+        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
         # artificial pos
         self.nbatch = 10

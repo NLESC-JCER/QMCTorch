@@ -7,7 +7,7 @@ Solver
 Solver
 ----------------------------------------
 
-.. automodule:: qmctorch.solver.solver_orbital
+.. automodule:: qmctorch.solver.solver_slater_jastrow
     :members:
     :undoc-members:
 

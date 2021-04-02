@@ -7,7 +7,7 @@ import torch.optim as optim
 from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
 
 from qmctorch.sampler import Hamiltonian, Metropolis
-from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_correlation_coefficient, plot_energy,
                             plot_integrated_autocorrelation_time,
@@ -64,8 +64,8 @@ class TestH2Correlated(unittest.TestCase):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverOrbital(wf=self.wf, sampler=self.sampler,
-                                    optimizer=self.opt)
+        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
         # ground state energy
         self.ground_state_energy = -1.16

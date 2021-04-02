@@ -35,7 +35,7 @@ and use is as the normal solver and only a few modifications are required to use
 
 
 >>> import horovod.torch as hvd
->>> from deepqmc.solver.solver_orbital_horovod import SolverOrbitalHorovod
+>>> from deepqmc.solver.solver_slater_jastrow_horovod import SolverSlaterJastrowHorovod
 >>>
 >>> hvd.init()
 >>> if torch.cuda.is_available():
@@ -48,7 +48,7 @@ and use is as the normal solver and only a few modifications are required to use
 >>>
 >>> ...
 >>>
->>> solver = SolverOrbitalHorovod(wf=wf, sampler=sampler,
+>>> solver = SolverSlaterJastrowHorovod(wf=wf, sampler=sampler,
 >>>                              optimizer=opt, scheduler=scheduler,
 >>>                              rank=hvd.rank())
 >>> ....

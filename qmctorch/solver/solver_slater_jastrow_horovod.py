@@ -8,7 +8,7 @@ from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
                             dump_to_hdf5)
 
 from .. import log
-from .solver_orbital import SolverOrbital
+from .solver_slater_jastrow import SolverSlaterJastrow
 
 try:
     import horovod.torch as hvd
@@ -21,7 +21,7 @@ def logd(rank, *args):
         log.info(*args)
 
 
-class SolverOrbitalHorovod(SolverOrbital):
+class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None, output=None, rank=0):
@@ -36,8 +36,8 @@ class SolverOrbitalHorovod(SolverOrbital):
             rank (int, optional): rank of he process. Defaults to 0.
         """
 
-        SolverOrbital.__init__(self, wf, sampler,
-                               optimizer, scheduler, output, rank)
+        SolverSlaterJastrow.__init__(self, wf, sampler,
+                                     optimizer, scheduler, output, rank)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(

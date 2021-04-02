@@ -6,7 +6,7 @@ We first need to import all the relevant modules :
 
 >>> from torch import optim
 >>> from qmctorch.wavefunction import SlaterJastrow, Molecule
->>> from qmctorch.solver import SolverOrbital
+>>> from qmctorch.solver import SolverSlaterJastrow
 >>> from qmctorch.sampler import Metropolis
 >>> from qmctorch.utils import set_torch_double_precision
 >>> from qmctorch.utils import (plot_energy, plot_data)
@@ -62,7 +62,7 @@ We also define a linear scheduler that will decrease the learning rate after 100
 We can now assemble the solver :
 
 >>> # QMC solver
->>> solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
+>>> solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
 
 The solver needs to be configured. We set the task to wave function optimization and freeze here the
 variational parameters of the atomic orbitals and molecular orbitals. Hence only the jastrow factor and the CI coefficients

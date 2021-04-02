@@ -7,7 +7,7 @@ As previously the firs task is to import all the modules needed
 >>> from torch import optim
 >>> from torch.optim import Adam
 >>>  from qmctorch.wavefunction import SlaterJastrow
->>> from qmctorch.solver import SolverOrbital
+>>> from qmctorch.solver import SolverSlaterJastrow
 >>> from qmctorch.samplerimport Metropolis
 >>> from qmctorch.wavefunction import Molecule
 >>> from qmctorch.utils import plot_energy
@@ -47,7 +47,7 @@ As an opimizer we use ADAM and define a simple linear scheduler.
 We can now assemble the solver
 
 >>> # solver
->>> solver = SolverOrbital(wf=wf,
+>>> solver = SolverSlaterJastrow(wf=wf,
 >>>                        sampler=sampler,
 >>>                        optimizer=opt,
 >>>                        scheduler=scheduler)
