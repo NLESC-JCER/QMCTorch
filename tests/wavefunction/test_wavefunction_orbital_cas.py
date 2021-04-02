@@ -62,14 +62,14 @@ class TestOrbitalWF(unittest.TestCase):
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
-        self.pos = torch.tensor(np.random.rand(10, 6))
+        self.pos = torch.Tensor(np.random.rand(10, 6))
         self.pos.requires_grad = True
 
     def test_forward(self):
 
         wfvals = self.wf(self.pos)
 
-        ref = torch.tensor([[0.0522],
+        ref = torch.Tensor([[0.0522],
                             [0.0826],
                             [0.0774],
                             [0.1321],
@@ -121,7 +121,7 @@ class TestOrbitalWF(unittest.TestCase):
         self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
         eloc_jac = self.wf.local_energy(self.pos)
 
-        ref = torch.tensor([[-1.6567],
+        ref = torch.Tensor([[-1.6567],
                             [-0.8790],
                             [-2.8136],
                             [-0.3644],
@@ -143,7 +143,7 @@ class TestOrbitalWF(unittest.TestCase):
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos, kinpool=False)
 
-        ref = torch.tensor([[0.6099],
+        ref = torch.Tensor([[0.6099],
                             [0.6438],
                             [0.6313],
                             [2.0512],

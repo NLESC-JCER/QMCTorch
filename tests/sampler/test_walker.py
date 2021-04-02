@@ -7,7 +7,7 @@ from qmctorch.sampler.walkers import Walkers
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-from test_sampler_base import TestSamplerBase
+from .test_sampler_base import TestSamplerBase
 
 
 class TestWalkers(TestSamplerBase):

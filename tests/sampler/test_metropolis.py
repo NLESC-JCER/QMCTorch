@@ -7,7 +7,7 @@ from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-from test_sampler_base import TestSamplerBase
+from .test_sampler_base import TestSamplerBase
 
 
 class TestMetropolis(TestSamplerBase):
