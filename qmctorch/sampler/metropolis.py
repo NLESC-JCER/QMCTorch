@@ -37,7 +37,7 @@ class Metropolis(SamplerBase):
                                         'one-elec': move a single electron per iteration \n
                                         'all-elec': move all electrons at the same time \n
                                         'all-elec-iter': move all electrons by iterating through single elec moves \n
-                                    'proba' : 
+                                    'proba' :
                                         'uniform': uniform ina cube \n
                                         'normal': gussian in a sphere \n
             cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
@@ -151,7 +151,7 @@ class Metropolis(SamplerBase):
                                         'one-elec': move a single electron per iteration \n
                                         'all-elec': move all electrons at the same time \n
                                         'all-elec-iter': move all electrons by iterating through single elec moves \n
-                                    'proba' : 
+                                    'proba' :
                                         'uniform': uniform ina cube \n
                                         'normal': gussian in a sphere \n
 
@@ -171,7 +171,7 @@ class Metropolis(SamplerBase):
 
         if self.movedict['proba'] == 'normal':
             _sigma = self.step_size / \
-                (2 * torch.sqrt(2 * torch.log(torch.tensor(2.))))
+                (2 * torch.sqrt(2 * torch.log(torch.as_tensor(2.))))
             self.multiVariate = MultivariateNormal(
                 torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
 

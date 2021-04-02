@@ -26,7 +26,7 @@ class PadeJastrowOrbital(ElectronElectronBase):
             w * torch.ones(nmo), requires_grad=True)
 
         self.nmo = nmo
-        wcusp = torch.tensor(wcusp).view(
+        wcusp = torch.as_tensor(wcusp).view(
             1, 2).repeat(self.nmo, 1) / nup / 2
         self.wcusp = nn.Parameter(wcusp, requires_grad=False)
 

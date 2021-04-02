@@ -68,7 +68,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             self.wf.jastrow.weight.shape)
 
         self.nbatch = 3
-        self.pos = torch.tensor(np.random.rand(
+        self.pos = torch.as_tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
 
         self.pos.requires_grad = True
@@ -76,10 +76,10 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_forward(self):
         """Value of the wave function."""
         wfvals = self.wf(self.pos)
-        ref = torch.tensor([[-1.0935e-02], [6.4874e-02], [1.7879e-04],
-                            [1.5797e-02], [7.4684e-02], [-4.4445e-02],
-                            [-4.8149e-04], [-3.0355e-03], [-2.0027e-02],
-                            [5.1957e-05]])
+        ref = torch.as_tensor([[-1.0935e-02], [6.4874e-02], [1.7879e-04],
+                               [1.5797e-02], [7.4684e-02], [-4.4445e-02],
+                               [-4.8149e-04], [-3.0355e-03], [-2.0027e-02],
+                               [5.1957e-05]])
 
         # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 

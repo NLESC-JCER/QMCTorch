@@ -28,22 +28,23 @@ class TestGTO2STOFit(unittest.TestCase):
         self.wf = Orbital(mol, kinetic='auto',
                           configs='ground_state').gto2sto()
 
-        self.pos = -0.25 + 0.5 * torch.tensor(np.random.rand(10, 18))
+        self.pos = -0.25 + 0.5 * \
+            torch.as_tensor(np.random.rand(10, 18))
         self.pos.requires_grad = True
 
     def test_forward(self):
 
         wfvals = self.wf(self.pos)
-        ref = torch.tensor([[-8.4430e-06],
-                            [1.5092e-02],
-                            [3.3809e-03],
-                            [9.7981e-03],
-                            [-6.8513e-02],
-                            [-4.6836e-03],
-                            [-3.2847e-04],
-                            [2.3636e-02],
-                            [5.5934e-04],
-                            [1.3205e-02]])
+        ref = torch.as_tensor([[-8.4430e-06],
+                               [1.5092e-02],
+                               [3.3809e-03],
+                               [9.7981e-03],
+                               [-6.8513e-02],
+                               [-4.6836e-03],
+                               [-3.2847e-04],
+                               [2.3636e-02],
+                               [5.5934e-04],
+                               [1.3205e-02]])
         assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
 

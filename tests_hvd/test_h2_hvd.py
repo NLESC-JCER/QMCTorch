@@ -85,11 +85,11 @@ class TestH2Hvd(unittest.TestCase):
         self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
 
         self.solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
-                         loss='energy', grad='auto',
-                         ortho_mo=False, clip_loss=False,
-                         resampling={'mode': 'update',
-                                     'resample_every': 1,
-                                     'nstep_update': 50})
+                              loss='energy', grad='auto',
+                              ortho_mo=False, clip_loss=False,
+                              resampling={'mode': 'update',
+                                          'resample_every': 1,
+                                          'nstep_update': 50})
         self.solver.run(10)
 
         MPI.COMM_WORLD.barrier()
@@ -108,8 +108,8 @@ class TestH2Hvd(unittest.TestCase):
         assert 0 < v < 2
 
     # def test_geo_opt(self):
-    #     self.solver.wf.ao.atom_coords[0, 2].data = torch.tensor(-0.37)
-    #     self.solver.wf.ao.atom_coords[1, 2].data = torch.tensor(0.37)
+    #     self.solver.wf.ao.atom_coords[0, 2].data = torch.as_tensor(-0.37)
+    #     self.solver.wf.ao.atom_coords[1, 2].data = torch.as_tensor(0.37)
     #
     #     self.solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
     #                           loss='energy', grad='auto',

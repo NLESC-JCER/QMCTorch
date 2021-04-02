@@ -58,7 +58,7 @@ class InterpolateMolecularOrbitals:
             grid_pts = get_log_grid(self.wf.mol.atom_coords, n=n)
 
             def func(x):
-                x = torch.tensor(x).type(torch.get_default_dtype())
+                x = torch.as_tensor(x).type(torch.get_default_dtype())
                 ao = self.wf.ao(x, one_elec=True)
                 mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
                 return mo[:, :self.mo_max_index].detach()
@@ -90,7 +90,7 @@ class InterpolateMolecularOrbitals:
                 self.wf.mol.atom_coords, resolution=res, border_length=blength)
 
             def func(x):
-                x = torch.tensor(x).type(torch.get_default_dtype())
+                x = torch.as_tensor(x).type(torch.get_default_dtype())
                 ao = self.wf.ao(x, one_elec=True)
                 mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
                 return mo[:, :self.mo_max_index]
@@ -144,7 +144,7 @@ class InterpolateAtomicOrbitals:
                          for iorb in range(self.wf.ao.norb)])
         print('___ data', time()-t0)
 
-        return torch.tensor(data.transpose(1, 2, 0))
+        return torch.as_tensor(data.transpose(1, 2, 0))
 
     def get_interpolator(self, n=6, length=2):
         """evaluate the interpolation function.
@@ -161,7 +161,7 @@ class InterpolateAtomicOrbitals:
             xpts, xpts, xpts, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
 
         def func(x):
-            x = torch.tensor(x).type(torch.get_default_dtype())
+            x = torch.as_tensor(x).type(torch.get_default_dtype())
             nbatch = x.shape[0]
             xyz = x.view(-1, 1, 1, 3).expand(-1,
                                              1, self.wf.ao.nbas, 3)
@@ -258,7 +258,7 @@ def interpolator_reg_grid(func, x, y, z):
     nx, ny, nz = len(x), len(y), len(z)
     grid = np.stack(np.meshgrid(
         z, y, x, indexing='ij')).T.reshape(-1, 3)[:, [2, 1, 0]]
-    #grid = torch.tensor(grid)
+
     data = func(grid).detach().numpy()
     data = data.reshape(nx, ny, nz, -1)
     return RegularGridInterpolator((x, y, z),
@@ -285,7 +285,7 @@ def interpolate_reg_grid(interpfunc, pos):
     data = interpfunc(pos.reshape(
         nbatch, nelec, ndim).detach().numpy())
 
-    return torch.tensor(data)
+    return torch.as_tensor(data)
 
 
 def is_even(x):
@@ -305,7 +305,7 @@ def logspace(n, length):
 
 
 def get_log_grid(atomic_positions, n=6, length=2., border_length=2.):
-    """Computes a logarithmic grid 
+    """Computes a logarithmic grid
 
     Args:
         atomic_positions (list, np.ndarray, torch.tensor): positions of the atoms
@@ -363,4 +363,4 @@ def interpolate_irreg_grid(interpfunc, pos):
     """
 
     nbatch, nelec, ndim = pos.shape[0], pos.shape[1]//3, 3
-    return torch.tensor(interpfunc(pos.reshape(nbatch, nelec, ndim)))
+    return torch.as_tensor(interpfunc(pos.reshape(nbatch, nelec, ndim)))

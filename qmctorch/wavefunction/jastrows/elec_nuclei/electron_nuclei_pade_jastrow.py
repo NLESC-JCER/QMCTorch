@@ -26,10 +26,10 @@ class ElectronNucleiPadeJastrow(ElectronNucleiBase):
               self).__init__(nup, ndown, atoms, cuda)
 
         self.weight = nn.Parameter(
-            torch.tensor([w]), requires_grad=True).to(self.device)
+            torch.as_tensor([w]), requires_grad=True).to(self.device)
         register_extra_attributes(self, ['weight'])
 
-        self.static_weight = torch.tensor([1.])
+        self.static_weight = torch.as_tensor([1.])
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :

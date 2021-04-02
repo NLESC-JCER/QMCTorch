@@ -42,16 +42,18 @@ class Harmonics:
 
         # register parameters
         if self.type == 'sph':
-            self.bas_l = torch.tensor(kwargs['bas_l']).to(self.device)
-            self.bas_m = torch.tensor(kwargs['bas_m']).to(self.device)
+            self.bas_l = torch.as_tensor(
+                kwargs['bas_l']).to(self.device)
+            self.bas_m = torch.as_tensor(
+                kwargs['bas_m']).to(self.device)
 
         elif self.type == 'cart':
 
-            self.bas_kx = torch.tensor(
+            self.bas_kx = torch.as_tensor(
                 kwargs['bas_kx']).to(self.device)
-            self.bas_ky = torch.tensor(
+            self.bas_ky = torch.as_tensor(
                 kwargs['bas_ky']).to(self.device)
-            self.bas_kz = torch.tensor(
+            self.bas_kz = torch.as_tensor(
                 kwargs['bas_kz']).to(self.device)
 
             self.bas_k = torch.stack(
@@ -199,7 +201,7 @@ def get_spherical_harmonics(xyz, lval, m, derivative):
 
     Returns:
         Y (torch.tensor): value of each harmonics at each points (or derivative) \n
-                          size : (Nbatch,Nelec,Nrbf) 
+                          size : (Nbatch,Nelec,Nrbf)
     """
 
     Y = torch.zeros_like(xyz[..., 0])
@@ -260,7 +262,7 @@ def get_grad_spherical_harmonics(xyz, lval, m):
 
     Returns:
         Y (torch.tensor): value of each harmonics at each points (or derivative) \n
-                          size : (Nbatch,Nelec,Nrbf,3) 
+                          size : (Nbatch,Nelec,Nrbf,3)
     """
 
     Y = torch.zeros_like(xyz)
@@ -462,7 +464,7 @@ def _nabla_spherical_harmonics_l2(xyz, m):
     Returns
         Y2-2 = 1/2\sqrt(15/\pi) (x+y)/r^2 - 2 * xy (x+y+z)/r^3
         Y2-1 = 1/2\sqrt(15/\pi) (y+z)/r^2 - 2 * yz (x+y+z)/r^3
-        Y20  = 1/4\sqrt(5/\pi) ( (-2x-2y+4z)/r^2 - \ 
+        Y20  = 1/4\sqrt(5/\pi) ( (-2x-2y+4z)/r^2 - \
                2 *(-xx - yy + 2zz) * (x+y+z)/r3 )
         Y21  = 1/2\sqrt(15/\pi) (x+z)/r^2 - 2 * xz (x+y+z)/r^3
         Y22  = 1/4\sqrt(15/\pi)  ( 2(x-y)/r^2 - 2 *(xx-yy)(x+y+z)/r^3  )

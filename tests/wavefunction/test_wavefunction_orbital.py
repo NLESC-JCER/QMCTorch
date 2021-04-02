@@ -62,13 +62,13 @@ class TestOrbitalWF(unittest.TestCase):
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
-        self.pos = torch.tensor(np.random.rand(10,  self.wf.nelec*3))
+        self.pos = torch.Tensor(np.random.rand(10,  self.wf.nelec*3))
         self.pos.requires_grad = True
 
     def test_forward(self):
 
         wfvals = self.wf(self.pos)
-        ref = torch.tensor([[0.0977],
+        ref = torch.Tensor([[0.0977],
                             [0.0618],
                             [0.0587],
                             [0.0861],
