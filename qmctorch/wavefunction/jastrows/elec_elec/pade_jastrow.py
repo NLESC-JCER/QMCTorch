@@ -1,12 +1,14 @@
 import torch
 from torch import nn
 
-from ...utils import register_extra_attributes
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ....utils import register_extra_attributes
+from .electron_electron_base import ElectronElectronBase
 
 
-class PadeJastrow(TwoBodyJastrowFactorBase):
-    def __init__(self, nup, ndown, w=1., cuda=False):
+class PadeJastrow(ElectronElectronBase):
+    def __init__(self, nup, ndown, w=1.,
+                 scale=False, scale_factor=0.6,
+                 cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -16,11 +18,12 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            w (float, optional): Value of the variational parameter. Defaults to 1..
+            w (float, optional): Value of the variational parameter.
+                                 Defaults to 1.
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
+        super().__init__(nup, ndown, scale, scale_factor, cuda)
 
         self.weight = nn.Parameter(torch.tensor([w]),
                                    requires_grad=True).to(self.device)
@@ -120,7 +123,5 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         b = -2 * self.static_weight * self.weight * dr_square * denom2
         c = -self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
-
-        e = self._get_der_jastrow_elements(r, dr)
 
         return a + b + c + d

@@ -1,11 +1,11 @@
 import torch
 from torch import nn
-from .electron_distance import ElectronDistance
-from .electron_nuclei_distance import ElectronNucleiDistance
+from ..distance.electron_electron_distance import ElectronElectronDistance
+from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 import itertools
 
 
-class ThreeBodyJastrowFactorBase(nn.Module):
+class ElectronElectronNucleisBase(nn.Module):
 
     def __init__(self, nup, ndown, atomic_pos, cuda=False):
         r"""Base class for two body jastrow of the form:
@@ -19,7 +19,7 @@ class ThreeBodyJastrowFactorBase(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ThreeBodyJastrowFactorBase, self).__init__()
+        super().__init__()
 
         self.nup = nup
         self.ndown = ndown
@@ -37,7 +37,8 @@ class ThreeBodyJastrowFactorBase(nn.Module):
         self.index_elec = [
             self.index_row.tolist(), self.index_col.tolist()]
 
-        self.elel_dist = ElectronDistance(self.nelec, self.ndim)
+        self.elel_dist = ElectronElectronDistance(
+            self.nelec, self.ndim)
         self.elnu_dist = ElectronNucleiDistance(
             self.nelec, self.atoms, self.ndim)
 

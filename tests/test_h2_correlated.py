@@ -4,6 +4,8 @@ import numpy as np
 import torch
 import torch.optim as optim
 
+from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
+
 from qmctorch.sampler import Hamiltonian, Metropolis
 from qmctorch.solver import SolverOrbital
 from qmctorch.utils import (plot_block, plot_blocking_energy,
@@ -11,7 +13,6 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_integrated_autocorrelation_time,
                             plot_walkers_traj)
 
-from qmctorch.wavefunction.jastrows.fully_connected_jastrow import FullyConnectedJastrow
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import CorrelatedOrbital

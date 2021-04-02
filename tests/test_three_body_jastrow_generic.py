@@ -3,7 +3,7 @@ import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.three_body_jastrow_generic import ThreeBodyJastrowFactorGeneric
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei.electron_electron_nuclei_generic import ElectronElectronNucleiGeneric
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -101,7 +101,7 @@ class TestThreeBodyGeneric(unittest.TestCase):
         self.nelec = self.nup + self.ndown
         self.natom = 4
         self.atoms = 0.1*torch.rand(self.natom, 3)
-        self.jastrow = ThreeBodyJastrowFactorGeneric(
+        self.jastrow = ElectronElectronNucleiGeneric(
             self.nup, self.ndown, self.atoms, FullyConnected, False)
         self.nbatch = 5
 
@@ -180,32 +180,3 @@ class TestThreeBodyGeneric(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    if 0:
-        t = TestThreeBodyGeneric()
-        t.setUp()
-        t.test_grad_elel_distance()
-        t.test_grad_elnu_distance()
-        t.test_jacobian_jastrow()
-        t.test_grad_jastrow()
-        t.test_hess_jastrow()
-
-    if 0:
-        nup, ndown = 4, 4
-        nelec = nup + ndown
-        atoms = torch.rand(4, 3)
-        jastrow = ThreeBodyJastrowFactorGeneric(
-            nup, ndown, atoms, FullyConnected, False)
-        nbatch = 5
-
-        pos = torch.rand(nbatch, nelec * 3)
-        pos.requires_grad = True
-
-        ree = jastrow.extract_tri_up(jastrow.elel_dist(pos))
-        ren = jastrow.extract_elec_nuc_dist(jastrow.elnu_dist(pos))
-        r = jastrow.assemble_dist(pos)
-
-        jast = jastrow._get_jastrow_elements(r)
-        jast = jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
-
-        dr = jastrow.assemble_dist_deriv(pos)
-        djast = jastrow._get_der_jastrow_elements(r, dr)
