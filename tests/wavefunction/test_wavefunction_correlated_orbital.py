@@ -190,9 +190,6 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
 
-        print(eauto)
-        print(ejac)
-
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
@@ -207,47 +204,6 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         assert torch.allclose(
             eloc_auto.data, eloc_jac.data, rtol=1E-4, atol=1E-4)
 
-    # def test_ee_cusp(self):
-    #     """ee cusp condition"""
-
-    #     npts = 51
-    #     pos = torch.tensor(np.random.rand(
-    #         npts, self.wf.nelec, 3))
-
-    #     pos[:, 0, :] = 0.
-    #     pos[:, -1, :] = 0.
-    #     pos[:, 0, 0] = torch.linspace(-0.5, 0.5, npts)
-    #     pos[:, -1, 0] = torch.linspace(0.5, -0.5, npts)
-
-    #     pos = pos.reshape(npts, self.wf.nelec*3)
-    #     e = self.wf.kinetic_energy_jacobi(pos)
-    #     print(e)
-    #     plt.plot(e.detach().numpy())
-    #     plt.show()
-
 
 if __name__ == "__main__":
-
-    # unittest.main()
-
-    # set_torch_double_precision()
-    t = TestCorrelatedOrbitalWF()
-    t.setUp()
-    t.test_forward()
-
-    # t.test_jacobian_mo()
-    # t.test_grad_mo()
-    # t.test_hess_mo()
-
-    # t.test_jacobian_jast()
-    # t.test_grad_jast()
-    # t.test_hess_jast()
-
-    # t.test_grad_cmo()
-    # t.test_hess_cmo()
-
-    # t.test_jacobian_wf()
-    # t.test_grad_wf()
-
-    # t.test_kinetic_energy()
-    # t.test_local_energy()
+    unittest.main()

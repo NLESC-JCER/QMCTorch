@@ -10,7 +10,7 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction import CorrelatedOrbital
 from qmctorch.utils import set_torch_double_precision
 
-from .path_utils import PATH_TEST
+from ..path_utils import PATH_TEST
 
 
 class TestLiHCorrelated(unittest.TestCase):

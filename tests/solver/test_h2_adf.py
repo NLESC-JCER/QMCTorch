@@ -8,10 +8,11 @@ from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverOrbital
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
-from .path_utils import PATH_TEST
+
+from ..path_utils import PATH_TEST
 
 
-class TestH2ADFJacobi(unittest.TestCase):
+class TestH2ADF(unittest.TestCase):
 
     def setUp(self):
 
@@ -23,7 +24,7 @@ class TestH2ADFJacobi(unittest.TestCase):
         self.mol = Molecule(load=path_hdf5)
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
+        self.wf = Orbital(self.mol, kinetic='auto',
                           configs='single(2,2)',
                           use_jastrow=True)
 
@@ -61,17 +62,19 @@ class TestH2ADFJacobi(unittest.TestCase):
         # sample and compute observables
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
-        print(e.data.item(), v.data.item())
 
         # vals on different archs
-        expected_energy = [-1.1571345329284668,
+        expected_energy = [-1.1572532653808594,
                            -1.1501641653648578]
 
-        expected_variance = [0.05087674409151077,
+        expected_variance = [0.05085879936814308,
                              0.05094174843043177]
 
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
+
+        # assert(e > 2 * self.ground_state_energy and e < 0.)
+        # assert(v > 0 and v < 5.)
 
     def test_wf_opt_auto_grad(self):
 
@@ -80,7 +83,6 @@ class TestH2ADFJacobi(unittest.TestCase):
         obs = self.solver.run(5)
 
     def test_wf_opt_manual_grad(self):
-
         self.solver.configure(track=['local_energy'],
                               loss='energy', grad='manual')
         obs = self.solver.run(5)
@@ -88,6 +90,6 @@ class TestH2ADFJacobi(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # t = TestH2ADFJacobi()
+    # t = TestH2ADF()
     # t.setUp()
     # t.test_single_point()
