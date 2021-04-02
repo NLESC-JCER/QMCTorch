@@ -15,7 +15,7 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
 
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import CorrelatedOrbital
+from qmctorch.wavefunction import SlaterJastrowOrbital
 from qmctorch.utils import set_torch_double_precision
 
 __PLOT__ = False
@@ -41,12 +41,12 @@ class TestH2Correlated(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = CorrelatedOrbital(self.mol,
-                                    kinetic='auto',
-                                    configs='cas(2,2)',
-                                    jastrow_type=FullyConnectedJastrow,
-                                    # jastrow_type='pade_jastrow',
-                                    include_all_mo=True)
+        self.wf = SlaterJastrowOrbital(self.mol,
+                                       kinetic='auto',
+                                       configs='cas(2,2)',
+                                       jastrow_type=FullyConnectedJastrow,
+                                       # jastrow_type='pade_jastrow',
+                                       include_all_mo=True)
 
         # sampler
         self.sampler = Metropolis(

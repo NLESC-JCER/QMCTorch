@@ -1,5 +1,5 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import CorrelatedOrbital
+from qmctorch.wavefunction import SlaterJastrowOrbital
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision, btrace
 
@@ -58,10 +58,10 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = CorrelatedOrbital(mol,
-                                    kinetic='auto',
-                                    configs='ground_state',
-                                    jastrow_type=FullyConnectedJastrow)
+        self.wf = SlaterJastrowOrbital(mol,
+                                       kinetic='auto',
+                                       configs='ground_state',
+                                       jastrow_type=FullyConnectedJastrow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight

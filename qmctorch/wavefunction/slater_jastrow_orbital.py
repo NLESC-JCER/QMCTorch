@@ -17,7 +17,7 @@ from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.jastrow_correlated_orbitals import set_jastrow_correlated
 
 
-class CorrelatedOrbital(SlaterJastrowBase):
+class SlaterJastrowOrbital(SlaterJastrowBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -42,12 +42,12 @@ class CorrelatedOrbital(SlaterJastrowBase):
         """
 
         if use_jastrow is False:
-            raise ValueError('use_jastrow = False is invalid for CorrelatedOrbital wave functions, \
+            raise ValueError('use_jastrow = False is invalid for SlaterJastrowOrbital wave functions, \
                               use SlaterJastrow wave function if you do not want to use Jastrow factors')
 
-        super(CorrelatedOrbital, self).__init__(mol, configs,
-                                                kinetic, use_jastrow, jastrow_type,
-                                                cuda, include_all_mo)
+        super(SlaterJastrowOrbital, self).__init__(mol, configs,
+                                                   kinetic, use_jastrow, jastrow_type,
+                                                   cuda, include_all_mo)
 
         self.jastrow = set_jastrow_correlated(
             jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda, **kwargs)
