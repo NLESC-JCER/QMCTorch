@@ -13,11 +13,11 @@ from .orbitals.atomic_orbitals import AtomicOrbitals
 from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
-from .wf_orbital_base import OrbitalBase
+from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.jastrow_correlated_orbitals import set_jastrow_correlated
 
 
-class CorrelatedOrbital(OrbitalBase):
+class CorrelatedOrbital(SlaterJastrowBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -38,12 +38,12 @@ class CorrelatedOrbital(OrbitalBase):
                                              popualted in the configs. Defaults to False
         Examples::
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
         if use_jastrow is False:
             raise ValueError('use_jastrow = False is invalid for CorrelatedOrbital wave functions, \
-                              use Orbital wave function if you do not want to use Jastrow factors')
+                              use SlaterJastrow wave function if you do not want to use Jastrow factors')
 
         super(CorrelatedOrbital, self).__init__(mol, configs,
                                                 kinetic, use_jastrow, jastrow_type,
@@ -106,7 +106,7 @@ class CorrelatedOrbital(OrbitalBase):
 
         Examples::
             >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
             >>> pos = torch.rand(500,6)
             >>> vals = wf(pos)
         """

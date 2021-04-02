@@ -1,18 +1,18 @@
-Geometry Optimization 
+Geometry Optimization
 ====================================
 
-We present here a complete example on how to use QMCTorch on a H2O molecule. 
+We present here a complete example on how to use QMCTorch on a H2O molecule.
 As previously the firs task is to import all the modules needed
 
 >>> from torch import optim
 >>> from torch.optim import Adam
->>>  from qmctorch.wavefunction import Orbital
+>>>  from qmctorch.wavefunction import SlaterJastrow
 >>> from qmctorch.solver import SolverOrbital
 >>> from qmctorch.samplerimport Metropolis
 >>> from qmctorch.wavefunction import Molecule
 >>> from qmctorch.utils import plot_energy
 
-We then define the molecule. We read here an xyz file of a water molecule 
+We then define the molecule. We read here an xyz file of a water molecule
 where the three atoms are on the same line.
 
 >>> # define the molecule
@@ -20,11 +20,11 @@ where the three atoms are on the same line.
 >>>                calculator='pyscf', basis='sto-3g')
 
 
-The QMCNet wave function is defined from the molecule object. We only consider here the 
+The QMCNet wave function is defined from the molecule object. We only consider here the
 ground state of the molecule in the CI expansion.
 
 >>> # define the wave function
->>> wf = Orbital(mol, kinetic='jacobi',
+>>> wf = SlaterJastrow(mol, kinetic='jacobi',
 >>>          configs='ground_state',
 >>>           use_jastrow=True)
 
@@ -62,7 +62,7 @@ of the gradients.
 >>> obs = solver.run(50, loss='energy', grad='manual')
 >>> solver.save_traj('h2o_traj.xyz')
 
-We can then plot the energy 
+We can then plot the energy
 
 >>> # plot the data
 >>> plot_energy(obs.local_energy)

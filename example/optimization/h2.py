@@ -1,7 +1,7 @@
 from torch import optim
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.solver import SolverOrbital
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
@@ -21,10 +21,10 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                unit='bohr')
 
 # define the wave function
-wf = Orbital(mol, kinetic='jacobi',
-             configs='single_double(2,2)',
-             jastrow='pade_jastrow',
-             use_jastrow=True)
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   configs='single_double(2,2)',
+                   jastrow='pade_jastrow',
+                   use_jastrow=True)
 
 wf.jastrow.weight.data[0] = 1.
 

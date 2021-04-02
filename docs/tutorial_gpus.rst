@@ -10,7 +10,7 @@ Using pytorch as a backend, QMCTorch can leverage GPU cards available on your ha
 You of course must have the CUDA version of pytorch installed (https://pytorch.org/)
 
 
-Running on a single GPU 
+Running on a single GPU
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The use of GPU acceleration has been streamlined in QMCTorch, the only modification
@@ -18,7 +18,7 @@ you need to do on your code is to specify `cuda=True` in the declaration of the 
 
 
 >>> # define the wave function
->>> wf = Orbital(mol, kinetic='jacobi',
+>>> wf = SlaterJastrow(mol, kinetic='jacobi',
 >>>             configs='cas(2,2)',
 >>>             use_jastrow=True,
 >>>             cuda=True)
@@ -30,7 +30,7 @@ Multi-GPU support
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The use of multiple GPUs is made possible through the `Horovod` library : https://github.com/horovod/horovod
-A dedicated QMCTorch Solver has been developped to handle multiple GPU. To use this solver simply import it 
+A dedicated QMCTorch Solver has been developped to handle multiple GPU. To use this solver simply import it
 and use is as the normal solver and only a few modifications are required to use horovod :
 
 
@@ -65,8 +65,8 @@ The code can then be launched using the `horovodrun` executalbe :
 See the horovod documentation for more details : https://github.com/horovod/horovod
 
 
-This solver distribute the `Nw` walkers over the `Np` process . For example specifying 2000 walkers 
+This solver distribute the `Nw` walkers over the `Np` process . For example specifying 2000 walkers
 and using 4 process will lead to each process using only 500 walkers. During the optimizaiton of the wavefunction
-each process will compute the gradients of the variational parameter using their local 500 walkers. 
+each process will compute the gradients of the variational parameter using their local 500 walkers.
 The gradients are then averaged over all the processes before the optimization step takes place. This data parallel
 model has been greatly succesfull in machine learning applications (http://jmlr.org/papers/volume20/18-789/18-789.pdf)

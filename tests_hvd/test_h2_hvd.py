@@ -9,7 +9,7 @@ from mpi4py import MPI
 from qmctorch.sampler import Hamiltonian, Metropolis
 from qmctorch.solver import SolverOrbitalHorovod
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 
 
@@ -36,9 +36,9 @@ class TestH2Hvd(unittest.TestCase):
             rank=hvd.local_rank())
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='cas(2,2)',
-                          use_jastrow=True, cuda=False)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='cas(2,2)',
+                                use_jastrow=True, cuda=False)
         self.wf.jastrow.weight.data[0] = 1.
 
         # sampler

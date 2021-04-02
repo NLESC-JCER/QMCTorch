@@ -1,6 +1,6 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import CorrelatedOrbital
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision, btrace
 
 from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow

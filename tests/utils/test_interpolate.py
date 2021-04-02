@@ -5,7 +5,7 @@ import torch
 from qmctorch.utils import (InterpolateAtomicOrbitals,
                             InterpolateMolecularOrbitals)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 class TestInterpolate(unittest.TestCase):
@@ -20,9 +20,9 @@ class TestInterpolate(unittest.TestCase):
             basis='dzp')
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='single(2,2)',
-                          use_jastrow=True)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='single(2,2)',
+                                use_jastrow=True)
 
         npts = 51
         self.pos = torch.zeros(npts, 6)

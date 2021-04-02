@@ -7,7 +7,7 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverOrbital
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 class TestLiH(unittest.TestCase):
@@ -25,10 +25,10 @@ class TestLiH(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='single(2,2)',
-                          use_jastrow=True,
-                          include_all_mo=False)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='single(2,2)',
+                                use_jastrow=True,
+                                include_all_mo=False)
 
         # sampler
         self.sampler = Metropolis(

@@ -1,5 +1,5 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision, btrace
 
 from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
@@ -57,10 +57,10 @@ class TestGenericJastrowWF(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = Orbital(mol,
-                          kinetic='auto',
-                          configs='ground_state',
-                          jastrow_type=FullyConnectedJastrow)
+        self.wf = SlaterJastrow(mol,
+                                kinetic='auto',
+                                configs='ground_state',
+                                jastrow_type=FullyConnectedJastrow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight

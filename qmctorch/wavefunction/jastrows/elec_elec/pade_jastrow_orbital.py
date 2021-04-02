@@ -64,7 +64,7 @@ class PadeJastrowOrbital(ElectronElectronBase):
     def get_static_weight(self):
         """Make sure we can' t use that method for orbital dependent jastrow."""
         raise NotImplementedError(
-            'Orbital Dependent Jastrow do not have static weight')
+            'SlaterJastrow Dependent Jastrow do not have static weight')
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :

@@ -45,7 +45,7 @@ class Metropolis(SamplerBase):
 
         Examples::
             >>> mol = Molecule('h2.xyz')
-            >>> wf = Orbital(mol)
+            >>> wf = SlaterJastrow(mol)
             >>> sampler = Metropolis(nwalkers=100, nelec=wf.nelec)
             >>> pos = sampler(wf.pdf)
         """

@@ -5,14 +5,14 @@ from pyscf import gto
 from torch.autograd import Variable, grad
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 def btrace(M):
     return torch.diagonal(M, dim1=-2, dim2=-1).sum(-1)
 
 
-class OrbitalTest(Orbital):
+class OrbitalTest(SlaterJastrow):
     def __init__(self, mol):
         super(OrbitalTest, self).__init__(mol, use_jastrow=True)
 

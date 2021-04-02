@@ -11,7 +11,7 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_integrated_autocorrelation_time,
                             plot_walkers_traj)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 __PLOT__ = True
 
@@ -35,9 +35,9 @@ class TestH2(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='auto',
-                          configs='single(2,2)',
-                          use_jastrow=True)
+        self.wf = SlaterJastrow(self.mol, kinetic='auto',
+                                configs='single(2,2)',
+                                use_jastrow=True)
 
         # sampler
         self.sampler = Metropolis(

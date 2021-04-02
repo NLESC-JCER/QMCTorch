@@ -6,7 +6,7 @@ import torch
 from qmctorch.utils import (plot_block, plot_data, plot_energy,
                             plot_walkers_traj)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from ...path_utils import PATH_TEST
 from .second_derivative import second_derivative
 
@@ -23,10 +23,10 @@ class TestRadialSlater(unittest.TestCase):
         self.mol = Molecule(load=path_hdf5)
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='ground_state',
-                          use_jastrow=True,
-                          include_all_mo=False)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='ground_state',
+                                use_jastrow=True,
+                                include_all_mo=False)
 
     def test_first_derivative_x(self):
 
