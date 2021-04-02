@@ -36,8 +36,8 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
             rank (int, optional): rank of he process. Defaults to 0.
         """
 
-        SolverSlaterJastrow.__init__(self, wf, sampler,
-                                     optimizer, scheduler, output, rank)
+        super().__init__(wf, sampler,
+                         optimizer, scheduler, output, rank)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(

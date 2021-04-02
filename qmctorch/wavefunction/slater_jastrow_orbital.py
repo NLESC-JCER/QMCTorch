@@ -45,9 +45,9 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
             raise ValueError('use_jastrow = False is invalid for SlaterJastrowOrbital wave functions, \
                               use SlaterJastrow wave function if you do not want to use Jastrow factors')
 
-        super(SlaterJastrowOrbital, self).__init__(mol, configs,
-                                                   kinetic, use_jastrow, jastrow_type,
-                                                   cuda, include_all_mo)
+        super().__init__(mol, configs,
+                         kinetic, use_jastrow, jastrow_type,
+                         cuda, include_all_mo)
 
         self.jastrow = set_jastrow_correlated(
             jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda, **kwargs)
