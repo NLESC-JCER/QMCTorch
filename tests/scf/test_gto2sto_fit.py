@@ -5,7 +5,7 @@ import torch
 
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 class TestGTO2STOFit(unittest.TestCase):
@@ -25,8 +25,8 @@ class TestGTO2STOFit(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = Orbital(mol, kinetic='auto',
-                          configs='ground_state').gto2sto()
+        self.wf = SlaterJastrow(mol, kinetic='auto',
+                                configs='ground_state').gto2sto()
 
         self.pos = -0.25 + 0.5 * \
             torch.as_tensor(np.random.rand(10, 18))

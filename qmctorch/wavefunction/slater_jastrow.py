@@ -13,11 +13,11 @@ from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .jastrows.jastrow import set_jastrow
-from .wf_orbital_base import OrbitalBase
+from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.jastrow import set_jastrow
 
 
-class Orbital(OrbitalBase):
+class SlaterJastrow(SlaterJastrowBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -37,11 +37,11 @@ class Orbital(OrbitalBase):
                                              popualted in the configs. Defaults to False
         Examples::
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        super(Orbital, self).__init__(mol, configs, kinetic,
-                                      use_jastrow, jastrow_type, cuda, include_all_mo)
+        super(SlaterJastrow, self).__init__(mol, configs, kinetic,
+                                            use_jastrow, jastrow_type, cuda, include_all_mo)
 
         self.jastrow = set_jastrow(
             jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
@@ -66,7 +66,7 @@ class Orbital(OrbitalBase):
 
         Examples::
             >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
             >>> pos = torch.rand(500,6)
             >>> vals = wf(pos)
         """

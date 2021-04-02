@@ -16,7 +16,7 @@ from .pooling.slater_pooling import SlaterPooling
 from .wf_base import WaveFunction
 
 
-class OrbitalBase(WaveFunction):
+class SlaterJastrowBase(WaveFunction):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -36,10 +36,11 @@ class OrbitalBase(WaveFunction):
                                              popualted in the configs. Defaults to False
         Examples::
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        super(OrbitalBase, self).__init__(mol.nelec, 3, kinetic, cuda)
+        super(SlaterJastrowBase, self).__init__(
+            mol.nelec, 3, kinetic, cuda)
 
         # check for cuda
         if not torch.cuda.is_available and self.cuda:
@@ -276,7 +277,7 @@ class OrbitalBase(WaveFunction):
 
         Examples::
             >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = Orbital(mol, configs='cas(2,2)')
+            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
             >>> pos = torch.rand(500,6)
             >>> vals = wf(pos)
         """

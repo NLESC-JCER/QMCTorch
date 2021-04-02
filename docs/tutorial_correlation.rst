@@ -1,11 +1,11 @@
 Correlation and Blocking
 ========================================
 
-One important part of the sampling is to estimate the correlation between the different sampling points. 
+One important part of the sampling is to estimate the correlation between the different sampling points.
 To this end let's import the following modules
 
 
->>> from qmctorch.wavefunction import Orbital, Molecule
+>>> from qmctorch.wavefunction import SlaterJastrow, Molecule
 >>> from qmctorch.sampler import Metropolis
 >>> from qmctorch.utils import set_torch_double_precision
 >>> from qmctorch.utils import blocking, plot_blocking_energy
@@ -64,7 +64,7 @@ Energy blocking
 
 It is also common practice to use blocking of the local energy values to reduce the variance. This can easily be done with
 
->>> eb = plot_blocking_energy(obs.local_energy, block_size=100, 
+>>> eb = plot_blocking_energy(obs.local_energy, block_size=100,
 >>>                           walkers='mean')
 
 leading to the plot

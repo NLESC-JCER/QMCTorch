@@ -15,7 +15,7 @@ Kinetic Pooling
     :members:
     :inherited-members:
 
-Orbital Projectors
+SlaterJastrow Projectors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. automodule:: qmctorch.wavefunction.orbital_projector

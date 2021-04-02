@@ -7,7 +7,7 @@ import torch.optim as optim
 from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
 
 from qmctorch.sampler import Hamiltonian, Metropolis
-from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_correlation_coefficient, plot_energy,
                             plot_integrated_autocorrelation_time,
@@ -15,7 +15,7 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
 
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import CorrelatedOrbital
+from qmctorch.wavefunction import SlaterJastrowOrbital
 from qmctorch.utils import set_torch_double_precision
 
 __PLOT__ = False
@@ -41,12 +41,12 @@ class TestH2Correlated(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = CorrelatedOrbital(self.mol,
-                                    kinetic='auto',
-                                    configs='cas(2,2)',
-                                    jastrow_type=FullyConnectedJastrow,
-                                    # jastrow_type='pade_jastrow',
-                                    include_all_mo=True)
+        self.wf = SlaterJastrowOrbital(self.mol,
+                                       kinetic='auto',
+                                       configs='cas(2,2)',
+                                       jastrow_type=FullyConnectedJastrow,
+                                       # jastrow_type='pade_jastrow',
+                                       include_all_mo=True)
 
         # sampler
         self.sampler = Metropolis(
@@ -64,8 +64,8 @@ class TestH2Correlated(unittest.TestCase):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverOrbital(wf=self.wf, sampler=self.sampler,
-                                    optimizer=self.opt)
+        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
         # ground state energy
         self.ground_state_energy = -1.16

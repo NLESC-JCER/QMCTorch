@@ -1,8 +1,8 @@
 from torch import optim
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
-from qmctorch.solver import SolverOrbital
+from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
@@ -21,10 +21,10 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                unit='bohr')
 
 # define the wave function
-wf = Orbital(mol, kinetic='jacobi',
-             configs='cas(2,2)',
-             use_jastrow=True,
-             cuda=True)
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   configs='cas(2,2)',
+                   use_jastrow=True,
+                   cuda=True)
 
 wf.jastrow.weight.data[0] = 1.
 
@@ -48,8 +48,8 @@ opt = optim.Adam(lr_dict, lr=1E-3)
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # QMC solver
-solver = SolverOrbital(wf=wf, sampler=sampler,
-                       optimizer=opt, scheduler=None)
+solver = SolverSlaterJastrow(wf=wf, sampler=sampler,
+                             optimizer=opt, scheduler=None)
 
 # perform a single point calculation
 obs = solver.single_point()

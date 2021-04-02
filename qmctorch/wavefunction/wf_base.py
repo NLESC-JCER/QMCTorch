@@ -177,7 +177,7 @@ class WaveFunction(torch.nn.Module):
 
          Examples::
              >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-             >>> wf = Orbital(mol, configs='cas(2,2)')
+             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
              >>> pos = torch.rand(500,6)
              >>> vals = wf.local_energy(pos)
 

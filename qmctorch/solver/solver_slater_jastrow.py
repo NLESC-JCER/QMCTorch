@@ -11,7 +11,7 @@ from .. import log
 from .solver_base import SolverBase
 
 
-class SolverOrbital(SolverBase):
+class SolverSlaterJastrow(SolverBase):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None, output=None, rank=0):

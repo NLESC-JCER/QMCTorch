@@ -1,12 +1,12 @@
 Wave function Optimization
 ====================================
 
-We present here a complete example on how to use QMCTorch on a H2 molecule. 
+We present here a complete example on how to use QMCTorch on a H2 molecule.
 We first need to import all the relevant modules :
 
 >>> from torch import optim
->>> from qmctorch.wavefunction import Orbital, Molecule
->>> from qmctorch.solver import SolverOrbital
+>>> from qmctorch.wavefunction import SlaterJastrow, Molecule
+>>> from qmctorch.solver import SolverSlaterJastrow
 >>> from qmctorch.sampler import Metropolis
 >>> from qmctorch.utils import set_torch_double_precision
 >>> from qmctorch.utils import (plot_energy, plot_data)
@@ -30,13 +30,13 @@ We then define the QMCNet wave function relative to this molecule. We also speci
 the determinants we want to use in the CI expansion. We use here a CAS(2,2).
 
 >>> # define the wave function
->>> wf = Orbital(mol, kinetic='jacobi',
+>>> wf = SlaterJastrow(mol, kinetic='jacobi',
 >>>              configs='cas(2,2)',
 >>>              use_jastrow=True)
 
 As a sampler we use a simple Metropolis Hasting with 1000 walkers. The walkers are initially localized around the atoms.
-Each walker will perform 2000 steps of size 0.2 atomic unit and will only keep the last position of each walker (`ntherm=-1`). 
-During each move all the the electrons are moved simultaneously within a normal distribution centered around their current location. 
+Each walker will perform 2000 steps of size 0.2 atomic unit and will only keep the last position of each walker (`ntherm=-1`).
+During each move all the the electrons are moved simultaneously within a normal distribution centered around their current location.
 
 >>> # define the sampler
 >>> sampler = Metropolis(nwalkers=1000,
@@ -62,7 +62,7 @@ We also define a linear scheduler that will decrease the learning rate after 100
 We can now assemble the solver :
 
 >>> # QMC solver
->>> solver = SolverOrbital(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
+>>> solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
 
 The solver needs to be configured. We set the task to wave function optimization and freeze here the
 variational parameters of the atomic orbitals and molecular orbitals. Hence only the jastrow factor and the CI coefficients
@@ -77,9 +77,9 @@ We also configure the resampling so that the positions of the walkers are update
 
 >>> solver.configure_resampling(mode='update', resample_every=1, nstep_update=25)
 
-We can now run the optimization. We use here 250 optimization steps (epoch), using all the points 
+We can now run the optimization. We use here 250 optimization steps (epoch), using all the points
 in a single mini-batch. The energy of the system is used as a training loss and the gradients of the variational
-parameters are computed using a low-variance expression (`grad='manual'`). 
+parameters are computed using a low-variance expression (`grad='manual'`).
 
 >>> data = solver.run(5, batchsize=None, loss='energy', grad='manual', clip_loss=False)
 

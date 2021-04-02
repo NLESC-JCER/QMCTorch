@@ -3,10 +3,10 @@ Wavefunction
 
 .. automodule:: qmctorch.wavefunction
 
-QMCNet 
+QMCNet
 -------------------------------------------
-.. automodule:: qmctorch.wavefunction.wf_orbital
-.. autoclass:: Orbital
+.. automodule:: qmctorch.wavefunction.slater_jastrow
+.. autoclass:: SlaterJastrow
     :members:
 
 

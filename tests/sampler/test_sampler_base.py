@@ -5,7 +5,7 @@ import torch
 
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 class TestSamplerBase(unittest.TestCase):
@@ -25,4 +25,4 @@ class TestSamplerBase(unittest.TestCase):
             basis='sto-3g')
 
         # orbital
-        self.wf = Orbital(self.mol)
+        self.wf = SlaterJastrow(self.mol)

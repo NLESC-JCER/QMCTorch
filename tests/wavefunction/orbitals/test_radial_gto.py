@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 from .second_derivative import second_derivative
 
@@ -22,10 +22,10 @@ class TestRadialSlater(unittest.TestCase):
                             unit='bohr')
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='ground_state',
-                          use_jastrow=True,
-                          include_all_mo=False)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='ground_state',
+                                use_jastrow=True,
+                                include_all_mo=False)
 
     def test_first_derivative_x(self):
 

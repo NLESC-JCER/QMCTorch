@@ -7,7 +7,7 @@ import torch
 from torch.autograd import Variable
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 from ...path_utils import PATH_TEST
 
@@ -64,7 +64,7 @@ class TestMOvaluesADF(unittest.TestCase):
         self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
-        self.wf = Orbital(self.mol, include_all_mo=True)
+        self.wf = SlaterJastrow(self.mol, include_all_mo=True)
 
         # define the grid points
         self.npts = 21

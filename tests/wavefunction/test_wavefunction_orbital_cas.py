@@ -1,5 +1,5 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 
 from torch.autograd import grad, gradcheck, Variable
@@ -54,10 +54,10 @@ class TestOrbitalWF(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = Orbital(mol,
-                          kinetic='auto',
-                          include_all_mo=True,
-                          configs='cas(2,2)')
+        self.wf = SlaterJastrow(mol,
+                                kinetic='auto',
+                                include_all_mo=True,
+                                configs='cas(2,2)')
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight

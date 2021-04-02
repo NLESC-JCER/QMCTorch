@@ -5,13 +5,13 @@ import torch
 import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_correlation_coefficient,
                             plot_integrated_autocorrelation_time,
                             plot_walkers_traj)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 __PLOT__ = False
@@ -36,9 +36,9 @@ class TestH2Stat(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='single(2,2)',
-                          use_jastrow=True)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='single(2,2)',
+                                use_jastrow=True)
 
         # sampler
         self.sampler = Metropolis(
@@ -58,8 +58,8 @@ class TestH2Stat(unittest.TestCase):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverOrbital(wf=self.wf, sampler=self.sampler,
-                                    optimizer=self.opt)
+        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
     def test_sampling_traj(self):
 

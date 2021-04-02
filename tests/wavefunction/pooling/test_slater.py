@@ -4,7 +4,7 @@ import torch
 
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 
 
 class TestSlater(unittest.TestCase):
@@ -18,15 +18,15 @@ class TestSlater(unittest.TestCase):
                             basis='dzp',
                             unit='bohr')
 
-        self.wf = Orbital(self.mol, kinetic='jacobi',
-                          configs='single_double(6,6)',
-                          use_jastrow=True,
-                          include_all_mo=False)
-
-        self.wf_allmo = Orbital(self.mol, kinetic='jacobi',
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='single_double(6,6)',
                                 use_jastrow=True,
-                                include_all_mo=True)
+                                include_all_mo=False)
+
+        self.wf_allmo = SlaterJastrow(self.mol, kinetic='jacobi',
+                                      configs='single_double(6,6)',
+                                      use_jastrow=True,
+                                      include_all_mo=True)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
