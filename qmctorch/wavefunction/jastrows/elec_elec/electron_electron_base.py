@@ -6,7 +6,9 @@ import itertools
 
 class ElectronElectronBase(nn.Module):
 
-    def __init__(self, nup, ndown, cuda=False):
+    def __init__(self, nup, ndown,
+                 scale=False, scale_factor=0.6,
+                 cuda=False):
         r"""Base class for two body jastrow of the form:
 
         .. math::
@@ -32,7 +34,8 @@ class ElectronElectronBase(nn.Module):
 
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
-        self.edist = ElectronElectronDistance(self.nelec, self.ndim)
+        self.edist = ElectronElectronDistance(self.nelec, self.ndim,
+                                              scale=scale, scale_factor=scale_factor)
 
         # choose the partial derivative method
         method = 'square'

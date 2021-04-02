@@ -1,17 +1,22 @@
 import torch
 from torch import nn
+from .scaling import (get_scaled_distance,
+                      get_der_scaled_distance,
+                      get_second_der_scaled_distance)
 
 
 class ElectronNucleiDistance(nn.Module):
 
-    def __init__(self, nelec, atomic_pos, ndim=3, scale=0.6):
+    def __init__(self, nelec, atomic_pos, ndim=3, scale=False, scale_factor=0.6):
         """Computes the electron-nuclei distances
 
         Args:
             nelec (int): number of electrons
             atomic_pos (tensor): positions of the atoms
             ndim (int): number of spatial dimensions
-            scale(float, optional): value of the scale factor, Defaults to 0.6
+            scale(bool, optional): return scaled values, Defaults to False
+            scale_factor(float, optional): value of the scale factor,
+                                           Defaults to 0.6
 
         Examples::
             >>> endist = ElectronNucleiDistance(2,2)
@@ -21,11 +26,12 @@ class ElectronNucleiDistance(nn.Module):
 
         """
 
-        super(ElectronNucleiDistance, self).__init__()
+        super().__init__()
         self.nelec = nelec
         self.atoms = atomic_pos
         self.ndim = ndim
-        self.kappa = scale
+        self.scale = scale
+        self.kappa = scale_factor
 
     def forward(self, input, derivative=0):
         """Compute the pairwise distance between the electrons
@@ -60,24 +66,69 @@ class ElectronNucleiDistance(nn.Module):
         dist = torch.sqrt(dist)
 
         if derivative == 0:
-            return dist
+            if self.scale:
+                return get_scaled_distance(self.kappa, dist)
+            else:
+                return dist
 
         elif derivative == 1:
-            invr = (1. / dist).unsqueeze(-1)
-            diff_axis = (input_.unsqueeze(-1) -
-                         self.atoms.T).transpose(2, 3)
-            return (diff_axis * invr).permute(0, 3, 1, 2)
+            der_dist = self.get_der_distance(input_, dist)
+            if self.scale:
+                return get_der_scaled_distance(self.kappa,
+                                               dist, der_dist)
+            else:
+                return der_dist
 
         elif derivative == 2:
 
-            invr3 = (1. / (dist**3)).unsqueeze(1)
-            diff_axis = input_.transpose(1, 2).unsqueeze(3)
-            diff_axis = (diff_axis - self.atoms.T.unsqueeze(1))**2
+            d2_dist = self.get_second_der_distance(input_, dist)
 
-            diff_axis = diff_axis[:, [
-                [1, 2], [2, 0], [0, 1]], ...].sum(2)
+            if self.scale:
+                der_dist = self.get_der_distance(input_, dist)
+                return get_second_der_scaled_distance(self.kappa,
+                                                      dist,
+                                                      der_dist,
+                                                      d2_dist)
+            else:
+                return d2_dist
 
-            return (diff_axis * invr3)
+    def get_der_distance(self, pos, dist):
+        """Get the derivative of the distance
+
+        Args:
+            pos (torch.tensor): positions of the electrons
+                                Nbatch x Nelec x Ndim
+            dist (torch.tensor): distance matrix between the elecs
+                           Nbatch x Nelec x Nelec
+
+        Returns:
+            [type]: [description]
+        """
+        invr = (1. / dist).unsqueeze(-1)
+        diff_axis = (pos.unsqueeze(-1) -
+                     self.atoms.T).transpose(2, 3)
+        return (diff_axis * invr).permute(0, 3, 1, 2)
+
+    def get_second_der_distance(self, pos, dist):
+        """Get the derivative of the distance
+
+        Args:
+            pos (torch.tensor): positions of the electrons
+                                Nbatch x Nelec x Ndim
+            dist (torch.tensor): distance matrix between the elecs
+                           Nbatch x Nelec x Nelec
+
+        Returns:
+            [type]: [description]
+        """
+        invr3 = (1. / (dist**3)).unsqueeze(1)
+        diff_axis = pos.transpose(1, 2).unsqueeze(3)
+        diff_axis = (diff_axis - self.atoms.T.unsqueeze(1))**2
+
+        diff_axis = diff_axis[:, [
+            [1, 2], [2, 0], [0, 1]], ...].sum(2)
+
+        return (diff_axis * invr3)
 
     @staticmethod
     def _get_distance_quadratic(elec_pos, atom_pos):

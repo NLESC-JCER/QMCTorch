@@ -6,7 +6,9 @@ from .electron_electron_base import ElectronElectronBase
 
 
 class PadeJastrow(ElectronElectronBase):
-    def __init__(self, nup, ndown, w=1., cuda=False):
+    def __init__(self, nup, ndown, w=1.,
+                 scale=False, scale_factor=0.6,
+                 cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -21,7 +23,7 @@ class PadeJastrow(ElectronElectronBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
+        super().__init__(nup, ndown, scale, scale_factor, cuda)
 
         self.weight = nn.Parameter(torch.tensor([w]),
                                    requires_grad=True).to(self.device)

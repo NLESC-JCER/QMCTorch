@@ -178,6 +178,4 @@ class PadeJastrowOrbital(ElectronElectronBase):
         c = -wcusp * w * r_ * d2r_ * denom2
         d = 2 * wcusp * w**2 * r_ * dr_square * denom**3
 
-        e = self._get_der_jastrow_elements(r, dr)
-
         return a + b + c + d

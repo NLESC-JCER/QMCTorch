@@ -4,7 +4,7 @@ from torch import nn
 class UnityTerm(nn.Module):
 
     def __init__(self):
-        super(UnityTerm, self).__init__()
+        super().__init__()
 
     def forward(self, pos, derivative=0, jacobian=True):
         if derivative == 0:
@@ -29,7 +29,7 @@ class JastrowAssembler(nn.Module):
             cuda (bool, optional): [description]. Defaults to False.
         """
 
-        super(JastrowAssembler, self).__init__()
+        super().__init__()
 
         for k in jastrow_terms.keys():
             if k not in ['elec_nuc', 'elec_elec', 'elec_elec_nuc']:
@@ -74,7 +74,7 @@ class JastrowAssembler(nn.Module):
             en = self.elec_nuc(pos)
             een = self.elec_elec_nuc(pos)
 
-            return en * ee * een
+            return self.evaluate_product(ee, en, een)
 
         elif derivative == 1:
 

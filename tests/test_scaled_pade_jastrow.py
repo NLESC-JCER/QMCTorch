@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.scaled_pade_jastrow import ScaledPadeJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.scaled_pade_jastrow import ScaledPadeJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.scaled_pade_jastrow import PadeJastrow
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -42,23 +43,11 @@ class TestScaledPadeJastrow(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.jastrow = ScaledPadeJastrow(self.nup, self.ndown)
+        self.jastrow = PadeJastrow(self.nup, self.ndown, scale=True)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
-
-    def test_grad_distance(self):
-
-        r = self.jastrow.edist(self.pos)
-        dr = self.jastrow.edist(self.pos, derivative=1)
-        dr_grad = grad(
-            r,
-            self.pos,
-            grad_outputs=torch.ones_like(r))[0]
-        gradcheck(self.jastrow.edist, self.pos)
-
-        assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
 
     def test_grad_jastrow(self):
 
@@ -89,3 +78,6 @@ class TestScaledPadeJastrow(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+    # t = TestScaledPadeJastrow()
+    # t.setUp()
+    # t.test_jastrow()

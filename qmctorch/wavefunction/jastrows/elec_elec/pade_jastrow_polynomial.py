@@ -31,7 +31,7 @@ class PadeJastrowPolynomial(ElectronElectronBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrowPolynomial, self).__init__(nup, ndown, cuda)
+        super().__init__(nup, ndown, cuda)
         self.porder = order
 
         self.set_variational_weights(weight_a, weight_b)

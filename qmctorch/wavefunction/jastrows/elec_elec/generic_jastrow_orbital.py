@@ -23,8 +23,7 @@ class GenericJastrowOrbitals(ElectronElectronBase):
 
         assert issubclass(JastrowFunction, torch.nn.Module)
 
-        super(GenericJastrowOrbitals, self).__init__(
-            nup, ndown, cuda)
+        super().__init__(nup, ndown, cuda)
         self.nmo = nmo
         self.jastrow_functions = nn.ModuleList(
             [JastrowFunction(**kwargs) for imo in range(self.nmo)])
@@ -134,10 +133,6 @@ class GenericJastrowOrbitals(ElectronElectronBase):
 
             kernel = jast(r)
             ker_hess, ker_grad = self._hess(kernel, r)
-
-            # ker_grad_2 = ker_grad * ker_grad
-            # jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
-            #     dr2 + ker_grad.unsqueeze(1) * d2r
 
             jhess = (ker_hess).unsqueeze(1) * \
                 dr2 + ker_grad.unsqueeze(1) * d2r
