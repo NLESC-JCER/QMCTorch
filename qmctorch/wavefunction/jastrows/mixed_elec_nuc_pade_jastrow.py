@@ -1,8 +1,8 @@
 import torch
 from torch import nn
 
-from .pade_jastrow import PadeJastrow
-from .electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
+from .elec_elec.pade_jastrow import PadeJastrow
+from .elec_nuclei.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
 
 
 class MixedElecNucPadeJastrow(nn.Module):

@@ -1,6 +1,6 @@
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.slow_jastrow import TwoBodyJastrowFactor
+from qmctorch.wavefunction.jastrows.elec_elec.pade_jastrow import PadeJastrow
 import unittest
 
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -35,7 +35,7 @@ class TestJastrow(unittest.TestCase):
     def setUp(self):
         self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
-        self.jastrow = TwoBodyJastrowFactor(self.nup, self.ndown)
+        self.jastrow = PadeJastrow(self.nup, self.ndown)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)

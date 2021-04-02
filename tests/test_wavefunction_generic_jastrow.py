@@ -2,7 +2,7 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction import Orbital
 from qmctorch.utils import set_torch_double_precision, btrace
 
-from qmctorch.wavefunction.jastrows.fully_connected_jastrow import FullyConnectedJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
 
 from torch.autograd import grad, gradcheck, Variable
 
