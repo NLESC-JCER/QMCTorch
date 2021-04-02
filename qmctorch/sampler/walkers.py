@@ -126,7 +126,7 @@ class Walkers(object):
         for iw in range(self.nwalkers):
 
             nelec_placed = [0] * natom
-            idx = torch.as_ensor(idx_ref)
+            idx = torch.as_tensor(idx_ref)
             idx = idx[torch.randperm(nelec_tot)]
             xyz = torch.as_tensor(
                 self.init_domain['atom_coords'])[
