@@ -23,6 +23,7 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = Orbital(mol, kinetic='jacobi',
              configs='single_double(2,2)',
+             jastrow='pade_jastrow',
              use_jastrow=True)
 
 wf.jastrow.weight.data[0] = 1.

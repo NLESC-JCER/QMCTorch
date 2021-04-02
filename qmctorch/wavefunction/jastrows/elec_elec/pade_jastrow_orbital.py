@@ -1,12 +1,11 @@
 import torch
 from torch import nn
 
-from ...utils import register_extra_attributes
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ....utils import register_extra_attributes
+from .electron_electron_base import ElectronElectronBase
 
 
-class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
-
+class PadeJastrowOrbital(ElectronElectronBase):
     def __init__(self, nup, ndown, nmo, w=1., wcusp=[0.25, 0.5], cuda=False):
         r"""Computes Pade jastrow factor per MO
 
@@ -24,11 +23,11 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         super(PadeJastrowOrbital, self).__init__(nup, ndown, cuda)
 
         self.weight = nn.Parameter(
-            w*torch.ones(nmo), requires_grad=True)
+            w * torch.ones(nmo), requires_grad=True)
 
         self.nmo = nmo
         wcusp = torch.tensor(wcusp).view(
-            1, 2).repeat(self.nmo, 1)/nup/2
+            1, 2).repeat(self.nmo, 1) / nup / 2
         self.wcusp = nn.Parameter(wcusp, requires_grad=False)
 
         self.idx_spin = self.get_idx_spin().to(self.device)
@@ -135,7 +134,7 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
         denom = 1. / (1.0 + w * r_)
         wcusp = self.get_cusp_weight().unsqueeze(1)
         a = wcusp * dr_ * denom
-        b = - wcusp * w * r_ * dr_ * denom**2
+        b = -wcusp * w * r_ * dr_ * denom**2
 
         return (a + b)
 
@@ -152,12 +151,12 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
                               Nbatch x Nelec_pair
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec_pair
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec_pair
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nmo x Nbatch x Ndim x Nelec_pair
         """
@@ -171,14 +170,12 @@ class PadeJastrowOrbital(TwoBodyJastrowFactorBase):
 
         denom = 1. / (1.0 + w * r_)
         denom2 = denom**2
-        dr_square = dr_*dr_
+        dr_square = dr_ * dr_
 
         wcusp = self.get_cusp_weight().unsqueeze(1)
         a = wcusp * d2r_ * denom
         b = -2 * wcusp * w * dr_square * denom2
-        c = - wcusp * w * r_ * d2r_ * denom2
+        c = -wcusp * w * r_ * d2r_ * denom2
         d = 2 * wcusp * w**2 * r_ * dr_square * denom**3
 
-        e = self._get_der_jastrow_elements(r, dr)
-
-        return a + b + c + d + e**2
+        return a + b + c + d

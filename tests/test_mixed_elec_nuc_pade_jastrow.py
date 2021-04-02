@@ -1,8 +1,10 @@
+import unittest
+
+import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.elec_elec.pade_jastrow_polynomial import PadeJastrowPolynomial
-import unittest
-import numpy as np
+
+from qmctorch.wavefunction.jastrows.mixed_elec_nuc_pade_jastrow import MixedElecNucPadeJastrow
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -31,7 +33,7 @@ def hess(out, pos):
     return hess
 
 
-class TestPadeJastrowPolynom(unittest.TestCase):
+class TestPadeJastrow(unittest.TestCase):
 
     def setUp(self):
 
@@ -40,26 +42,16 @@ class TestPadeJastrowPolynom(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.jastrow = PadeJastrowPolynomial(
-            self.nup, self.ndown, order=5,
-            weight_a=0.1*torch.ones(5),
-            weight_b=0.1*torch.ones(5))
+        self.atoms = torch.rand(4, 3)
+        self.jastrow = MixedElecNucPadeJastrow(
+            self.nup, self.ndown, self.atoms)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
 
-    def test_grad_distance(self):
-
-        r = self.jastrow.edist(self.pos)
-        dr = self.jastrow.edist(self.pos, derivative=1)
-        dr_grad = grad(
-            r,
-            self.pos,
-            grad_outputs=torch.ones_like(r))[0]
-        gradcheck(self.jastrow.edist, self.pos)
-
-        assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
+    def test_jastrow(self):
+        val = self.jastrow(self.pos)
 
     def test_grad_jastrow(self):
 
@@ -69,10 +61,12 @@ class TestPadeJastrowPolynom(unittest.TestCase):
             val,
             self.pos,
             grad_outputs=torch.ones_like(val))[0]
+
+        dval_grad = dval_grad.view(
+            self.nbatch, self.nelec, 3).sum(2)
         gradcheck(self.jastrow, self.pos)
 
-        assert torch.allclose(dval, dval_grad.view(
-            self.nbatch, self.nelec, 3).sum(2))
+        assert torch.allclose(dval, dval_grad)
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
 
     def test_hess_jastrow(self):
@@ -88,3 +82,16 @@ class TestPadeJastrowPolynom(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+    # from qmctorch.wavefunction.jastrows.pade_jastrow import PadeJastrow
+    # from qmctorch.wavefunction.jastrows.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
+
+    # nup, ndown = 4, 4
+    # nelec = nup + ndown
+    # atoms = torch.rand(4, 3)
+    # ee_jastrow = PadeJastrow(nup, ndown)
+    # en_jastrow = ElectronNucleiPadeJastrow(nup, ndown, atoms)
+    # nbatch = 5
+
+    # pos = torch.rand(nbatch, nelec * 3)
+    # pos.requires_grad = True

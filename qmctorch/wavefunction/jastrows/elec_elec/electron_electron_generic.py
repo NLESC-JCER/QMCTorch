@@ -2,12 +2,11 @@ import torch
 from torch import nn
 from torch.autograd import grad
 import numpy as np
-from ...utils import register_extra_attributes, diagonal_hessian
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ....utils import register_extra_attributes, diagonal_hessian
+from .electron_electron_base import ElectronElectronBase
 
 
-class GenericJastrow(TwoBodyJastrowFactorBase):
-
+class ElectronElectronGeneric(ElectronElectronBase):
     def __init__(self, nup, ndown, JastrowFunction, cuda, **kwargs):
         r"""Computes generic jastrow factor per MO
 
@@ -23,7 +22,7 @@ class GenericJastrow(TwoBodyJastrowFactorBase):
 
         assert issubclass(JastrowFunction, torch.nn.Module)
 
-        super(GenericJastrow, self).__init__(
+        super(ElectronElectronGeneric, self).__init__(
             nup, ndown, cuda)
         self.jastrow_function = JastrowFunction(**kwargs)
 
@@ -112,9 +111,8 @@ class GenericJastrow(TwoBodyJastrowFactorBase):
 
         kernel = self.jastrow_function(r)
         ker_hess, ker_grad = self._hess(kernel, r)
-        ker_grad_2 = ker_grad * ker_grad
 
-        jhess = (ker_hess + ker_grad_2).unsqueeze(1) * \
+        jhess = (ker_hess).unsqueeze(1) * \
             dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
@@ -143,11 +141,11 @@ class GenericJastrow(TwoBodyJastrowFactorBase):
             pos ([type]): [description]
         """
 
-        gval = grad(val, pos,
+        gval = grad(val,
+                    pos,
                     grad_outputs=torch.ones_like(val),
                     create_graph=True)[0]
 
-        hval = grad(gval, pos,
-                    grad_outputs=torch.ones_like(gval))[0]
+        hval = grad(gval, pos, grad_outputs=torch.ones_like(gval))[0]
 
         return hval, gval

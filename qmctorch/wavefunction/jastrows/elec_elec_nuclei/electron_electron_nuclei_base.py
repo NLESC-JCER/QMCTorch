@@ -1,12 +1,13 @@
 import torch
 from torch import nn
-from .electron_distance import ElectronDistance
+from ..distance.electron_electron_distance import ElectronElectronDistance
+from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 import itertools
 
 
-class TwoBodyJastrowFactorBase(nn.Module):
+class ElectronElectronNucleisBase(nn.Module):
 
-    def __init__(self, nup, ndown, cuda=False):
+    def __init__(self, nup, ndown, atomic_pos, cuda=False):
         r"""Base class for two body jastrow of the form:
 
         .. math::
@@ -18,11 +19,13 @@ class TwoBodyJastrowFactorBase(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(TwoBodyJastrowFactorBase, self).__init__()
+        super().__init__()
 
         self.nup = nup
         self.ndown = ndown
         self.nelec = nup + ndown
+        self.atoms = atomic_pos
+        self.natoms = atomic_pos.shape[0]
         self.ndim = 3
 
         self.cuda = cuda
@@ -31,18 +34,22 @@ class TwoBodyJastrowFactorBase(nn.Module):
             self.device = torch.device('cuda')
 
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
+        self.index_elec = [
+            self.index_row.tolist(), self.index_col.tolist()]
 
-        self.edist = ElectronDistance(self.nelec, self.ndim)
+        self.elel_dist = ElectronElectronDistance(
+            self.nelec, self.ndim)
+        self.elnu_dist = ElectronNucleiDistance(
+            self.nelec, self.atoms, self.ndim)
 
         # choose the partial derivative method
-        method = 'col_perm'
-        dict_method = {'index': self._partial_derivative_index,
-                       'col_perm': self._partial_derivative_col_perm}
-        self.partial_derivative_method = dict_method[method]
+        method = 'square'
+        dict_method = {'col_perm': self._partial_derivative_col_perm,
+                       'square': self._partial_dervivative_square}
+        self.partial_derivative = dict_method[method]
 
-        if method == 'index':
-            self._get_index_partial_derivative()
-        elif method == 'col_perm':
+        if method == 'col_perm':
+            raise ValueError(' col_perm is deprecated')
             self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
                 range(self.nelec-1), 2))).to(self.device)
 
@@ -144,17 +151,87 @@ class TwoBodyJastrowFactorBase(nn.Module):
         index_row = torch.LongTensor(index_row).to(self.device)
         return mask, index_col, index_row
 
-    def extract_tri_up(self, input):
+    def extract_tri_up(self, inp):
         r"""extract the upper triangular elements
 
         Args:
-            input (torch.tensor): input matrices (nbatch, n, n)
+            input (torch.tensor): input matrices (..., nelec, nelec)
 
         Returns:
-            torch.tensor: triangular up element (nbatch, -1)
+            torch.tensor: triangular up element (..., nelec_pair)
         """
-        nbatch = input.shape[0]
-        return input.masked_select(self.mask_tri_up).view(nbatch, -1)
+        shape = list(inp.shape)
+        out = inp.masked_select(self.mask_tri_up)
+        return out.view(*(shape[:-2] + [-1]))
+
+    def extract_elec_nuc_dist(self, en_dist):
+        r"""Organize the elec nuc distances
+
+        Args:
+            en_dist (torch.tensor): electron-nuclei distances
+                                    nbatch x nelec x natom or
+                                    nbatch x 3 x nelec x natom (dr)
+
+        Returns:
+            torch.tensor: nbatch x natom x nelec_pair x 2 or
+            torch.tensor: nbatch x 3 x natom x nelec_pair x 2 (dr)
+        """
+        out = en_dist[..., self.index_elec, :]
+        if en_dist.ndim == 3:
+            return out.permute(0, 3, 2, 1)
+        elif en_dist.ndim == 4:
+            return out.permute(0, 1, 4, 3, 2)
+        else:
+            raise ValueError(
+                'elec-nuc distance matrix should have 3 or 4 dim')
+
+    def assemble_dist(self, pos):
+        """Assemle the different distances for easy calculations
+
+        Args:
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+
+        Returns:
+            torch.tensor : nbatch, natom, nelec_pair, 3
+
+        """
+
+        # get the elec-elec distance matrix
+        ree = self.extract_tri_up(self.elel_dist(pos))
+        ree = ree.unsqueeze(1).unsqueeze(-1)
+        ree = ree.repeat(1, self.natoms, 1, 1)
+
+        # get the elec-nuc distance matrix
+        ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
+
+        # cat both
+        return torch.cat((ren, ree), -1)
+
+    def assemble_dist_deriv(self, pos, derivative=1):
+        """Assemle the different distances for easy calculations
+
+        Args:
+            pos (torch.tensor): Positions of the electrons
+                                  Size : Nbatch, Nelec x Ndim
+
+        Returns:
+            torch.tensor : nbatch, 3 x natom, nelec_pair, 3
+
+        """
+
+        # get the elec-elec distance derivative
+        dree = self.elel_dist(pos, derivative)
+        dree = self.extract_tri_up(dree)
+        dree = dree.unsqueeze(2).unsqueeze(-1)
+        dree = dree.repeat(1, 1, self.natoms, 1, 1)
+
+        # get the elec-nuc distance derivative
+        dren = self.elnu_dist(pos, derivative)
+        dren = self.extract_elec_nuc_dist(dren)
+
+        # assemble
+        return torch.cat((dren, dree), -1)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -191,32 +268,27 @@ class TwoBodyJastrowFactorBase(nn.Module):
         assert size[1] == self.nelec * self.ndim
         nbatch = size[0]
 
-        r = self.extract_tri_up(self.edist(pos))
+        r = self.assemble_dist(pos)
         jast = self._get_jastrow_elements(r)
 
         if derivative == 0:
-            return jast.prod(-1).unsqueeze(-1)
+            return jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
 
         elif derivative == 1:
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
+            dr = self.assemble_dist_deriv(pos, 1)
             return self._jastrow_derivative(r, dr, jast, jacobian)
 
         elif derivative == 2:
 
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
-            d2r = self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            dr = self.assemble_dist_deriv(pos, 1)
+            d2r = self.assemble_dist_deriv(pos, 2)
 
             return self._jastrow_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
 
-            dr = self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
-            d2r = self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            dr = self.assemble_dist_deriv(pos, 1)
+            d2r = self.assemble_dist_deriv(pos, 2)
 
             return(jast.prod(-1).unsqueeze(-1),
                    self._jastrow_derivative(r, dr, jast, jacobian),
@@ -237,27 +309,57 @@ class TwoBodyJastrowFactorBase(nn.Module):
         nbatch = r.shape[0]
         if jacobian:
 
-            prod_val = jast.prod(-1).unsqueeze(-1)
-            djast = self._get_der_jastrow_elements(r, dr).sum(-2)
-            djast = djast * prod_val
+            prod_val = jast.view(nbatch, -1).prod(-1)
 
-            # might cause problems with backward cause in place operation
-            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            # derivative of the jastrow elements
+            # nbatch x ndim x natom x nelec_pair x 3
+            # last dim is (ria rja rij)
+            djast = self._get_der_jastrow_elements(r, dr)
+
+            # sum dim and atom
+            djast = djast.sum([1, 2])
+
+            # multiply with the product of jastrow el values
+            djast = djast * prod_val.unsqueeze(-1).unsqueeze(-1)
+
+            # create the output vector with size nbatch x nelec
+            out_shape = list(djast.shape[:-2]) + [self.nelec]
             out = torch.zeros(out_shape).to(self.device)
-            out.index_add_(-1, self.index_row, djast)
-            out.index_add_(-1, self.index_col, -djast)
+
+            # add the elec-elec term
+            out.index_add_(-1, self.index_row, djast[..., 2])
+            out.index_add_(-1, self.index_col, -djast[..., 2])
+
+            # add the elec-nuc terms
+            out.index_add_(-1, self.index_row, djast[..., 0])
+            out.index_add_(-1, self.index_col, djast[..., 1])
 
         else:
 
-            prod_val = jast.prod(-1).unsqueeze(-1).unsqueeze(-1)
+            # product of jastrow terms
+            prod_val = jast.view(nbatch, -1).prod(-1)
+
+            # derivative of the jastrow elements
+            # nbatch x ndim x natom x nelec_pair x 3
+            # last dim is (ria rja rij)
             djast = self._get_der_jastrow_elements(r, dr)
-            djast = djast * prod_val
+
+            # sum atom
+            djast = djast.sum(2)
+            djast = djast * \
+                prod_val.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
             # might cause problems with backward cause in place operation
-            out_shape = list(djast.shape[:-1]) + [self.nelec]
+            out_shape = list(djast.shape[:-2]) + [self.nelec]
             out = torch.zeros(out_shape).to(self.device)
-            out.index_add_(-1, self.index_row, djast)
-            out.index_add_(-1, self.index_col, -djast)
+
+            # add electronic terms
+            out.index_add_(-1, self.index_row, djast[..., 2])
+            out.index_add_(-1, self.index_col, -djast[..., 2])
+
+            # add elec-nuc terms
+            out.index_add_(-1, self.index_row, djast[..., 0])
+            out.index_add_(-1, self.index_col, djast[..., 1])
 
         return out
 
@@ -275,102 +377,36 @@ class TwoBodyJastrowFactorBase(nn.Module):
         """
         nbatch = r.shape[0]
 
-        # pure second derivative terms
-        prod_val = jast.prod(-1).unsqueeze(-1)
+        # product of the jast
+        prod_val = jast.view(nbatch, -1).prod(-1)
 
-        d2jast = self._get_second_der_jastrow_elements(
-            r, dr, d2r).sum(-2)
+        # puresecond derivative of the jast el
+        # nbatch x ndim x natom x nelec_pair x 3
+        # last dim is (ria rja rij)
+        d2jast = self._get_second_der_jastrow_elements(r, dr, d2r)
+
+        # sum over the dim and the atom
+        d2jast = d2jast.sum([1, 2])
 
         # might cause problems with backward cause in place operation
-        hess_shape = list(d2jast.shape[:-1]) + [self.nelec]
+        hess_shape = list(d2jast.shape[:-2]) + [self.nelec]
         hess_jast = torch.zeros(hess_shape).to(self.device)
-        hess_jast.index_add_(-1, self.index_row, d2jast)
-        hess_jast.index_add_(-1, self.index_col, d2jast)
+
+        # add elec-elec terms
+        hess_jast.index_add_(-1, self.index_row, d2jast[..., 2])
+        hess_jast.index_add_(-1, self.index_col, d2jast[..., 2])
+
+        # add elec-nu terms
+        hess_jast.index_add_(-1, self.index_row, d2jast[..., 0])
+        hess_jast.index_add_(-1, self.index_col, d2jast[..., 1])
 
         # mixed terms
         djast = self._get_der_jastrow_elements(r, dr)
 
         # add partial derivative
-        hess_jast = hess_jast + 2 * \
-            self.partial_derivative_method(djast)
+        hess_jast = hess_jast + self.partial_derivative(djast)
 
-        return hess_jast * prod_val
-
-    def _get_index_partial_derivative(self):
-        """Computes the index of the pair of djast elements
-        that need to me multplued to get the mixed second derivatives.
-        """
-
-        self.index_partial_der = []
-        self.weight_partial_der = []
-        self.index_partial_der_to_elec = []
-
-        for idx in range(self.nelec):
-            index_pairs = [(idx, j, 1.) for j in range(
-                idx + 1, self.nelec)] + [(j, idx, -1.) for j in range(0, idx)]
-
-            for p1 in range(len(index_pairs) - 1):
-                i1, j1, w1 = index_pairs[p1]
-
-                for p2 in range(p1 + 1, len(index_pairs)):
-                    i2, j2, w2 = index_pairs[p2]
-
-                    idx1 = self._single_index(i1, j1)
-                    idx2 = self._single_index(i2, j2)
-
-                    self.index_partial_der.append([idx1, idx2])
-                    self.weight_partial_der.append(w1*w2)
-                    self.index_partial_der_to_elec.append(idx)
-
-        self.weight_partial_der = torch.tensor(
-            self.weight_partial_der).to(self.device)
-
-        self.index_partial_der_to_elec = torch.LongTensor(
-            self.index_partial_der_to_elec).to(self.device)
-
-        if self.weight_partial_der.shape[0] == 0:
-            self.weight_partial_der = 1.
-
-    def _single_index(self, i, j):
-        """Compute the from the i,j index of a [nelec, nelec] matrix
-        the index of a 1D array spanning the upper diagonal of the matrix.
-
-            ij                  k
-
-        00 01 02 03         . 0 1 2
-        10 11 12 13         . . 3 4
-        20 21 22 23         . . . 5
-        31 31 32 33         . . . .
-
-        """
-        n = self.nelec
-        return int((n*(n-1)/2) - (n-i)*((n-i)-1)/2 + j - i - 1)
-
-    def _partial_derivative_index(self, djast):
-        """Get the product of the mixed second deriative terms using indexing of the pairs
-
-        .. math ::
-
-            d B_{ij} / d x_i * d B_{kl} / d x_k
-
-        Args:
-            djast (torch.tensor): first derivative of the jastrow kernels
-
-        Returns:
-            torch.tensor:
-        """
-
-        nbatch = djast.shape[0]
-        out_mat = torch.zeros(nbatch, self.nelec).to(self.device)
-
-        if len(self.index_partial_der) > 0:
-            x = djast[..., self.index_partial_der]
-            x = x.prod(-1)
-            x = x * self.weight_partial_der
-            x = x.sum(1)
-            out_mat.index_add_(1, self.index_partial_der_to_elec, x)
-
-        return out_mat
+        return hess_jast * prod_val.unsqueeze(-1)
 
     def _partial_derivative_col_perm(self, djast):
         """Get the product of the mixed second deriative terms using column permuatation.
@@ -392,8 +428,29 @@ class TwoBodyJastrowFactorBase(nn.Module):
             tmp = torch.zeros(tmp_shape).to(self.device)
             tmp[..., self.index_row, self.index_col-1] = djast
             tmp[..., self.index_col, self.index_row] = -djast
-            return tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
+            return 2*tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
         else:
             out_shape = list(
                 djast.shape[:-2]) + [self.nelec]
             return torch.zeros(out_shape).to(self.device)
+
+    def _partial_dervivative_square(self, djast):
+        """[summary]
+
+        Args:
+            djast ([type]): [description]
+        """
+
+        # create the output vector with size nbatch x nelec
+        out_shape = list(djast.shape[:-2]) + [self.nelec]
+        out = torch.zeros(out_shape).to(self.device)
+
+        # add the elec-elec term
+        out.index_add_(-1, self.index_row, djast[..., 2])
+        out.index_add_(-1, self.index_col, -djast[..., 2])
+
+        # add the elec-nuc terms
+        out.index_add_(-1, self.index_row, djast[..., 0])
+        out.index_add_(-1, self.index_col, djast[..., 1])
+
+        return ((out.sum(2))**2).sum(1)

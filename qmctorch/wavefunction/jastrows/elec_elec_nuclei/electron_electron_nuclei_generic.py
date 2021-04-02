@@ -1,13 +1,13 @@
 import torch
 from torch import nn
+from torch.autograd import grad
+from ....utils import register_extra_attributes
+from .electron_electron_nuclei_base import ElectronElectronNucleisBase
 
-from ...utils import register_extra_attributes
-from .pade_jastrow import PadeJastrow
 
+class ElectronElectronNucleiGeneric(ElectronElectronNucleisBase):
 
-class ScaledPadeJastrow(PadeJastrow):
-
-    def __init__(self, nup, ndown, w=1., kappa=0.6, cuda=False):
+    def __init__(self, nup, ndown, atoms, JastrowFunction, cuda, **kwargs):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -17,19 +17,15 @@ class ScaledPadeJastrow(PadeJastrow):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            w (float, optional): Value of the variational parameter. Defaults to 1.
-            kappa (float, optional): value of the scale parameter. Defaults to 0.6.
+            atoms (torch.tensor): atomic positions of the atoms
+            w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ScaledPadeJastrow, self).__init__(
-            nup, ndown, w, cuda)
+        super().__init__(
+            nup, ndown, atoms, cuda)
 
-        self.weight = nn.Parameter(
-            torch.tensor([w]), requires_grad=True)
-        self.edist.kappa = kappa
-        self.static_weight = self.get_static_weight()
-        register_extra_attributes(self, ['weight'])
+        self.jastrow_function = JastrowFunction(**kwargs)
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -59,8 +55,7 @@ class ScaledPadeJastrow(PadeJastrow):
             torch.tensor: matrix of the jastrow kernels
                           Nbatch x Nelec x Nelec
         """
-        ur = self.edist.get_scaled_distance(r)
-        return self.static_weight * ur / (1.0 + self.weight * ur)
+        return self.jastrow_function(r)
 
     def _get_der_jastrow_elements(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
@@ -85,15 +80,14 @@ class ScaledPadeJastrow(PadeJastrow):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self.edist.get_scaled_distance(r).unsqueeze(1)
-        du = self.edist.get_der_scaled_distance(r, dr)
+        kernel = self.jastrow_function(r)
+        ker_grad = self._grads(kernel, r)
 
-        denom = 1. / (1.0 + self.weight * u)
+        # return the ker * dr
+        out = ker_grad.unsqueeze(1) * dr
 
-        a = self.static_weight * du * denom
-        b = - self.static_weight * self.weight * u * du * denom**2
-
-        return (a + b)
+        # sum over the atoms
+        return out
 
     def _get_second_der_jastrow_elements(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -118,19 +112,45 @@ class ScaledPadeJastrow(PadeJastrow):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        u = self.edist.get_scaled_distance(r).unsqueeze(1)
-        du = self.edist.get_der_scaled_distance(r, dr)
-        d2u = self.edist.get_second_der_scaled_distance(r, dr, d2r)
+        dr2 = dr * dr
 
-        denom = 1. / (1.0 + self.weight * u)
-        denom2 = denom**2
-        du_square = du*du
+        kernel = self.jastrow_function(r)
+        ker_hess, ker_grad = self._hess(kernel, r)
 
-        a = self.static_weight * d2u * denom
-        b = -2 * self.static_weight * self.weight * du_square * denom2
-        c = - self.static_weight * self.weight * u * d2u * denom2
-        d = 2 * self.static_weight * self.weight**2 * u * du_square * denom**3
+        jhess = ker_hess.unsqueeze(1) * \
+            dr2 + ker_grad.unsqueeze(1) * d2r
 
-        e = self._get_der_jastrow_elements(r, dr)
+        return jhess
 
-        return a + b + c + d + e**2
+    @staticmethod
+    def _grads(val, pos):
+        """Get the gradients of the jastrow values
+        of a given orbital terms
+
+        Args:
+            pos ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
+        return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+
+    @staticmethod
+    def _hess(val, pos):
+        """get the hessian of the jastrow values.
+        of a given orbital terms
+        Warning thos work only because the orbital term are dependent
+        of a single rij term, i.e. fij = f(rij)
+
+        Args:
+            pos ([type]): [description]
+        """
+
+        gval = grad(val, pos,
+                    grad_outputs=torch.ones_like(val),
+                    create_graph=True)[0]
+
+        hval = grad(gval, pos,
+                    grad_outputs=torch.ones_like(gval))[0]
+
+        return hval, gval

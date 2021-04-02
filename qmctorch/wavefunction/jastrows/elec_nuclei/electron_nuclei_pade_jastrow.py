@@ -1,13 +1,13 @@
 import torch
 from torch import nn
 
-from ...utils import register_extra_attributes
-from .two_body_jastrow_base import TwoBodyJastrowFactorBase
+from ....utils import register_extra_attributes
+from .electron_nuclei_base import ElectronNucleiBase
 
 
-class PadeJastrow(TwoBodyJastrowFactorBase):
+class ElectronNucleiPadeJastrow(ElectronNucleiBase):
 
-    def __init__(self, nup, ndown, w=1., cuda=False):
+    def __init__(self, nup, ndown, atoms, w=1., cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -17,17 +17,19 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
+            atoms (torch.tensor): atomic positions of the atoms
             w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(PadeJastrow, self).__init__(nup, ndown, cuda)
+        super(ElectronNucleiPadeJastrow,
+              self).__init__(nup, ndown, atoms, cuda)
 
         self.weight = nn.Parameter(
             torch.tensor([w]), requires_grad=True).to(self.device)
         register_extra_attributes(self, ['weight'])
 
-        self.static_weight = self.get_static_weight()
+        self.static_weight = torch.tensor([1.])
 
     def _get_jastrow_elements(self, r):
         r"""Get the elements of the jastrow matrix :
@@ -102,12 +104,12 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of 
+            d2r (torch.tensor): matrix of the 2nd derivative of
                                 the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of 
+            torch.tensor: matrix fof the pure 2nd derivative of
                           the jastrow elements
                           Nbatch x Ndim x Nelec x Nelec
         """
@@ -122,6 +124,15 @@ class PadeJastrow(TwoBodyJastrowFactorBase):
         c = - self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
-        e = self._get_der_jastrow_elements(r, dr)
+        return a + b + c + d
 
-        return a + b + c + d + e**2
+
+if __name__ == "__main__":
+    nup, ndown = 4, 4
+    nelec = nup + ndown
+    atoms = torch.rand(4, 3)
+    jastrow = ElectronNucleiPadeJastrow(nup, ndown, atoms)
+    nbatch = 5
+
+    pos = torch.rand(nbatch, nelec * 3)
+    pos.requires_grad = True

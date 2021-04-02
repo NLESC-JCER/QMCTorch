@@ -4,7 +4,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.pade_jastrow_orbital import PadeJastrowOrbital
+from qmctorch.wavefunction.jastrows.elec_elec.pade_jastrow_orbital import PadeJastrowOrbital
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -81,7 +81,7 @@ class TestPadeJastrowOrbital(unittest.TestCase):
             grad_outputs=torch.ones_like(val))[0]
 
         dval_grad = dval_grad.reshape(
-            self.nbatch, self.nelec, 3).permute(0,2,1)
+            self.nbatch, self.nelec, 3).permute(0, 2, 1)
         gradcheck(self.jastrow, self.pos)
 
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
@@ -99,8 +99,10 @@ class TestPadeJastrowOrbital(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    t = TestPadeJastrowOrbital()
-    t.setUp()
-    t.test_jastrow()
-    t.test_grad_jastrow()
-    t.test_hess_jastrow()
+    unittest.main()
+
+    # t = TestPadeJastrowOrbital()
+    # t.setUp()
+    # t.test_jastrow()
+    # t.test_grad_jastrow()
+    # t.test_hess_jastrow()
