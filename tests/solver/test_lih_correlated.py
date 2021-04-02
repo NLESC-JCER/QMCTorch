@@ -59,7 +59,7 @@ class TestLiHCorrelated(unittest.TestCase):
 
         # artificial pos
         self.nbatch = 10
-        self.pos = torch.tensor(np.random.rand(
+        self.pos = torch.as_tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
         self.pos.requires_grad = True
 

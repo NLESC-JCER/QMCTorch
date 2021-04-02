@@ -101,8 +101,8 @@ class Walkers(object):
             torch.tensor -- positions of the walkers
         """
         multi = MultivariateNormal(
-            torch.tensor(self.init_domain['mean']),
-            torch.tensor(self.init_domain['sigma']))
+            torch.as_tensor(self.init_domain['mean']),
+            torch.as_tensor(self.init_domain['sigma']))
         pos = multi.sample((self.nwalkers, self.nelec)).type(
             torch.get_default_dtype())
         pos = pos.view(self.nwalkers, self.nelec * self.ndim)
@@ -126,9 +126,9 @@ class Walkers(object):
         for iw in range(self.nwalkers):
 
             nelec_placed = [0] * natom
-            idx = torch.tensor(idx_ref)
+            idx = torch.as_tensor(idx_ref)
             idx = idx[torch.randperm(nelec_tot)]
-            xyz = torch.tensor(
+            xyz = torch.as_tensor(
                 self.init_domain['atom_coords'])[
                 idx, :]
 

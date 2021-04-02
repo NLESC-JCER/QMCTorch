@@ -26,37 +26,37 @@ class AtomicOrbitals(nn.Module):
         self.ndim = 3
 
         # make the atomic position optmizable
-        self.atom_coords = nn.Parameter(torch.tensor(
+        self.atom_coords = nn.Parameter(torch.as_tensor(
             mol.basis.atom_coords_internal).type(dtype))
         self.atom_coords.requires_grad = True
         self.natoms = len(self.atom_coords)
         self.atomic_number = mol.atomic_number
 
         # define the BAS positions.
-        self.nshells = torch.tensor(mol.basis.nshells)
-        self.nao_per_atom = torch.tensor(mol.basis.nao_per_atom)
+        self.nshells = torch.as_tensor(mol.basis.nshells)
+        self.nao_per_atom = torch.as_tensor(mol.basis.nao_per_atom)
         self.bas_coords = self.atom_coords.repeat_interleave(
             self.nshells, dim=0)
         self.nbas = len(self.bas_coords)
 
         # index for the contractions
-        self.index_ctr = torch.tensor(mol.basis.index_ctr)
+        self.index_ctr = torch.as_tensor(mol.basis.index_ctr)
         self.contract = not len(torch.unique(
             self.index_ctr)) == len(self.index_ctr)
 
         # get the coeffs of the bas
-        self.bas_coeffs = torch.tensor(
+        self.bas_coeffs = torch.as_tensor(
             mol.basis.bas_coeffs).type(dtype)
 
         # get the exponents of the bas
         self.bas_exp = nn.Parameter(
-            torch.tensor(mol.basis.bas_exp).type(dtype))
+            torch.as_tensor(mol.basis.bas_exp).type(dtype))
         self.bas_exp.requires_grad = True
 
         # harmonics generator
         self.harmonics_type = mol.basis.harmonics_type
         if mol.basis.harmonics_type == 'sph':
-            self.bas_n = torch.tensor(mol.basis.bas_n).type(dtype)
+            self.bas_n = torch.as_tensor(mol.basis.bas_n).type(dtype)
             self.harmonics = Harmonics(
                 mol.basis.harmonics_type,
                 bas_l=mol.basis.bas_l,
@@ -64,7 +64,7 @@ class AtomicOrbitals(nn.Module):
                 cuda=cuda)
 
         elif mol.basis.harmonics_type == 'cart':
-            self.bas_n = torch.tensor(mol.basis.bas_kr).type(dtype)
+            self.bas_n = torch.as_tensor(mol.basis.bas_kr).type(dtype)
             self.harmonics = Harmonics(
                 mol.basis.harmonics_type,
                 bas_kx=mol.basis.bas_kx,
@@ -82,7 +82,7 @@ class AtomicOrbitals(nn.Module):
 
         # get the normalisation constants
         if hasattr(mol.basis, 'bas_norm') and False:
-            self.norm_cst = torch.tensor(
+            self.norm_cst = torch.as_tensor(
                 mol.basis.bas_norm).type(dtype)
         else:
             with torch.no_grad():
@@ -394,9 +394,9 @@ class AtomicOrbitals(nn.Module):
             pos (torch.tensor): positions of the walkers Nbat, NelecxNdim
 
         Returns:
-            torch.tensor, torch.tensor: positions of the elec wrt the bas 
+            torch.tensor, torch.tensor: positions of the elec wrt the bas
                                         (nbatch, Nelec, Norn, Ndim)
-                                        distance between elec and bas 
+                                        distance between elec and bas
                                         (nbatch, Nelec, Norn)
         """
         self.bas_coords = self.atom_coords.repeat_interleave(

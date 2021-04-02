@@ -128,9 +128,9 @@ class ExcitationMask:
                 npermut = self.ndown-ielec-1
                 self.sign_unique_single_down.append((-1)**(npermut))
 
-        self.sign_unique_single_up = torch.tensor(
+        self.sign_unique_single_up = torch.as_tensor(
             self.sign_unique_single_up).to(self.device)
-        self.sign_unique_single_down = torch.tensor(
+        self.sign_unique_single_down = torch.as_tensor(
             self.sign_unique_single_down).to(self.device)
 
     def get_index_unique_double(self):

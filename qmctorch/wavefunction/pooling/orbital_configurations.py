@@ -154,8 +154,8 @@ class OrbitalConfigurations:
                             cup, cdown, _xt_up, _xt_down)
 
         # double with 2elec excited on spin up
-        for occ1, occ2 in torch.combinations(torch.tensor(idx_occ_up), r=2):
-            for vrt1, vrt2 in torch.combinations(torch.tensor(idx_vrt_up), r=2):
+        for occ1, occ2 in torch.combinations(torch.as_tensor(idx_occ_up), r=2):
+            for vrt1, vrt2 in torch.combinations(torch.as_tensor(idx_vrt_up), r=2):
                 _xt_up = self._create_excitation(
                     _gs_up.copy(), occ1, vrt2)
                 _xt_up = self._create_excitation(_xt_up, occ2, vrt1)
@@ -163,8 +163,8 @@ class OrbitalConfigurations:
                     cup, cdown, _xt_up, _gs_down)
 
         # double with 2elec excited per spin
-        for occ1, occ2 in torch.combinations(torch.tensor(idx_occ_down), r=2):
-            for vrt1, vrt2 in torch.combinations(torch.tensor(idx_vrt_down), r=2):
+        for occ1, occ2 in torch.combinations(torch.as_tensor(idx_occ_down), r=2):
+            for vrt1, vrt2 in torch.combinations(torch.as_tensor(idx_vrt_down), r=2):
 
                 _xt_down = self._create_excitation(
                     _gs_down.copy(), occ1, vrt2)

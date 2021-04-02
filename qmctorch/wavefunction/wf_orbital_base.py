@@ -152,7 +152,7 @@ class OrbitalBase(WaveFunction):
                 '  GPU                 : {0}', torch.cuda.get_device_name(0))
 
     def get_mo_coeffs(self):
-        mo_coeff = torch.tensor(self.mol.basis.mos).type(
+        mo_coeff = torch.as_tensor(self.mol.basis.mos).type(
             torch.get_default_dtype())
         if not self.include_all_mo:
             mo_coeff = mo_coeff[:, :self.highest_occ_mo]
