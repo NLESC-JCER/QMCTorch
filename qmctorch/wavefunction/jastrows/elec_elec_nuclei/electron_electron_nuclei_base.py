@@ -19,7 +19,7 @@ class ElectronElectronNucleisBase(nn.Module):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ElectronElectronNucleisBase, self).__init__()
+        super().__init__()
 
         self.nup = nup
         self.ndown = ndown

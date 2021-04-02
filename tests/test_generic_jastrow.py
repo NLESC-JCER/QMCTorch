@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.elec_elec.generic_jastrow import GenericJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.electron_electron_generic import ElectronElectronGeneric
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -124,7 +124,7 @@ class TestGenericJastrow(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.jastrow = GenericJastrow(
+        self.jastrow = ElectronElectronGeneric(
             self.nup, self.ndown, FullyConnectedJastrow, False)
         self.nbatch = 5
 
