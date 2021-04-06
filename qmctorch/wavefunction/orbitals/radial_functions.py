@@ -39,22 +39,6 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
             return nabla_rn * \
                 er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    def _second_derivative_kernel_unfactorized():
-
-        sum_xyz2 = (xyz*xyz).sum(3)
-
-        R2 = R*R
-        R3 = R2*R
-
-        lap_rn = bas_n * (3 * R**(bas_n - 2) +
-                          sum_xyz2 * (bas_n - 2) * R**(bas_n - 4))
-
-        lap_er = bas_exp**2 * er * sum_xyz2 / R2 \
-            - 2 * bas_exp * er * sum_xyz2 / R3
-
-        return lap_rn * er + 2 * \
-            (nabla_rn * nabla_er).sum(3) + rn * lap_er
-
     def _second_derivative_kernel():
 
         R2 = R*R
@@ -118,16 +102,6 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
         else:
             return nabla_rn * \
                 er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
-
-    def _second_derivative_kernel_unfactorized():
-        lap_rn = bas_n * (3 * R**(bas_n - 2)
-                          + (xyz**2).sum(3) * (bas_n - 2) * R**(bas_n - 4))
-
-        lap_er = 4 * bas_exp**2 * (xyz**2).sum(3) * er \
-            - 6 * bas_exp * er
-
-        return lap_rn * er + 2 * \
-            (nabla_rn * nabla_er).sum(3) + rn * lap_er
 
     def _second_derivative_kernel():
 
@@ -271,7 +245,7 @@ def return_required_data(derivative, _kernel,
 
     Args:
         derivative (list): list of the derivatives required
-        _kernel (callable): kernel of the values 
+        _kernel (callable): kernel of the values
         _first_derivative_kernel (callable): kernel for 1st der
         _second_derivative_kernel (callable): kernel for 2nd der
 
