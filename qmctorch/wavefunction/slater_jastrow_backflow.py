@@ -5,26 +5,27 @@ import numpy as np
 import torch
 from scipy.optimize import curve_fit
 from torch import nn
+import operator
 
 from .. import log
 from ..utils import register_extra_attributes
-from .orbitals.atomic_orbitals import AtomicOrbitals
+from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
-from .jastrows.jastrow import set_jastrow
 from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.jastrow import set_jastrow
 
 
-class SlaterJastrow(SlaterJastrowBase):
+class SlaterJastrowBackFlow(SlaterJastrowBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
                  use_jastrow=True,
                  jastrow_type='pade_jastrow',
                  cuda=False,
-                 include_all_mo=True):
+                 include_all_mo=True,
+                 **kwargs):
         """Implementation of the QMC Network.
 
         Args:
@@ -41,7 +42,10 @@ class SlaterJastrow(SlaterJastrowBase):
         """
 
         super().__init__(mol, configs, kinetic,
-                         use_jastrow, jastrow_type, cuda, include_all_mo)
+                         use_jastrow, jastrow_type,
+                         cuda, include_all_mo)
+
+        self.ao = AtomicOrbitalsBackFlow(mol, cuda)
 
         self.jastrow = set_jastrow(
             jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
@@ -71,6 +75,7 @@ class SlaterJastrow(SlaterJastrowBase):
             >>> vals = wf(pos)
         """
 
+        # compute the jastrow from the pos
         if self.use_jastrow:
             J = self.jastrow(x)
 
@@ -89,6 +94,7 @@ class SlaterJastrow(SlaterJastrowBase):
         # pool the mos
         x = self.pool(x)
 
+        # compute the CI and return
         if self.use_jastrow:
             return J * self.fc(x)
 
@@ -98,21 +104,22 @@ class SlaterJastrow(SlaterJastrowBase):
     def ao2mo(self, ao):
         return self.mo(self.mo_scf(ao))
 
-    def pos2mo(self, x, derivative=0):
-        """Get the values of MOs
+    def pos2mo(self, x, derivative=0, jacobian=True):
+        """Compute the MO vals from the pos
 
-        Arguments:
-            x {torch.tensor} -- positions of the electrons [nbatch, nelec*ndim]
-
-        Keyword Arguments:
-            derivative {int} -- order of the derivative (default: {0})
+        Args:
+            x ([type]): [description]
+            derivative (int, optional): [description]. Defaults to 0.
+            jacobian (bool, optional): [description]. Defaults to True.
 
         Returns:
-            torch.tensor -- MO matrix [nbatch, nelec, nmo]
+            [type]: [description]
         """
-        return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
-    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
+        ao = self.ao(x, derivative=derivative, jacobian=jacobian)
+        return self.ao2mo(ao)
+
+    def kinetic_energy_jacobi(self, x,  **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -127,105 +134,67 @@ class SlaterJastrow(SlaterJastrowBase):
             torch.tensor: values of the kinetic energy at each sampling points
         """
 
+        # get ao values
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
+
+        # get the mo values
         mo = self.ao2mo(ao)
-        bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
 
-        if kinpool:
-            log.info('   Warning : Kinpool energy calculation untested')
-            kin, psi = self.kinpool(mo, bkin)
-            return self.fc(kin) / self.fc(psi)
+        # compute the value of the slater det
+        slater_dets = self.pool(mo)
 
-        else:
-            kin = self.pool.operator(mo, bkin)
-            psi = self.pool(mo)
-            out = self.fc(kin * psi) / self.fc(psi)
-            return out
+        # compute  \Delta A (A = matrix of the correlated MO)
+        bhess = self.get_hessian_operator(x, ao, dao, d2ao, mo)
 
-    def gradients_jacobi(self, x, pdf=False):
-        """Compute the gradients of the wave function (or density) using the Jacobi Formula
-        C. Filippi, Simple Formalism for Efficient Derivatives.
+        # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
+        hess = self.pool.operator(mo, bhess)
 
-        .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{grad})
+        # compute \grad A
+        bgrad = self.get_gradient_operator(x)
 
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            pdf (bool, optional) : if true compute the grads of the density
+        # compute (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
+        grad = self.pool.operator(mo, bgrad, op=None)
+        grad2 = self.pool.operator(mo, bgrad, op_squared=True)
 
-        Returns:
-            torch.tensor: values of the gradients wrt the walker pos at each sampling points
-        """
+        # assemble the total kinetic values
+        kin = - 0.5 * (hess
+                       + operator.add(*[(g**2).sum(0) for g in grad])
+                       + 2 * operator.mul(*grad).sum(0)
+                       - grad2.sum(0))
 
-        # compute the gradient operator matrix
-        ao = self.ao(x)
-        grad_ao = self.ao(x, derivative=1, jacobian=False)
-        mo = self.ao2mo(ao)
-        bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
+        # assemble
+        return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
-        # use the Jacobi formula to compute the value
-        # the grad of each determinants
-        grads = self.pool.operator(mo, bgrad)
-
-        # compute the determinants
-        dets = self.pool(mo)
-
-        # CI sum
-        psi = self.fc(dets)
-
-        # assemble the final values of
-        # nabla psi / psi
-        grads = self.fc(grads * dets)
-        grads = grads.transpose(0, 1).squeeze()
-
-        # multiply by psi to get the grads
-        # grads = grads * psi
-        if self.use_jastrow:
-            jast = self.jastrow(x)
-            grads = grads * jast
-
-        # if we need the grads of the pdf
-        if pdf:
-            grads = 2*grads*psi
-            if self.use_jastrow:
-                grads = grads*jast
-
-        return grads
-
-    def get_grad_operator(self, x, ao, grad_ao, mo):
-        """Compute the gradient operator
+    def gradients_jacobi(self, x, jacobian=True):
+        """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
             x ([type]): [description]
-            ao ([type]): [description]
-            dao ([type]): [description]
         """
 
-        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
-        bgrad = bgrad.permute(3, 0, 1, 2)
-        bgrad = bgrad.repeat(self.nelec, 1, 1, 1)
+        # get the CMO matrix
+        cmo = self.pos2cmo(x)
 
-        for ielec in range(self.nelec):
-            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
-            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
+        # get the grad of the wf
+        if jacobian:
+            # bgrad = self.pos2cmo(x, derivative=1)
+            bgrad = self.get_gradient_operator(x).sum(0)
+        else:
+            bgrad = self.get_gradient_operator(x)
 
-        if self.use_jastrow:
+        # compute the value of the grad using trace trick
+        grad = self.pool.operator(cmo, bgrad, op=operator.add)
 
-            jast = self.jastrow(x)
-            grad_jast = self.jastrow(x,
-                                     derivative=1,
-                                     jacobian=False)
-            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
+        # compute the total wf
+        psi = self.pool(cmo)
 
-            grad_jast = grad_jast.flatten(start_dim=1)
-            grad_jast = grad_jast.transpose(0, 1)
+        out = self.fc(grad * psi)
+        out = out.transpose(0, 1)
 
-            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
-            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
+        # assemble
+        return out
 
-        return bgrad
-
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
+    def get_hessian_operator(self, x, ao, dao, d2ao,  mo):
         """Compute the Bkin matrix
 
         Args:
@@ -236,7 +205,7 @@ class SlaterJastrow(SlaterJastrowBase):
             torch.tensor: matrix of the kinetic operator
         """
 
-        bkin = self.ao2mo(d2ao)
+        bhess = self.ao2mo(d2ao)
 
         if self.use_jastrow:
 
@@ -247,11 +216,46 @@ class SlaterJastrow(SlaterJastrowBase):
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
             d2jast = d2jast / jast
 
-            dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
+            dmo = self.ao2mo(dao)
 
             djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
             d2jast_mo = d2jast.unsqueeze(-1) * mo
 
-            bkin = bkin + 2 * djast_dmo + d2jast_mo
+            bhess = bhess + 2 * djast_dmo + d2jast_mo
 
-        return -0.5 * bkin
+        return bhess
+
+    def get_gradient_operator(self, x):
+        """Compute the gradient operator
+
+        Args:
+            x ([type]): [description]
+            ao ([type]): [description]
+            dao ([type]): [description]
+        """
+
+        mo = self.pos2mo(x)
+        dmo = self.pos2mo(x, derivative=1, jacobian=False)
+
+        jast = self.ordered_jastrow(x)
+        djast = self.ordered_jastrow(x, derivative=1, jacobian=False)
+
+        # reformat to have Nelec, Ndim, Nbatch, 1, Nmo
+        djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
+
+        # reformat to have Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(3, 0, 1, 2)
+
+        # stride the tensor
+        eye = torch.eye(self.nelec).to(self.device)
+        dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
+
+        # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(2, 0, 1, 3, 4)
+
+        # assemble the derivative
+        out = (mo * djast + dmo * jast)
+
+        # collapse the first two dimensions
+        out = out.reshape(-1, *(out.shape[2:]))
+        return out
