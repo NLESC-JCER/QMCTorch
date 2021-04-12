@@ -216,7 +216,7 @@ class AtomicOrbitals(nn.Module):
         """Compute the value of the derivative of the ao from the xyx and r tensor
 
         Args:
-            pos (torch.tensor): position of each elec size Nbatch, NelexNdim
+            pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
             jacobian (boolean): return the jacobian (True) or gradient (False)
 
         Returns:
