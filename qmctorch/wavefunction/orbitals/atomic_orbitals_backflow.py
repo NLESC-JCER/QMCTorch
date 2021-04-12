@@ -87,7 +87,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             ao = self._compute_ao_values(pos)
 
         elif derivative == [1]:
-            ao = self._compute_first_derivative_backflow_ao_values(
+            ao = self._compute_first_derivative_ao_values(
                 pos, jacobian)
 
         elif derivative == [2]:
@@ -256,7 +256,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # backflow transformation
         xyz = (xyz.permute(0, 2, 3, 1) @
-               self.backflow_weights).permute(0, 3, 1, 2)
+               self.backflow_weights.T).permute(0, 3, 1, 2)
 
         r = torch.sqrt((xyz*xyz).sum(3))
 

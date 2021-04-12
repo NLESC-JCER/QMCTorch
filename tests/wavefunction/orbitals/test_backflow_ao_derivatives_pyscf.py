@@ -46,10 +46,10 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
                             basis=basis,
                             unit='bohr')
 
-        self.m = gto.M(atom=at, basis=basis, unit='bohr')
-
         # define the wave function
         self.ao = AtomicOrbitalsBackFlow(self.mol)
+        self.ao.backflow_weights.data += 0.1 * torch.rand(
+            self.mol.nelec, self.mol.nelec)
 
         # define the grid points
         npts = 11
@@ -60,13 +60,12 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
     def test_ao_deriv(self):
 
         ao = self.ao(self.pos)
-        # dao = self.ao(self.pos, derivative=1)
+        dao = self.ao(self.pos, derivative=1)
 
-        # dao_grad = grad(
-        #     ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
+        dao_grad = grad(
+            ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
 
-        # gradcheck(self.ao, self.pos)
-        # assert(torch.allclose(dao.sum(), dao_grad.sum()))
+        assert(torch.allclose(dao.sum(), dao_grad.sum()))
 
     def test_ao_hess(self):
 
@@ -82,4 +81,4 @@ if __name__ == "__main__":
     t = TestBFAOderivativesPyscf()
     t.setUp()
     t.test_ao_deriv()
-    # t.test_ao_hess()
+    t.test_ao_hess()
