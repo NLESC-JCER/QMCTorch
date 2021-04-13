@@ -58,7 +58,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
                                         kinetic='auto',
                                         use_jastrow=True,
                                         include_all_mo=True,
-                                        configs='ground_state')
+                                        configs='single_double(2,2)')
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
