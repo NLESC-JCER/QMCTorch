@@ -48,7 +48,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='H 0 0 0; H 0 0 3.015',
+            atom='Li 0 0 0; H 0 0 3.015',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
@@ -112,13 +112,13 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
             grad_outputs=torch.ones_like(mo))[0]
         assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
 
-        dmo = dmo.permute(1, 2, 3, 0)
-        shape = (self.nbatch, self.wf.nelec,
-                 self.wf.nmo_opt, self.wf.nelec, 3)
-        dmo = dmo.reshape(*shape)
-        dmo = dmo.sum(2).sum(1)
+        shape = (self.wf.nelec, 3, self.nbatch,
+                 self.wf.nelec, self.wf.nmo_opt)
 
-        dmo_grad = dmo_grad.reshape(self.nbatch, self.wf.nelec, 3)
+        dmo = dmo.reshape(*shape)
+        dmo = dmo.sum([0, -1])
+        dmo = dmo.permute(1, 2, 0)
+        dmo = dmo.reshape(self.nbatch, -1)
 
         assert(torch.allclose(dmo, dmo_grad))
 
@@ -175,7 +175,7 @@ if __name__ == "__main__":
     t = TestSlaterJastrowBackFlow()
     t.setUp()
     # t.test_forward()
-    # t.test_grad_mo()
+    t.test_grad_mo()
     t.test_jacobian_mo()
     t.test_hess_mo()
     t.test_kinetic_energy()

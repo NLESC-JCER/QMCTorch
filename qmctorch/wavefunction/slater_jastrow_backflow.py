@@ -143,28 +143,40 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         dmo = self.ao2mo(dao)
         d2mo = self.ao2mo(d2ao)
 
+        print('dmo', dmo.shape)
+        print('d2mo', d2mo.shape)
+        d2mo = d2mo.permute(2, 1, 0, 3)
+
+        dmo = dmo.reshape(4, 3, 5, 4, 6)
+        dmo = dmo.permute(3, 1, 2, 0, 4)
+        dmo = dmo.reshape(12, 5, 4, 6)
+
         # compute the value of the slater det
         slater_dets = self.pool(mo)
         sum_slater_dets = self.fc(slater_dets)
 
         # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
         hess = self.pool.operator(mo, d2mo)
+        print('hess', hess.shape)
 
         # compute (tr(A_u^-1\nabla A_u) and tr(A_d^-1\nabla A_d))
         grad = self.pool.operator(mo, dmo, op=None)
+        print('grad', grad[0].shape)
 
         # compute (tr((A_u^-1\nabla A_u)^2) + tr((A_d^-1\nabla A_d))^2)
         grad2 = self.pool.operator(mo, dmo, op_squared=True)
+        print('grad2', grad2.shape)
 
         # assemble the total second derivative term
-        hess = (hess
+        hess = (hess.sum(0)
                 + operator.add(*[(g**2).sum(0) for g in grad])
                 - grad2.sum(0)
                 + 2 * operator.mul(*grad).sum(0))
 
-        hess = self.fc(hess.sum(0) * slater_dets) / sum_slater_dets
+        hess = self.fc(hess * slater_dets) / sum_slater_dets
 
         if self.use_jastrow is False:
+            print('exit')
             return -0.5 * hess
 
         # compute the Jastrow terms
