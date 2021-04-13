@@ -147,8 +147,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
-        print(eauto)
-        print(ejac)
+
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
@@ -168,54 +167,11 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestSlaterJastrowBackFlow()
-    t.setUp()
-    t.test_forward()
-    t.test_grad_mo()
-    t.test_jacobian_mo()
-    t.test_hess_mo()
-    t.test_kinetic_energy()
-
-    # wf = t.wf
-    # x = t.pos
-    # ao, dao, d2ao = wf.ao(x, derivative=[0, 1, 2],
-    #                       jacobian=False)
-
-    # # get the mo values
-    # mo = wf.ao2mo(ao)
-    # dmo = wf.ao2mo(dao)
-    # d2mo = wf.ao2mo(d2ao)
-
-    # # compute the value of the slater det
-    # slater_dets = wf.pool(mo)
-    # sum_slater_dets = wf.fc(slater_dets)
-
-    # # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
-    # hess = wf.pool.operator(mo, d2mo)
-
-    # # compute (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
-    # grad = wf.pool.operator(mo, dmo, op=None)
-    # grad2 = wf.pool.operator(mo, dmo, op_squared=True)
-
-    # # assemble the total second derivative term
-    # hess = (hess
-    #         + operator.add(*[(g**2).sum(0) for g in grad])
-    #         + 2 * operator.mul(*grad).sum(0)
-    #         - grad2.sum(0))
-
-    # hess = wf.fc(hess * slater_dets) / sum_slater_dets
-
-    # # compute the Jastrow terms
-    # jast, djast, d2jast = wf.jastrow(x, derivative=[0, 1, 2], jacobian=False)
-
-    # djast = djast / jast.unsqueeze(-1)
-    # djast = djast.permute(0, 2, 1).reshape(5, 12)
-
-    # d2jast = d2jast / jast
-
-    # grad_val = wf.fc(operator.add(*grad) *
-    #                  slater_dets) / sum_slater_dets
-    # grad_val = grad_val.squeeze().permute(1, 0)
-
-    # d2jast.sum(-1) + 2*(grad_val * djast).sum(-1) + hess.squeeze().sum(0)
+    unittest.main()
+    # t = TestSlaterJastrowBackFlow()
+    # t.setUp()
+    # t.test_forward()
+    # t.test_grad_mo()
+    # t.test_jacobian_mo()
+    # t.test_hess_mo()
+    # t.test_kinetic_energy()
