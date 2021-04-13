@@ -133,6 +133,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           size (Nelec, Nbatch, Nelec, Norb)
         """
         # get the grad vals : size Nbatch x Nelec x Norb
+        # the derivative are : d \phi_i(q_j) / d \tilde{x}_j
+        # i.e. wrt to the bf coordinates
         if jac_ao is None:
             jac_ao = self._compute_jacobian_ao_values(pos)
 
@@ -140,7 +142,6 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         jac_ao = jac_ao[..., None] @ self.backflow_weights[:, None, :]
 
         # permute to Nelec, Nbatch, Nelec, Norb
-        # return jac_ao.permute(3, 0, 1, 2)
         return jac_ao.permute(1, 0, 3, 2)
 
     def _compute_gradient_backflow_ao_values(self, pos, grad_ao=None):
@@ -154,20 +155,21 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           size ([Nelec*Ndim], Nbatch, Nelec, Norb)
         """
 
-        # get the grad vals : size Nbatch x Nelec x Norb x Ndim
+        # get the grad vals : size Nbatch x Nelec x Norb x Ndim\
+        # the derivative are : d \phi_i(q_j) / d \tilde{x}_j
+        # i.e. wrt to the bf coordinates
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
 
         # permute the grad to Ndim x Nbatch x Nelec x Norb
         grad_ao = grad_ao.permute(3, 0, 1, 2)
 
-        # compute the derivative of the bf distances
-        # Nelec x Ndim x Nbatch x Nelec x Norb
-        grad_q = self._backflow_derivative(pos, repeat='naos')
+        # compute backflow : Ndim x Nbatch x Nelec X Norb x Nelec
+        grad_ao = grad_ao[...,
+                          None] @ self.backflow_weights[:, None, :]
 
-        # chaion rule the grad
-        # Nelec x Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.unsuqeeze(0) * grad_q
+        # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
+        grad_ao = grad_ao.permute(4, 0, 1, 2, 3)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))
@@ -195,7 +197,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         lap_ao = lap_ao[..., None] @ bfw_squared[:, None, :]
 
         # permute to Nelec, Nbatch, Nelec, Norb
-        return lap_ao.permute(3, 0, 1, 2)
+        return lap_ao.permute(1, 0, 3, 2)
 
     def _compute_all_backflow_ao_values(self, pos):
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
@@ -236,7 +238,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return (ao, grad_ao, lap_ao)
 
-    def _process_position(self, pos, repeat='nshells'):
+    def _process_position(self, pos):
         """Computes the positions/distance bewteen elec/orb
 
         Args:
@@ -253,15 +255,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # repeat/interleave to get vector and distance between
         # electrons and orbitals
-        if repeat == 'nshells':
-            repeat_size = self.nshells
-        elif repeat == 'naos':
-            repeat_size = self.nao_per_atom
-        else:
-            raise ValueError('repreat must be nshells or naos')
-
-        return (xyz.repeat_interleave(repeat_size, dim=2),
-                r.repeat_interleave(repeat_size, dim=2))
+        return (xyz.repeat_interleave(self.nshells, dim=2),
+                r.repeat_interleave(self.nshells, dim=2))
 
     def _elec_atom_dist(self, pos):
         """Computes the positions/distance bewteen elec/atoms
@@ -309,7 +304,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # return with correct size : Nbatch x [Nelec*Ndim]
         return bf_pos.permute(0, 2, 1).reshape(-1, self.nelec*self.ndim)
 
-    def _backflow_derivative(self, pos, repeat='nshells'):
+    def _backflow_derivative(self, pos):
         r"""Computes the derivative of the back flow elec-orb distances
            wrt the initial positions of the electrons
 
@@ -332,7 +327,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           Nelec x  Nbatch x Nelec x Norb x Ndim
         """
 
-        xyz, r = self._process_position(pos, repeat=repeat)
+        xyz, r = self._process_position(pos)
         der = (xyz/r.unsqueeze(-1)).permute(0, 2, 3, 1)
         der = der[..., None] * self.backflow_weights
         return der.permute(3, 0, 4, 1, 2)
