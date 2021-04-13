@@ -155,7 +155,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           size ([Nelec*Ndim], Nbatch, Nelec, Norb)
         """
 
-        # get the grad vals : size Nbatch x Nelec x Norb x Ndim\
+        # get the grad vals : size Nbatch x Nelec x Norb x Ndim
         # the derivative are : d \phi_i(q_j) / d \tilde{x}_j
         # i.e. wrt to the bf coordinates
         if grad_ao is None:
@@ -169,7 +169,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           None] @ self.backflow_weights[:, None, :]
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.permute(4, 0, 1, 2, 3)
+        grad_ao = grad_ao.permute(2, 0, 1, 4, 3)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))

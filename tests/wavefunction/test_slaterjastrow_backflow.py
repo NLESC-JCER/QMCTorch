@@ -48,7 +48,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='Li 0 0 0; H 0 0 3.015',
+            atom='H 0 0 0; H 0 0 3.015',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
@@ -128,13 +128,12 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         d2val_grad = hess(val, self.pos)
         d2val = self.wf.pos2mo(self.pos, derivative=2)
-
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
-        d2val = d2val.permute(1, 2, 0, 3).sum(1)
-
-        assert(torch.allclose(d2val.sum(-1),
-                              d2val_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1)))
+        d2val = d2val.sum(0).sum(-1)
+        d2val_grad = d2val_grad.view(
+            self.nbatch, self.wf.nelec, 3).sum(-1)
+        assert(torch.allclose(d2val, d2val_grad))
 
     def test_local_energy(self):
 
@@ -176,9 +175,9 @@ if __name__ == "__main__":
     t = TestSlaterJastrowBackFlow()
     t.setUp()
     # t.test_forward()
-    t.test_grad_mo()
+    # t.test_grad_mo()
     t.test_jacobian_mo()
-    # t.test_hess_mo()
+    t.test_hess_mo()
     t.test_kinetic_energy()
 
     # wf = t.wf

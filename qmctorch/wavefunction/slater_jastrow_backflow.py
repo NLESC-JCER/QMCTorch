@@ -150,15 +150,17 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
         hess = self.pool.operator(mo, d2mo)
 
-        # compute (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
+        # compute (tr(A_u^-1\nabla A_u) and tr(A_d^-1\nabla A_d))
         grad = self.pool.operator(mo, dmo, op=None)
+
+        # compute (tr((A_u^-1\nabla A_u)^2) + tr((A_d^-1\nabla A_d))^2)
         grad2 = self.pool.operator(mo, dmo, op_squared=True)
 
         # assemble the total second derivative term
         hess = (hess
                 + operator.add(*[(g**2).sum(0) for g in grad])
-                + 2 * operator.mul(*grad).sum(0)
-                - grad2.sum(0))
+                - grad2.sum(0)
+                + 2 * operator.mul(*grad).sum(0))
 
         hess = self.fc(hess.sum(0) * slater_dets) / sum_slater_dets
 

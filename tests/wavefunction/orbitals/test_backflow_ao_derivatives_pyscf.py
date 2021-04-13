@@ -91,8 +91,12 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
             ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
         assert(torch.allclose(dao.sum(), dao_grad.sum()))
 
-        dao = dao.sum(-1).sum(-1)
-        dao_grad = dao_grad.T
+        dao = dao.reshape(self.ao.nelec, 3, self.npts,
+                          self.ao.nelec, self.ao.norb)
+        dao = dao.sum([0, -1])
+        dao = dao.permute(1, 2, 0)
+        dao = dao.reshape(self.npts, -1)
+
         assert(torch.allclose(dao, dao_grad))
 
     def test_ao_hess(self):
@@ -116,3 +120,9 @@ if __name__ == "__main__":
     t.test_ao_jacobian()
     t.test_ao_gradian()
     t.test_ao_hess()
+    ao = t.ao
+    pos = t.pos
+
+    # grad = ao(pos, 1, False)
+    # jac = ao(pos, 1)
+    # assert(torch.allclose(grad.sum(1), jac))
