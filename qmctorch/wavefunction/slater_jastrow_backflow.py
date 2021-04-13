@@ -124,7 +124,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
+             \\frac{K \Psi(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -135,35 +135,54 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         """
 
         # get ao values
-        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
+        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2],
+                                jacobian=False)
 
         # get the mo values
         mo = self.ao2mo(ao)
+        dmo = self.ao2mo(dao)
+        d2mo = self.ao2mo(d2ao)
 
         # compute the value of the slater det
         slater_dets = self.pool(mo)
-
-        # compute  \Delta A (A = matrix of the correlated MO)
-        bhess = self.get_hessian_operator(x, ao, dao, d2ao, mo)
+        sum_slater_dets = self.fc(slater_dets)
 
         # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
-        hess = self.pool.operator(mo, bhess)
-
-        # compute \grad A
-        bgrad = self.get_gradient_operator(x)
+        hess = self.pool.operator(mo, d2mo)
 
         # compute (tr(A_u^-1\nabla A_u) * tr(A_d^-1\nabla A_d))
-        grad = self.pool.operator(mo, bgrad, op=None)
-        grad2 = self.pool.operator(mo, bgrad, op_squared=True)
+        grad = self.pool.operator(mo, dmo, op=None)
+        grad2 = self.pool.operator(mo, dmo, op_squared=True)
 
-        # assemble the total kinetic values
-        kin = - 0.5 * (hess
-                       + operator.add(*[(g**2).sum(0) for g in grad])
-                       + 2 * operator.mul(*grad).sum(0)
-                       - grad2.sum(0))
+        # assemble the total second derivative term
+        hess = (hess
+                + operator.add(*[(g**2).sum(0) for g in grad])
+                + 2 * operator.mul(*grad).sum(0)
+                - grad2.sum(0))
 
-        # assemble
-        return self.fc(kin * slater_dets) / self.fc(slater_dets)
+        hess = self.fc(hess.sum(0) * slater_dets) / sum_slater_dets
+
+        if self.use_jastrow is False:
+            return -0.5 * hess
+
+        # compute the Jastrow terms
+        jast, djast, d2jast = self.jastrow(x,
+                                           derivative=[0, 1, 2],
+                                           jacobian=False)
+
+        djast = djast / jast.unsqueeze(-1)
+        djast = djast.permute(0, 2, 1).flatten(start_dim=1)
+
+        d2jast = d2jast / jast
+
+        grad_val = self.fc(operator.add(*grad) *
+                           slater_dets) / sum_slater_dets
+        grad_val = grad_val.squeeze().permute(1, 0)
+
+        out = d2jast.sum(-1) + 2*(grad_val * djast).sum(-1) + \
+            hess.squeeze().sum(0)
+
+        return -0.5 * out
 
     def gradients_jacobi(self, x, jacobian=True):
         """Computes the gradients of the wf using Jacobi's Formula

@@ -161,12 +161,13 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # permute the grad to Ndim x Nbatch x Nelec x Norb
         grad_ao = grad_ao.permute(3, 0, 1, 2)
 
-        # compute outer product : Ndim, Nbatch, Nelec, Norb, Nelec
-        grad_ao = grad_ao[...,
-                          None] @ self.backflow_weights[:, None, :]
+        # compute the derivative of the bf distances
+        # Nelec x Ndim x Nbatch x Nelec x Norb
+        grad_q = self._backflow_derivative(pos, repeat='naos')
 
-        # permute to get Nelec, Ndim, Nbatch, Nelec, Norb
-        grad_ao = grad_ao.permute(4, 0, 1, 2, 3)
+        # chaion rule the grad
+        # Nelec x Ndim x Nbatch x Nelec x Norb
+        grad_ao = grad_ao.unsuqeeze(0) * grad_q
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))
@@ -235,7 +236,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return (ao, grad_ao, lap_ao)
 
-    def _process_position(self, pos):
+    def _process_position(self, pos, repeat='nshells'):
         """Computes the positions/distance bewteen elec/orb
 
         Args:
@@ -247,18 +248,91 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                                         distance between elec and bas
                                         (Nbatch, Nelec, Norb)
         """
-        # we should remove that line but that means
-        # geometry optimization should update that
-        self.bas_coords = self.atom_coords.repeat_interleave(
-            self.nshells, dim=0)
+        # get the elec-atom vectrors/distances
+        xyz, r = self._elec_atom_dist(pos)
 
-        xyz = (pos.view(-1, self.nelec, 1, self.ndim) -
-               self.bas_coords[None, ...])
+        # repeat/interleave to get vector and distance between
+        # electrons and orbitals
+        if repeat == 'nshells':
+            repeat_size = self.nshells
+        elif repeat == 'naos':
+            repeat_size = self.nao_per_atom
+        else:
+            raise ValueError('repreat must be nshells or naos')
 
-        # backflow transformation
-        xyz = (xyz.permute(0, 2, 3, 1) @
-               self.backflow_weights.T).permute(0, 3, 1, 2)
+        return (xyz.repeat_interleave(repeat_size, dim=2),
+                r.repeat_interleave(repeat_size, dim=2))
 
+    def _elec_atom_dist(self, pos):
+        """Computes the positions/distance bewteen elec/atoms
+
+        Args:
+            pos (torch.tensor): positions of the walkers Nbat, NelecxNdim
+
+        Returns:
+            torch.tensor, torch.tensor: positions of the elec wrt the bas
+                                        (Nbatch, Nelec, Natom, Ndim)
+                                        distance between elec and bas
+                                        (Nbatch, Nelec, Natom)
+        """
+
+        # compute the back flow positions
+        bf_pos = self._backflow(pos)
+
+        # compute the vectors between electrons and atoms
+        xyz = (bf_pos.view(-1, self.nelec, 1, self.ndim) -
+               self.atom_coords[None, ...])
+
+        # distance between electrons and atoms
         r = torch.sqrt((xyz*xyz).sum(3))
 
         return xyz, r
+
+    def _backflow(self, pos):
+        """transform the position of the electrons
+
+        Args:
+            pos (torch.tensor): original positions Nbatch x [Nelec*Ndim]
+
+        Returns:
+            torch.tensor: transformed positions Nbatch x [Nelec*Ndim]
+        """
+        # reshape to have Nbatch x Nelec x Ndim
+        bf_pos = pos.reshape(-1, self.nelec, self.ndim)
+
+        # permute to Nbatch x Ndim x Nelec
+        bf_pos = bf_pos.permute(0, 2, 1)
+
+        # transform
+        bf_pos = bf_pos @ self.backflow_weights.T
+
+        # return with correct size : Nbatch x [Nelec*Ndim]
+        return bf_pos.permute(0, 2, 1).reshape(-1, self.nelec*self.ndim)
+
+    def _backflow_derivative(self, pos, repeat='nshells'):
+        r"""Computes the derivative of the back flow elec-orb distances
+           wrt the initial positions of the electrons
+
+        .. math::
+            \frac{d q_i^a}{d x_k} = \frac{d q_i^a}{d \tilde{x}_i} \frac{d \tilde{x}_i}{d x_k}
+            \\text{$q_i^a$ is the distance between bf elec i and orbital a}
+            q_i^a \sqrt{ (\tilde{x}_i-x_a)^2 + (\tilde{y}_i-y_a)^2 + (\tilde{z}_i-z_a)^2}
+            \\text{$\tilde{x}_i$ is the coordinate of bf elec i}
+            \\text{$x_k$ is the original coordinate of elec k}
+
+            \frac{d q_i^a}{d x_k} = \frac{\tilde{x}_i}{q_i^a} W[i,k]
+
+        Args:
+            pos (torch.tensor): orginal positions of the electrons Nbatch x [Nelec*Ndim]
+
+        Returns:
+            torch.tensor: d q_{ij}/d x_k  with :
+                          q_{ij} the distance between bf elec i and orb j
+                          x_k original coordinate of the kth elec
+                          Nelec x  Nbatch x Nelec x Norb x Ndim
+        """
+
+        xyz, r = self._process_position(pos, repeat=repeat)
+        der = (xyz/r.unsqueeze(-1)).permute(0, 2, 3, 1)
+        der = der[..., None] * self.backflow_weights
+        return der.permute(3, 0, 4, 1, 2)
