@@ -96,9 +96,10 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
             mo, self.pos, grad_outputs=torch.ones_like(mo))[0]
         assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
 
-        psum_mo = dmo.sum(-1).sum(0)
+        psum_mo = dmo.sum(-1).sum(-1)
         psum_mo_grad = dmo_grad.view(
             self.nbatch, self.wf.nelec, 3).sum(-1)
+        psum_mo_grad = psum_mo_grad.T
         assert(torch.allclose(psum_mo, psum_mo_grad))
 
     def test_grad_mo(self):
@@ -112,13 +113,8 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
             grad_outputs=torch.ones_like(mo))[0]
         assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
 
-        shape = (self.wf.nelec, 3, self.nbatch,
-                 self.wf.nelec, self.wf.nmo_opt)
-
-        dmo = dmo.reshape(*shape)
-        dmo = dmo.sum([0, -1])
-        dmo = dmo.permute(1, 2, 0)
-        dmo = dmo.reshape(self.nbatch, -1)
+        dmo = dmo.sum(-1).sum(-1)
+        dmo_grad = dmo_grad.T
 
         assert(torch.allclose(dmo, dmo_grad))
 
@@ -130,9 +126,10 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         d2val = self.wf.pos2mo(self.pos, derivative=2)
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
-        d2val = d2val.sum(0).sum(-1)
+        d2val = d2val.sum(-1).sum(-1)
         d2val_grad = d2val_grad.view(
             self.nbatch, self.wf.nelec, 3).sum(-1)
+        d2val_grad = d2val_grad.T
         assert(torch.allclose(d2val, d2val_grad))
 
     def test_local_energy(self):

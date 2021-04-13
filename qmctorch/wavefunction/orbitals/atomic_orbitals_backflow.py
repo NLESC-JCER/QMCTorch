@@ -142,7 +142,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         jac_ao = jac_ao[..., None] @ self.backflow_weights[:, None, :]
 
         # permute to Nelec, Nbatch, Nelec, Norb
-        return jac_ao.permute(1, 0, 3, 2)
+        return jac_ao.permute(3, 0, 1, 2)
 
     def _compute_gradient_backflow_ao_values(self, pos, grad_ao=None):
         """Compute the jacobian of the backflow ao fromn xyz tensor
@@ -169,7 +169,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           None] @ self.backflow_weights[:, None, :]
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.permute(2, 0, 1, 4, 3)
+        grad_ao = grad_ao.permute(4, 0, 1, 2, 3)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))
@@ -197,7 +197,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         lap_ao = lap_ao[..., None] @ bfw_squared[:, None, :]
 
         # permute to Nelec, Nbatch, Nelec, Norb
-        return lap_ao.permute(1, 0, 3, 2)
+        return lap_ao.permute(3, 0, 1, 2)
 
     def _compute_all_backflow_ao_values(self, pos):
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
