@@ -56,7 +56,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         self.wf = SlaterJastrowBackFlow(mol,
                                         kinetic='auto',
-                                        use_jastrow=False,
+                                        use_jastrow=True,
                                         include_all_mo=True,
                                         configs='ground_state')
 
@@ -147,31 +147,31 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
-        print(eauto.sum())
-        print(ejac.sum())
+        print(eauto)
+        print(ejac)
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
-    def test_gradients_wf(self):
+    # def test_gradients_wf(self):
 
-        grads = self.wf.gradients_jacobi(self.pos)
-        grad_auto = self.wf.gradients_autograd(self.pos)
+    #     grads = self.wf.gradients_jacobi(self.pos)
+    #     grad_auto = self.wf.gradients_autograd(self.pos)
 
-        assert torch.allclose(grads, grad_auto)
+    #     assert torch.allclose(grads, grad_auto)
 
-    def test_gradients_pdf(self):
+    # def test_gradients_pdf(self):
 
-        grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
-        grads_auto = self.wf.gradients_autograd(self.pos, pdf=True)
+    #     grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
+    #     grads_auto = self.wf.gradients_autograd(self.pos, pdf=True)
 
-        assert torch.allclose(grads_pdf, grads_auto)
+    #     assert torch.allclose(grads_pdf, grads_auto)
 
 
 if __name__ == "__main__":
     # unittest.main()
     t = TestSlaterJastrowBackFlow()
     t.setUp()
-    # t.test_forward()
+    t.test_forward()
     t.test_grad_mo()
     t.test_jacobian_mo()
     t.test_hess_mo()

@@ -135,8 +135,8 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         """
 
         # get ao values
-        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2],
-                                jacobian=False)
+        ao, dao, d2ao = self.ao(
+            x, derivative=[0, 1, 2], jacobian=False)
 
         # get the mo values
         mo = self.ao2mo(ao)
@@ -172,19 +172,32 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
                                            derivative=[0, 1, 2],
                                            jacobian=False)
 
-        djast = djast / jast.unsqueeze(-1)
-        djast = djast.permute(0, 2, 1).flatten(start_dim=1)
-
+        # prepare the second derivative term d2Jast/Jast
+        # Nbatch x Nelec
         d2jast = d2jast / jast
 
+        # prepare the first derivative term
+        djast = djast / jast.unsqueeze(-1)
+
+        # -> Nelec x Ndim x Nbatch
+        djast = djast.permute(2, 1, 0)
+
+        # -> [Nelec*Ndim] x Nbatch
+        djast = djast.reshape(-1, djast.shape[-1])
+
+        # prepare the grad of the dets
+        # [Nelec*Ndim] x Nbatch x 1
         grad_val = self.fc(operator.add(*grad) *
                            slater_dets) / sum_slater_dets
-        grad_val = grad_val.squeeze().permute(1, 0)
 
-        out = d2jast.sum(-1) + 2*(grad_val * djast).sum(-1) + \
-            hess.squeeze().sum(0)
+        # [Nelec*Ndim] x Nbatch
+        grad_val = grad_val.squeeze()
 
-        return -0.5 * out
+        # assemble the derivaite terms
+        out = d2jast.sum(-1) + 2*(grad_val * djast).sum(0) + \
+            hess.squeeze(-1)
+
+        return -0.5 * out.unsqueeze(-1)
 
     def gradients_jacobi(self, x, jacobian=True):
         """Computes the gradients of the wf using Jacobi's Formula
