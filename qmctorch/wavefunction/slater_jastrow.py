@@ -55,7 +55,7 @@ class SlaterJastrow(SlaterJastrowBase):
         """computes the value of the wave function for the sampling points
 
         .. math::
-            \\Psi(R) = \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
+            \\Psi(R) =  \\sum_{n} c_n J(R) D^{u}_n(r^u) \\times D^{d}_n(r^d)
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -117,8 +117,17 @@ class SlaterJastrow(SlaterJastrowBase):
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
+             \\frac{\Delta \\Psi(R)}{ \\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\\Delta D_n^u}{D_n^u} + \\frac{\\Delta D_n^d}{D_n^d}) D_n^u D_n^d
 
+        We compute the laplacian of the determinants through the Jacobi formula
+
+        .. math::
+            \\frac{\\Delta det(A)}{det(A)} = Tr(A^{-1} \\Delta A)
+
+        Here A = J(R) phi and therefore :
+
+        .. math::
+            \\Delta A = (\\Delta J) D + 2 \\nabla J \\nabla D + (\\Delta D) J
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
             kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False

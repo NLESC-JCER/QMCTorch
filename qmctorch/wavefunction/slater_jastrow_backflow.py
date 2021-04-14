@@ -59,7 +59,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         """computes the value of the wave function for the sampling points
 
         .. math::
-            \\Psi(R) = \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
+            J(R) \\Psi(R) =  J(R) \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -102,6 +102,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             return self.fc(x)
 
     def ao2mo(self, ao):
+        """transforms AO values in to MO values."""
         return self.mo(self.mo_scf(ao))
 
     def pos2mo(self, x, derivative=0, jacobian=True):
@@ -121,14 +122,32 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
     def kinetic_energy_jacobi(self, x,  **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
-        C. Filippi, Simple Formalism for Efficient Derivatives .
+
 
         .. math::
-             \\frac{K \Psi(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
+             \\frac{\Delta (J(R) \Psi(R))}{ J(R) \Psi(R)} = \\frac{\\Delta J(R)}{J(R}
+                                                          + 2 \\frac{\\nabla J(R)}{J(R)} \\frac{\\nabla \\Psi(R)}{\\Psi(R)}
+                                                          + \\frac{\\Delta \\Psi(R)}{\\Psi(R)}
+
+        The lapacian of the determinental part is computed via
+
+        .. math::
+            \\Delta_i \\Psi(R) \\sum_n c_n ( \\frac{\\Delta_i D_n^{\\uparraow}}{D_n^{\\uparraow}} +
+                                           \\frac{\\Delta_i D_n^{\\downarrow}}{D_n^{\\downarrow}} +
+                                           2 \\frac{\\nabla_i D_n^{\\uparraow}}{D_n^{\\uparraow}} \\frac{\\nabla_i D_n^{\\downarrow}}{D_n^{\\downarrow}} )
+                                           D_n^{\\uparraow} D_n^{\\downarrow}
+
+        Since the backflow orbitals are multi-electronic the laplacian of the determinants
+        are obtained
+
+        .. math::
+            \\frac{\\Delta det(A)}{det(A)} = Tr(A^{-1} \\Delta A) +
+                                             Tr(A^{-1} \\nabla A) Tr(A^{-1} \\nabla A) +
+                                             Tr( (A^{-1} \\nabla A) (A^{-1} \\nabla A ))
+
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
