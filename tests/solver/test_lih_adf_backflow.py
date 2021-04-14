@@ -80,17 +80,6 @@ class TestLiHBackFlow(unittest.TestCase):
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
 
-        # # values on different arch
-        # expected_energy = [-1.1464850902557373,
-        #                    -1.14937478612449]
-
-        # # values on different arch
-        # expected_variance = [0.9279592633247375,
-        #                      0.7445300449383236]
-
-        # assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
-        # assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
-
     def test2_wf_opt_grad_auto(self):
         self.solver.sampler = self.sampler
 
@@ -108,10 +97,3 @@ class TestLiHBackFlow(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # t = TestLiHBackFlow()()
-    # t.setUp()
-    # t.test_0_wavefunction()
-    # t.setUp()
-    # t.test1_single_point()
-    # t.test2_wf_opt_grad_auto()
-    # t.test3_wf_opt_grad_manual()
