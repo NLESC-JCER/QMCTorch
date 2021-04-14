@@ -7,13 +7,6 @@ Slater Pooling
     :members:
     :inherited-members:
 
-Kinetic Pooling
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-.. automodule:: qmctorch.wavefunction.kinetic_pooling
-.. autoclass:: KineticPooling
-    :members:
-    :inherited-members:
 
 SlaterJastrow Projectors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

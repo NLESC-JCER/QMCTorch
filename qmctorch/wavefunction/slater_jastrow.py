@@ -9,7 +9,6 @@ from torch import nn
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals import AtomicOrbitals
-from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .jastrows.jastrow import set_jastrow

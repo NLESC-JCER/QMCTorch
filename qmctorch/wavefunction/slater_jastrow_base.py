@@ -10,7 +10,6 @@ import torch
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals import AtomicOrbitals
-from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .wf_base import WaveFunction
@@ -91,11 +90,6 @@ class SlaterJastrowBase(WaveFunction):
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs_method,
                                   self.configs, mol, cuda)
-
-        # pooling operation to directly compute
-        # the kinetic energies via Jacobi formula
-        self.kinpool = KineticPooling(
-            self.configs, mol, cuda)
 
         # define the linear layer
         self.fc = nn.Linear(self.nci, 1, bias=False)
