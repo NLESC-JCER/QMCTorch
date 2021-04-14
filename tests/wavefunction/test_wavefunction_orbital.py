@@ -126,7 +126,7 @@ class TestOrbitalWF(unittest.TestCase):
     def test_kinetic_energy(self):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos, kinpool=False)
+        ejac = self.wf.kinetic_energy_jacobi(self.pos)
 
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)

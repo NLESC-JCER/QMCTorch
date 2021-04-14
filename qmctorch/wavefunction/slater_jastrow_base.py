@@ -116,7 +116,7 @@ class SlaterJastrowBase(WaveFunction):
         register_extra_attributes(self,
                                   ['ao', 'mo_scf',
                                    'mo', 'jastrow',
-                                   'pool', 'kinpool', 'fc'])
+                                   'pool', 'fc'])
 
     def log_data(self):
         """Print information abut the wave function."""
@@ -296,7 +296,7 @@ class SlaterJastrowBase(WaveFunction):
         """
         raise NotImplementedError('Implement a get_mo_vals method')
 
-    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
+    def kinetic_energy_jacobi(self, x,  **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -305,7 +305,6 @@ class SlaterJastrowBase(WaveFunction):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points

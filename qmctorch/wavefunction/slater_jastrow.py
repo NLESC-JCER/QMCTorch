@@ -111,7 +111,7 @@ class SlaterJastrow(SlaterJastrowBase):
         """
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
-    def kinetic_energy_jacobi(self, x, kinpool=False, **kwargs):
+    def kinetic_energy_jacobi(self, x, **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -120,7 +120,6 @@ class SlaterJastrow(SlaterJastrowBase):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
@@ -130,16 +129,10 @@ class SlaterJastrow(SlaterJastrowBase):
         mo = self.ao2mo(ao)
         bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
 
-        if kinpool:
-            log.info('   Warning : Kinpool energy calculation untested')
-            kin, psi = self.kinpool(mo, bkin)
-            return self.fc(kin) / self.fc(psi)
-
-        else:
-            kin = self.pool.operator(mo, bkin)
-            psi = self.pool(mo)
-            out = self.fc(kin * psi) / self.fc(psi)
-            return out
+        kin = self.pool.operator(mo, bkin)
+        psi = self.pool(mo)
+        out = self.fc(kin * psi) / self.fc(psi)
+        return out
 
     def gradients_jacobi(self, x, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula

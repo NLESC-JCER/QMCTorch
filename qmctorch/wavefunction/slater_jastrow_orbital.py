@@ -210,7 +210,6 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
