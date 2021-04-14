@@ -160,6 +160,7 @@ class SlaterJastrow(SlaterJastrowBase):
         # compute the gradient operator matrix
         ao = self.ao(x)
         grad_ao = self.ao(x, derivative=1, jacobian=False)
+
         mo = self.ao2mo(ao)
         bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
 
