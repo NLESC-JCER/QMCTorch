@@ -399,7 +399,7 @@ class AtomicOrbitals(nn.Module):
                                         distance between elec and bas
                                         (Nbatch, Nelec, Norb)
         """
-        # get the elec-atom vectrors/distances
+        # get the elec-atom vectors/distances
         xyz, r = self._elec_atom_dist(pos)
 
         # repeat/interleave to get vector and distance between
@@ -411,13 +411,13 @@ class AtomicOrbitals(nn.Module):
         """Computes the positions/distance bewteen elec/atoms
 
         Args:
-            pos (torch.tensor): positions of the walkers Nbat, NelecxNdim
+            pos (torch.tensor): positions of the walkers : Nbatch x [Nelec*Ndim]
 
         Returns:
-            torch.tensor, torch.tensor: positions of the elec wrt the bas
-                                        (Nbatch, Nelec, Natom, Ndim)
-                                        distance between elec and bas
-                                        (Nbatch, Nelec, Natom)
+            (torch.tensor, torch.tensor): positions of the elec wrt the atoms
+                                        [Nbatch x Nelec x Natom x Ndim]
+                                        distance between elec and atoms
+                                        [Nbatch x Nelec x Natom]
         """
 
         # compute the vectors between electrons and atoms
