@@ -10,7 +10,6 @@ import operator
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals import AtomicOrbitals
-from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .slater_jastrow_base import SlaterJastrowBase
@@ -211,7 +210,6 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            kinpool (bool, optional): use kinetic pooling (deprecated). Defaults to False
 
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
