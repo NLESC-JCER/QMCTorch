@@ -13,7 +13,7 @@ from qmctorch.utils import set_torch_double_precision
 from ..path_utils import PATH_TEST
 
 
-class TestLiHBackFlow(unittest.TestCase):
+class TestLiHBackFlowPySCF(unittest.TestCase):
 
     def setUp(self):
 

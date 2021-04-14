@@ -132,10 +132,10 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         The lapacian of the determinental part is computed via
 
         .. math::
-            \\Delta_i \\Psi(R) \\sum_n c_n ( \\frac{\\Delta_i D_n^{\\uparraow}}{D_n^{\\uparraow}} +
-                                           \\frac{\\Delta_i D_n^{\\downarrow}}{D_n^{\\downarrow}} +
-                                           2 \\frac{\\nabla_i D_n^{\\uparraow}}{D_n^{\\uparraow}} \\frac{\\nabla_i D_n^{\\downarrow}}{D_n^{\\downarrow}} )
-                                           D_n^{\\uparraow} D_n^{\\downarrow}
+            \\Delta_i \\Psi(R) \\sum_n c_n ( \\frac{\\Delta_i D_n^{u}}{D_n^{u}} +
+                                           \\frac{\\Delta_i D_n^{d}}{D_n^{d}} +
+                                           2 \\frac{\\nabla_i D_n^{u}}{D_n^{u}} \\frac{\\nabla_i D_n^{d}}{D_n^{d}} )
+                                           D_n^{u} D_n^{d}
 
         Since the backflow orbitals are multi-electronic the laplacian of the determinants
         are obtained
