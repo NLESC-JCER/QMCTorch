@@ -110,12 +110,4 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-
-    t = TestBFAOderivativesPyscf()
-    t.setUp()
-    t.test_backflow()
-    t.test_ao_gradian()
-    t.test_ao_jacobian()
-
-    t.test_ao_hess()
+    unittest.main()

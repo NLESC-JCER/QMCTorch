@@ -151,27 +151,6 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
-    # def test_gradients_wf(self):
-
-    #     grads = self.wf.gradients_jacobi(self.pos)
-    #     grad_auto = self.wf.gradients_autograd(self.pos)
-
-    #     assert torch.allclose(grads, grad_auto)
-
-    # def test_gradients_pdf(self):
-
-    #     grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
-    #     grads_auto = self.wf.gradients_autograd(self.pos, pdf=True)
-
-    #     assert torch.allclose(grads_pdf, grads_auto)
-
 
 if __name__ == "__main__":
     unittest.main()
-    # t = TestSlaterJastrowBackFlow()
-    # t.setUp()
-    # t.test_forward()
-    # t.test_grad_mo()
-    # t.test_jacobian_mo()
-    # t.test_hess_mo()
-    # t.test_kinetic_energy()
