@@ -131,6 +131,21 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
                                 1).reshape(self.npts, self.mol.nelec*3)
         assert(torch.allclose(dq, dq_grad))
 
+    def test_ao_gradian(self):
+        """Test the calculation of the gradient of the at
+        wrt the original coordinates."""
+
+        ao = self.ao(self.pos)
+        dao = self.ao(self.pos, derivative=1, jacobian=False)
+
+        dao_grad = grad(
+            ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
+        assert(torch.allclose(dao.sum(), dao_grad.sum()))
+
+        dao = dao.sum(-1).sum(-1)
+        dao_grad = dao_grad.T
+        assert(torch.allclose(dao, dao_grad))
+
     def test_ao_jacobian(self):
 
         ao = self.ao(self.pos)
@@ -142,19 +157,6 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
         dao = dao.sum(-1).sum(-1)
         dao_grad = dao_grad.reshape(-1, self.ao.nelec, 3).sum(-1)
-        dao_grad = dao_grad.T
-        assert(torch.allclose(dao, dao_grad))
-
-    def test_ao_gradian(self):
-
-        ao = self.ao(self.pos)
-        dao = self.ao(self.pos, derivative=1, jacobian=False)
-
-        dao_grad = grad(
-            ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
-        assert(torch.allclose(dao.sum(), dao_grad.sum()))
-
-        dao = dao.sum(-1).sum(-1)
         dao_grad = dao_grad.T
         assert(torch.allclose(dao, dao_grad))
 
@@ -177,4 +179,5 @@ if __name__ == "__main__":
     t.test_backflow_kernel()
     t.test_backflow_kernel_pos()
     t.test_backflow_derivative()
+    t.test_ao_gradian()
     # unittest.main()

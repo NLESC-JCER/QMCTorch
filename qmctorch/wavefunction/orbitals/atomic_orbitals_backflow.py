@@ -165,12 +165,16 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # permute the grad to Ndim x Nbatch x Nelec x Norb
         grad_ao = grad_ao.permute(3, 0, 1, 2)
 
+        # compute the derivative of the bf positions wrt to the original pos
+        # Ndim x Nbatch x Nelec x Nelec
+        dbf = self._backflow_derivative(pos).permute(1, 0, 2, 3)
+
         # compute backflow : Ndim x Nbatch x Nelec X Norb x Nelec
         grad_ao = grad_ao[...,
-                          None] @ self.backflow_weights[:, None, :]
+                          None] @ dbf[..., None, :]
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.permute(4, 0, 1, 2, 3)
+        grad_ao = grad_ao.permute(2, 0, 1, 4, 3)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))
@@ -349,6 +353,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the diagonal terms
         # Nbatch x Ndim x Nelec
+        # not sure of -1 or -2 dim ...
         out = 1 + dbf.sum(-2) + bf.sum(-2)
 
         # Nbatch x Ndim x Nelec x Nelec
