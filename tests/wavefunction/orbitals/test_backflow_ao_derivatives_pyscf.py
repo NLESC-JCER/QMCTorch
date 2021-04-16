@@ -48,8 +48,6 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
         # define the wave function
         self.ao = AtomicOrbitalsBackFlow(self.mol)
-        self.ao.backflow_weights.data += 0.1 * torch.rand(
-            self.mol.nelec, self.mol.nelec)
 
         # define the grid points
         self.npts = 11
@@ -57,17 +55,81 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
 
-    def test_backflow(self):
+    def test_backflow_kernel(self):
+        """Test the derivative of the kernel function wrt the elec-elec distance."""
 
-        xyz, r = self.ao._process_position(self.pos)
-        dr_grad = grad(
-            r, self.pos, grad_outputs=torch.ones_like(r))[0]
+        ree = self.ao.edist(self.pos)
+        bfpos = self.ao._backflow_kernel(ree)
 
-        dr = self.ao._backflow_derivative(self.pos)
-        assert(torch.allclose(dr.sum(), dr_grad.sum()))
+        dbfpos_grad = grad(
+            bfpos, ree, grad_outputs=torch.ones_like(bfpos))[0]
 
-        dr = dr.sum(3).sum(0).reshape(self.npts, self.mol.nelec*3)
-        assert(torch.allclose(dr, dr_grad))
+        dbfpos = self.ao._backflow_kernel_derivative(ree)
+        assert(torch.allclose(dbfpos.sum(), dbfpos_grad.sum()))
+        assert(torch.allclose(dbfpos, dbfpos_grad))
+
+    def test_backflow_kernel_pos(self):
+        """Test the derivative of the kenel function wrt the pos of the elecs.
+        Note that the derivative edist(pos,1) returns drr_ij = d/dx_i r_ij
+        and that d/dx_j r_ij = d/d_xi r_ij = - d/dx_i r_ji
+        i.e. edist(pos,1) returns half of the derivatives
+
+        so to obatin the same values than autograd we need to double d/dx_i r_ij
+        """
+
+        # compute the ee dist
+        ree = self.ao.edist(self.pos)
+
+        # compute the kernel values
+        bfpos = self.ao._backflow_kernel(ree)
+
+        # computes the derivative of the ee dist
+        di_ree = self.ao.edist(self.pos, 1)
+        dj_ree = di_ree
+
+        # compute the derivative of the kernal values
+        di_bfpos = self.ao._backflow_kernel_derivative(
+            ree).unsqueeze(1) * di_ree
+
+        dj_bfpos = self.ao._backflow_kernel_derivative(
+            ree).unsqueeze(1) * dj_ree
+
+        d_bfpos = di_bfpos + dj_bfpos
+
+        # computes the the derivative of the kernal values with autograd
+        dbfpos_grad = grad(
+            bfpos, self.pos, grad_outputs=torch.ones_like(bfpos))[0]
+
+        # checksum
+        assert(torch.allclose(d_bfpos.sum(), dbfpos_grad.sum()))
+
+        # reshape and check individual elements
+        dbfpos = d_bfpos.sum(-1).permute(0, 2,
+                                         1).reshape(self.npts, -1)
+        assert(torch.allclose(dbfpos, dbfpos_grad))
+
+    def test_backflow_derivative(self):
+        """Test the derivative pf the bf coordinate wrt the initial positions."""
+
+        # compute backflow pos
+        q = self.ao._backflow(self.pos)
+
+        # compute der of the backflow pos wrt the
+        # original pos
+        dq = self.ao._backflow_derivative(self.pos)
+
+        # compute der of the backflow pos wrt the
+        # original pos using autograd
+        dq_grad = grad(
+            q, self.pos, grad_outputs=torch.ones_like(self.pos))[0]
+
+        # checksum
+        assert(torch.allclose(dq.sum(), dq_grad.sum()))
+
+        # permute and check elements
+        dq = dq.sum(-1).permute(0, 2,
+                                1).reshape(self.npts, self.mol.nelec*3)
+        assert(torch.allclose(dq, dq_grad))
 
     def test_ao_jacobian(self):
 
@@ -110,4 +172,9 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    t = TestBFAOderivativesPyscf()
+    t.setUp()
+    t.test_backflow_kernel()
+    t.test_backflow_kernel_pos()
+    t.test_backflow_derivative()
+    # unittest.main()
