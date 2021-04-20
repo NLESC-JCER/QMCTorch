@@ -123,7 +123,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         else:
             return self._compute_gradient_backflow_ao_values(pos)
 
-    def _compute_jacobian_backflow_ao_values(self, pos, jac_ao=None):
+    def _compute_jacobian_backflow_ao_values(self, pos):
         """Compute the jacobian of the backflow ao fromn xyz tensor
 
         Args:
@@ -133,17 +133,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             torch.tensor derivative of atomic orbital values
                           size (Nelec, Nbatch, Nelec, Norb)
         """
-        # get the grad vals : size Nbatch x Nelec x Norb
-        # the derivative are : d \phi_i(q_j) / d \tilde{x}_j
-        # i.e. wrt to the bf coordinates
-        if jac_ao is None:
-            jac_ao = self._compute_jacobian_ao_values(pos)
+        # get the grad vals
+        grad = self._compute_gradient_backflow_ao_values(pos)
+        _, nbatch, nelec, norb = grad.shape
 
-        # compute backflow : Nbatch x Nelec X Norb x Nelec
-        jac_ao = jac_ao[..., None] @ self.backflow_weights[:, None, :]
-
-        # permute to Nelec, Nbatch, Nelec, Norb
-        return jac_ao.permute(3, 0, 1, 2)
+        return grad.reshape(nelec, 3, nbatch, nelec, norb).sum(1)
 
     def _compute_gradient_backflow_ao_values(self, pos, grad_ao=None):
         """Compute the jacobian of the backflow ao fromn xyz tensor
@@ -322,8 +316,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             \\bold{q}_i = \\bold{r}_i + \\sum_{j\\neq i} \\eta(r_{ij}) (\\bold{r}_i - \\bold{r}_j)
 
         .. math::
-            \\frac{d q_i}{d x_k} = \\delta_{ik} (1 + \\sum_{j\\neqi} \\frac{d \\eta(r_ij)}{d x_i} + \\eta(r_ij))  +
-                                   \\delta_{i\\neq k} (-\\frac{d \\eta(r_ik)}{d x_k} - \\eta(r_ik))
+            \\frac{d q_i}{d x_k} = \\delta_{ik} (1 + \\sum_{j\\neqi} \\frac{d \\eta(r_ij)}{d x_i} x_i + \\eta(r_ij))  +
+                                   \\delta_{i\\neq k} (-\\frac{d \\eta(r_ik)}{d x_k} x_k - \\eta(r_ik))
 
 
         Args:
@@ -338,6 +332,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # ee dist matrix : Nbatch x  Nelec x Nelec
         ree = self.edist(pos)
+        nbatch, nelec, _ = ree.shape
 
         # derivative ee dist matrix : Nbatch x 3 x Nelec x Nelec
         dree = self.edist(pos, derivative=1)
@@ -345,23 +340,86 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # backflow kernel : Nbatch x 1 x Nelec x Nelec
         bf = self._backflow_kernel(ree).unsqueeze(1)
 
+        # d eta(r_ij)/d r_ij
         # derivative of the back flow kernel : Nbatch x 1 x Nelec x Nelec
         dbf = self._backflow_kernel_derivative(ree).unsqueeze(1)
 
+        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i)
         # Nbatch x 3 x Nelec x Nelec
         dbf = dbf * dree
+
+        # reshape the pos to : Nbatch x 3 x Nelec
+        pos = pos.reshape(nbatch, nelec, 3).permute(
+            0, 2, 1)
+
+        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i) x_i
+        # Nbatch x 3 x Nelec x Nelec
+        dbf_x = dbf * pos.unsqueeze(-1)
 
         # compute the diagonal terms
         # Nbatch x Ndim x Nelec
         # not sure of -1 or -2 dim ...
-        out = 1 + dbf.sum(-2) + bf.sum(-2)
+        out = 1 + dbf_x.sum(-2) + bf.sum(-2)
 
         # Nbatch x Ndim x Nelec x Nelec
         out = torch.diag_embed(out, dim1=-1, dim2=-2)
 
-        # add the off diagonal term : -dbf_ij / dxj = dbf_ij/dxi and - bf_{ij}
+        # add the off diagonal term :
+        # - (d bf_ij / dx_j) x_j - bf_ij = (d bf_ij / d x_i) x_j - bf_ij
         # Nbatch x Ndim x Nelec x Nelec
-        return out + dbf - bf
+        return out + dbf * pos.unsqueeze(-2) - bf
+
+    def _backflow_second_derivative(self, pos):
+        r"""Computes the seocnd derivative of the back flow elec positions
+           wrt the initial positions of the electrons
+
+        .. math::
+            \\bold{q}_i = \\bold{r}_i + \\sum_{j\\neq i} \\eta(r_{ij}) (\\bold{r}_i - \\bold{r}_j)
+
+        .. math::
+            \\frac{d q_i}{d x_k} = \\delta_{ik} (1 + \\sum_{j\\neqi} \\frac{d \\eta(r_ij)}{d x_i} + \\eta(r_ij))  +
+                                   \\delta_{i\\neq k} (-\\frac{d \\eta(r_ik)}{d x_k} - \\eta(r_ik))
+
+        .. math::
+            \\frac{d^2 q_i}{d x_k^2} = \\delta_{ik} (\\sum_{j\\neqi} \\frac{d^2 \\eta(r_ij)}{d x_i^2} + 2 \\frac{d \\eta(r_ij)}{d x_i})  +
+                                       - \\delta_{i\\neq k} (\\frac{d^2 \\eta(r_ik)}{d x_k^2} + \\frac{d \\eta(r_ik)}{d x_k})
+
+
+        Args:
+            pos (torch.tensor): orginal positions of the electrons Nbatch x [Nelec*Ndim]
+
+        Returns:
+            torch.tensor: d q_{i}/d x_k  with :
+                          q_{i} bf position of elec i
+                          x_k original coordinate of the kth elec
+                          Nelec x  Nbatch x Nelec x Norb x Ndim
+        """
+
+        # ee dist matrix :
+        # Nbatch x  Nelec x Nelec
+        ree = self.edist(pos)
+        nbatch, nelec, _ = ree.shape
+
+        # derivative ee dist matrix  d r_{ij} / d x_i
+        # Nbatch x 3 x Nelec x Nelec
+        dree = self.edist(pos, derivative=1)
+
+        # derivative ee dist matrix :  d2 r_{ij} / d2 x_i
+        # Nbatch x 3 x Nelec x Nelec
+        d2ree = self.edist(pos, derivative=2)
+
+        # derivative of the back flow kernel : d eta(r_ij)/d r_ij
+        # Nbatch x 1 x Nelec x Nelec
+        dbf = self._backflow_kernel_derivative(ree).unsqueeze(1)
+
+        # second derivative of the back flow kernel : d2 eta(r_ij)/d2 r_ij
+        # Nbatch x 1 x Nelec x Nelec
+        dbf = self._backflow_kernel_second_derivative(
+            ree).unsqueeze(1)
+
+        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i)
+        # Nbatch x 3 x Nelec x Nelec
+        dbf = dbf * dree
 
     def _backflow_kernel(self, ree):
         """Computes the backflow function:
@@ -396,6 +454,23 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
         invree = (1./(ree+eye) - eye)
         return - self.backflow_weight * invree * invree
+
+    def _backflow_kernel_second_derivative(self, ree):
+        """Computes the derivative of the kernel function
+            w.r.t r_{ij}
+        .. math::
+            \\frac{d}{dr_{ij} \\eta(r_{ij}) = -u r_{ij}^{-2}
+
+        Args:
+            ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor : f'(r) Nbatch x Nelec x Nelec
+        """
+
+        eye = torch.eye(self.nelec, self.nelec).to(self.device)
+        invree = (1./(ree+eye) - eye)
+        return 2 * self.backflow_weight * invree * invree * invree
 
     # def _backflow(self, pos):
     #     """transform the position of the electrons

@@ -180,4 +180,5 @@ if __name__ == "__main__":
     t.test_backflow_kernel_pos()
     t.test_backflow_derivative()
     t.test_ao_gradian()
+    t.test_ao_jacobian()
     # unittest.main()
