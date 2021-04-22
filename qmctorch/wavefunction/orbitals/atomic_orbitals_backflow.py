@@ -414,12 +414,38 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # second derivative of the back flow kernel : d2 eta(r_ij)/d2 r_ij
         # Nbatch x 1 x Nelec x Nelec
-        dbf = self._backflow_kernel_second_derivative(
+        d2bf = self._backflow_kernel_second_derivative(
             ree).unsqueeze(1)
+
+        # (d^2 eta(r_ij) / d r_ij^2) (d r_ij/d x_i)^2
+        # + (d eta(r_ij) / d r_ij) (d^2 r_ij/d x_i^2)
+        # Nbatch x 3 x Nelec x Nelec
+        d2bf = (d2bf * dree * dree) + (dbf * d2ree)
 
         # (d eta(r_ij) / d r_ij) (d r_ij/d x_i)
         # Nbatch x 3 x Nelec x Nelec
         dbf = dbf * dree
+
+        # reshape the pos to : Nbatch x 3 x Nelec
+        pos = pos.reshape(nbatch, nelec, 3).permute(
+            0, 2, 1)
+
+        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i) x_i
+        # Nbatch x 3 x Nelec x Nelec
+        d2bf_x = d2bf * pos.unsqueeze(-1)
+
+        # compute the diagonal terms
+        # Nbatch x Ndim x Nelec
+        # not sure of -1 or -2 dim ...
+        out = d2bf_x.sum(-2) + 2 * dbf.sum(-2)
+
+        # Nbatch x Ndim x Nelec x Nelec
+        out = torch.diag_embed(out, dim1=-1, dim2=-2)
+
+        # add the off diagonal term :
+        # - (d2 bf_ij / d2x_j) x_j - 2 (dbf_ij/d x_j)
+        # Nbatch x Ndim x Nelec x Nelec
+        return out - d2bf * pos.unsqueeze(-2) + 2 * dbf
 
     def _backflow_kernel(self, ree):
         """Computes the backflow function:
@@ -471,53 +497,3 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
         invree = (1./(ree+eye) - eye)
         return 2 * self.backflow_weight * invree * invree * invree
-
-    # def _backflow(self, pos):
-    #     """transform the position of the electrons
-
-    #     Args:
-    #         pos (torch.tensor): original positions Nbatch x [Nelec*Ndim]
-
-    #     Returns:
-    #         torch.tensor: transformed positions Nbatch x [Nelec*Ndim]
-    #     """
-
-    #     # reshape to have Nbatch x Nelec x Ndim
-    #     bf_pos = pos.reshape(-1, self.nelec, self.ndim)
-
-    #     # permute to Nbatch x Ndim x Nelec
-    #     bf_pos = bf_pos.permute(0, 2, 1)
-
-    #     # transform
-    #     bf_pos = bf_pos @ self.backflow_weights.T
-
-    #     # return with correct size : Nbatch x [Nelec*Ndim]
-    #     return bf_pos.permute(0, 2, 1).reshape(-1, self.nelec*self.ndim)
-
-    # def _backflow_derivative(self, pos):
-    #     r"""Computes the derivative of the back flow elec-orb distances
-    #        wrt the initial positions of the electrons
-
-    #     .. math::
-    #         \frac{d q_i^a}{d x_k} = \frac{d q_i^a}{d \tilde{x}_i} \frac{d \tilde{x}_i}{d x_k}
-    #         \\text{$q_i^a$ is the distance between bf elec i and orbital a}
-    #         q_i^a \sqrt{ (\tilde{x}_i-x_a)^2 + (\tilde{y}_i-y_a)^2 + (\tilde{z}_i-z_a)^2}
-    #         \\text{$\tilde{x}_i$ is the coordinate of bf elec i}
-    #         \\text{$x_k$ is the original coordinate of elec k}
-
-    #         \frac{d q_i^a}{d x_k} = \frac{\tilde{x}_i}{q_i^a} W[i,k]
-
-    #     Args:
-    #         pos (torch.tensor): orginal positions of the electrons Nbatch x [Nelec*Ndim]
-
-    #     Returns:
-    #         torch.tensor: d q_{ij}/d x_k  with :
-    #                       q_{ij} the distance between bf elec i and orb j
-    #                       x_k original coordinate of the kth elec
-    #                       Nelec x  Nbatch x Nelec x Norb x Ndim
-    #     """
-
-    #     xyz, r = self._process_position(pos)
-    #     der = (xyz/r.unsqueeze(-1)).permute(0, 2, 3, 1)
-    #     der = der[..., None] * self.backflow_weights
-    #     return der.permute(3, 0, 4, 1, 2)
