@@ -6,7 +6,7 @@ import torch
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 
-from second_derivative import second_derivative
+from .second_derivative import second_derivative
 import matplotlib.pyplot as plt
 
 
