@@ -92,7 +92,8 @@ class Harmonics:
             raise ValueError('Harmonics type should be cart or sph')
 
 
-def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], sum_grad=True, sum_hess=True):
+def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0],
+                       sum_grad=True, sum_hess=True):
     r"""Computes Real Cartesian Harmonics
 
     .. math::

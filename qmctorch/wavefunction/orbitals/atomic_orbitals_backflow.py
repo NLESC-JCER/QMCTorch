@@ -176,7 +176,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         return grad_ao
 
     def _compute_laplacian_backflow_ao_values(self, pos, lap_ao=None, grad_ao=None):
-        """Compute the jacobian of the backflow ao fromn xyz tensor
+        """Compute the laplacian of the backflow ao fromn xyz tensor
 
         Args:
             pos ([type]): [description]
@@ -187,7 +187,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         """
         # compute the lap size Nbatch x Nelec x Norb
         if lap_ao is None:
-            lap_ao = self._compute_laplacian_ao_values(pos)
+            lap_ao = self._compute_sum_diag_hessian_ao_values(pos)
 
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
@@ -255,7 +255,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             xyz, grad_ao=grad_ao)
 
         # lap of the bf ao
-        lap_ao = self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y)
+        lap_ao = self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
         lap_ao = self._compute_laplacian_backflow_ao_values(
             xyz, lap_ao=lap_ao)
 

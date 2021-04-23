@@ -68,12 +68,28 @@ class TestAOderivativesPyscf(unittest.TestCase):
         gradcheck(self.wf.ao, self.pos)
         assert(torch.allclose(dao.sum(), dao_grad.sum()))
 
+    def test_ao_grad_sum(self):
+
+        ao = self.wf.ao(self.pos)
+        dao_sum = self.wf.ao(self.pos, derivative=1, sum_grad=True)
+        dao = self.wf.ao(self.pos, derivative=1, sum_grad=False)
+
+        assert(torch.allclose(dao_sum, dao.sum(-1)))
+
     def test_ao_hess(self):
 
         ao = self.wf.ao(self.pos)
         d2ao = self.wf.ao(self.pos, derivative=2)
         d2ao_grad = hess(ao, self.pos)
         assert(torch.allclose(d2ao.sum(), d2ao_grad.sum()))
+
+    def test_ao_hess_sum(self):
+
+        ao = self.wf.ao(self.pos)
+        d2ao_sum = self.wf.ao(self.pos, derivative=2, sum_hess=True)
+        d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
+        print(d2ao_sum, d2ao.sum(-1))
+        assert(torch.allclose(d2ao_sum, d2ao.sum(-1)))
 
 
 if __name__ == "__main__":
