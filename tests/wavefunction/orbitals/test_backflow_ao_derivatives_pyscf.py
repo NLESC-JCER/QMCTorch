@@ -3,11 +3,14 @@ import unittest
 import torch
 from pyscf import gto
 from torch.autograd import Variable, grad, gradcheck
-
+import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.wavefunction.orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 torch.set_default_tensor_type(torch.DoubleTensor)
+
+torch.manual_seed(101)
+np.random.seed(101)
 
 
 def hess(out, pos):
@@ -282,8 +285,6 @@ if __name__ == "__main__":
     t = TestBFAOderivativesPyscf()
     t.setUp()
 
-    t.test_ao_hess()
-
     t.test_derivative_backflow_kernel()
     t.test_derivative_backflow_kernel_pos()
     t.test_backflow_derivative()
@@ -294,5 +295,6 @@ if __name__ == "__main__":
 
     t.test_ao_gradian()
     t.test_ao_jacobian()
+    t.test_ao_hess()
 
     # unittest.main()

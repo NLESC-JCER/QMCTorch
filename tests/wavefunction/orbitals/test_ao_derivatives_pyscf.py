@@ -88,7 +88,6 @@ class TestAOderivativesPyscf(unittest.TestCase):
         ao = self.wf.ao(self.pos)
         d2ao_sum = self.wf.ao(self.pos, derivative=2, sum_hess=True)
         d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
-        print(d2ao_sum, d2ao.sum(-1))
         assert(torch.allclose(d2ao_sum, d2ao.sum(-1)))
 
 

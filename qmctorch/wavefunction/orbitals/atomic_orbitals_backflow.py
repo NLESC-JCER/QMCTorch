@@ -35,7 +35,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, pos, derivative=[0], sum_grad=True, one_elec=False):
+    def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.
 
         .. math::
@@ -80,6 +80,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         if not sum_grad:
             assert(1 in derivative)
 
+        if not sum_hess:
+            assert(2 in derivative)
+
         if one_elec:
             nelec_save = self.nelec
             self.nelec = 1
@@ -92,7 +95,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                 pos, sum_grad)
 
         elif derivative == [2]:
-            ao = self._compute_laplacian_backflow_ao_values(pos)
+            ao = self._compute_second_derivative_ao_values(
+                pos, sum_hess)
 
         elif derivative == [0, 1, 2]:
             ao = self._compute_all_backflow_ao_values(pos)
@@ -118,26 +122,13 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                           size (Nbatch, Nelec, Norb) if sum_grad
                           size (Nbatch, Nelec, Norb, Ndim) if sum_grad=False
         """
-        if sum_grad:
-            return self._compute_jacobian_backflow_ao_values(pos)
-        else:
-            return self._compute_gradient_backflow_ao_values(pos)
-
-    def _compute_jacobian_backflow_ao_values(self, pos):
-        """Compute the jacobian of the backflow ao fromn xyz tensor
-
-        Args:
-            pos ([type]): [description]
-
-        Returns:
-            torch.tensor derivative of atomic orbital values
-                          size (Nelec, Nbatch, Nelec, Norb)
-        """
-        # get the grad vals
         grad = self._compute_gradient_backflow_ao_values(pos)
-        _, nbatch, nelec, norb = grad.shape
 
-        return grad.reshape(nelec, 3, nbatch, nelec, norb).sum(1)
+        if sum_grad:
+            _, nbatch, nelec, norb = grad.shape
+            grad = grad.reshape(nelec, 3, nbatch, nelec, norb).sum(1)
+
+        return grad
 
     def _compute_gradient_backflow_ao_values(self, pos, grad_ao=None):
         """Compute the jacobian of the backflow ao fromn xyz tensor
@@ -175,7 +166,27 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad_ao
 
-    def _compute_laplacian_backflow_ao_values(self, pos, lap_ao=None, grad_ao=None):
+    def _compute_second_derivative_ao_values(self, pos, sum_hess):
+        """Compute the value of the 2nd derivative of the ao from the xyx and r tensor
+
+        Args:
+            pos (torch.tensor): position of each elec size Nbatch, NelexNdim
+            sum_hess (boolean): return the sum_hess (True) or diag hess (False)
+
+        Returns:
+            torch.tensor: derivative of atomic orbital values
+                          size (Nbatch, Nelec, Norb) if sum_grad
+                          size (Nbatch, Nelec, Norb, Ndim) if sum_grad=False
+        """
+        hess = self._compute_diag_hessian_backflow_ao_values(pos)
+
+        if sum_hess:
+            _, nbatch, nelec, norb = hess.shape
+            hess = hess.reshape(nelec, 3, nbatch, nelec, norb).sum(1)
+
+        return hess
+
+    def _compute_diag_hessian_backflow_ao_values(self, pos, hess_ao=None, grad_ao=None):
         """Compute the laplacian of the backflow ao fromn xyz tensor
 
         Args:
@@ -185,42 +196,44 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             torch.tensor derivative of atomic orbital values
                           size (Nbatch, Nelec, Nelec, Norb)
         """
-        # compute the lap size Nbatch x Nelec x Norb
-        if lap_ao is None:
-            lap_ao = self._compute_sum_diag_hessian_ao_values(pos)
+        # compute the lap size Nbatch x Nelec x Norb x 3
+        if hess_ao is None:
+            hess_ao = self._compute_diag_hessian_ao_values(pos)
 
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
 
         # permute the grad to Ndim x Nbatch x Nelec x Norb
         grad_ao = grad_ao.permute(3, 0, 1, 2)
-        lap_ao = lap_ao.unsqueeze(0)
-        print(lap_ao.shape)
+
+        # permute the grad to Ndim x Nbatch x Nelec x Norb
+        # hess_ao = hess_ao.unsqueeze(-1)
+        hess_ao = hess_ao.permute(3, 0, 1, 2)
 
         # compute the derivative of the bf positions wrt to the original pos
         # Ndim x Nbatch x Nelec x Nelec
-        dbf = self._backflow_derivative(pos).permute(1, 0, 2, 3)
-        print(dbf.shape)
+        dbf = self._backflow_derivative(pos)
+        dbf = dbf.permute(1, 0, 2, 3)
 
         # compute the 2nd derivative of the bf positions wrt to the original pos
         # Ndim x Nbatch x Nelec x Nelec
-        d2bf = self._backflow_second_derivative(
-            pos).permute(1, 0, 2, 3)
+        d2bf = self._backflow_second_derivative(pos)
+        d2bf = d2bf.permute(1, 0, 2, 3)
 
         # compute the back flow second der
-        dbf = dbf * dbf
-        lap_ao = lap_ao[..., None] @ dbf[..., None, :]
+        # I don't get it that should be db2**2 !!!
+        hess_ao = hess_ao[..., None] @ (dbf)[..., None, :]
 
         # compute the backflow grad
-        lap_ao += grad_ao[..., None] @ d2bf[..., None, :]
+        hess_ao += grad_ao[..., None] @ d2bf[..., None, :]
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
-        lap_ao = lap_ao.permute(2, 0, 1, 4, 3)
+        hess_ao = hess_ao.permute(2, 0, 1, 4, 3)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
-        lap_ao = lap_ao.reshape(-1, *(lap_ao.shape[2:]))
+        hess_ao = hess_ao.reshape(-1, *(hess_ao.shape[2:]))
 
-        return lap_ao
+        return hess_ao
 
     def _compute_all_backflow_ao_values(self, pos):
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
@@ -246,20 +259,25 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                                     derivative=[0, 1, 2],
                                     sum_grad=False)
 
-        # vals of the bf_ao
+        # vals of the bf ao
         ao = self._ao_kernel(R, Y)
 
-        # grad of the bf ao
+        # grad kernel of the bf ao
         grad_ao = self._gradient_kernel(R, dR, Y, dY)
+
+        # diag hess kernel of the bf ao
+        hess_ao = self._sum_diag_hessian_kernel(
+            R, dR, d2R, Y, dY, d2Y)
+
+        # compute the bf ao
+        hess_ao = self._compute_diag_hessian_backflow_ao_values(
+            xyz, hess_ao=hess_ao, grad_ao=grad_ao)
+
+        # compute the bf grad
         grad_ao = self._compute_gradient_backflow_ao_values(
             xyz, grad_ao=grad_ao)
 
-        # lap of the bf ao
-        lap_ao = self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
-        lap_ao = self._compute_laplacian_backflow_ao_values(
-            xyz, lap_ao=lap_ao)
-
-        return (ao, grad_ao, lap_ao)
+        return (ao, grad_ao, hess_ao)
 
     def _process_position(self, pos):
         """Computes the positions/distance bewteen elec/orb
@@ -382,7 +400,6 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the diagonal terms
         # Nbatch x Ndim x Nelec
-        # not sure of -1 or -2 dim ...
         out = 1 + dbf_x.sum(-2) + bf.sum(-2)
 
         # Nbatch x Ndim x Nelec x Nelec
@@ -460,7 +477,6 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the diagonal terms
         # Nbatch x Ndim x Nelec
-        # not sure of -1 or -2 dim ...
         out = d2bf_x.sum(-2) + 2 * dbf.sum(-2)
 
         # Nbatch x Ndim x Nelec x Nelec
@@ -515,7 +531,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
 
         Returns:
-            torch.tensor : f'(r) Nbatch x Nelec x Nelec
+            torch.tensor : f''(r) Nbatch x Nelec x Nelec
         """
 
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
