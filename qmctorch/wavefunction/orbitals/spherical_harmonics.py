@@ -61,7 +61,7 @@ class Harmonics:
             self.mask_bas_k0 = self.bas_k == 0
             self.mask_bas_k2 = self.bas_k == 2
 
-    def __call__(self, xyz, derivative=[0], sum_grad=True):
+    def __call__(self, xyz, derivative=[0], sum_grad=True, sum_hess=True):
         """Computes the cartesian or spherical harmonics
 
         Arguments:
@@ -71,6 +71,8 @@ class Harmonics:
         Keyword Arguments:
             derivative {int} -- order of the derivative (default: {0})
             sum_grad {bool} -- return the sum of th derivative if true and
+                               grad if False (default: {True})
+            sum_hess {bool} -- return the sum of the 2nd derivative if true and
                                grad if False (default: {True})
 
         Raises:
@@ -82,15 +84,15 @@ class Harmonics:
 
         if self.type == 'cart':
             return CartesianHarmonics(xyz, self.bas_k, self.mask_bas_k0, self.mask_bas_k2,
-                                      derivative, sum_grad)
+                                      derivative, sum_grad, sum_hess)
         elif self.type == 'sph':
             return SphericalHarmonics(
-                xyz, self.bas_l, self.bas_m, derivative, sum_grad)
+                xyz, self.bas_l, self.bas_m, derivative, sum_grad, sum_hess)
         else:
             raise ValueError('Harmonics type should be cart or sph')
 
 
-def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], sum_grad=True):
+def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], sum_grad=True, sum_hess=True):
     r"""Computes Real Cartesian Harmonics
 
     .. math::
@@ -104,7 +106,7 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], sum_grad=True):
         mask2 (torch.tensor): precomputed mask of k=2
         derivative (int, optional): degree of the derivative. Defaults to 0.
         sum_grad (bool, optional): returns the sum of the derivative if True. Defaults to True.
-
+        sum_hess (bool, optional): returns the sum of the 2nd derivative if True. Defaults to True.
     Returns:
         torch.tensor: values of the harmonics at the sampling points
     """
@@ -147,7 +149,10 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], sum_grad=True):
         d2z = kz*(kz-1) * xyz_k[..., 0] * \
             xyz_k[..., 1] * xyz_km2[..., 2]
 
-        return d2x + d2y + d2z
+        if sum_hess:
+            return d2x + d2y + d2z
+        else:
+            return torch.stack((d2x, d2y, d2z), dim=-1)
 
     # computes the power of the xyz
     xyz_k = fast_power(xyz, k,  mask0, mask2)
@@ -166,7 +171,7 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0], sum_grad=True):
         return output
 
 
-def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True):
+def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True, sum_hess=True):
     r"""Compute the Real Spherical Harmonics of the AO.
 
     Args:
@@ -180,6 +185,9 @@ def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True):
                           size : (Nbatch,Nelec,Nrbf) for sum_grad=True \n
                           size : (Nbatch,Nelec,Nrbf, Ndim) for sum_grad=False
     """
+    if not sum_hess:
+        raise NotImplementedError(
+            'SphericalHarmonics cannot return individual component of the laplacian')
 
     if sum_grad:
         return get_spherical_harmonics(xyz, l, m, derivative)

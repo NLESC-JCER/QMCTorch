@@ -10,7 +10,7 @@ from ...path_utils import PATH_TEST
 from .second_derivative import second_derivative
 
 
-class TestRadialSlater(unittest.TestCase):
+class TestCartesianHarmonics(unittest.TestCase):
 
     def setUp(self):
 
@@ -170,6 +170,18 @@ class TestRadialSlater(unittest.TestCase):
             # plt.plot(lap_analytic, linewidth=2)
             # plt.plot(lap_fd)
             # plt.show()
+
+    def test_lap_sum(self):
+        npts = 100
+        self.pos = torch.rand(npts, self.mol.nelec * 3)
+        xyz, r = self.wf.ao._process_position(self.pos)
+        d2R_sum = self.wf.ao.harmonics(
+            xyz, derivative=2, sum_hess=True)
+
+        d2R = self.wf.ao.harmonics(
+            xyz, derivative=2, sum_hess=False)
+
+        assert(torch.allclose(d2R.sum(-1), d2R_sum))
 
 
 if __name__ == "__main__":

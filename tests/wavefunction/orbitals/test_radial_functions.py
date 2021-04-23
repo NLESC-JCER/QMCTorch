@@ -41,22 +41,15 @@ class TestRadialFunctions(unittest.TestCase):
     def test_grad(self):
         xyz, r = self.process_position()
         for fn in self.radfn:
-            fn(r, self.bas_n, self.bas_exp, xyz=xyz,
-               derivative=1, sum_grad=False)
+            a = fn(r, self.bas_n, self.bas_exp, xyz=xyz,
+                   derivative=1, sum_grad=False)
 
-    def test_jac(self):
-        xyz, r = self.process_position()
-        for fn in self.radfn:
-            fn(r, self.bas_n, self.bas_exp, xyz=xyz,
-               derivative=1, sum_grad=True)
+            b = fn(r, self.bas_n, self.bas_exp, xyz=xyz,
+                   derivative=1, sum_grad=True)
+
+            assert(torch.allclose(a.sum(-1), b, atol=1E-6))
 
     def test_lap(self):
-        xyz, r = self.process_position()
-        for fn in self.radfn:
-            fn(r, self.bas_n, self.bas_exp, xyz=xyz,
-               derivative=2, sum_grad=True)
-
-    def test_lap_sum(self):
         xyz, r = self.process_position()
         for fn in self.radfn:
 
@@ -72,4 +65,5 @@ if __name__ == "__main__":
     # unittest.TestCase()
     t = TestRadialFunctions()
     t.setUp()
-    t.test_lap_sum()
+    t.test_grad()
+    t.test_lap()
