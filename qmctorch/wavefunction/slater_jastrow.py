@@ -168,7 +168,7 @@ class SlaterJastrow(SlaterJastrowBase):
 
         # compute the gradient operator matrix
         ao = self.ao(x)
-        grad_ao = self.ao(x, derivative=1, jacobian=False)
+        grad_ao = self.ao(x, derivative=1, sum_grad=False)
 
         mo = self.ao2mo(ao)
         bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
@@ -224,7 +224,7 @@ class SlaterJastrow(SlaterJastrowBase):
             jast = self.jastrow(x)
             grad_jast = self.jastrow(x,
                                      derivative=1,
-                                     jacobian=False)
+                                     sum_grad=False)
             grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
 
             grad_jast = grad_jast.flatten(start_dim=1)
@@ -252,7 +252,7 @@ class SlaterJastrow(SlaterJastrowBase):
 
             jast, djast, d2jast = self.jastrow(x,
                                                derivative=[0, 1, 2],
-                                               jacobian=False)
+                                               sum_grad=False)
 
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
             d2jast = d2jast / jast

@@ -36,7 +36,7 @@ class TestRadialSlater(unittest.TestCase):
 
         xyz, r = self.wf.ao._process_position(self.pos)
         R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], jacobian=False)
+            xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -63,7 +63,7 @@ class TestRadialSlater(unittest.TestCase):
 
         xyz, r = self.wf.ao._process_position(self.pos)
         R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], jacobian=False)
+            xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -91,7 +91,7 @@ class TestRadialSlater(unittest.TestCase):
 
         xyz, r = self.wf.ao._process_position(self.pos)
         R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], jacobian=False)
+            xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -135,7 +135,7 @@ class TestRadialSlater(unittest.TestCase):
 
         xyz, r = self.wf.ao._process_position(self.pos)
         R, dR, d2R = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1, 2], jacobian=False)
+            xyz, derivative=[0, 1, 2], sum_grad=False)
 
         for iorb in range(7):
 

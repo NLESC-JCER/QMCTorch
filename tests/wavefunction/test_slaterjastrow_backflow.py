@@ -106,7 +106,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         """Gradients of the BF MOs."""
 
         mo = self.wf.pos2mo(self.pos)
-        dmo = self.wf.pos2mo(self.pos, derivative=1, jacobian=False)
+        dmo = self.wf.pos2mo(self.pos, derivative=1, sum_grad=False)
 
         dmo_grad = grad(
             mo, self.pos,

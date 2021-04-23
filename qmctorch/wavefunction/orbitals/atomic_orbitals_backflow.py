@@ -35,7 +35,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, pos, derivative=[0], jacobian=True, one_elec=False):
+    def forward(self, pos, derivative=[0], sum_grad=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.
 
         .. math::
@@ -54,7 +54,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                                   Size : Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0,1,2,).
                                         Defaults to 0.
-            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+            sum_grad (bool, optional): Return the sum_grad (i.e. the sum of
                                        the derivatives) or the individual
                                        terms. Defaults to True.
                                        False only for derivative=1
@@ -63,8 +63,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         Returns:
             torch.tensor: Value of the AO (or their derivatives) \n
-                          size : Nbatch, Nelec, Norb (jacobian = True) \n
-                          size : Nbatch, Nelec, Norb, Ndim (jacobian = False)
+                          size : Nbatch, Nelec, Norb (sum_grad = True) \n
+                          size : Nbatch, Nelec, Norb, Ndim (sum_grad = False)
 
         Examples::
             >>> mol = Molecule('h2.xyz')
@@ -77,7 +77,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         if not isinstance(derivative, list):
             derivative = [derivative]
 
-        if not jacobian:
+        if not sum_grad:
             assert(1 in derivative)
 
         if one_elec:
@@ -89,7 +89,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         elif derivative == [1]:
             ao = self._compute_first_derivative_ao_values(
-                pos, jacobian)
+                pos, sum_grad)
 
         elif derivative == [2]:
             ao = self._compute_laplacian_backflow_ao_values(pos)
@@ -106,19 +106,19 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return ao
 
-    def _compute_first_derivative_ao_values(self, pos, jacobian):
+    def _compute_first_derivative_ao_values(self, pos, sum_grad):
         """Compute the value of the derivative of the ao from the xyx and r tensor
 
         Args:
             pos (torch.tensor): position of each elec size Nbatch, NelexNdim
-            jacobian (boolean): return the jacobian (True) or gradient (False)
+            sum_grad (boolean): return the sum_grad (True) or gradient (False)
 
         Returns:
             torch.tensor: derivative of atomic orbital values
-                          size (Nbatch, Nelec, Norb) if jacobian
-                          size (Nbatch, Nelec, Norb, Ndim) if jacobian=False
+                          size (Nbatch, Nelec, Norb) if sum_grad
+                          size (Nbatch, Nelec, Norb, Ndim) if sum_grad=False
         """
-        if jacobian:
+        if sum_grad:
             return self._compute_jacobian_backflow_ao_values(pos)
         else:
             return self._compute_gradient_backflow_ao_values(pos)
@@ -175,7 +175,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad_ao
 
-    def _compute_laplacian_backflow_ao_values(self, pos, lap_ao=None):
+    def _compute_laplacian_backflow_ao_values(self, pos, lap_ao=None, grad_ao=None):
         """Compute the jacobian of the backflow ao fromn xyz tensor
 
         Args:
@@ -189,14 +189,38 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         if lap_ao is None:
             lap_ao = self._compute_laplacian_ao_values(pos)
 
-        # compute square of weights
-        bfw_squared = self.backflow_weights*self.backflow_weights
+        if grad_ao is None:
+            grad_ao = self._compute_gradient_ao_values(pos)
 
-        # compute backflow : Nbatch x Nelec X Norb x Nelec
-        lap_ao = lap_ao[..., None] @ bfw_squared[:, None, :]
+        # permute the grad to Ndim x Nbatch x Nelec x Norb
+        grad_ao = grad_ao.permute(3, 0, 1, 2)
+        lap_ao = lap_ao.unsqueeze(0)
+        print(lap_ao.shape)
 
-        # permute to Nelec, Nbatch, Nelec, Norb
-        return lap_ao.permute(3, 0, 1, 2)
+        # compute the derivative of the bf positions wrt to the original pos
+        # Ndim x Nbatch x Nelec x Nelec
+        dbf = self._backflow_derivative(pos).permute(1, 0, 2, 3)
+        print(dbf.shape)
+
+        # compute the 2nd derivative of the bf positions wrt to the original pos
+        # Ndim x Nbatch x Nelec x Nelec
+        d2bf = self._backflow_second_derivative(
+            pos).permute(1, 0, 2, 3)
+
+        # compute the back flow second der
+        dbf = dbf * dbf
+        lap_ao = lap_ao[..., None] @ dbf[..., None, :]
+
+        # compute the backflow grad
+        lap_ao += grad_ao[..., None] @ d2bf[..., None, :]
+
+        # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
+        lap_ao = lap_ao.permute(2, 0, 1, 4, 3)
+
+        # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
+        lap_ao = lap_ao.reshape(-1, *(lap_ao.shape[2:]))
+
+        return lap_ao
 
     def _compute_all_backflow_ao_values(self, pos):
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
@@ -216,11 +240,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
                                  xyz=xyz, derivative=[0, 1, 2],
-                                 jacobian=False)
+                                 sum_grad=False)
 
         Y, dY, d2Y = self.harmonics(xyz,
                                     derivative=[0, 1, 2],
-                                    jacobian=False)
+                                    sum_grad=False)
 
         # vals of the bf_ao
         ao = self._ao_kernel(R, Y)
@@ -443,7 +467,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         out = torch.diag_embed(out, dim1=-1, dim2=-2)
 
         # add the off diagonal term :
-        # - (d2 bf_ij / d2x_j) x_j - 2 (dbf_ij/d x_j)
+        # - (d2 bf_ij / d2x_j) x_j - 2 (dbf_ij/d x_j) = - (d2 bf_ij / d2x_i) x_j + 2 (dbf_ij/d x_i)
         # Nbatch x Ndim x Nelec x Nelec
         return out - d2bf * pos.unsqueeze(-2) + 2 * dbf
 

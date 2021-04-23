@@ -6,7 +6,7 @@ class UnityTerm(nn.Module):
     def __init__(self):
         super().__init__()
 
-    def forward(self, pos, derivative=0, jacobian=True):
+    def forward(self, pos, derivative=0, sum_grad=True):
         if derivative == 0:
             return 1.
         elif derivative == 1:
@@ -48,7 +48,7 @@ class JastrowAssembler(nn.Module):
         self.elec_elec = jastrow_terms['elec_elec']
         self.elec_elec_nuc = jastrow_terms['elec_elec_nuc']
 
-    def forward(self, pos, derivative=0, jacobian=True):
+    def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
 
         Args:
@@ -56,7 +56,7 @@ class JastrowAssembler(nn.Module):
                Size: Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0, 1, 2,).
               Defaults to 0.
-            jacobian(bool, optional): Return the jacobian(i.e. the sum of
+            sum_grad(bool, optional): Return the sum_grad(i.e. the sum of
                                                            the derivatives)
               terms. Defaults to True.
                 False only for derivative = 1
@@ -65,9 +65,9 @@ class JastrowAssembler(nn.Module):
             torch.tensor: value of the jastrow parameter for all confs
               derivative = 0  (Nmo) x Nbatch x 1
                derivative = 1  (Nmo) x Nbatch x Nelec
-                  (for jacobian = True)
+                  (for sum_grad = True)
                 derivative = 1  (Nmo) x Nbatch x Ndim x Nelec
-                  (for jacobian = False)
+                  (for sum_grad = False)
         """
         if derivative == 0:
             ee = self.elec_elec(pos)
@@ -82,10 +82,10 @@ class JastrowAssembler(nn.Module):
             en = self.elec_nuc(pos)
             een = self.elec_elec_nuc(pos)
 
-            dee = self.elec_elec(pos, derivative=1, jacobian=jacobian)
-            den = self.elec_nuc(pos, derivative=1, jacobian=jacobian)
+            dee = self.elec_elec(pos, derivative=1, sum_grad=sum_grad)
+            den = self.elec_nuc(pos, derivative=1, sum_grad=sum_grad)
             deen = self.elec_elec_nuc(
-                pos, derivative=1, jacobian=jacobian)
+                pos, derivative=1, sum_grad=sum_grad)
 
             out = self.evaluate_product(dee, en, een)
             out = out + self.evaluate_product(ee, den, een)
@@ -96,13 +96,13 @@ class JastrowAssembler(nn.Module):
         elif derivative == 2:
 
             ee, dee, d2ee = self.elec_elec(
-                pos, derivative=[0, 1, 2], jacobian=False)
+                pos, derivative=[0, 1, 2], sum_grad=False)
 
             en, den, d2en = self.elec_nuc(
-                pos, derivative=[0, 1, 2], jacobian=False)
+                pos, derivative=[0, 1, 2], sum_grad=False)
 
             een, deen, d2een = self.elec_elec_nuc(
-                pos, derivative=[0, 1, 2], jacobian=False)
+                pos, derivative=[0, 1, 2], sum_grad=False)
 
             out = self.evaluate_product(d2ee, en, een)
             out = out + self.evaluate_product(ee, d2en, een)

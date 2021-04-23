@@ -241,7 +241,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         wrt the original coordinates."""
 
         ao = self.ao(self.pos)
-        dao = self.ao(self.pos, derivative=1, jacobian=False)
+        dao = self.ao(self.pos, derivative=1, sum_grad=False)
 
         dao_grad = grad(
             ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
@@ -281,13 +281,18 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 if __name__ == "__main__":
     t = TestBFAOderivativesPyscf()
     t.setUp()
-    t.test_second_derivative_backflow_kernel()
-    t.test_second_derivative_backflow_kernel_pos()
-    t.test_backflow_second_derivative()
+
+    t.test_ao_hess()
 
     t.test_derivative_backflow_kernel()
     t.test_derivative_backflow_kernel_pos()
     t.test_backflow_derivative()
+
+    t.test_second_derivative_backflow_kernel()
+    t.test_second_derivative_backflow_kernel_pos()
+    t.test_backflow_second_derivative()
+
     t.test_ao_gradian()
     t.test_ao_jacobian()
+
     # unittest.main()

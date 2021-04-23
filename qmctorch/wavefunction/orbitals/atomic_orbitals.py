@@ -110,7 +110,7 @@ class AtomicOrbitals(nn.Module):
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, pos, derivative=[0], jacobian=True, one_elec=False):
+    def forward(self, pos, derivative=[0], sum_grad=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.
 
         .. math::
@@ -129,7 +129,7 @@ class AtomicOrbitals(nn.Module):
                                   Size : Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0,1,2,).
                                         Defaults to 0.
-            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+            sum_grad (bool, optional): Return the sum_grad (i.e. the sum of
                                        the derivatives) or the individual
                                        terms. Defaults to True.
                                        False only for derivative=1
@@ -138,8 +138,8 @@ class AtomicOrbitals(nn.Module):
 
         Returns:
             torch.tensor: Value of the AO (or their derivatives) \n
-                          size : Nbatch, Nelec, Norb (jacobian = True) \n
-                          size : Nbatch, Nelec, Norb, Ndim (jacobian = False)
+                          size : Nbatch, Nelec, Norb (sum_grad = True) \n
+                          size : Nbatch, Nelec, Norb, Ndim (sum_grad = False)
 
         Examples::
             >>> mol = Molecule('h2.xyz')
@@ -152,7 +152,7 @@ class AtomicOrbitals(nn.Module):
         if not isinstance(derivative, list):
             derivative = [derivative]
 
-        if not jacobian:
+        if not sum_grad:
             assert(1 in derivative)
 
         if one_elec:
@@ -164,7 +164,7 @@ class AtomicOrbitals(nn.Module):
 
         elif derivative == [1]:
             ao = self._compute_first_derivative_ao_values(
-                pos, jacobian)
+                pos, sum_grad)
 
         elif derivative == [2]:
             ao = self._compute_laplacian_ao_values(pos)
@@ -212,19 +212,19 @@ class AtomicOrbitals(nn.Module):
             ao = self._contract(ao)
         return ao
 
-    def _compute_first_derivative_ao_values(self, pos, jacobian):
+    def _compute_first_derivative_ao_values(self, pos, sum_grad):
         """Compute the value of the derivative of the ao from the xyx and r tensor
 
         Args:
             pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
-            jacobian (boolean): return the jacobian (True) or gradient (False)
+            sum_grad (boolean): return the sum_grad (True) or gradient (False)
 
         Returns:
             torch.tensor: derivative of atomic orbital values
-                          size (Nbatch, Nelec, Norb) if jacobian
-                          size (Nbatch, Nelec, Norb, Ndim) if jacobian=False
+                          size (Nbatch, Nelec, Norb) if sum_grad
+                          size (Nbatch, Nelec, Norb, Ndim) if sum_grad=False
         """
-        if jacobian:
+        if sum_grad:
             return self._compute_jacobian_ao_values(pos)
         else:
             return self._compute_gradient_ao_values(pos)
@@ -267,9 +267,9 @@ class AtomicOrbitals(nn.Module):
         R, dR = self.radial(r, self.bas_n,
                             self.bas_exp, xyz=xyz,
                             derivative=[0, 1],
-                            jacobian=False)
+                            sum_grad=False)
 
-        Y, dY = self.harmonics(xyz, derivative=[0, 1], jacobian=False)
+        Y, dY = self.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
         return self._gradient_kernel(R, dR, Y, dY)
 
@@ -331,11 +331,11 @@ class AtomicOrbitals(nn.Module):
 
         R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
                                  xyz=xyz, derivative=[0, 1, 2],
-                                 jacobian=False)
+                                 sum_grad=False)
 
         Y, dY, d2Y = self.harmonics(xyz,
                                     derivative=[0, 1, 2],
-                                    jacobian=False)
+                                    sum_grad=False)
         return self._laplacian_kernel(R, dR, d2R, Y, dY, d2Y)
 
     def _laplacian_kernel(self, R, dR, d2R, Y, dY, d2Y):
@@ -377,11 +377,11 @@ class AtomicOrbitals(nn.Module):
 
         R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
                                  xyz=xyz, derivative=[0, 1, 2],
-                                 jacobian=False)
+                                 sum_grad=False)
 
         Y, dY, d2Y = self.harmonics(xyz,
                                     derivative=[0, 1, 2],
-                                    jacobian=False)
+                                    sum_grad=False)
 
         return (self._ao_kernel(R, Y),
                 self._gradient_kernel(R, dR, Y, dY),

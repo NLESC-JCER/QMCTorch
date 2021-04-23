@@ -2,7 +2,8 @@ import torch
 from ...utils import fast_power
 
 
-def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
+def radial_slater(R, bas_n, bas_exp, xyz=None,
+                  derivative=0, sum_grad=True, sum_hess=True):
     """Compute the radial part of STOs (or its derivative).
 
     .. math:
@@ -17,7 +18,9 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         xyz (torch.tensor): positions of the electrons
                             (needed for derivative) (default: {None})
         derivative (int): degree of the derivative (default: {0})
-        jacobian (bool): return the jacobian, i.e the sum of the gradients
+        sum_grad (bool): return the sum_grad, i.e the sum of the gradients
+                           (default: {True})
+        sum_hess (bool): return the sum_hess, i.e the sum of the diag hessian
                            (default: {True})
 
     Returns:
@@ -31,7 +34,7 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
         return rn * er
 
     def _first_derivative_kernel():
-        if jacobian:
+        if sum_grad:
             nabla_rn_sum = nabla_rn.sum(3)
             nabla_er_sum = nabla_er.sum(3)
             return nabla_rn_sum * er + rn * nabla_er_sum
@@ -41,12 +44,27 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
 
     def _second_derivative_kernel():
 
-        R2 = R*R
-        lap_rn = nRnm2 * (bas_n + 1)
-        lap_er = bexp_er * (bas_exp - 2. / R)
+        if sum_hess:
 
-        return lap_rn * er + 2 * \
-            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+            lap_rn = nRnm2 * (bas_n + 1)
+            lap_er = bexp_er * (bas_exp - 2. / R)
+
+            return lap_rn * er + 2 * \
+                (nabla_rn * nabla_er).sum(3) + rn * lap_er
+        else:
+
+            xyz2 = xyz*xyz
+            xyz2 = xyz2 / xyz2.sum(-1, keepdim=True)
+
+            lap_rn = nRnm2.unsqueeze(-1) * \
+                (1. + (bas_n-2).unsqueeze(-1) * xyz2)
+
+            lap_er = bexp_er.unsqueeze(-1) * \
+                (bas_exp.unsqueeze(-1) * xyz2 +
+                 (-1 + xyz2)/R.unsqueeze(-1))
+
+            return lap_rn * er.unsqueeze(-1) + 2 * \
+                (nabla_rn * nabla_er) + rn.unsqueeze(-1) * lap_er
 
     # computes the basic quantities
     rn = fast_power(R, bas_n)
@@ -66,7 +84,8 @@ def radial_slater(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
                                 _second_derivative_kernel)
 
 
-def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
+def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0],
+                    sum_grad=True, sum_hess=True):
     """Compute the radial part of GTOs (or its derivative).
 
     .. math:
@@ -81,7 +100,7 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
         xyz (torch.tensor): positions of the electrons
                             (needed for derivative) (default: {None})
         derivative (int): degree of the derivative (default: {0})
-        jacobian (bool): return the jacobian, i.e the sum of the gradients
+        sum_grad (bool): return the sum_grad, i.e the sum of the gradients
                            (default: {True})
 
     Returns:
@@ -95,7 +114,7 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
         return rn * er
 
     def _first_derivative_kernel():
-        if jacobian:
+        if sum_grad:
             nabla_rn_sum = nabla_rn.sum(3)
             nabla_er_sum = nabla_er.sum(3)
             return nabla_rn_sum * er + rn * nabla_er_sum
@@ -105,11 +124,26 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
 
     def _second_derivative_kernel():
 
-        lap_rn = nRnm2 * (bas_n + 1)
-        lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
+        if sum_hess:
+            lap_rn = nRnm2 * (bas_n + 1)
+            lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
 
-        return lap_rn * er + 2 * \
-            (nabla_rn * nabla_er).sum(3) + rn * lap_er
+            return lap_rn * er + 2 * \
+                (nabla_rn * nabla_er).sum(3) + rn * lap_er
+
+        else:
+            xyz2 = xyz*xyz
+
+            lap_er = (bas_exp * er).unsqueeze(-1) * \
+                (4*bas_exp.unsqueeze(-1)*xyz2-2)
+
+            xyz2 = xyz2 / xyz2.sum(-1, keepdim=True)
+
+            lap_rn = nRnm2.unsqueeze(-1) * \
+                (1. + (bas_n-2).unsqueeze(-1) * xyz2)
+
+            return lap_rn * er.unsqueeze(-1) + 2 * \
+                (nabla_rn * nabla_er) + rn.unsqueeze(-1) * lap_er
 
     # computes the basic  quantities
     R2 = R*R
@@ -131,7 +165,8 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
                                 _second_derivative_kernel)
 
 
-def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=True):
+def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0],
+                         sum_grad=True, sum_hess=True):
     """Compute the radial part of GTOs (or its derivative).
 
     .. math:
@@ -146,7 +181,9 @@ def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=T
         xyz (torch.tensor): positions of the electrons
                             (needed for derivative) (default: {None})
         derivative (int): degree of the derivative (default: {0})
-        jacobian (bool): return the jacobian, i.e the sum of the gradients
+        sum_grad (bool): return the sum_grad, i.e the sum of the gradients
+                           (default: {True})
+        sum_hess (bool): return the sum_hess, i.e the sum of the lapacian
                            (default: {True})
 
     Returns:
@@ -160,14 +197,20 @@ def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=T
         return er
 
     def _first_derivative_kernel():
-        if jacobian:
+        if sum_grad:
             return nabla_er.sum(3)
         else:
             return nabla_er
 
     def _second_derivative_kernel():
-        lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
-        return lap_er
+        if sum_hess:
+            lap_er = bas_exp * er * (4*bas_exp*R2 - 6)
+            return lap_er
+        else:
+            xyz2 = xyz*xyz
+            lap_er = (bas_exp * er).unsqueeze(-1) * \
+                (4*bas_exp.unsqueeze(-1)*xyz2-2)
+            return lap_er
 
     # computes the basic  quantities
     R2 = R*R
@@ -184,7 +227,8 @@ def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0], jacobian=T
                                 _second_derivative_kernel)
 
 
-def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True):
+def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0,
+                       sum_grad=True, sum_hess=True):
     """Compute the radial part of STOs (or its derivative).
 
     .. math:
@@ -199,7 +243,9 @@ def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True)
         xyz (torch.tensor): positions of the electrons
                             (needed for derivative) (default: {None})
         derivative (int): degree of the derivative (default: {0})
-        jacobian (bool): return the jacobian, i.e the sum of the gradients
+        sum_grad (bool): return the sum_grad, i.e the sum of the gradients
+                           (default: {True})
+        sum_hess (bool): return the sum_hess, i.e the sum of the laplacian
                            (default: {True})
 
     Returns:
@@ -213,18 +259,23 @@ def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0, jacobian=True)
         return er
 
     def _first_derivative_kernel():
-        if jacobian:
+        if sum_grad:
             return nabla_er.sum(3)
         else:
             return nabla_er
 
     def _second_derivative_kernel():
 
-        R2 = R*R
-        lap_er = bexp_er * (bas_exp - 2. / R)
-        return lap_er
+        if sum_hess:
+            return bexp_er * (bas_exp - 2. / R)
 
-    # computes the basic quantities
+        else:
+            xyz2 = xyz*xyz / (R*R).unsqueeze(-1)
+            lap_er = bexp_er.unsqueeze(-1) * \
+                (bas_exp.unsqueeze(-1) * xyz2 - (1-xyz2)/R.unsqueeze(-1))
+            return lap_er
+
+    # computes the basic quantitiesgradients
     er = torch.exp(-bas_exp * R)
 
     # computes the grad
