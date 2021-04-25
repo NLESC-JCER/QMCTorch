@@ -253,11 +253,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
                                  xyz=xyz, derivative=[0, 1, 2],
-                                 sum_grad=False)
+                                 sum_grad=False, sum_hess=False)
 
         Y, dY, d2Y = self.harmonics(xyz,
                                     derivative=[0, 1, 2],
-                                    sum_grad=False)
+                                    sum_grad=False, sum_hess=False)
 
         # vals of the bf ao
         ao = self._ao_kernel(R, Y)
@@ -266,16 +266,26 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         grad_ao = self._gradient_kernel(R, dR, Y, dY)
 
         # diag hess kernel of the bf ao
-        hess_ao = self._sum_diag_hessian_kernel(
+        hess_ao = self._diag_hessian_kernel(
             R, dR, d2R, Y, dY, d2Y)
 
         # compute the bf ao
         hess_ao = self._compute_diag_hessian_backflow_ao_values(
-            xyz, hess_ao=hess_ao, grad_ao=grad_ao)
+            pos, hess_ao=hess_ao, grad_ao=grad_ao)
+
+        hess_ao = hess_ao.reshape()
 
         # compute the bf grad
         grad_ao = self._compute_gradient_backflow_ao_values(
-            xyz, grad_ao=grad_ao)
+            pos, grad_ao=grad_ao)
+
+        # _, nbatch, nelec, norb = hess_ao.shape
+
+        # grad_ao = grad_ao.reshape(
+        #     nelec, 3, nbatch, nelec, norb).sum(0).permute(1, 2, 3, 0)
+
+        # hess_ao = hess_ao.reshape(
+        #     nelec, 3, nbatch, nelec, norb).sum(0).permute(1, 2, 3, 0)
 
         return (ao, grad_ao, hess_ao)
 

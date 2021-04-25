@@ -63,9 +63,6 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
-        self.wf.ao.backflow_weights.data += 0.1 * torch.rand(
-            mol.nelec, mol.nelec)
-
         self.nbatch = 5
         self.pos = torch.Tensor(np.random.rand(
             self.nbatch,  self.wf.nelec*3))

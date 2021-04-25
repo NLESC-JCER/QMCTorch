@@ -90,11 +90,24 @@ class TestAOderivativesPyscf(unittest.TestCase):
         d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
         assert(torch.allclose(d2ao_sum, d2ao.sum(-1)))
 
+    def test_ao_all(self):
+        ao = self.wf.ao(self.pos)
+        dao = self.wf.ao(self.pos, derivative=1, sum_grad=False)
+        d2ao = self.wf.ao(self.pos, derivative=2)
+        ao_all, dao_all, d2ao_all = self.wf.ao(
+            self.pos, derivative=[0, 1, 2])
+        print(dao_all.shape)
+        print(d2ao_all.shape)
+        assert(torch.allclose(ao, ao_all))
+        assert(torch.allclose(dao, dao_all))
+        assert(torch.allclose(d2ao, d2ao_all))
+
 
 if __name__ == "__main__":
     # unittest.main()
 
     t = TestAOderivativesPyscf()
     t.setUp()
+    t.test_ao_all()
     t.test_ao_deriv()
     t.test_ao_hess()

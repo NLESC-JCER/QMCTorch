@@ -280,11 +280,23 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         d2ao_grad = d2ao_grad.T
         assert(torch.allclose(d2ao, d2ao_grad))
 
+    def test_all_ao_values(self):
+        ao = self.ao(self.pos)
+        dao = self.ao(self.pos, derivative=1, sum_grad=False)
+        d2ao = self.ao(self.pos, derivative=2, sum_hess=False)
+        ao_all, dao_all, d2ao_all = self.ao(
+            self.pos, derivative=[0, 1, 2])
+
+        assert(torch.allclose(ao, ao_all))
+        assert(torch.allclose(dao, dao_all))
+        assert(torch.allclose(d2ao, d2ao_all))
+
 
 if __name__ == "__main__":
     t = TestBFAOderivativesPyscf()
     t.setUp()
 
+    t.test_all_ao_values()
     t.test_derivative_backflow_kernel()
     t.test_derivative_backflow_kernel_pos()
     t.test_backflow_derivative()

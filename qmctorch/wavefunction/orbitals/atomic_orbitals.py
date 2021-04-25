@@ -389,7 +389,7 @@ class AtomicOrbitals(nn.Module):
         return self._diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
     def _sum_diag_hessian_kernel(self, R, dR, d2R, Y, dY, d2Y):
-        """Kernel for the laplacian of the ao values
+        """Kernel for the sum of the diag hessian of the ao values
 
         Args:
             R (torch.tensor): radial part of the AOs
@@ -410,7 +410,7 @@ class AtomicOrbitals(nn.Module):
         return d2ao
 
     def _diag_hessian_kernel(self, R, dR, d2R, Y, dY, d2Y):
-        """Kernel for the laplacian of the ao values
+        """Kernel for the diagonal hessian of the ao values
 
         Args:
             R (torch.tensor): radial part of the AOs
