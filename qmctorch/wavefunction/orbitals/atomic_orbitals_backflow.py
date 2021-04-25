@@ -273,19 +273,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         hess_ao = self._compute_diag_hessian_backflow_ao_values(
             pos, hess_ao=hess_ao, grad_ao=grad_ao)
 
-        hess_ao = hess_ao.reshape()
-
         # compute the bf grad
         grad_ao = self._compute_gradient_backflow_ao_values(
             pos, grad_ao=grad_ao)
-
-        # _, nbatch, nelec, norb = hess_ao.shape
-
-        # grad_ao = grad_ao.reshape(
-        #     nelec, 3, nbatch, nelec, norb).sum(0).permute(1, 2, 3, 0)
-
-        # hess_ao = hess_ao.reshape(
-        #     nelec, 3, nbatch, nelec, norb).sum(0).permute(1, 2, 3, 0)
 
         return (ao, grad_ao, hess_ao)
 

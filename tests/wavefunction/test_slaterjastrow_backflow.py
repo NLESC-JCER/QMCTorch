@@ -134,8 +134,11 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
         eloc_auto = self.wf.local_energy(self.pos)
 
-        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
+        self.wf.kinetic_energy = self.wf.kinetic_energy_jacobi
         eloc_jac = self.wf.local_energy(self.pos)
+
+        print(eloc_jac)
+        print(eloc_auto)
 
         assert torch.allclose(
             eloc_auto.data, eloc_jac.data, rtol=1E-4, atol=1E-4)
@@ -144,6 +147,9 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
+
+        print(ejac)
+        print(eauto)
 
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
