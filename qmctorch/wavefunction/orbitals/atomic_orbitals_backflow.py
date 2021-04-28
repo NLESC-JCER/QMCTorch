@@ -145,24 +145,23 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # get the grad vals : size Nbatch x Nelec x Norb x Ndim
         # the derivative are : d \phi_i(q_j) / d \tilde{x}_j
-        # i.e. wrt to the bf coordinates
+        # i.e. wrt to the back flow coordinates
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
 
-        # permute the grad to Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.permute(3, 0, 1, 2)
+        # permute the grad to Nbatch x Ndim x 1 x Nelec x 1 x Norb
+        grad_ao = grad_ao.permute(0, 3, 1, 2)
+        grad_ao = grad_ao.unsqueeze(2).unsqueeze(4)
 
         # compute the derivative of the bf positions wrt to the original pos
-        # Ndim x Nbatch x Nelec x Nelec
-        dbf = self._backflow_derivative(pos).permute(1, 0, 2, 3)
+        # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
+        dbf = self._backflow_derivative(pos).unsqueeze(-1)
 
-        # compute backflow : Ndim x Nbatch x Nelec X Norb x Nelec
-        grad_ao = grad_ao[...,
-                          None] @ dbf[..., None, :]
+        # compute backflow : Nbatch x Ndim x Nelec x Nelec x Norb
+        grad_ao = (grad_ao * dbf).sum(1)
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.permute(2, 0, 1, 4, 3)
-        #grad_ao = grad_ao.permute(4, 0, 1, 2, 3)
+        grad_ao = grad_ao.permute(3, 1, 0, 2, 4)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))
@@ -424,6 +423,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # compute delta_ab * f(rij)
         delta_ab_bf = I33 * bf.view(nbatch, 1, 1, nelec, nelec)
 
+        # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
+        # nbatch d alpha_i / d beta_j
         return delta_ab_delta_ij_bf + delta_ij_sum - dbf_delta_ee - delta_ab_bf
 
     def _backflow_second_derivative(self, pos):
@@ -508,27 +509,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # compute delta_ab * df(rij)/dbeta_j
         term3 = 2 * i33 * dbf.reshape(nbatch, 1, 3, nelec, nelec)
 
+        # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
+        # nbatch d2 alpha_i / d2 beta_j
         return term1 + term2 + d2bf_delta_ee + term3
-
-        # # reshape the pos to : Nbatch x 3 x Nelec
-        # pos = pos.reshape(nbatch, nelec, 3).permute(
-        #     0, 2, 1)
-
-        # # (d eta(r_ij) / d r_ij) (d r_ij/d x_i) x_i
-        # # Nbatch x 3 x Nelec x Nelec
-        # d2bf_x = d2bf * pos.unsqueeze(-1)
-
-        # # compute the diagonal terms
-        # # Nbatch x Ndim x Nelec
-        # out = d2bf_x.sum(-2) + 2 * dbf.sum(-2)
-
-        # # Nbatch x Ndim x Nelec x Nelec
-        # out = torch.diag_embed(out, dim1=-1, dim2=-2)
-
-        # # add the off diagonal term :
-        # # - (d2 bf_ij / d2x_j) x_j - 2 (dbf_ij/d x_j) = - (d2 bf_ij / d2x_i) x_j + 2 (dbf_ij/d x_i)
-        # # Nbatch x Ndim x Nelec x Nelec
-        # return out - d2bf * pos.unsqueeze(-2) + 2 * dbf
 
     def _backflow_kernel(self, ree):
         """Computes the backflow function:

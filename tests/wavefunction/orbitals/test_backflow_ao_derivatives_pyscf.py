@@ -66,8 +66,8 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        at = 'H 0 0 0; H 0 0 1'
-        basis = 'sto-3g'
+        at = 'C 0 0 0'
+        basis = 'dzp'
         self.mol = Molecule(atom=at,
                             calculator='pyscf',
                             basis=basis,
@@ -273,6 +273,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
         dao_grad = grad(
             ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
+
         assert(torch.allclose(dao.sum(), dao_grad.sum()))
 
         dao = dao.sum(-1).sum(-1)
@@ -286,6 +287,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
         dao_grad = grad(
             ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
+
         assert(torch.allclose(dao.sum(), dao_grad.sum()))
 
         dao = dao.sum(-1).sum(-1)
@@ -338,8 +340,8 @@ if __name__ == "__main__":
     t.test_second_derivative_backflow_kernel_pos()
     t.test_backflow_second_derivative()
 
-    # t.test_ao_gradian()
-    # t.test_ao_jacobian()
+    t.test_ao_gradian()
+    t.test_ao_jacobian()
     # t.test_ao_hess()
 
     # t.test_ao_gradian_original()
