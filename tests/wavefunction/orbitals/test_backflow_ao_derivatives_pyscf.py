@@ -66,8 +66,8 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
     def setUp(self):
 
         # define the molecule
-        at = 'C 0 0 0'
-        basis = 'dzp'
+        at = 'H 0 0 0; H 0 0 1'
+        basis = 'sto-3g'
         self.mol = Molecule(atom=at,
                             calculator='pyscf',
                             basis=basis,
@@ -77,7 +77,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         self.ao = AtomicOrbitalsBackFlow(self.mol)
 
         # define the grid points
-        self.npts = 11
+        self.npts = 1
         self.pos = torch.rand(self.npts, self.mol.nelec * 3)
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
@@ -179,17 +179,17 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         d2j_ree = d2i_ree
 
         # compute the derivative of the kernel values
-        # we should in principle have to take the transpose of the der
-        # here as well (like for the first der) but di_ree^2 is symmetric
-        # so we dont have to
-        d2bf_kernel = 2*self.ao._backflow_kernel_second_derivative(
+        d2bf_kernel = self.ao._backflow_kernel_second_derivative(
             ree).unsqueeze(1) * di_ree * di_ree
 
-        # we should in principle have to take the transpose of the der
-        # here as well (like for the first der) but d2i_ree is symmetric
-        # so we dont have to
-        d2bf_kernel += 2*self.ao._backflow_kernel_derivative(
+        d2bf_kernel += self.ao._backflow_kernel_second_derivative(
+            ree).permute(0, 2, 1).unsqueeze(1) * dj_ree * dj_ree
+
+        d2bf_kernel += self.ao._backflow_kernel_derivative(
             ree).unsqueeze(1) * d2i_ree
+
+        d2bf_kernel += self.ao._backflow_kernel_derivative(
+            ree).permute(0, 2, 1).unsqueeze(1) * d2j_ree
 
         # computes the the derivative of the kernal values with autograd
         d2bf_kernel_auto = hess(bf_kernel, self.pos)
@@ -219,16 +219,14 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
             q, self.pos, grad_outputs=torch.ones_like(self.pos))[0]
 
         # checksum
-        print((dq.sum(), dq_grad.sum()))
         assert(torch.allclose(dq.sum(), dq_grad.sum()))
 
         # permute and check elements
-        dq = dq.sum(-2).permute(0, 2, 1)
+        dq = dq.sum([1, 3])
+        dq = dq.permute(0, 2, 1)
 
         dq_grad = dq_grad.reshape(self.npts, self.mol.nelec, 3)
-        print(dq[0])
-        print(dq_grad[0])
-        assert(torch.allclose(dq.sum(-1), dq_grad.sum(-1)))
+        assert(torch.allclose(dq, dq_grad))
 
     def test_backflow_second_derivative(self):
         """Test the derivative of the bf coordinate wrt the initial positions."""
@@ -248,8 +246,9 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         assert(torch.allclose(d2q.sum(), d2q_auto.sum()))
 
         # permute and check elements
-        d2q = d2q.sum(-1).permute(0, 2,
-                                  1).reshape(self.npts, self.mol.nelec*3)
+        d2q = d2q.sum([1, 3])
+        d2q = d2q.permute(0, 2, 1)
+        d2q_auto = d2q_auto.reshape(self.npts, self.mol.nelec, 3)
 
         assert(torch.allclose(d2q, d2q_auto))
 
@@ -339,12 +338,12 @@ if __name__ == "__main__":
     t.test_second_derivative_backflow_kernel_pos()
     t.test_backflow_second_derivative()
 
-    t.test_ao_gradian()
-    t.test_ao_jacobian()
-    t.test_ao_hess()
+    # t.test_ao_gradian()
+    # t.test_ao_jacobian()
+    # t.test_ao_hess()
 
-    t.test_ao_gradian_original()
-    t.test_ao_hess_original()
-    t.test_all_ao_values()
+    # t.test_ao_gradian_original()
+    # t.test_ao_hess_original()
+    # t.test_all_ao_values()
 
     # unittest.main()

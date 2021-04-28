@@ -392,32 +392,39 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             pos.reshape(nbatch, nelec, 3)).permute(0, 3, 1, 2)
 
         # backflow kernel : Nbatch x 1 x Nelec x Nelec
-        bf = self._backflow_kernel(ree).unsqueeze(1)
+        bf = self._backflow_kernel(ree)
 
-        # d eta(r_ij)/d r_ij
-        # derivative of the back flow kernel : Nbatch x 1 x Nelec x Nelec
+        # (d eta(r_ij) / d r_ij) (d r_ij/d beta_i)
+        # derivative of the back flow kernel : Nbatch x 3 x Nelec x Nelec
         dbf = self._backflow_kernel_derivative(ree).unsqueeze(1)
+        dbf = dbf * dree
 
-        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i)
-        # Nbatch x 3 x Nelec x Nelec
-        dbf_i = dbf * dree
-        dbf_j = -dbf * dree
+        # (d eta(r_ij) / d beta_i) (alpha_i - alpha_j)
+        # Nbatch x 3 x 3 x Nelec x Nelec
+        dbf_delta_ee = dbf.unsqueeze(1) * delta_ee.unsqueeze(2)
 
-        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i) (x_i - x_j)
-        # Nbatch x 3 x Nelec x Nelec
-        dbf_delta_ee = dbf_i * delta_ee
+        # compute the delta_ij * (1 + sum k \neq i eta(rik))
+        # Nbatch x Nelec x Nelec (diagonal matrix)
+        delta_ij_bf = torch.diag_embed(
+            1 + bf.sum(-1), dim1=-1, dim2=-2)
 
-        # compute the diagonal terms
-        # Nbatch x Ndim x Nelec
-        out = 1 + dbf_delta_ee.sum(-1) + bf.sum(-1)
+        # eye 3x3 in 1x3x3x1x1
+        I33 = torch.eye(3, 3).view(1, 3, 3, 1, 1)
 
-        # Nbatch x Ndim x Nelec x Nelec
-        out = torch.diag_embed(out, dim1=-1, dim2=-2)
+        # compute the delta_ab * delta_ij * (1 + sum k \neq i eta(rik))
+        # Nbatch x Ndim x Ndim x Nelec x Nelec (diagonal matrix)
+        delta_ab_delta_ij_bf = I33 * \
+            delta_ij_bf.view(nbatch, 1, 1, nelec, nelec)
 
-        # add the off diagonal term :
-        #  (d bf_ij / dx_j) (x_i-x_j) - bf_ij = - (d bf_ij / d x_i) (x_i-x_j) - bf_ij
-        # Nbatch x Ndim x Nelec x Nelec
-        return out + (dbf_j * delta_ee) - bf
+        # compute sum_k df(r_ik)/dbeta_i (alpha_i - alpha_k)
+        # Nbatch x Ndim x Ndim x Nelec x Nelec
+        delta_ij_sum = torch.diag_embed(
+            dbf_delta_ee.sum(-1), dim1=-1, dim2=-2)
+
+        # compute delta_ab * f(rij)
+        delta_ab_bf = I33 * bf.view(nbatch, 1, 1, nelec, nelec)
+
+        return delta_ab_delta_ij_bf + delta_ij_sum - dbf_delta_ee - delta_ab_bf
 
     def _backflow_second_derivative(self, pos):
         r"""Computes the seocnd derivative of the back flow elec positions
@@ -450,6 +457,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         ree = self.edist(pos)
         nbatch, nelec, _ = ree.shape
 
+        # difference between elec pos
+        # Nbatch, 3, Nelec, Nelec
+        delta_ee = self.edist.get_difference(
+            pos.reshape(nbatch, nelec, 3)).permute(0, 3, 1, 2)
+
         # derivative ee dist matrix  d r_{ij} / d x_i
         # Nbatch x 3 x Nelec x Nelec
         dree = self.edist(pos, derivative=1)
@@ -476,25 +488,47 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         # Nbatch x 3 x Nelec x Nelec
         dbf = dbf * dree
 
-        # reshape the pos to : Nbatch x 3 x Nelec
-        pos = pos.reshape(nbatch, nelec, 3).permute(
-            0, 2, 1)
+        # eye matrix in dim x dim
+        i33 = torch.eye(3, 3).reshape(1, 3, 3, 1, 1)
 
-        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i) x_i
-        # Nbatch x 3 x Nelec x Nelec
-        d2bf_x = d2bf * pos.unsqueeze(-1)
+        # compute delta_ij delta_ab 2 sum_k dbf(ik) / dbeta_i
+        term1 = 2 * i33 * \
+            torch.diag_embed(
+                dbf.sum(-1), dim1=-1, dim2=-2).reshape(nbatch, 1, 3, nelec, nelec)
 
-        # compute the diagonal terms
-        # Nbatch x Ndim x Nelec
-        out = d2bf_x.sum(-2) + 2 * dbf.sum(-2)
+        # (d2 eta(r_ij) / d2 beta_i) (alpha_i - alpha_j)
+        # Nbatch x 3 x 3 x Nelec x Nelec
+        d2bf_delta_ee = d2bf.unsqueeze(1) * delta_ee.unsqueeze(2)
 
-        # Nbatch x Ndim x Nelec x Nelec
-        out = torch.diag_embed(out, dim1=-1, dim2=-2)
+        # compute sum_k d2f(r_ik)/d2beta_i (alpha_i - alpha_k)
+        # Nbatch x Ndim x Ndim x Nelec x Nelec
+        term2 = torch.diag_embed(
+            d2bf_delta_ee.sum(-1), dim1=-1, dim2=-2)
 
-        # add the off diagonal term :
-        # - (d2 bf_ij / d2x_j) x_j - 2 (dbf_ij/d x_j) = - (d2 bf_ij / d2x_i) x_j + 2 (dbf_ij/d x_i)
-        # Nbatch x Ndim x Nelec x Nelec
-        return out - d2bf * pos.unsqueeze(-2) + 2 * dbf
+        # compute delta_ab * df(rij)/dbeta_j
+        term3 = 2 * i33 * dbf.reshape(nbatch, 1, 3, nelec, nelec)
+
+        return term1 + term2 + d2bf_delta_ee + term3
+
+        # # reshape the pos to : Nbatch x 3 x Nelec
+        # pos = pos.reshape(nbatch, nelec, 3).permute(
+        #     0, 2, 1)
+
+        # # (d eta(r_ij) / d r_ij) (d r_ij/d x_i) x_i
+        # # Nbatch x 3 x Nelec x Nelec
+        # d2bf_x = d2bf * pos.unsqueeze(-1)
+
+        # # compute the diagonal terms
+        # # Nbatch x Ndim x Nelec
+        # out = d2bf_x.sum(-2) + 2 * dbf.sum(-2)
+
+        # # Nbatch x Ndim x Nelec x Nelec
+        # out = torch.diag_embed(out, dim1=-1, dim2=-2)
+
+        # # add the off diagonal term :
+        # # - (d2 bf_ij / d2x_j) x_j - 2 (dbf_ij/d x_j) = - (d2 bf_ij / d2x_i) x_j + 2 (dbf_ij/d x_i)
+        # # Nbatch x Ndim x Nelec x Nelec
+        # return out - d2bf * pos.unsqueeze(-2) + 2 * dbf
 
     def _backflow_kernel(self, ree):
         """Computes the backflow function:

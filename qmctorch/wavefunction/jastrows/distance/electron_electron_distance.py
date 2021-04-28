@@ -196,5 +196,5 @@ class ElectronElectronDistance(nn.Module):
         Returns:
             torch.tensor -- distance matrices nbatch x nelec x nelec x ndim]
         """
-        out = pos[:, None, :, :] - pos[:, :, None, :]
+        out = pos[:, :, None, :] - pos[:, None, :, :]
         return out
