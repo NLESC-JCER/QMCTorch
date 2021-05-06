@@ -252,18 +252,6 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
 
         assert(torch.allclose(d2q, d2q_auto))
 
-    def test_ao_gradian_original(self):
-        ao = self.ao(self.pos)
-        dao = self.ao._compute_gradient_ao_values(self.pos)
-        daobf = self.ao._compute_gradient_backflow_ao_values(self.pos)
-        print(dao.shape, daobf.shape)
-        assert(torch.allclose(dao, daobf.reshape(
-            6, 3, 11, 6, 16).sum(3).permute(2, 0, 3, 1)))
-        dao_grad = grad(
-            ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
-        print(daobf.sum(), dao.sum(), dao_grad.sum())
-        assert(torch.allclose(dao.sum(), dao_grad.sum()))
-
     def test_ao_gradian(self):
         """Test the calculation of the gradient of the at
         wrt the original coordinates."""
@@ -295,13 +283,6 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         dao_grad = dao_grad.T
         assert(torch.allclose(dao, dao_grad))
 
-    def test_ao_hess_original(self):
-        ao = self.ao(self.pos)
-        d2ao = self.ao._compute_diag_hessian_ao_values(self.pos)
-        d2ao_grad = hess(ao, self.pos)
-        print(d2ao.sum(), d2ao_grad.sum())
-        assert(torch.allclose(d2ao.sum(), d2ao_grad.sum()))
-
     def test_ao_hess(self):
 
         ao = self.ao(self.pos)
@@ -310,6 +291,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         d2ao_grad = hess(ao, self.pos)
         print(d2ao.sum(), d2ao_grad.sum())
         assert(torch.allclose(d2ao.sum(), d2ao_grad.sum()))
+
         print(d2ao.shape, d2ao_grad.shape)
         d2ao = d2ao.sum(-1).sum(-1)
         d2ao_grad = d2ao_grad.reshape(-1, self.ao.nelec, 3).sum(-1)
@@ -342,10 +324,8 @@ if __name__ == "__main__":
 
     t.test_ao_gradian()
     t.test_ao_jacobian()
-    # t.test_ao_hess()
+    t.test_ao_hess()
 
-    # t.test_ao_gradian_original()
-    # t.test_ao_hess_original()
     # t.test_all_ao_values()
 
     # unittest.main()

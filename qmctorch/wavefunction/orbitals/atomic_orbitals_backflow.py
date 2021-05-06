@@ -2,8 +2,8 @@ import torch
 from torch import nn
 
 from .norm_orbital import atomic_orbital_norm
-from .radial_functions import (radial_gaussian, radial_gaussian_pure,
-                               radial_slater, radial_slater_pure)
+from .radial_functions import (
+    radial_gaussian, radial_gaussian_pure, radial_slater, radial_slater_pure)
 from .spherical_harmonics import Harmonics
 from .atomic_orbitals import AtomicOrbitals
 from ..jastrows.distance.electron_electron_distance import ElectronElectronDistance
@@ -198,40 +198,39 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             torch.tensor derivative of atomic orbital values
                           size (Nbatch, Nelec, Nelec, Norb)
         """
-        # compute the lap size Nbatch x Nelec x Norb x 3
+        # compute the lap size Nbatch x Ndim x Ndim x Nelec x Norb
         if hess_ao is None:
             hess_ao = self._compute_diag_hessian_ao_values(pos)
 
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
 
-        # permute the grad to Ndim x Nbatch x Nelec x Norb
-        grad_ao = grad_ao.permute(3, 0, 1, 2)
+        # permute the grad to Nbatch x Ndim x 1 x Nelec x 1 x Norb
+        grad_ao = grad_ao.permute(0, 3, 1, 2)
+        grad_ao = grad_ao.unsqueeze(2).unsqueeze(4)
 
-        # permute the grad to Ndim x Nbatch x Nelec x Norb
-        hess_ao = hess_ao.permute(3, 0, 1, 2)
+        # permute the hess to Nbatch x Ndim x 1 x Nelec x 1 x Norb
+        hess_ao = hess_ao.permute(0, 3, 1, 2)
+        hess_ao = hess_ao.unsqueeze(2).unsqueeze(4)
 
         # compute the derivative of the bf positions wrt to the original pos
-        # Ndim x Nbatch x Nelec x Nelec
-        dbf = self._backflow_derivative(pos)
-        dbf = dbf.permute(1, 0, 2, 3)
+        # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
+        dbf = self._backflow_derivative(pos).unsqueeze(-1)
 
-        # compute the 2nd derivative of the bf positions wrt to the original pos
-        # Ndim x Nbatch x Nelec x Nelec
-        d2bf = self._backflow_second_derivative(pos)
-        d2bf = d2bf.permute(1, 0, 2, 3)
+        # compute the derivative of the bf positions wrt to the original pos
+        # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
+        d2bf = self._backflow_second_derivative(
+            pos).unsqueeze(-1)
 
         # compute the back flow second der
         # I don't get it that should be dbf**2 !!!
-        # WEIRD !
-        hess_ao = hess_ao[..., None] @ (dbf)[..., None, :]
+        hess_ao = (hess_ao * (dbf*dbf)).sum(1)
 
         # compute the backflow grad
-        hess_ao += grad_ao[..., None] @ d2bf[..., None, :]
+        hess_ao += (grad_ao * d2bf).sum(1)
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
-        hess_ao = hess_ao.permute(2, 0, 1, 4, 3)
-        # hess_ao = hess_ao.permute(4, 0, 1, 2, 3)
+        hess_ao = hess_ao.permute(3, 1, 0, 2, 4)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         hess_ao = hess_ao.reshape(-1, *(hess_ao.shape[2:]))
