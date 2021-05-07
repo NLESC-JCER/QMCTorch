@@ -157,7 +157,8 @@ class TestRadialFunctions(unittest.TestCase):
         xyz, r = self.process_position()
         radial = radial_slater
         radial = radial_gaussian
-
+        radial = radial_gaussian_pure
+        radial = radial_slater_pure
         val = radial(r, self.bas_n, self.bas_exp)
         val_lap = radial(r, self.bas_n, self.bas_exp, xyz=xyz,
                          derivative=3)

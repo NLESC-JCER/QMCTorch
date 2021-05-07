@@ -181,9 +181,6 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0],
 
         lap_rn = ((bas_n-2) * nRnm4).unsqueeze(-1) * mix_prod
 
-        # lap_er = (bexp_er/(xyz*xyz).sum(-1)).unsqueeze(-1) * mix_prod * (
-        #     bas_exp.unsqueeze(-1) + 1./R.unsqueeze(-1))
-
         lap_er = 4 * (bexp_er * bas_exp).unsqueeze(-1) * mix_prod
 
         return lap_rn * er.unsqueeze(-1) \
@@ -258,19 +255,29 @@ def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0],
                 (4*bas_exp.unsqueeze(-1)*xyz2-2)
             return lap_er
 
+    def _mixed_second_derivative_kernel():
+        """Returns the mixed second derivative i.e. d^2/dxdy.
+        where x and y are coordinate of the same electron."""
+
+        mix_prod = xyz[..., [[0, 1], [0, 2], [1, 2]]].prod(-1)
+        lap_er = 4 * (bexp_er * bas_exp).unsqueeze(-1) * mix_prod
+
+        return lap_er
+
     # computes the basic  quantities
     R2 = R*R
     er = torch.exp(-bas_exp * R2)
 
     # computes the grads
-    if any(x in derivative for x in [1, 2]):
+    if any(x in derivative for x in [1, 2, 3]):
 
         bexp_er = bas_exp * er
         nabla_er = -2 * (bexp_er).unsqueeze(-1) * xyz
 
     return return_required_data(derivative, _kernel,
                                 _first_derivative_kernel,
-                                _second_derivative_kernel)
+                                _second_derivative_kernel,
+                                _mixed_second_derivative_kernel)
 
 
 def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0,
@@ -321,24 +328,36 @@ def radial_slater_pure(R, bas_n, bas_exp, xyz=None, derivative=0,
                 (bas_exp.unsqueeze(-1) * xyz2 - (1-xyz2)/R.unsqueeze(-1))
             return lap_er
 
-    # computes the basic quantitiesgradients
+    def _mixed_second_derivative_kernel():
+        """Returns the mixed second derivative i.e. d^2/dxdy.
+        where x and y are coordinate of the same electron."""
+
+        mix_prod = xyz[..., [[0, 1], [0, 2], [1, 2]]].prod(-1)
+
+        lap_er = (bexp_er/(xyz*xyz).sum(-1)).unsqueeze(-1) * mix_prod * (
+            bas_exp.unsqueeze(-1) + 1./R.unsqueeze(-1))
+
+        return lap_er
+
+    # computes the basic gradients
     er = torch.exp(-bas_exp * R)
 
     # computes the grad
-    if any(x in derivative for x in [1, 2]):
+    if any(x in derivative for x in [1, 2, 3]):
         bexp_er = bas_exp * er
         nabla_er = -(bexp_er).unsqueeze(-1) * \
             xyz / R.unsqueeze(-1)
 
     return return_required_data(derivative, _kernel,
                                 _first_derivative_kernel,
-                                _second_derivative_kernel)
+                                _second_derivative_kernel,
+                                _mixed_second_derivative_kernel)
 
 
 def return_required_data(derivative, _kernel,
                          _first_derivative_kernel,
                          _second_derivative_kernel,
-                         _mixed_second_derivative_kernel=None):
+                         _mixed_second_derivative_kernel):
     """Returns the data contained in derivative
 
     Args:
