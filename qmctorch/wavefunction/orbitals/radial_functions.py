@@ -172,13 +172,31 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0],
             return lap_rn * er.unsqueeze(-1) + 2 * \
                 (nabla_rn * nabla_er) + rn.unsqueeze(-1) * lap_er
 
+    def _mixed_second_derivative_kernel():
+        """Returns the mixed second derivative i.e. d^2/dxdy.
+        where x and y are coordinate of the same electron."""
+
+        mix_prod = xyz[..., [[0, 1], [0, 2], [1, 2]]].prod(-1)
+        nRnm4 = nRnm2 / (xyz*xyz).sum(-1)
+
+        lap_rn = ((bas_n-2) * nRnm4).unsqueeze(-1) * mix_prod
+
+        # lap_er = (bexp_er/(xyz*xyz).sum(-1)).unsqueeze(-1) * mix_prod * (
+        #     bas_exp.unsqueeze(-1) + 1./R.unsqueeze(-1))
+
+        lap_er = 4 * (bexp_er * bas_exp).unsqueeze(-1) * mix_prod
+
+        return lap_rn * er.unsqueeze(-1) \
+            + (nabla_rn[..., [[0, 1], [0, 2], [1, 2]]] * nabla_er[..., [[1, 0], [2, 0], [2, 1]]]).sum(-1) \
+            + rn.unsqueeze(-1) * lap_er
+
     # computes the basic  quantities
     R2 = R*R
     rn = fast_power(R, bas_n)
     er = torch.exp(-bas_exp * R2)
 
     # computes the grads
-    if any(x in derivative for x in [1, 2]):
+    if any(x in derivative for x in [1, 2, 3]):
 
         Rnm2 = R**(bas_n - 2)
         nRnm2 = bas_n * Rnm2
@@ -189,7 +207,8 @@ def radial_gaussian(R, bas_n, bas_exp, xyz=None, derivative=[0],
 
     return return_required_data(derivative, _kernel,
                                 _first_derivative_kernel,
-                                _second_derivative_kernel)
+                                _second_derivative_kernel,
+                                _mixed_second_derivative_kernel)
 
 
 def radial_gaussian_pure(R, bas_n, bas_exp, xyz=None, derivative=[0],

@@ -88,7 +88,7 @@ class TestRadialFunctions(unittest.TestCase):
         # self.bas_exp = torch.rand(self.nbas)
 
         self.bas_n = torch.as_tensor([1])
-        self.bas_exp = torch.as_tensor([1.])
+        self.bas_exp = torch.as_tensor([0.5])
 
         self.xyz = Variable(torch.rand(self.nbatch, self.nelec*3))
         self.xyz = Variable(torch.as_tensor([[1., 2., 3.]]))
@@ -155,9 +155,13 @@ class TestRadialFunctions(unittest.TestCase):
     def test_mixed(self):
 
         xyz, r = self.process_position()
-        val = radial_slater(r, self.bas_n, self.bas_exp)
-        val_lap = radial_slater(r, self.bas_n, self.bas_exp, xyz=xyz,
-                                derivative=3)
+        radial = radial_slater
+        radial = radial_gaussian
+
+        val = radial(r, self.bas_n, self.bas_exp)
+        val_lap = radial(r, self.bas_n, self.bas_exp, xyz=xyz,
+                         derivative=3)
+
         val_lap_auto = hess_mixed_terms(val, self.xyz)
         print(val_lap)
         print(val_lap_auto)
