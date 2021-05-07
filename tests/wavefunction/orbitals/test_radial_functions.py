@@ -88,7 +88,7 @@ class TestRadialFunctions(unittest.TestCase):
         # self.bas_exp = torch.rand(self.nbas)
 
         self.bas_n = torch.as_tensor([1])
-        self.bas_exp = torch.as_tensor([0.])
+        self.bas_exp = torch.as_tensor([1.])
 
         self.xyz = Variable(torch.rand(self.nbatch, self.nelec*3))
         self.xyz = Variable(torch.as_tensor([[1., 2., 3.]]))

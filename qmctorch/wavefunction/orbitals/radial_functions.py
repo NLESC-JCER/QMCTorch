@@ -76,15 +76,16 @@ def radial_slater(R, bas_n, bas_exp, xyz=None,
                 (nabla_rn * nabla_er) + rn.unsqueeze(-1) * lap_er
 
     def _mixed_second_derivative_kernel():
-        """Returns the mixed second derivative i.e. d^x/dxdy.
+        """Returns the mixed second derivative i.e. d^2/dxdy.
         where x and y are coordinate of the same electron."""
 
         mix_prod = xyz[..., [[0, 1], [0, 2], [1, 2]]].prod(-1)
         nRnm4 = nRnm2 / (xyz*xyz).sum(-1)
 
-        lap_rn = - ((bas_n-2) * nRnm4).unsqueeze(-1) * mix_prod
-        lap_er = (bexp_er/xyz.sum(-1)).unsqueeze(-1) * (
-            bas_exp.unsqueeze(-1) * mix_prod - mix_prod/R.unsqueeze(-1))
+        lap_rn = ((bas_n-2) * nRnm4).unsqueeze(-1) * mix_prod
+
+        lap_er = (bexp_er/(xyz*xyz).sum(-1)).unsqueeze(-1) * mix_prod * (
+            bas_exp.unsqueeze(-1) + 1./R.unsqueeze(-1))
 
         return lap_rn * er.unsqueeze(-1) \
             + (nabla_rn[..., [[0, 1], [0, 2], [1, 2]]] * nabla_er[..., [[1, 0], [2, 0], [2, 1]]]).sum(-1) \
