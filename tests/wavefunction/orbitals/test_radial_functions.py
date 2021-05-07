@@ -81,17 +81,17 @@ class TestRadialFunctions(unittest.TestCase):
                       radial_slater_pure]
 
         self.nbatch = 1
-        self.nelec = 1
-        self.nbas = 1
+        self.nelec = 2
+        self.nbas = 2
 
         # self.bas_n = torch.Tensor([0, 1, 1, 1, 2, 2])
         # self.bas_exp = torch.rand(self.nbas)
 
-        self.bas_n = torch.as_tensor([1])
-        self.bas_exp = torch.as_tensor([0.5])
+        self.bas_n = torch.as_tensor([1, 1])
+        self.bas_exp = torch.as_tensor([0.5, 0.5])
 
         self.xyz = Variable(torch.rand(self.nbatch, self.nelec*3))
-        self.xyz = Variable(torch.as_tensor([[1., 2., 3.]]))
+        # self.xyz = Variable(torch.as_tensor([[1., 2., 3.]]))
         self.xyz.requires_grad = True
 
     def process_position(self):
@@ -153,19 +153,14 @@ class TestRadialFunctions(unittest.TestCase):
                 val_lap.sum(), val_lap_auto.sum(), atol=1E-6))
 
     def test_mixed(self):
-
-        xyz, r = self.process_position()
-        radial = radial_slater
-        radial = radial_gaussian
-        radial = radial_gaussian_pure
-        radial = radial_slater_pure
-        val = radial(r, self.bas_n, self.bas_exp)
-        val_lap = radial(r, self.bas_n, self.bas_exp, xyz=xyz,
+        """Test the mixed second derivatives."""
+        for fn in self.radfn:
+            xyz, r = self.process_position()
+            val = fn(r, self.bas_n, self.bas_exp)
+            val_lap = fn(r, self.bas_n, self.bas_exp, xyz=xyz,
                          derivative=3)
 
         val_lap_auto = hess_mixed_terms(val, self.xyz)
-        print(val_lap)
-        print(val_lap_auto)
         assert(torch.allclose(
             val_lap.sum(), val_lap_auto.sum(), atol=1E-6))
 

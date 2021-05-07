@@ -2,194 +2,145 @@ import unittest
 
 import numpy as np
 import torch
+from torch.autograd import grad, Variable
 
-from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.orbitals.spherical_harmonics import Harmonics
 
-from ...path_utils import PATH_TEST
-from .second_derivative import second_derivative
+
+def hess(out, pos):
+
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, pos,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+
+    for idim in range(jacob.shape[1]):
+
+        tmp = grad(jacob[:, idim], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, idim] = tmp[:, idim]
+
+    return hess
+
+
+def hess_mixed_terms(out, pos):
+
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, pos,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+    nelec = pos.shape[1]//3
+    k = 0
+
+    for ielec in range(nelec):
+
+        ix = ielec*3
+        tmp = grad(jacob[:, ix], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, k] = tmp[:, ix+1]
+        k = k + 1
+        hess[:, k] = tmp[:, ix+2]
+        k = k + 1
+
+        iy = ielec*3 + 1
+        tmp = grad(jacob[:, iy], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, k] = tmp[:, iy+1]
+        k = k + 1
+
+    return hess
 
 
 class TestCartesianHarmonics(unittest.TestCase):
 
     def setUp(self):
+        bas_kx = torch.as_tensor([0, 1, 0, 0, 2, 0, 0, 1, 0, 0, 1])
+        bas_ky = torch.as_tensor([0, 0, 1, 0, 0, 2, 0, 1, 1, 0, 1])
+        bas_kz = torch.as_tensor([0, 0, 0, 1, 0, 0, 2, 0, 1, 1, 1])
+        self.nbas = len(bas_kx)
 
-        torch.manual_seed(0)
-        np.random.seed(0)
+        self.harmonics = Harmonics(
+            'cart', bas_kx=bas_kx, bas_ky=bas_ky, bas_kz=bas_kz)
 
-        path_hdf5 = (
-            PATH_TEST / 'hdf5/CO2_adf_dzp.hdf5').absolute().as_posix()
-        self.mol = Molecule(load=path_hdf5)
+        self.nbatch = 1
+        self.nelec = 4
 
-        # wave function
-        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='ground_state',
-                                use_jastrow=True,
-                                include_all_mo=False)
+        self.pos = Variable(torch.rand(self.nbatch, self.nelec*3))
+        self.pos.requires_grad = True
 
-    def test_first_derivative_x(self):
+    def process_position(self):
+        """Return the distance between electron and centers."""
 
-        npts = 1000
-        self.pos = torch.zeros(npts, self.mol.nelec * 3)
-        self.pos[:, 0] = torch.linspace(-4, 4, npts)
-        self.dx = self.pos[1, 0] - self.pos[0, 0]
+        bas_coords = torch.zeros(self.nbas, 3)
+        xyz = (self.pos.view(-1, self.nelec, 1, 3) -
+               bas_coords[None, ...])
+        r = torch.sqrt((xyz*xyz).sum(3))
+        return xyz, r
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], sum_grad=False)
+    def test_value(self):
+        xyz, r = self.process_position()
+        self.harmonics(xyz, derivative=0)
 
-        R = R.detach().numpy()
-        dR = dR.detach().numpy()
-        ielec = 0
+    def test_grad(self):
+        xyz, r = self.process_position()
 
-        for iorb in range(7):
-            r0 = R[:, ielec, iorb]
-            dz_r0 = dR[:, ielec, iorb, 0]
-            dz_r0_fd = np.gradient(r0, self.dx)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+        val_grad = self.harmonics(
+            xyz, derivative=1, sum_grad=False)
 
-            # plt.plot(dz_r0)
-            # plt.plot(dz_r0_fd)
-            # plt.show()
+        val = self.harmonics(xyz)
+        val_grad_auto = grad(val, self.pos, torch.ones_like(val))[0]
 
-            assert(np.all(delta < 1E-3))
+        assert(torch.allclose(
+            val_grad.sum(), val_grad_auto.sum(), atol=1E-6))
 
-    def test_first_derivative_y(self):
+    def test_jac(self):
+        xyz, r = self.process_position()
+        val_jac = self.harmonics(xyz, derivative=1, sum_grad=True)
+        val = self.harmonics(xyz)
+        val_jac_auto = grad(val, self.pos, torch.ones_like(val))[0]
 
-        npts = 1000
-        self.pos = torch.zeros(npts, self.mol.nelec * 3)
-        self.pos[:, 1] = torch.linspace(-4, 4, npts)
-        self.dy = self.pos[1, 1] - self.pos[0, 1]
+        assert(torch.allclose(
+            val_jac.sum(), val_jac_auto.sum(), atol=1E-6))
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], sum_grad=False)
+    def test_lap(self):
+        xyz, r = self.process_position()
+        val_hess = self.harmonics(xyz, derivative=2)
+        val = self.harmonics(xyz)
+        val_hess_auto = hess(val, self.pos)
 
-        R = R.detach().numpy()
-        dR = dR.detach().numpy()
-        ielec = 0
+        assert(torch.allclose(
+            val_hess.sum(), val_hess_auto.sum(), atol=1E-6))
 
-        for iorb in range(7):
-            r0 = R[:, ielec, iorb]
-            dz_r0 = dR[:, ielec, iorb, 1]
-            dz_r0_fd = np.gradient(r0, self.dy)
-            delta = np.delete(
-                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+    def test_mixed_der(self):
+        xyz, r = self.process_position()
+        val_hess = self.harmonics(xyz, derivative=3)
+        val = self.harmonics(xyz)
+        val_hess_auto = hess_mixed_terms(val, self.pos)
 
-            # plt.plot(dz_r0)
-            # plt.plot(dz_r0_fd)
-            # plt.show()
-
-            assert(np.all(delta < 1E-3))
-
-    def test_first_derivative_z(self):
-
-        npts = 1000
-        self.pos = torch.zeros(npts, self.mol.nelec * 3)
-        self.pos[:, 2] = torch.linspace(-4, 4, npts)
-        self.dz = self.pos[1, 2] - self.pos[0, 2]
-
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1], sum_grad=False)
-
-        R = R.detach().numpy()
-        dR = dR.detach().numpy()
-        ielec = 0
-
-        for iorb in range(7):
-
-            r0 = R[:, ielec, iorb]
-            dz_r0 = dR[:, ielec, iorb, 2]
-            dz_r0_fd = np.gradient(r0, self.dz)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
-
-            # plt.plot(r0)
-            # plt.plot(dz_r0)
-            # plt.plot(dz_r0_fd)
-            # plt.show()
-
-            assert(np.all(delta < 1E-3))
-
-    def test_laplacian(self, eps=1E-4):
-
-        npts = 1000
-
-        self.pos = torch.zeros(npts, self.mol.nelec * 3)
-        self.pos[:, 2] = torch.linspace(-4, 4, npts)
-        eps = self.pos[1, 2] - self.pos[0, 2]
-
-        self.pos[:, 2] = torch.linspace(-4, 4, npts)
-
-        self.pos[:, 3] = eps
-        self.pos[:, 5] = torch.linspace(-4, 4, npts)
-
-        self.pos[:, 6] = -eps
-        self.pos[:, 8] = torch.linspace(-4, 4, npts)
-
-        self.pos[:, 10] = eps
-        self.pos[:, 11] = torch.linspace(-4, 4, npts)
-
-        self.pos[:, 13] = -eps
-        self.pos[:, 14] = torch.linspace(-4, 4, npts)
-
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR, d2R = self.wf.ao.harmonics(
-            xyz, derivative=[0, 1, 2], sum_grad=False)
-
-        for iorb in range(7):
-
-            lap_analytic = np.zeros(npts - 2)
-            lap_fd = np.zeros(npts - 2)
-
-            for i in range(1, npts - 1):
-                lap_analytic[i - 1] = d2R[i, 0, iorb]
-
-                r0 = R[i, 0, iorb].detach().numpy()
-                rpz = R[i+1, 0, iorb].detach().numpy()
-                rmz = R[i-1, 0, iorb].detach().numpy()
-                d2z = second_derivative(rmz, r0, rpz, eps)
-
-                r0 = R[i, 0, iorb]
-                rpx = R[i, 1, iorb]
-                rmx = R[i, 2, iorb]
-                d2x = second_derivative(rmx, r0, rpx, eps)
-
-                r0 = R[i, 0, iorb]
-                rpy = R[i, 3, iorb]
-                rmy = R[i, 4, iorb]
-                d2y = second_derivative(rmy, r0, rpy, eps)
-
-                lap_fd[i-1] = d2x + d2y + d2z
-
-            delta = np.delete(
-                np.abs(lap_analytic - lap_fd), np.s_[450:550])
-
-            assert(np.all(delta < 5E-3))
-
-            # plt.plot(lap_analytic, linewidth=2)
-            # plt.plot(lap_fd)
-            # plt.show()
-
-    def test_lap_sum(self):
-        npts = 100
-        self.pos = torch.rand(npts, self.mol.nelec * 3)
-        xyz, r = self.wf.ao._process_position(self.pos)
-        d2R_sum = self.wf.ao.harmonics(
-            xyz, derivative=2, sum_hess=True)
-
-        d2R = self.wf.ao.harmonics(
-            xyz, derivative=2, sum_hess=False)
-
-        assert(torch.allclose(d2R.sum(-1), d2R_sum))
+        assert(torch.allclose(
+            val_hess.sum(), val_hess_auto.sum(), atol=1E-6))
 
 
 if __name__ == "__main__":
     unittest.main()
-
-    # t = TestRadialSlater()
-    # t.setUp()
-    # t.test_first_derivative_x()
-    # # t.test_first_derivative_y()
-    # # t.test_first_derivative_z()
-    # t.test_laplacian()

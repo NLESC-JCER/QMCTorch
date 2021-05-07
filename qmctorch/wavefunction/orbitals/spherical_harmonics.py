@@ -155,13 +155,31 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0],
         else:
             return torch.stack((d2x, d2y, d2z), dim=-1)
 
+    def _mixed_second_derivative_kernel():
+        km1 = k-1
+        km1[km1 < 0] = 0
+
+        xyz_km1 = fast_power(xyz, km1)
+
+        kx, ky, kz = k.transpose(0, 1)
+        dxdy = kx * xyz_km1[..., 0] * ky * \
+            xyz_km1[..., 1] * xyz_k[..., 2]
+        dxdz = kx * xyz_km1[..., 0] * \
+            xyz[..., 1] * kz * xyz_km1[..., 2]
+        dydz = xyz_k[..., 0] * ky * \
+            xyz_km1[..., 1] * kz * xyz_km1[..., 2]
+
+        return torch.stack((dxdy, dxdz, dydz), dim=-1)
+
     # computes the power of the xyz
     xyz_k = fast_power(xyz, k,  mask0, mask2)
 
     # compute the outputs
     fns = [_kernel,
            _first_derivative_kernel,
-           _second_derivative_kernel]
+           _second_derivative_kernel,
+           _mixed_second_derivative_kernel]
+
     output = []
     for d in derivative:
         output.append(fns[d]())
@@ -189,6 +207,9 @@ def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True, sum_hess=True):
     if not sum_hess:
         raise NotImplementedError(
             'SphericalHarmonics cannot return individual component of the laplacian')
+    if derivative > 2:
+        raise NotImplementedError(
+            "Spherical Harmonics only accpet derivative=0,1,2 (%d found)" % derivative)
 
     if sum_grad:
         return get_spherical_harmonics(xyz, l, m, derivative)
