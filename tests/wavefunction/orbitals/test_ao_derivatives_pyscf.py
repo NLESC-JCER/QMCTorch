@@ -34,12 +34,52 @@ def hess(out, pos):
     return hess
 
 
+def hess_mixed_terms(out, pos):
+
+    # compute the jacobian
+    z = Variable(torch.ones(out.shape))
+    jacob = grad(out, pos,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
+
+    # compute the diagonal element of the Hessian
+    z = Variable(torch.ones(jacob.shape[0]))
+    hess = torch.zeros(jacob.shape)
+    nelec = pos.shape[1]//3
+    k = 0
+
+    for ielec in range(nelec):
+
+        ix = ielec*3
+        tmp = grad(jacob[:, ix], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, k] = tmp[:, ix+1]
+        k = k + 1
+        hess[:, k] = tmp[:, ix+2]
+        k = k + 1
+
+        iy = ielec*3 + 1
+        tmp = grad(jacob[:, iy], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
+
+        hess[:, k] = tmp[:, iy+1]
+        k = k + 1
+
+    return hess
+
+
 class TestAOderivativesPyscf(unittest.TestCase):
 
     def setUp(self):
 
         # define the molecule
-        at = 'C 0 0 0'
+        at = 'H 0 0 0; Li 0 0 1'
         basis = 'dzp'
         self.mol = Molecule(atom=at,
                             calculator='pyscf',
@@ -90,14 +130,20 @@ class TestAOderivativesPyscf(unittest.TestCase):
         d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
         assert(torch.allclose(d2ao_sum, d2ao.sum(-1)))
 
+    def test_ao_mixed_der(self):
+        ao = self.wf.ao(self.pos)
+        d2ao = self.wf.ao(self.pos, derivative=3)
+        d2ao_auto = hess_mixed_terms(ao, self.pos)
+        print(d2ao.sum(), d2ao_auto.sum())
+        assert(torch.allclose(d2ao.sum(), d2ao_auto.sum()))
+
     def test_ao_all(self):
         ao = self.wf.ao(self.pos)
         dao = self.wf.ao(self.pos, derivative=1, sum_grad=False)
         d2ao = self.wf.ao(self.pos, derivative=2)
         ao_all, dao_all, d2ao_all = self.wf.ao(
             self.pos, derivative=[0, 1, 2])
-        print(dao_all.shape)
-        print(d2ao_all.shape)
+
         assert(torch.allclose(ao, ao_all))
         assert(torch.allclose(dao, dao_all))
         assert(torch.allclose(d2ao, d2ao_all))
@@ -108,6 +154,7 @@ if __name__ == "__main__":
 
     t = TestAOderivativesPyscf()
     t.setUp()
-    t.test_ao_all()
-    t.test_ao_deriv()
-    t.test_ao_hess()
+    t.test_ao_mixed_der()
+    # t.test_ao_all()
+    # t.test_ao_deriv()
+    # t.test_ao_hess()

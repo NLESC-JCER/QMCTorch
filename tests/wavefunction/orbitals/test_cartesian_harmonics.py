@@ -83,7 +83,7 @@ class TestCartesianHarmonics(unittest.TestCase):
         self.harmonics = Harmonics(
             'cart', bas_kx=bas_kx, bas_ky=bas_ky, bas_kz=bas_kz)
 
-        self.nbatch = 1
+        self.nbatch = 10
         self.nelec = 4
 
         self.pos = Variable(torch.rand(self.nbatch, self.nelec*3))

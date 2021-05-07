@@ -100,6 +100,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             ao = self._compute_second_derivative_ao_values(
                 pos, sum_hess)
 
+        elif derivative == [3]:
+            ao = self._compute_mixed_second_derivative_ao_values(pos)
+
         elif derivative == [0, 1, 2]:
             ao = self._compute_all_backflow_ao_values(pos)
 

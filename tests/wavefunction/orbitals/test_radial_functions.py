@@ -80,18 +80,14 @@ class TestRadialFunctions(unittest.TestCase):
                       radial_slater,
                       radial_slater_pure]
 
-        self.nbatch = 1
-        self.nelec = 2
-        self.nbas = 2
+        self.nbatch = 10
+        self.nelec = 4
+        self.nbas = 6
 
-        # self.bas_n = torch.Tensor([0, 1, 1, 1, 2, 2])
-        # self.bas_exp = torch.rand(self.nbas)
-
-        self.bas_n = torch.as_tensor([1, 1])
-        self.bas_exp = torch.as_tensor([0.5, 0.5])
+        self.bas_n = torch.Tensor([0, 1, 1, 1, 2, 2])
+        self.bas_exp = torch.rand(self.nbas)
 
         self.xyz = Variable(torch.rand(self.nbatch, self.nelec*3))
-        # self.xyz = Variable(torch.as_tensor([[1., 2., 3.]]))
         self.xyz.requires_grad = True
 
     def process_position(self):
