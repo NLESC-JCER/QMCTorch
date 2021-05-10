@@ -1,5 +1,5 @@
 import unittest
-
+import numpy as np
 import torch
 from pyscf import gto
 from torch.autograd import Variable, grad, gradcheck
@@ -78,8 +78,11 @@ class TestAOderivativesPyscf(unittest.TestCase):
 
     def setUp(self):
 
+        torch.manual_seed(101)
+        np.random.seed(101)
+
         # define the molecule
-        at = 'H 0 0 0; Li 0 0 1'
+        at = 'Be 0 0 0'
         basis = 'dzp'
         self.mol = Molecule(atom=at,
                             calculator='pyscf',
@@ -134,7 +137,7 @@ class TestAOderivativesPyscf(unittest.TestCase):
         ao = self.wf.ao(self.pos)
         d2ao = self.wf.ao(self.pos, derivative=3)
         d2ao_auto = hess_mixed_terms(ao, self.pos)
-        print(d2ao.sum(), d2ao_auto.sum())
+
         assert(torch.allclose(d2ao.sum(), d2ao_auto.sum()))
 
     def test_ao_all(self):

@@ -72,11 +72,6 @@ class AtomicOrbitals(nn.Module):
                 bas_kz=mol.basis.bas_kz,
                 cuda=cuda)
 
-        print(self.bas_n)
-        print(mol.basis.bas_kx)
-        print(mol.basis.bas_ky)
-        print(mol.basis.bas_kz)
-
         # select the radial apart
         radial_dict = {'sto': radial_slater,
                        'gto': radial_gaussian,
@@ -468,6 +463,7 @@ class AtomicOrbitals(nn.Module):
         Y, dY, d2Y, d2mY = self.harmonics(xyz,
                                           derivative=[0, 1, 2, 3],
                                           sum_grad=False)
+
         return self._off_diag_hessian_kernel(R, dR, d2R, d2mR, Y, dY, d2Y, d2mY)
 
     def _off_diag_hessian_kernel(self, R, dR, d2R, d2mR, Y, dY, d2Y, d2mY):

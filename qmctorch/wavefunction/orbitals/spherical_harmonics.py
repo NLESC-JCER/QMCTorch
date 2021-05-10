@@ -162,10 +162,11 @@ def CartesianHarmonics(xyz, k, mask0, mask2, derivative=[0],
         xyz_km1 = fast_power(xyz, km1)
 
         kx, ky, kz = k.transpose(0, 1)
+
         dxdy = kx * xyz_km1[..., 0] * ky * \
             xyz_km1[..., 1] * xyz_k[..., 2]
         dxdz = kx * xyz_km1[..., 0] * \
-            xyz[..., 1] * kz * xyz_km1[..., 2]
+            xyz_k[..., 1] * kz * xyz_km1[..., 2]
         dydz = xyz_k[..., 0] * ky * \
             xyz_km1[..., 1] * kz * xyz_km1[..., 2]
 
