@@ -10,7 +10,7 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow
 from qmctorch.utils import set_torch_double_precision
 
-from ..path_utils import PATH_TEST
+# from ..path_utils import PATH_TEST
 
 
 class TestLiHBackFlowPySCF(unittest.TestCase):
@@ -95,4 +95,9 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    t = TestLiHBackFlowPySCF()
+    t.setUp()
+    t.test_0_wavefunction()
+    t.test1_single_point()
+
+    # unittest.main()

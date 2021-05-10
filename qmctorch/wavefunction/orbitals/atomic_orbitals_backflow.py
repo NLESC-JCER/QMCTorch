@@ -21,9 +21,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         super().__init__(mol, cuda)
         dtype = torch.get_default_dtype()
-        self.backflow_weight = nn.Parameter(torch.as_tensor([0.1]))
-        self.backflow_weight = nn.Parameter(
-            torch.rand(mol.nelec, mol.nelec))
+        self.backflow_weight = nn.Parameter(torch.as_tensor([1E-4]))
         self.edist = ElectronElectronDistance(mol.nelec)
 
     def _to_device(self):
