@@ -77,7 +77,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         self.ao = AtomicOrbitalsBackFlow(self.mol)
 
         # define the grid points
-        self.npts = 1
+        self.npts = 11
         self.pos = torch.rand(self.npts, self.mol.nelec * 3)
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True

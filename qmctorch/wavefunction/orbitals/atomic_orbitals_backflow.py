@@ -191,7 +191,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return hess
 
-    def _compute_diag_hessian_backflow_ao_values(self, pos, hess_ao=None, grad_ao=None):
+    def _compute_diag_hessian_backflow_ao_values(self, pos, hess_ao=None, mixed_ao=None, grad_ao=None):
         """Compute the laplacian of the backflow ao fromn xyz tensor
 
         Args:
@@ -205,6 +205,10 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         if hess_ao is None:
             hess_ao = self._compute_diag_hessian_ao_values(pos)
 
+        if mixed_ao is None:
+            mixed_ao = self._compute_mixed_second_derivative_ao_values(
+                pos)
+
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
 
@@ -216,6 +220,10 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         hess_ao = hess_ao.permute(0, 3, 1, 2)
         hess_ao = hess_ao.unsqueeze(2).unsqueeze(4)
 
+        # permute the hess to Nbatch x Ndim x 1 x Nelec x 1 x Norb
+        mixed_ao = mixed_ao.permute(0, 3, 1, 2)
+        mixed_ao = mixed_ao.unsqueeze(2).unsqueeze(4)
+
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
         dbf = self._backflow_derivative(pos).unsqueeze(-1)
@@ -226,11 +234,14 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             pos).unsqueeze(-1)
 
         # compute the back flow second der
-        # I don't get it that should be dbf**2 !!!
         hess_ao = (hess_ao * (dbf*dbf)).sum(1)
 
         # compute the backflow grad
         hess_ao += (grad_ao * d2bf).sum(1)
+
+        # compute the contribution of the mixed derivative
+        hess_ao += 2*(mixed_ao *
+                      dbf[:, [[0, 1], [0, 2], [1, 2]], ...].prod(2)).sum(1)
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
         hess_ao = hess_ao.permute(3, 1, 0, 2, 4)
