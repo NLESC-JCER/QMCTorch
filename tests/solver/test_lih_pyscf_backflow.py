@@ -33,9 +33,6 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
                                         configs='single_double(2,2)',
                                         include_all_mo=True)
 
-        self.wf.ao.backflow_weights.data += 0.1 * torch.rand(
-            self.mol.nelec, self.mol.nelec)
-
         # fc weights
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
 

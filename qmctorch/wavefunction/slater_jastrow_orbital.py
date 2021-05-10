@@ -59,7 +59,7 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
 
         self.log_data()
 
-    def ordered_jastrow(self, pos, derivative=0, jacobian=True):
+    def ordered_jastrow(self, pos, derivative=0, sum_grad=True):
         """Returns the value of the jastrow with the correct dimensions
 
         Args:
@@ -67,17 +67,17 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
                                   Size : Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0,1,2,).
                             Defaults to 0.
-            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+            sum_grad (bool, optional): Return the sum_grad (i.e. the sum of
                                        the derivatives) or the individual
                                        terms. Defaults to True.
                                        False only for derivative=1
 
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
-                          Nbatch, Nelec, Nmo (jacobian = True)
-                          Nbatch, Nelec, Nmo, Ndim (jacobian = False)
+                          Nbatch, Nelec, Nmo (sum_grad = True)
+                          Nbatch, Nelec, Nmo, Ndim (sum_grad = False)
         """
-        jast_vals = self.jastrow(pos, derivative, jacobian)
+        jast_vals = self.jastrow(pos, derivative, sum_grad)
 
         def permute(vals):
             """transpose the data depending on the number of dim."""
@@ -141,16 +141,16 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
     def ao2cmo(self, ao, jastrow):
         return jastrow * self.mo(self.mo_scf(ao))
 
-    def pos2mo(self, x, derivative=0, jacobian=True):
+    def pos2mo(self, x, derivative=0, sum_grad=True):
         """Compute the uncorrelated MOs from the positions."""
 
-        ao = self.ao(x, derivative=derivative, jacobian=jacobian)
-        if jacobian:
+        ao = self.ao(x, derivative=derivative, sum_grad=sum_grad)
+        if sum_grad:
             return self.ao2mo(ao)
         else:
             return self.ao2mo(ao.transpose(2, 3)).transpose(2, 3)
 
-    def pos2cmo(self, x, derivative=0, jacobian=True):
+    def pos2cmo(self, x, derivative=0, sum_grad=True):
         """Get the values of correlated MOs
 
         Arguments:
@@ -168,13 +168,13 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         elif derivative == 1:
 
             mo = self.pos2mo(x)
-            dmo = self.pos2mo(x, derivative=1, jacobian=jacobian)
+            dmo = self.pos2mo(x, derivative=1, sum_grad=sum_grad)
 
             jast = self.ordered_jastrow(x)
             djast = self.ordered_jastrow(
-                x, derivative=1, jacobian=jacobian)
+                x, derivative=1, sum_grad=sum_grad)
 
-            if jacobian:
+            if sum_grad:
                 return mo * djast.sum(1).unsqueeze(1) + jast * dmo
             else:
                 return mo.unsqueeze(-1) * djast.sum(1).unsqueeze(1) + jast.unsqueeze(-1) * dmo
@@ -193,7 +193,7 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
             jast, djast, d2jast = self.ordered_jastrow(x,
                                                        derivative=[
                                                            0, 1, 2],
-                                                       jacobian=False)
+                                                       sum_grad=False)
             # terms of the kin op
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
@@ -245,7 +245,7 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
-    def gradients_jacobi(self, x, jacobian=True):
+    def gradients_jacobi(self, x, sum_grad=True):
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
@@ -256,7 +256,7 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         cmo = self.pos2cmo(x)
 
         # get the grad of the wf
-        if jacobian:
+        if sum_grad:
             # bgrad = self.pos2cmo(x, derivative=1)
             bgrad = self.get_gradient_operator(x).sum(0)
         else:
@@ -286,12 +286,12 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         """
         if 1:
             mo = self.pos2mo(x)
-            dmo = self.pos2mo(x, derivative=1, jacobian=False)
+            dmo = self.pos2mo(x, derivative=1, sum_grad=False)
             d2mo = self.pos2mo(x, derivative=2)
 
             jast = self.ordered_jastrow(x)
             djast = self.ordered_jastrow(
-                x, derivative=1, jacobian=False)
+                x, derivative=1, sum_grad=False)
             d2jast = self.ordered_jastrow(x, derivative=2)
 
             # \Delta_n J * MO
@@ -341,10 +341,10 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         """
 
         mo = self.pos2mo(x)
-        dmo = self.pos2mo(x, derivative=1, jacobian=False)
+        dmo = self.pos2mo(x, derivative=1, sum_grad=False)
 
         jast = self.ordered_jastrow(x)
-        djast = self.ordered_jastrow(x, derivative=1, jacobian=False)
+        djast = self.ordered_jastrow(x, derivative=1, sum_grad=False)
 
         # reformat to have Nelec, Ndim, Nbatch, 1, Nmo
         djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)

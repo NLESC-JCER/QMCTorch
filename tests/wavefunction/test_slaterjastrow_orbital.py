@@ -95,7 +95,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_grad_mo(self):
         """Gradients of the uncorrelated MOs."""
         mo = self.wf.pos2mo(self.pos)
-        dmo = self.wf.pos2mo(self.pos, derivative=1, jacobian=False)
+        dmo = self.wf.pos2mo(self.pos, derivative=1, sum_grad=False)
         dmo_grad = grad(
             mo, self.pos, grad_outputs=torch.ones_like(mo))[0]
 
@@ -125,7 +125,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         """Gradients of the jastrow values."""
         jast = self.wf.ordered_jastrow(self.pos)
         djast = self.wf.ordered_jastrow(
-            self.pos, derivative=1, jacobian=False)
+            self.pos, derivative=1, sum_grad=False)
         djast_grad = grad(jast, self.pos,
                           grad_outputs=torch.ones_like(jast))[0]
 
@@ -180,7 +180,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_grad_wf(self):
         """Compute the gradients of the wf  wrt to xyz coord of each elec."""
         grad_jacobi = self.wf.gradients_jacobi(
-            self.pos, jacobian=False).squeeze()
+            self.pos, sum_grad=False).squeeze()
         grad_auto = self.wf.gradients_autograd(self.pos)
         assert torch.allclose(grad_jacobi, grad_auto)
 

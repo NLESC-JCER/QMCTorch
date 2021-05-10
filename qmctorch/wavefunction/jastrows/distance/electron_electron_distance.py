@@ -171,17 +171,30 @@ class ElectronElectronDistance(nn.Module):
         return (diff_axis * invr3)
 
     @staticmethod
-    def get_distance_quadratic(input):
+    def get_distance_quadratic(pos):
         """Compute the distance following a quadratic expansion
 
         Arguments:
-            input {torch.tensor} -- electron position [nbatch x nelec x ndim]
+            pos {torch.tensor} -- electron position [nbatch x nelec x ndim]
 
         Returns:
             torch.tensor -- distance matrices nbatch x nelec x ndim]
         """
 
-        norm = (input**2).sum(-1).unsqueeze(-1)
+        norm = (pos**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(input, input.transpose(1, 2)))
+                torch.bmm(pos, pos.transpose(1, 2)))
         return dist
+
+    @staticmethod
+    def get_difference(pos):
+        """Compute the difference ri - rj
+
+        Arguments:
+            pos {torch.tensor} -- electron position [nbatch x nelec x ndim]
+
+        Returns:
+            torch.tensor -- distance matrices nbatch x nelec x nelec x ndim]
+        """
+        out = pos[:, :, None, :] - pos[:, None, :, :]
+        return out

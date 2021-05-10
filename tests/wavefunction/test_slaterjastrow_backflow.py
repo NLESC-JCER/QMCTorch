@@ -55,16 +55,15 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
             redo_scf=True)
 
         self.wf = SlaterJastrowBackFlow(mol,
-                                        kinetic='auto',
+                                        kinetic='jacobi',
                                         use_jastrow=True,
                                         include_all_mo=True,
                                         configs='single_double(2,2)')
 
+        # self.wf.ao.backflow_weight.data *= 0.
+
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
-
-        self.wf.ao.backflow_weights.data += 0.1 * torch.rand(
-            mol.nelec, mol.nelec)
 
         self.nbatch = 5
         self.pos = torch.Tensor(np.random.rand(
@@ -72,19 +71,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         self.pos.requires_grad = True
 
     def test_forward(self):
-
         wfvals = self.wf(self.pos)
-        # ref = torch.as_tensor([[0.0977],
-        #                     [0.0618],
-        #                     [0.0587],
-        #                     [0.0861],
-        #                     [0.0466],
-        #                     [0.0406],
-        #                     [0.0444],
-        #                     [0.0728],
-        #                     [0.0809],
-        #                     [0.1868]])
-        # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
 
     def test_jacobian_mo(self):
         """Jacobian of the BF MOs."""
@@ -106,7 +93,9 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         """Gradients of the BF MOs."""
 
         mo = self.wf.pos2mo(self.pos)
-        dmo = self.wf.pos2mo(self.pos, derivative=1, jacobian=False)
+
+        dao = self.wf.ao(self.pos, derivative=1, sum_grad=False)
+        dmo = self.wf.ao2mo(dao)
 
         dmo_grad = grad(
             mo, self.pos,
@@ -123,21 +112,32 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         val = self.wf.pos2mo(self.pos)
 
         d2val_grad = hess(val, self.pos)
-        d2val = self.wf.pos2mo(self.pos, derivative=2)
+        d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
+        d2val = self.wf.ao2mo(d2ao)
+
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
-        d2val = d2val.sum(-1).sum(-1)
+        d2val = d2val.reshape(4, 3, 5, 4, 6).sum(1).sum(-1).sum(-1)
         d2val_grad = d2val_grad.view(
             self.nbatch, self.wf.nelec, 3).sum(-1)
         d2val_grad = d2val_grad.T
         assert(torch.allclose(d2val, d2val_grad))
+
+    def test_grad_wf(self):
+        pass
+
+        # grad_auto = self.wf.gradients_autograd(self.pos)
+        # grad_jac = self.wf.gradients_jacobi(self.pos)
+
+        # assert torch.allclose(
+        #     grad_auto.data, grad_jac.data, rtol=1E-4, atol=1E-4)
 
     def test_local_energy(self):
 
         self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
         eloc_auto = self.wf.local_energy(self.pos)
 
-        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
+        self.wf.kinetic_energy = self.wf.kinetic_energy_jacobi
         eloc_jac = self.wf.local_energy(self.pos)
 
         assert torch.allclose(
@@ -148,9 +148,17 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
         eauto = self.wf.kinetic_energy_autograd(self.pos)
         ejac = self.wf.kinetic_energy_jacobi(self.pos)
 
+        print(ejac)
+        print(eauto)
+
         assert torch.allclose(
             eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    t = TestSlaterJastrowBackFlow()
+    t.setUp()
+    t.test_hess_mo()
+    t.test_grad_mo()
+    t.test_kinetic_energy()
+    # unittest.main()

@@ -105,19 +105,19 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         """transforms AO values in to MO values."""
         return self.mo(self.mo_scf(ao))
 
-    def pos2mo(self, x, derivative=0, jacobian=True):
+    def pos2mo(self, x, derivative=0, sum_grad=True):
         """Compute the MO vals from the pos
 
         Args:
             x ([type]): [description]
             derivative (int, optional): [description]. Defaults to 0.
-            jacobian (bool, optional): [description]. Defaults to True.
+            sum_grad (bool, optional): [description]. Defaults to True.
 
         Returns:
             [type]: [description]
         """
 
-        ao = self.ao(x, derivative=derivative, jacobian=jacobian)
+        ao = self.ao(x, derivative=derivative, sum_grad=sum_grad)
         return self.ao2mo(ao)
 
     def kinetic_energy_jacobi(self, x,  **kwargs):
@@ -155,7 +155,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
         # get ao values
         ao, dao, d2ao = self.ao(
-            x, derivative=[0, 1, 2], jacobian=False)
+            x, derivative=[0, 1, 2], sum_grad=False)
 
         # get the mo values
         mo = self.ao2mo(ao)
@@ -189,7 +189,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         # compute the Jastrow terms
         jast, djast, d2jast = self.jastrow(x,
                                            derivative=[0, 1, 2],
-                                           jacobian=False)
+                                           sum_grad=False)
 
         # prepare the second derivative term d2Jast/Jast
         # Nbatch x Nelec
@@ -218,7 +218,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
         return -0.5 * out.unsqueeze(-1)
 
-    def gradients_jacobi(self, x, jacobian=True):
+    def gradients_jacobi(self, x, sum_grad=True):
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:

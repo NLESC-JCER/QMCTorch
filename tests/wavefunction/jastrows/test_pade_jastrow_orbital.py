@@ -73,7 +73,7 @@ class TestPadeJastrowOrbital(unittest.TestCase):
     def test_grad_jastrow(self):
 
         val = self.jastrow(self.pos)
-        dval = self.jastrow(self.pos, derivative=1, jacobian=False)
+        dval = self.jastrow(self.pos, derivative=1, sum_grad=False)
 
         dval_grad = grad(
             val,
