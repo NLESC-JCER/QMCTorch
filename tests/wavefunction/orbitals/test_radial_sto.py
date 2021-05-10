@@ -180,11 +180,11 @@ class TestRadialSlater(unittest.TestCase):
             delta = np.delete(
                 np.abs(lap_analytic - lap_fd), np.s_[450:550])
 
-            # assert(np.all(delta < 5E-3))
+            assert(np.all(delta < 5E-3))
 
-            plt.plot(lap_analytic, linewidth=2)
-            plt.plot(lap_fd)
-            plt.show()
+            # plt.plot(lap_analytic, linewidth=2)
+            # plt.plot(lap_fd)
+            # plt.show()
 
 
 if __name__ == "__main__":

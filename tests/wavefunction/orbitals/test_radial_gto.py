@@ -179,17 +179,17 @@ class TestRadialSlater(unittest.TestCase):
                 np.abs(lap_analytic - lap_fd) / m, np.s_[450:550])
 
             assert(np.all(delta < 5E-3))
-            plt.plot(lap_analytic, linewidth=2)
-            plt.plot(lap_fd)
-            plt.show()
+            # plt.plot(lap_analytic, linewidth=2)
+            # plt.plot(lap_fd)
+            # plt.show()
 
 
 if __name__ == "__main__":
-    # unittest.main()
+    unittest.main()
 
-    t = TestRadialSlater()
-    t.setUp()
-    # t.test_first_derivative_x()
-    # t.test_first_derivative_y()
-    # t.test_first_derivative_z()
-    t.test_laplacian()
+    # t = TestRadialSlater()
+    # t.setUp()
+    # # t.test_first_derivative_x()
+    # # t.test_first_derivative_y()
+    # # t.test_first_derivative_z()
+    # t.test_laplacian()
