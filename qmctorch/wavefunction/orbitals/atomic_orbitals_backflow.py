@@ -7,11 +7,12 @@ from .radial_functions import (
 from .spherical_harmonics import Harmonics
 from .atomic_orbitals import AtomicOrbitals
 from ..jastrows.distance.electron_electron_distance import ElectronElectronDistance
+from .backflow.backflow_transformation import BackFlowTransformation
 
 
 class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
-    def __init__(self, mol, cuda=False):
+    def __init__(self, mol, backflow_kernel, cuda=False):
         """Computes the value of atomic orbitals
 
         Args:
@@ -21,8 +22,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         super().__init__(mol, cuda)
         dtype = torch.get_default_dtype()
-        self.backflow_weight = nn.Parameter(torch.as_tensor([1E-4]))
-        self.edist = ElectronElectronDistance(mol.nelec)
+        self.backflow_trans = BackFlowTransformation(
+            mol, backflow_kernel=backflow_kernel, cuda=cuda)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
@@ -30,8 +31,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         self.device = torch.device('cuda')
         self.to(self.device)
         attrs = ['bas_n', 'bas_coeffs',
-                 'nshells', 'norm_cst', 'index_ctr',
-                 'backflow_weight']
+                 'nshells', 'norm_cst', 'index_ctr']
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
@@ -156,7 +156,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
-        dbf = self._backflow_derivative(pos).unsqueeze(-1)
+        dbf = self.backflow_trans(pos, derivative=1).unsqueeze(-1)
 
         # compute backflow : Nbatch x Ndim x Nelec x Nelec x Norb
         grad_ao = (grad_ao * dbf).sum(1)
@@ -224,12 +224,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
-        dbf = self._backflow_derivative(pos).unsqueeze(-1)
+        dbf = self.backflow_trans(pos, derivative=1).unsqueeze(-1)
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
-        d2bf = self._backflow_second_derivative(
-            pos).unsqueeze(-1)
+        d2bf = self.backflow_trans(pos, derivative=2).unsqueeze(-1)
 
         # compute the back flow second der
         hess_ao = (hess_ao * (dbf*dbf)).sum(1)
@@ -327,7 +326,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         """
 
         # compute the back flow positions
-        bf_pos = self._backflow(pos)
+        bf_pos = self.backflow_trans(pos)
 
         # compute the vectors between electrons and atoms
         xyz = (bf_pos.view(-1, self.nelec, 1, self.ndim) -
@@ -337,244 +336,3 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         r = torch.sqrt((xyz*xyz).sum(3))
 
         return xyz, r
-
-    def _backflow(self, pos):
-        """transform the position of the electrons
-
-        .. math:
-            \\bold{q}_i = \\bold{r}_i + \\sum_{j\neq i} \\eta(r_{ij}) (\\bold{r}_i - \\bold{r}_j)
-
-        Args:
-            pos (torch.tensor): original positions Nbatch x [Nelec*Ndim]
-
-        Returns:
-            torch.tensor: transformed positions Nbatch x [Nelec*Ndim]
-        """
-
-        # compute the difference
-        # Nbatch x Nelec x Nelec x 3
-        delta_ee = self.edist.get_difference(
-            pos.reshape(-1, self.nelec, self.ndim))
-
-        # compute the backflow function
-        # Nbatch x Nelec x Nelec
-        bf_kernel = self._backflow_kernel(self.edist(pos))
-
-        # update pos
-        pos = pos.reshape(-1, self.nelec, self.ndim) + \
-            (bf_kernel.unsqueeze(-1) * delta_ee).sum(2)
-
-        return pos.reshape(-1, self.nelec*self.ndim)
-
-    def _backflow_derivative(self, pos):
-        r"""Computes the derivative of the back flow elec positions
-           wrt the initial positions of the electrons
-
-        .. math::
-            \\bold{q}_i = \\bold{r}_i + \\sum_{j\\neq i} \\eta(r_{ij}) (\\bold{r}_i - \\bold{r}_j)
-
-        .. math::
-            \\frac{d q_i}{d x_k} = \\delta_{ik} (1 + \\sum_{j\\neq i} \\frac{d \\eta(r_ij)}{d x_i} (x_i-x_j) + \\eta(r_ij))  +
-                                   \\delta_{i\\neq k} (-\\frac{d \\eta(r_ik)}{d x_k} (x_i-x_k) - \\eta(r_ik))
-
-
-        Args:
-            pos (torch.tensor): orginal positions of the electrons Nbatch x [Nelec*Ndim]
-
-        Returns:
-            torch.tensor: d q_{i}/d x_k  with :
-                          q_{i} bf position of elec i
-                          x_k original coordinate of the kth elec
-                          Nelec x  Nbatch x Nelec x Norb x Ndim
-        """
-
-        # ee dist matrix : Nbatch x  Nelec x Nelec
-        ree = self.edist(pos)
-        nbatch, nelec, _ = ree.shape
-
-        # derivative ee dist matrix : Nbatch x 3 x Nelec x Nelec
-        # dr_ij / dx_i = - dr_ij / dx_j
-        dree = self.edist(pos, derivative=1)
-
-        # difference between elec pos
-        # Nbatch, 3, Nelec, Nelec
-        delta_ee = self.edist.get_difference(
-            pos.reshape(nbatch, nelec, 3)).permute(0, 3, 1, 2)
-
-        # backflow kernel : Nbatch x 1 x Nelec x Nelec
-        bf = self._backflow_kernel(ree)
-
-        # (d eta(r_ij) / d r_ij) (d r_ij/d beta_i)
-        # derivative of the back flow kernel : Nbatch x 3 x Nelec x Nelec
-        dbf = self._backflow_kernel_derivative(ree).unsqueeze(1)
-        dbf = dbf * dree
-
-        # (d eta(r_ij) / d beta_i) (alpha_i - alpha_j)
-        # Nbatch x 3 x 3 x Nelec x Nelec
-        dbf_delta_ee = dbf.unsqueeze(1) * delta_ee.unsqueeze(2)
-
-        # compute the delta_ij * (1 + sum k \neq i eta(rik))
-        # Nbatch x Nelec x Nelec (diagonal matrix)
-        delta_ij_bf = torch.diag_embed(
-            1 + bf.sum(-1), dim1=-1, dim2=-2)
-
-        # eye 3x3 in 1x3x3x1x1
-        I33 = torch.eye(3, 3).view(1, 3, 3, 1, 1)
-
-        # compute the delta_ab * delta_ij * (1 + sum k \neq i eta(rik))
-        # Nbatch x Ndim x Ndim x Nelec x Nelec (diagonal matrix)
-        delta_ab_delta_ij_bf = I33 * \
-            delta_ij_bf.view(nbatch, 1, 1, nelec, nelec)
-
-        # compute sum_k df(r_ik)/dbeta_i (alpha_i - alpha_k)
-        # Nbatch x Ndim x Ndim x Nelec x Nelec
-        delta_ij_sum = torch.diag_embed(
-            dbf_delta_ee.sum(-1), dim1=-1, dim2=-2)
-
-        # compute delta_ab * f(rij)
-        delta_ab_bf = I33 * bf.view(nbatch, 1, 1, nelec, nelec)
-
-        # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
-        # nbatch d alpha_i / d beta_j
-        return delta_ab_delta_ij_bf + delta_ij_sum - dbf_delta_ee - delta_ab_bf
-
-    def _backflow_second_derivative(self, pos):
-        r"""Computes the seocnd derivative of the back flow elec positions
-           wrt the initial positions of the electrons
-
-        .. math::
-            \\bold{q}_i = \\bold{r}_i + \\sum_{j\\neq i} \\eta(r_{ij}) (\\bold{r}_i - \\bold{r}_j)
-
-        .. math::
-            \\frac{d q_i}{d x_k} = \\delta_{ik} (1 + \\sum_{j\\neqi} \\frac{d \\eta(r_ij)}{d x_i} + \\eta(r_ij))  +
-                                   \\delta_{i\\neq k} (-\\frac{d \\eta(r_ik)}{d x_k} - \\eta(r_ik))
-
-        .. math::
-            \\frac{d^2 q_i}{d x_k^2} = \\delta_{ik} (\\sum_{j\\neqi} \\frac{d^2 \\eta(r_ij)}{d x_i^2} + 2 \\frac{d \\eta(r_ij)}{d x_i})  +
-                                       - \\delta_{i\\neq k} (\\frac{d^2 \\eta(r_ik)}{d x_k^2} + \\frac{d \\eta(r_ik)}{d x_k})
-
-
-        Args:
-            pos (torch.tensor): orginal positions of the electrons Nbatch x [Nelec*Ndim]
-
-        Returns:
-            torch.tensor: d q_{i}/d x_k  with :
-                          q_{i} bf position of elec i
-                          x_k original coordinate of the kth elec
-                          Nelec x  Nbatch x Nelec x Norb x Ndim
-        """
-
-        # ee dist matrix :
-        # Nbatch x  Nelec x Nelec
-        ree = self.edist(pos)
-        nbatch, nelec, _ = ree.shape
-
-        # difference between elec pos
-        # Nbatch, 3, Nelec, Nelec
-        delta_ee = self.edist.get_difference(
-            pos.reshape(nbatch, nelec, 3)).permute(0, 3, 1, 2)
-
-        # derivative ee dist matrix  d r_{ij} / d x_i
-        # Nbatch x 3 x Nelec x Nelec
-        dree = self.edist(pos, derivative=1)
-
-        # derivative ee dist matrix :  d2 r_{ij} / d2 x_i
-        # Nbatch x 3 x Nelec x Nelec
-        d2ree = self.edist(pos, derivative=2)
-
-        # derivative of the back flow kernel : d eta(r_ij)/d r_ij
-        # Nbatch x 1 x Nelec x Nelec
-        dbf = self._backflow_kernel_derivative(ree).unsqueeze(1)
-
-        # second derivative of the back flow kernel : d2 eta(r_ij)/d2 r_ij
-        # Nbatch x 1 x Nelec x Nelec
-        d2bf = self._backflow_kernel_second_derivative(
-            ree).unsqueeze(1)
-
-        # (d^2 eta(r_ij) / d r_ij^2) (d r_ij/d x_i)^2
-        # + (d eta(r_ij) / d r_ij) (d^2 r_ij/d x_i^2)
-        # Nbatch x 3 x Nelec x Nelec
-        d2bf = (d2bf * dree * dree) + (dbf * d2ree)
-
-        # (d eta(r_ij) / d r_ij) (d r_ij/d x_i)
-        # Nbatch x 3 x Nelec x Nelec
-        dbf = dbf * dree
-
-        # eye matrix in dim x dim
-        i33 = torch.eye(3, 3).reshape(1, 3, 3, 1, 1)
-
-        # compute delta_ij delta_ab 2 sum_k dbf(ik) / dbeta_i
-        term1 = 2 * i33 * \
-            torch.diag_embed(
-                dbf.sum(-1), dim1=-1, dim2=-2).reshape(nbatch, 1, 3, nelec, nelec)
-
-        # (d2 eta(r_ij) / d2 beta_i) (alpha_i - alpha_j)
-        # Nbatch x 3 x 3 x Nelec x Nelec
-        d2bf_delta_ee = d2bf.unsqueeze(1) * delta_ee.unsqueeze(2)
-
-        # compute sum_k d2f(r_ik)/d2beta_i (alpha_i - alpha_k)
-        # Nbatch x Ndim x Ndim x Nelec x Nelec
-        term2 = torch.diag_embed(
-            d2bf_delta_ee.sum(-1), dim1=-1, dim2=-2)
-
-        # compute delta_ab * df(rij)/dbeta_j
-        term3 = 2 * i33 * dbf.reshape(nbatch, 1, 3, nelec, nelec)
-
-        # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
-        # nbatch d2 alpha_i / d2 beta_j
-        return term1 + term2 + d2bf_delta_ee + term3
-
-    def _backflow_kernel(self, ree):
-        """Computes the backflow function:
-
-        .. math:
-            \\eta(r_{ij}) = \\frac{u}{r_{ij}}
-
-        Args:
-            r (torch.tensor): e-e distance Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor : f(r) Nbatch x Nelec x Nelec
-        """
-        return self.backflow_weight * ree * ree
-
-        eye = torch.eye(self.nelec, self.nelec).to(self.device)
-        mask = torch.ones_like(ree) - eye
-        return self.backflow_weight * mask * (1./(ree+eye) - eye)
-
-    def _backflow_kernel_derivative(self, ree):
-        """Computes the derivative of the kernel function
-            w.r.t r_{ij}
-        .. math::
-            \\frac{d}{dr_{ij} \\eta(r_{ij}) = -u r_{ij}^{-2}
-
-        Args:
-            ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor : f'(r) Nbatch x Nelec x Nelec
-        """
-
-        return 2 * self.backflow_weight * ree
-
-        eye = torch.eye(self.nelec, self.nelec).to(self.device)
-        invree = (1./(ree+eye) - eye)
-        return - self.backflow_weight * invree * invree
-
-    def _backflow_kernel_second_derivative(self, ree):
-        """Computes the derivative of the kernel function
-            w.r.t r_{ij}
-        .. math::
-            \\frac{d}{dr_{ij} \\eta(r_{ij}) = -u r_{ij}^{-2}
-
-        Args:
-            ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor : f''(r) Nbatch x Nelec x Nelec
-        """
-        return 2 * self.backflow_weight * torch.ones_like(ree)
-
-        eye = torch.eye(self.nelec, self.nelec).to(self.device)
-        invree = (1./(ree+eye) - eye)
-        return 2 * self.backflow_weight * invree * invree * invree

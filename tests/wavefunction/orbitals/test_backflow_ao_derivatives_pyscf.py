@@ -7,6 +7,7 @@ import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.wavefunction.orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
+from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelnInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.manual_seed(101)
@@ -74,7 +75,8 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
                             unit='bohr')
 
         # define the wave function
-        self.ao = AtomicOrbitalsBackFlow(self.mol)
+        self.ao = AtomicOrbitalsBackFlow(
+            self.mol, BackFlowKernelnInverse)
 
         # define the grid points
         self.npts = 11
@@ -86,11 +88,12 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         """Test the derivative of the kernel function
             wrt the elec-elec distance."""
 
-        ree = self.ao.edist(self.pos)
-        bf_kernel = self.ao._backflow_kernel(ree)
+        ree = self.ao.backflow_trans.edist(self.pos)
+        bf_kernel = self.ao.backflow_trans.backflow_kernel(ree)
         dbf_kernel_auto = grad(
             bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel))[0]
-        dbf_kernel = self.ao._backflow_kernel_derivative(ree)
+        dbf_kernel = self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=1)
 
         assert(torch.allclose(dbf_kernel.sum(), dbf_kernel_auto.sum()))
         assert(torch.allclose(dbf_kernel, dbf_kernel_auto))
@@ -99,12 +102,13 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         """Test the 2nd derivative of the kernel function
            wrt the elec-elec distance."""
 
-        ree = self.ao.edist(self.pos)
-        bf_kernel = self.ao._backflow_kernel(ree)
+        ree = self.ao.backflow_trans.edist(self.pos)
+        bf_kernel = self.ao.backflow_trans.backflow_kernel(ree)
 
         d2bf_kernel_auto = hess_single_element(bf_kernel, ree)
 
-        d2bf_kernel = self.ao._backflow_kernel_second_derivative(ree)
+        d2bf_kernel = self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=2)
 
         assert(torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum()))
         assert(torch.allclose(d2bf_kernel, d2bf_kernel_auto))
@@ -119,18 +123,18 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         """
 
         # compute the ee dist
-        ree = self.ao.edist(self.pos)
+        ree = self.ao.backflow_trans.edist(self.pos)
 
         # compute the kernel values
-        bfpos = self.ao._backflow_kernel(ree)
+        bfpos = self.ao.backflow_trans.backflow_kernel(ree)
 
         # computes the derivative of the ee dist
-        di_ree = self.ao.edist(self.pos, 1)
+        di_ree = self.ao.backflow_trans.edist(self.pos, 1)
         dj_ree = di_ree
 
         # compute the derivative of the kernal values
-        bf_der = self.ao._backflow_kernel_derivative(
-            ree)
+        bf_der = self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=1)
 
         # get the der of the bf wrt the first elec in ree
         di_bfpos = bf_der.unsqueeze(1) * di_ree
@@ -165,31 +169,31 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         """
 
         # compute the ee dist
-        ree = self.ao.edist(self.pos)
+        ree = self.ao.backflow_trans.edist(self.pos)
 
         # compute the kernel values
-        bf_kernel = self.ao._backflow_kernel(ree)
+        bf_kernel = self.ao.backflow_trans.backflow_kernel(ree)
 
         # computes the derivative of the ee dist
-        di_ree = self.ao.edist(self.pos, 1)
+        di_ree = self.ao.backflow_trans.edist(self.pos, 1)
         dj_ree = di_ree
 
         # computes the derivative of the ee dist
-        d2i_ree = self.ao.edist(self.pos, 2)
+        d2i_ree = self.ao.backflow_trans.edist(self.pos, 2)
         d2j_ree = d2i_ree
 
         # compute the derivative of the kernel values
-        d2bf_kernel = self.ao._backflow_kernel_second_derivative(
-            ree).unsqueeze(1) * di_ree * di_ree
+        d2bf_kernel = self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=2).unsqueeze(1) * di_ree * di_ree
 
-        d2bf_kernel += self.ao._backflow_kernel_second_derivative(
-            ree).permute(0, 2, 1).unsqueeze(1) * dj_ree * dj_ree
+        d2bf_kernel += self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=2).permute(0, 2, 1).unsqueeze(1) * dj_ree * dj_ree
 
-        d2bf_kernel += self.ao._backflow_kernel_derivative(
-            ree).unsqueeze(1) * d2i_ree
+        d2bf_kernel += self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=1).unsqueeze(1) * d2i_ree
 
-        d2bf_kernel += self.ao._backflow_kernel_derivative(
-            ree).permute(0, 2, 1).unsqueeze(1) * d2j_ree
+        d2bf_kernel += self.ao.backflow_trans.backflow_kernel(
+            ree, derivative=1).permute(0, 2, 1).unsqueeze(1) * d2j_ree
 
         # computes the the derivative of the kernal values with autograd
         d2bf_kernel_auto = hess(bf_kernel, self.pos)
@@ -207,11 +211,11 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         """Test the derivative of the bf coordinate wrt the initial positions."""
 
         # compute backflow pos
-        q = self.ao._backflow(self.pos)
+        q = self.ao.backflow_trans(self.pos)
 
         # compute der of the backflow pos wrt the
         # original pos
-        dq = self.ao._backflow_derivative(self.pos)
+        dq = self.ao.backflow_trans(self.pos, derivative=1)
 
         # compute der of the backflow pos wrt the
         # original pos using autograd
@@ -232,11 +236,11 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         """Test the derivative of the bf coordinate wrt the initial positions."""
 
         # compute backflow pos
-        q = self.ao._backflow(self.pos)
+        q = self.ao.backflow_trans(self.pos)
 
         # compute der of the backflow pos wrt the
         # original pos
-        d2q = self.ao._backflow_second_derivative(self.pos)
+        d2q = self.ao.backflow_trans(self.pos, derivative=2)
 
         # compute der of the backflow pos wrt the
         # original pos using autograd
