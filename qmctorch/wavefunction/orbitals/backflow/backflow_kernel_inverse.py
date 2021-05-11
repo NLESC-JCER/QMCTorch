@@ -5,7 +5,7 @@ from .backflow_kernel_base import BackFlowKernelnBase
 
 class BackFlowKernelnInverse(BackFlowKernelnBase):
 
-    def __init__(self, mol, cuda):
+    def __init__(self, mol, cuda=False):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
