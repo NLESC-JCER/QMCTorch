@@ -5,8 +5,7 @@ from pyscf import gto
 from torch.autograd import Variable, grad, gradcheck
 import numpy as np
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
-from qmctorch.wavefunction.orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelnInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -62,7 +61,7 @@ def hess_single_element(out, inp):
     return hess.reshape(*shape)
 
 
-class TestBFAOderivativesPyscf(unittest.TestCase):
+class TestBackFlowTransformation(unittest.TestCase):
 
     def setUp(self):
 
@@ -74,8 +73,8 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
                             basis=basis,
                             unit='bohr')
 
-        # define the wave function
-        self.ao = AtomicOrbitalsBackFlow(
+        # define the backflow transformation
+        self.backflow_trans = BackFlowTransformation(
             self.mol, BackFlowKernelnInverse)
 
         # define the grid points
@@ -84,60 +83,54 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
 
-    def test_ao_gradian(self):
-        """Test the calculation of the gradient of the at
-        wrt the original coordinates."""
+    def test_backflow_derivative(self):
+        """Test the derivative of the bf coordinate wrt the initial positions."""
 
-        ao = self.ao(self.pos)
-        dao = self.ao(self.pos, derivative=1, sum_grad=False)
+        # compute backflow pos
+        q = self.backflow_trans(self.pos)
 
-        dao_grad = grad(
-            ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
+        # compute der of the backflow pos wrt the
+        # original pos
+        dq = self.backflow_trans(self.pos, derivative=1)
 
-        assert(torch.allclose(dao.sum(), dao_grad.sum()))
+        # compute der of the backflow pos wrt the
+        # original pos using autograd
+        dq_grad = grad(
+            q, self.pos, grad_outputs=torch.ones_like(self.pos))[0]
 
-        dao = dao.sum(-1).sum(-1)
-        dao_grad = dao_grad.T
-        assert(torch.allclose(dao, dao_grad))
+        # checksum
+        assert(torch.allclose(dq.sum(), dq_grad.sum()))
 
-    def test_ao_jacobian(self):
+        # permute and check elements
+        dq = dq.sum([1, 3])
+        dq = dq.permute(0, 2, 1)
 
-        ao = self.ao(self.pos)
-        dao = self.ao(self.pos, derivative=1)
+        dq_grad = dq_grad.reshape(self.npts, self.mol.nelec, 3)
+        assert(torch.allclose(dq, dq_grad))
 
-        dao_grad = grad(
-            ao, self.pos, grad_outputs=torch.ones_like(ao))[0]
+    def test_backflow_second_derivative(self):
+        """Test the derivative of the bf coordinate wrt the initial positions."""
 
-        assert(torch.allclose(dao.sum(), dao_grad.sum()))
+        # compute backflow pos
+        q = self.backflow_trans(self.pos)
 
-        dao = dao.sum(-1).sum(-1)
-        dao_grad = dao_grad.reshape(-1, self.ao.nelec, 3).sum(-1)
-        dao_grad = dao_grad.T
-        assert(torch.allclose(dao, dao_grad))
+        # compute der of the backflow pos wrt the
+        # original pos
+        d2q = self.backflow_trans(self.pos, derivative=2)
 
-    def test_ao_hess(self):
+        # compute der of the backflow pos wrt the
+        # original pos using autograd
+        d2q_auto = hess(q, self.pos)
 
-        ao = self.ao(self.pos)
-        d2ao = self.ao(self.pos, derivative=2)
+        # checksum
+        assert(torch.allclose(d2q.sum(), d2q_auto.sum()))
 
-        d2ao_grad = hess(ao, self.pos)
-        assert(torch.allclose(d2ao.sum(), d2ao_grad.sum()))
+        # permute and check elements
+        d2q = d2q.sum([1, 3])
+        d2q = d2q.permute(0, 2, 1)
+        d2q_auto = d2q_auto.reshape(self.npts, self.mol.nelec, 3)
 
-        d2ao = d2ao.sum(-1).sum(-1)
-        d2ao_grad = d2ao_grad.reshape(-1, self.ao.nelec, 3).sum(-1)
-        d2ao_grad = d2ao_grad.T
-        assert(torch.allclose(d2ao, d2ao_grad))
-
-    def test_all_ao_values(self):
-        ao = self.ao(self.pos)
-        dao = self.ao(self.pos, derivative=1, sum_grad=False)
-        d2ao = self.ao(self.pos, derivative=2, sum_hess=False)
-        ao_all, dao_all, d2ao_all = self.ao(
-            self.pos, derivative=[0, 1, 2])
-
-        assert(torch.allclose(ao, ao_all))
-        assert(torch.allclose(dao, dao_all))
-        assert(torch.allclose(d2ao, d2ao_all))
+        assert(torch.allclose(d2q, d2q_auto))
 
 
 if __name__ == "__main__":
