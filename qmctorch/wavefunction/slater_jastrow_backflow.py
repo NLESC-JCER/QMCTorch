@@ -15,7 +15,7 @@ from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.jastrow import set_jastrow
-from .orbitals.backflow.backflow_kernel_inverse import BackFlowKernelnInverse
+from .orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
 
 
 class SlaterJastrowBackFlow(SlaterJastrowBase):
@@ -26,7 +26,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
                  jastrow_type='pade_jastrow',
                  cuda=False,
                  include_all_mo=True,
-                 backflow_kernel=BackFlowKernelnInverse,
+                 backflow_kernel=BackFlowKernelInverse,
                  **kwargs):
         """Implementation of the QMC Network.
 

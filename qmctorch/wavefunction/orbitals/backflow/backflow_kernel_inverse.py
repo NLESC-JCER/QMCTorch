@@ -1,9 +1,9 @@
 import torch
 from torch import nn
-from .backflow_kernel_base import BackFlowKernelnBase
+from .backflow_kernel_base import BackFlowKernelBase
 
 
-class BackFlowKernelnInverse(BackFlowKernelnBase):
+class BackFlowKernelInverse(BackFlowKernelBase):
 
     def __init__(self, mol, cuda=False):
         """Compute the back flow kernel, i.e. the function
@@ -14,30 +14,7 @@ class BackFlowKernelnInverse(BackFlowKernelnBase):
         """
         super().__init__(mol, cuda)
         self.weight = nn.Parameter(
-            torch.as_tensor([1E-4])).to(self.device)
-
-    def forward(self, ree, derivative=0):
-        """Computes the desired values of the kernel
-         Args:
-            ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
-            derivative (int): derivative requried 0, 1, 2
-
-        Returns:
-            torch.tensor : f(r) Nbatch x Nelec x Nelec
-        """
-
-        if derivative == 0:
-            return self._backflow_kernel(ree)
-
-        elif derivative == 1:
-            return self._backflow_kernel_derivative(ree)
-
-        elif derivative == 2:
-            return self._backflow_kernel_second_derivative(ree)
-
-        else:
-            raise ValueError(
-                'derivative of the kernel must be 0, 1 or 2')
+            torch.as_tensor([1E-3])).to(self.device)
 
     def _backflow_kernel(self, ree):
         """Computes the backflow kernel:

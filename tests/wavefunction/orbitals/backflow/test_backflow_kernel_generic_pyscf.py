@@ -2,11 +2,12 @@ import unittest
 
 import torch
 from pyscf import gto
+from torch import nn
 from torch.autograd import Variable, grad, gradcheck
 import numpy as np
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_base import BackFlowKernelBase
 from qmctorch.wavefunction.jastrows.distance.electron_electron_distance import ElectronElectronDistance
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -62,7 +63,31 @@ def hess_single_element(out, inp):
     return hess.reshape(*shape)
 
 
-class TestBackFlowKernel(unittest.TestCase):
+class GenericBackFlowKernel(BackFlowKernelBase):
+
+    def __init__(self, mol, cuda=False):
+        """Define a generic kernel to test the auto diff features."""
+        super().__init__(mol, cuda)
+        eps = 1E-4
+        self.weight = nn.Parameter(
+            eps * torch.rand(self.nelec, self.nelec)).to(self.device)
+
+    def _backflow_kernel(self, ree):
+        """Computes the backflow kernel:
+
+        .. math:
+            \\eta(r_{ij}) = w_{ij} r_{ij}^2
+
+        Args:
+            r (torch.tensor): e-e distance Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor : f(r) Nbatch x Nelec x Nelec
+        """
+        return self.weight * ree * ree
+
+
+class TestGenericBackFlowKernel(unittest.TestCase):
 
     def setUp(self):
 
@@ -75,7 +100,7 @@ class TestBackFlowKernel(unittest.TestCase):
                             unit='bohr')
 
         # define the kernel
-        self.kernel = BackFlowKernelInverse(self.mol)
+        self.kernel = GenericBackFlowKernel(self.mol)
         self.edist = ElectronElectronDistance(self.mol.nelec)
 
         # define the grid points

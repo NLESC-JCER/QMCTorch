@@ -3,7 +3,7 @@ from torch import nn
 from torch.autograd import grad, Variable
 
 
-class BackFlowKernelnBase(nn.Module):
+class BackFlowKernelBase(nn.Module):
 
     def __init__(self, mol, cuda):
         """Compute the back flow kernel, i.e. the function
@@ -18,6 +18,29 @@ class BackFlowKernelnBase(nn.Module):
         self.device = torch.device('cpu')
         if self.cuda:
             self.device = torch.device('gpu')
+
+    def forward(self, ree, derivative=0):
+        """Computes the desired values of the kernel
+         Args:
+            ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
+            derivative (int): derivative requried 0, 1, 2
+
+        Returns:
+            torch.tensor : f(r) Nbatch x Nelec x Nelec
+        """
+
+        if derivative == 0:
+            return self._backflow_kernel(ree)
+
+        elif derivative == 1:
+            return self._backflow_kernel_derivative(ree)
+
+        elif derivative == 2:
+            return self._backflow_kernel_second_derivative(ree)
+
+        else:
+            raise ValueError(
+                'derivative of the kernel must be 0, 1 or 2')
 
     def _backflow_kernel(self, ree):
         """Computes the kernel via autodiff
@@ -40,7 +63,7 @@ class BackFlowKernelnBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        kernel_val = self._kernel(ree)
+        kernel_val = self._backflow_kernel(ree)
         return self._grad(kernel_val, ree)
 
     def _backflow_kernel_second_derivative(self, ree):
@@ -52,11 +75,12 @@ class BackFlowKernelnBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        kernel_val = self._kernel(ree)
-        return self._hess(kernel_val, ree)
+        kernel_val = self._backflow_kernel(ree)
+        hess_val, _ = self._hess(kernel_val, ree)
+        return hess_val
 
     @staticmethod
-    def _grads(val, ree):
+    def _grad(val, ree):
         """Get the gradients of the kernel.
 
         Args:

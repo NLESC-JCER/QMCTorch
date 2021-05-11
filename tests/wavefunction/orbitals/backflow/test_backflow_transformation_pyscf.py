@@ -6,7 +6,7 @@ from torch.autograd import Variable, grad, gradcheck
 import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelnInverse
+from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.manual_seed(101)
@@ -75,7 +75,7 @@ class TestBackFlowTransformation(unittest.TestCase):
 
         # define the backflow transformation
         self.backflow_trans = BackFlowTransformation(
-            self.mol, BackFlowKernelnInverse)
+            self.mol, BackFlowKernelInverse)
 
         # define the grid points
         self.npts = 11
