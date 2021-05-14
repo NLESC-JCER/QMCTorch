@@ -5,6 +5,7 @@ from pyscf import gto
 from torch.autograd import Variable, grad, gradcheck
 import numpy as np
 from qmctorch.scf import Molecule
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.orbital_dependent_backflow_transformation import OrbitalDependentBackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -77,11 +78,20 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
         self.backflow_trans = OrbitalDependentBackFlowTransformation(
             self.mol, BackFlowKernelInverse)
 
+        # define a normal bf trans
+        self.ref_backflow_trans = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse)
         # define the grid points
         self.npts = 11
         self.pos = torch.rand(self.npts, self.mol.nelec * 3)
         self.pos = Variable(self.pos)
         self.pos.requires_grad = True
+
+    def test_backflow(self):
+
+        ref = self.ref_backflow_trans(self.pos)
+        val = self.backflow_trans(self.pos)
+        assert(torch.allclose(ref, val[:, 0, ...]))
 
     def test_backflow_derivative(self):
         """Test the derivative of the bf coordinate wrt the initial positions."""

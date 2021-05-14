@@ -57,19 +57,20 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
         # compute the difference
         # Nbatch x 1 x Nelec x Nelec x 3
         delta_ee = self.edist.get_difference(
-            pos.reshape(nbatch, 1, self.nelec, self.ndim))
+            pos.reshape(nbatch, self.nelec, self.ndim)).unsqueeze(1)
 
         # compute the backflow function
         # Nbatch x Nao x Nelec x Nelec x 1
         bf_kernel = self.backflow_kernel(
             self.edist(pos)).unsqueeze(-1)
+        nao = bf_kernel.shape[self.backflow_kernel.stack_axis]
 
         # update pos
         pos = pos.reshape(nbatch, 1, self.nelec, self.ndim) + \
             (bf_kernel * delta_ee).sum(3)
 
         # retrurn Nbatch x Nao x Nelec*Ndim
-        return pos.reshape(nbatch, -1, self.nelec*self.ndim)
+        return pos.reshape(nbatch, nao, self.nelec*self.ndim)
 
     def _backflow_derivative(self, pos):
         r"""Computes the derivative of the backflow transformation
