@@ -82,7 +82,7 @@ class TestAOderivativesPyscf(unittest.TestCase):
         np.random.seed(101)
 
         # define the molecule
-        at = 'Be 0 0 0'
+        at = 'Li 0 0 0; H 0 0 1'
         basis = 'dzp'
         self.mol = Molecule(atom=at,
                             calculator='pyscf',

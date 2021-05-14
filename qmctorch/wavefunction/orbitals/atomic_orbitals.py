@@ -41,6 +41,7 @@ class AtomicOrbitals(nn.Module):
 
         # index for the contractions
         self.index_ctr = torch.as_tensor(mol.basis.index_ctr)
+        self.nctr_per_ao = torch.as_tensor(mol.basis.nctr_per_ao)
         self.contract = not len(torch.unique(
             self.index_ctr)) == len(self.index_ctr)
 

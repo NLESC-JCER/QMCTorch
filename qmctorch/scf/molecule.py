@@ -275,6 +275,7 @@ class Molecule:
         self.basis.nshells = basis_grp['nshells'][()]
         self.basis.nao_per_atom = basis_grp['nao_per_atom'][()]
         self.basis.index_ctr = basis_grp['index_ctr'][()]
+        self.basis.nctr_per_ao = basis_grp['nctr_per_ao'][()]
 
         self.basis.bas_exp = basis_grp['bas_exp'][()]
         self.basis.bas_coeffs = basis_grp['bas_coeffs'][()]
