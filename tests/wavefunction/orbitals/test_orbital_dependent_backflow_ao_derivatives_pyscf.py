@@ -78,6 +78,10 @@ class TestODBFAOderivativesPyscf(unittest.TestCase):
         self.ao = AtomicOrbitalsOrbitalDependentBackFlow(
             self.mol, BackFlowKernelInverse)
 
+        # change the weights
+        for ker in self.ao.backflow_trans.backflow_kernel.orbital_dependent_kernel:
+            ker.weight.data[0] = torch.rand(1)
+
         # define the grid points
         self.npts = 11
         self.pos = torch.rand(self.npts, self.mol.nelec * 3)

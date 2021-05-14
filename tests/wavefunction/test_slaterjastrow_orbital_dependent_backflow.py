@@ -1,7 +1,8 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow
-from qmctorch.utils import set_torch_double_precision
 from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+
+from qmctorch.utils import set_torch_double_precision
 
 from torch.autograd import grad, gradcheck, Variable
 
@@ -38,7 +39,7 @@ def hess(out, pos):
     return hess
 
 
-class TestSlaterJastrowBackFlow(unittest.TestCase):
+class TestSlaterJastrowOrbitalDependentBackFlow(unittest.TestCase):
 
     def setUp(self):
 
@@ -61,9 +62,12 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
                                         include_all_mo=True,
                                         configs='single_double(2,2)',
                                         backflow_kernel=BackFlowKernelInverse,
-                                        orbital_dependent_backflow=False)
+                                        orbital_dependent_backflow=True
+                                        )
 
-        # self.wf.ao.backflow_weight.data *= 0.
+        # change the weights
+        for ker in self.wf.ao.backflow_trans.backflow_kernel.orbital_dependent_kernel:
+            ker.weight.data[0] = torch.rand(1)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -159,9 +163,9 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    t = TestSlaterJastrowBackFlow()
-    t.setUp()
-    t.test_hess_mo()
-    t.test_grad_mo()
-    t.test_kinetic_energy()
-    # unittest.main()
+    # t = TestSlaterJastrowOrbitalDependentBackFlow()
+    # t.setUp()
+    # t.test_hess_mo()
+    # t.test_grad_mo()
+    # t.test_kinetic_energy()
+    unittest.main()

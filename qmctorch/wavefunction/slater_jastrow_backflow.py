@@ -10,6 +10,7 @@ import operator
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
+from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
 from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
@@ -27,6 +28,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
                  cuda=False,
                  include_all_mo=True,
                  backflow_kernel=BackFlowKernelInverse,
+                 orbital_dependent_backflow=False,
                  **kwargs):
         """Implementation of the QMC Network.
 
@@ -47,7 +49,12 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
                          use_jastrow, jastrow_type,
                          cuda, include_all_mo)
 
-        self.ao = AtomicOrbitalsBackFlow(mol, backflow_kernel, cuda)
+        if orbital_dependent_backflow:
+            self.ao = AtomicOrbitalsOrbitalDependentBackFlow(
+                mol, backflow_kernel, cuda)
+        else:
+            self.ao = AtomicOrbitalsBackFlow(
+                mol, backflow_kernel, cuda)
 
         self.jastrow = set_jastrow(
             jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
