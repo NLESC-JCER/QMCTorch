@@ -121,8 +121,6 @@ class TestODBFAOderivativesPyscf(unittest.TestCase):
         d2ao = self.ao(self.pos, derivative=2)
 
         d2ao_grad = hess(ao, self.pos)
-        print(d2ao.sum())
-        print(d2ao_grad.sum())
         assert(torch.allclose(d2ao.sum(), d2ao_grad.sum()))
 
         d2ao = d2ao.sum(-1).sum(-1)
@@ -143,9 +141,9 @@ class TestODBFAOderivativesPyscf(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestODBFAOderivativesPyscf()
-    t.setUp()
-    t.test_ao_gradian()
-    t.test_ao_jacobian()
-    t.test_ao_hess()
+    unittest.main()
+    # t = TestODBFAOderivativesPyscf()
+    # t.setUp()
+    # t.test_ao_gradian()
+    # t.test_ao_jacobian()
+    # t.test_ao_hess()

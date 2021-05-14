@@ -165,7 +165,7 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
         # Note the idex of the electron (2,3) are inverted
         # compare to the single backflow trans case
-        grad_ao = grad_ao.permute(2, 1, 0, 3, 4)
+        grad_ao = grad_ao.permute(3, 1, 0, 2, 4)
 
         # collapse the first two dim [Nelec*Ndim] x Nbatch x Nelec x Norb
         grad_ao = grad_ao.reshape(-1, *(grad_ao.shape[2:]))
