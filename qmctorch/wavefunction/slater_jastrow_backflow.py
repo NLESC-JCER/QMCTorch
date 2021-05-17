@@ -61,6 +61,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)
+            self.ao = self.ao.to(self.device)
 
         self.log_data()
 

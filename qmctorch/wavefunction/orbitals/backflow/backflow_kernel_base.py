@@ -17,7 +17,7 @@ class BackFlowKernelBase(nn.Module):
         self.cuda = cuda
         self.device = torch.device('cpu')
         if self.cuda:
-            self.device = torch.device('gpu')
+            self.device = torch.device('cuda')
 
     def forward(self, ree, derivative=0):
         """Computes the desired values of the kernel

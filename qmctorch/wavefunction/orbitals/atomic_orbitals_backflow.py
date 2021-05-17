@@ -25,16 +25,6 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         self.backflow_trans = BackFlowTransformation(
             mol, backflow_kernel=backflow_kernel, cuda=cuda)
 
-    def _to_device(self):
-        """Export the non parameter variable to the device."""
-
-        self.device = torch.device('cuda')
-        self.to(self.device)
-        attrs = ['bas_n', 'bas_coeffs',
-                 'nshells', 'norm_cst', 'index_ctr']
-        for at in attrs:
-            self.__dict__[at] = self.__dict__[at].to(self.device)
-
     def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.
 

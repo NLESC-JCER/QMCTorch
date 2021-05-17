@@ -6,11 +6,13 @@ from torch.autograd import grad, Variable
 class OrbitalDependentBackFlowKernel(nn.Module):
 
     def __init__(self, backflow_kernel, mol, cuda):
-        """Compute the back flow kernel, i.e. the function
+        """Compute orbital dependent back flow kernel, i.e. the functions
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
         .. math:
-            q_i = r_i + \\sum_{j\\neq i} f(r_{ij}) (r_i-r_j)
+            q^{\\alpha}_i = r_i + \\sum_{j\\neq i} f^{\\alpha}(r_{ij}) (r_i-r_j)
+
+        where :math: `f^{\\alpha}(r_{ij})` is the kernel for obital :math: `\\alpha`
         """
         super().__init__()
 
@@ -22,18 +24,21 @@ class OrbitalDependentBackFlowKernel(nn.Module):
         self.cuda = cuda
         self.device = torch.device('cpu')
         if self.cuda:
-            self.device = torch.device('gpu')
+            self.device = torch.device('cuda')
 
+        # domension along which the different orbitals are stacked
+        # with stach_axis = 1 the resulting tensors will have dimension
+        # Nbatch x Nao x ...
         self.stack_axis = 1
 
     def forward(self, ree, derivative=0):
-        """Computes the desired values of the kernel
+        """Computes the desired values of the kernels
          Args:
             ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
             derivative (int): derivative requried 0, 1, 2
 
         Returns:
-            torch.tensor : f(r) Nbatch x Nelec x Nelec
+            torch.tensor : f(r) Nbatch x Nao x Nelec x Nelec
         """
         out = None
 

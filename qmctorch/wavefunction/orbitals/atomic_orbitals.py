@@ -107,7 +107,8 @@ class AtomicOrbitals(nn.Module):
         self.device = torch.device('cuda')
         self.to(self.device)
         attrs = ['bas_n', 'bas_coeffs',
-                 'nshells', 'norm_cst', 'index_ctr']
+                 'nshells', 'norm_cst',
+                 'index_ctr', 'nctr_per_ao']
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 

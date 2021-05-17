@@ -11,6 +11,11 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         This kernel is used in the backflow transformation
         .. math:
             q_i = r_i + \\sum_{j\\neq i} f(r_{ij}) (r_i-r_j)
+
+        with here :
+
+        .. math:
+            f(r_{ij) = \\frac{w}{r_{ij}
         """
         super().__init__(mol, cuda)
         self.weight = nn.Parameter(
@@ -20,7 +25,7 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """Computes the backflow kernel:
 
         .. math:
-            \\eta(r_{ij}) = \\frac{u}{r_{ij}}
+            \\eta(r_{ij}) = \\frac{w}{r_{ij}}
 
         Args:
             r (torch.tensor): e-e distance Nbatch x Nelec x Nelec
@@ -37,7 +42,7 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """Computes the derivative of the kernel function
             w.r.t r_{ij}
         .. math::
-            \\frac{d}{dr_{ij} \\eta(r_{ij}) = -u r_{ij}^{-2}
+            \\frac{d}{dr_{ij} \\eta(r_{ij}) = -w r_{ij}^{-2}
 
         Args:
             ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
@@ -54,7 +59,7 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """Computes the derivative of the kernel function
             w.r.t r_{ij}
         .. math::
-            \\frac{d}{dr_{ij} \\eta(r_{ij}) = -u r_{ij}^{-2}
+            \\frac{d^2}{dr_{ij}^2} \\eta(r_{ij}) = 2 w r_{ij}^{-3}
 
         Args:
             ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
