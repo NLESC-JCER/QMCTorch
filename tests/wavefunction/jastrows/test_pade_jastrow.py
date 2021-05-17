@@ -1,3 +1,4 @@
+from tests.wavefunction.test_slaterjastrow import TestSlaterJastrow
 import unittest
 import numpy as np
 import torch
@@ -58,7 +59,7 @@ class TestPadeJastrow(unittest.TestCase):
 
         assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
 
-    def test_grad_jastrow(self):
+    def test_sum_grad_jastrow(self):
 
         val = self.jastrow(self.pos)
         dval = self.jastrow(self.pos, derivative=1)
@@ -74,15 +75,26 @@ class TestPadeJastrow(unittest.TestCase):
         assert torch.allclose(dval, dval_grad)
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
 
+    def test_grad_jastrow(self):
+
+        val = self.jastrow(self.pos)
+        dval = self.jastrow(self.pos, derivative=1, sum_grad=False)
+        dval_grad = grad(
+            val,
+            self.pos,
+            grad_outputs=torch.ones_like(val))[0]
+
+        dval_grad = dval_grad.view(
+            self.nbatch, self.nelec, 3)
+
+        assert torch.allclose(dval, dval_grad.transpose(1, 2))
+        assert(torch.allclose(dval.sum(), dval_grad.sum()))
+
     def test_hess_jastrow(self):
 
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
-
-        print(d2val)
-        print(d2val_grad.view(
-            self.nbatch, self.nelec, 3).sum(2))
 
         assert torch.allclose(d2val, d2val_grad.view(
             self.nbatch, self.nelec, 3).sum(2))
@@ -91,16 +103,7 @@ class TestPadeJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-
-    # torch.manual_seed(0)
-    # np.random.seed(0)
-
-    # nup, ndown = 2, 2
-    # nelec = nup + ndown
-
-    # jastrow = PadeJastrow(nup, ndown)
-    # nbatch = 5
-
-    # pos = torch.rand(nbatch, nelec * 3)
-    # pos.requires_grad = True
+    # unittest.main()
+    t = TestPadeJastrow()
+    t.setUp()
+    t.test_grad_jastrow()

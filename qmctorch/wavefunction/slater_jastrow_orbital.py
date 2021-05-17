@@ -7,6 +7,8 @@ from scipy.optimize import curve_fit
 from torch import nn
 import operator
 
+from torch._C import Value
+
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals import AtomicOrbitals
@@ -245,12 +247,16 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
-    def gradients_jacobi(self, x, sum_grad=True):
+    def gradients_jacobi(self, x, sum_grad=True, pdf=False):
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
             x ([type]): [description]
         """
+
+        if pdf:
+            raise NotImplementedError(
+                'Gradients of the pdf not implemented for ', self.__name__)
 
         # get the CMO matrix
         cmo = self.pos2cmo(x)
@@ -284,52 +290,48 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         Returns:
             torch.tensor: matrix of the kinetic operator
         """
-        if 1:
-            mo = self.pos2mo(x)
-            dmo = self.pos2mo(x, derivative=1, sum_grad=False)
-            d2mo = self.pos2mo(x, derivative=2)
+        mo = self.pos2mo(x)
+        dmo = self.pos2mo(x, derivative=1, sum_grad=False)
+        d2mo = self.pos2mo(x, derivative=2)
 
-            jast = self.ordered_jastrow(x)
-            djast = self.ordered_jastrow(
-                x, derivative=1, sum_grad=False)
-            d2jast = self.ordered_jastrow(x, derivative=2)
+        jast = self.ordered_jastrow(x)
+        djast = self.ordered_jastrow(
+            x, derivative=1, sum_grad=False)
+        d2jast = self.ordered_jastrow(x, derivative=2)
 
-            # \Delta_n J * MO
-            d2jast_mo = d2jast.permute(1, 0, 2).unsqueeze(2) * mo
+        # \Delta_n J * MO
+        d2jast_mo = d2jast.permute(1, 0, 2).unsqueeze(2) * mo
 
-            # stride d2mo
-            eye = torch.eye(self.nelec).to(self.device)
-            d2mo = d2mo.unsqueeze(2) * eye.unsqueeze(-1)
+        # stride d2mo
+        eye = torch.eye(self.nelec).to(self.device)
+        d2mo = d2mo.unsqueeze(2) * eye.unsqueeze(-1)
 
-            # reshape d2mo to nelec, nbatch, nelec, nmo
-            d2mo = d2mo.permute(1, 0, 2, 3)
+        # reshape d2mo to nelec, nbatch, nelec, nmo
+        d2mo = d2mo.permute(1, 0, 2, 3)
 
-            # \Delta_n MO * J
-            d2mo_jast = d2mo * jast.repeat(1, self.nelec, 1)
+        # \Delta_n MO * J
+        d2mo_jast = d2mo * jast.repeat(1, self.nelec, 1)
 
-            # reformat to have Ndim, Nbatch, Nelec, Nmo
-            dmo = dmo.permute(3, 0, 1, 2)
+        # reformat to have Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(3, 0, 1, 2)
 
-            # stride
-            eye = torch.eye(self.nelec).to(self.device)
-            dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
+        # stride
+        eye = torch.eye(self.nelec).to(self.device)
+        dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
 
-            # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
-            dmo = dmo.permute(2, 0, 1, 3, 4)
+        # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(2, 0, 1, 3, 4)
 
-            # reshape djast to Nelec, Ndim, Nbatch, 1, Nmo
-            djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
+        # reshape djast to Nelec, Ndim, Nbatch, 1, Nmo
+        djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
 
-            # \nabla jast \nabla mo
-            djast_dmo = (djast * dmo)
+        # \nabla jast \nabla mo
+        djast_dmo = (djast * dmo)
 
-            # sum over ndim -> Nelec, Nbatch, Nelec, Nmo
-            djast_dmo = djast_dmo.sum(1)
+        # sum over ndim -> Nelec, Nbatch, Nelec, Nmo
+        djast_dmo = djast_dmo.sum(1)
 
-            return d2mo_jast + d2jast_mo + 2*djast_dmo
-
-        else:
-            return self.pos2cmo(x, derivative=2)
+        return d2mo_jast + d2jast_mo + 2*djast_dmo
 
     def get_gradient_operator(self, x):
         """Compute the gradient operator

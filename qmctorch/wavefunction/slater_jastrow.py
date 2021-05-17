@@ -5,6 +5,7 @@ import numpy as np
 import torch
 from scipy.optimize import curve_fit
 from torch import nn
+from torch.autograd import grad
 
 from .. import log
 from ..utils import register_extra_attributes
@@ -151,12 +152,34 @@ class SlaterJastrow(SlaterJastrowBase):
             out = self.fc(kin * psi) / self.fc(psi)
             return out
 
-    def gradients_jacobi(self, x, pdf=False):
+    def gradients_jacobi(self, x, sum_grad=False, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
         C. Filippi, Simple Formalism for Efficient Derivatives.
 
         .. math::
              \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{grad})
+
+        The gradients of the wave function
+
+        .. math:
+            \\Psi(R) = J(R) \\sum_n c_n D^{u}_n D^{d}_n = J(R) \\Sigma
+
+        are computed following
+
+        .. math::
+            \\nabla \\Psi(R) = \\left( \\nabla J(R) \\right) \\Sigma + J(R) \\left(\\nabla \Sigma \\right)
+
+        with
+
+        .. math::
+
+            \\nabla \\Sigma =  \\sum_n c_n (\\frac{\\nabla D^u_n}{D^u_n} + \\frac{\\nabla D^d_n}{D^d_n}) D^u_n D^d_n
+
+        that we compute with the Jacobi formula as:
+
+        .. math::
+
+            \\nabla \\Sigma =  \\sum_n c_n (Tr( (D^u_n)^-1 \\nabla D^u_n) + Tr( (D^d_n)^-1 \\nabla D^d_n)) D^u_n D^d_n
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -166,74 +189,68 @@ class SlaterJastrow(SlaterJastrowBase):
             torch.tensor: values of the gradients wrt the walker pos at each sampling points
         """
 
+        # compute the mo values
+        mo = self.ao2mo(self.ao(x))
+
         # compute the gradient operator matrix
-        ao = self.ao(x)
         grad_ao = self.ao(x, derivative=1, sum_grad=False)
 
-        mo = self.ao2mo(ao)
-        bgrad = self.get_grad_operator(x, ao, grad_ao, mo)
+        # compute the derivatives of the MOs
+        dmo = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
+        dmo = dmo.permute(3, 0, 1, 2)
+
+        # stride the tensor
+        eye = torch.eye(self.nelec).to(self.device)
+        dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
+
+        # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(2, 0, 1, 3, 4)
+
+        # flatten to have Nelec*Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.reshape(-1, *(dmo.shape[2:]))
 
         # use the Jacobi formula to compute the value
-        # the grad of each determinants
-        grads = self.pool.operator(mo, bgrad)
+        # the grad of each determinants and sum up the terms :
+        # Tr( (D^u_n)^-1 \\nabla D^u_n) + Tr( (D^d_n)^-1 \\nabla D^d_n)
+        grad_dets = self.pool.operator(mo, dmo)
 
         # compute the determinants
+        # D^u_n D^d_n
         dets = self.pool(mo)
 
-        # CI sum
-        psi = self.fc(dets)
+        # assemble the final values of \nabla \Sigma
+        # \\sum_n c_n (Tr( (D^u_n)^-1 \\nabla D^u_n) + Tr( (D^d_n)^-1 \\nabla D^d_n)) D^u_n D^d_n
+        out = self.fc(grad_dets * dets)
+        out = out.transpose(0, 1).squeeze()
 
-        # assemble the final values of
-        # nabla psi / psi
-        grads = self.fc(grads * dets)
-        grads = grads.transpose(0, 1).squeeze()
-
-        # multiply by psi to get the grads
-        # grads = grads * psi
         if self.use_jastrow:
-            jast = self.jastrow(x)
-            grads = grads * jast
 
-        # if we need the grads of the pdf
+            nbatch = x.shape[0]
+
+            # nbatch x 1
+            jast = self.jastrow(x)
+
+            # nbatch x ndim x nelec
+            grad_jast = self.jastrow(x, derivative=1, sum_grad=False)
+
+            # reorder grad_jast to nbtach x Nelec x Ndim
+            grad_jast = grad_jast.permute(0, 2, 1)
+
+            # compute J(R) (\nabla\Sigma)
+            out = jast*out
+
+            # add the product (\nabla J(R)) \Sigma
+            out = out + \
+                (grad_jast * self.fc(dets).unsqueeze(-1)).reshape(nbatch, -1)
+
+        # compute the gradient of the pdf (i.e. the square of the wave function)
+        # \nabla f^2 = 2 (\nabla f) f
         if pdf:
-            grads = 2*grads*psi
+            out = 2 * out * self.fc(dets)
             if self.use_jastrow:
-                grads = grads*jast
+                out = out * jast
 
-        return grads
-
-    def get_grad_operator(self, x, ao, grad_ao, mo):
-        """Compute the gradient operator
-
-        Args:
-            x ([type]): [description]
-            ao ([type]): [description]
-            dao ([type]): [description]
-        """
-
-        bgrad = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)
-        bgrad = bgrad.permute(3, 0, 1, 2)
-        bgrad = bgrad.repeat(self.nelec, 1, 1, 1)
-
-        for ielec in range(self.nelec):
-            bgrad[ielec*3:(ielec+1)*3, :, :ielec, :] = 0
-            bgrad[ielec*3:(ielec+1)*3, :, ielec+1:, :] = 0
-
-        if self.use_jastrow:
-
-            jast = self.jastrow(x)
-            grad_jast = self.jastrow(x,
-                                     derivative=1,
-                                     sum_grad=False)
-            grad_jast = grad_jast.transpose(1, 2) / jast.unsqueeze(-1)
-
-            grad_jast = grad_jast.flatten(start_dim=1)
-            grad_jast = grad_jast.transpose(0, 1)
-
-            grad_jast = grad_jast.unsqueeze(2).unsqueeze(3)
-            bgrad = bgrad + 0.5 * grad_jast * mo.unsqueeze(0)
-
-        return bgrad
+        return out
 
     def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
         """Compute the Bkin matrix
