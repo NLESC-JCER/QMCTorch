@@ -118,13 +118,14 @@ class BackFlowTransformation(nn.Module):
         # Nbatch x Nelec x Nelec (diagonal matrix)
         delta_ij_bf = torch.diag_embed(
             1 + bf.sum(-1), dim1=-1, dim2=-2)
+        print(delta_ij_bf)
 
         # eye 3x3 in 1x3x3x1x1
-        I33 = torch.eye(3, 3).view(1, 3, 3, 1, 1).to(self.device)
+        eye_mat = torch.eye(3, 3).view(1, 3, 3, 1, 1).to(self.device)
 
         # compute the delta_ab * delta_ij * (1 + sum k \neq i eta(rik))
         # Nbatch x Ndim x Ndim x Nelec x Nelec (diagonal matrix)
-        delta_ab_delta_ij_bf = I33 * \
+        delta_ab_delta_ij_bf = eye_mat * \
             delta_ij_bf.view(nbatch, 1, 1, nelec, nelec)
 
         # compute sum_k df(r_ik)/dbeta_i (alpha_i - alpha_k)
@@ -133,7 +134,7 @@ class BackFlowTransformation(nn.Module):
             dbf_delta_ee.sum(-1), dim1=-1, dim2=-2)
 
         # compute delta_ab * f(rij)
-        delta_ab_bf = I33 * bf.view(nbatch, 1, 1, nelec, nelec)
+        delta_ab_bf = eye_mat * bf.view(nbatch, 1, 1, nelec, nelec)
 
         # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
         # nbatch d alpha_i / d beta_j
