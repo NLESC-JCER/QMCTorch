@@ -11,7 +11,6 @@ from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
-from .pooling.kinetic_pooling import KineticPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from .pooling.slater_pooling import SlaterPooling
 from .slater_jastrow_base import SlaterJastrowBase
