@@ -131,6 +131,9 @@ class TestGenericJastrowWF(unittest.TestCase):
 
         assert torch.allclose(grads, grad_auto)
 
+        print(grads.reshape(10, self.wf.nelec, 3)[0])
+        print(grad_auto.reshape(10, self.wf.nelec, 3)[0])
+
     def test_gradients_pdf(self):
 
         grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
@@ -140,11 +143,11 @@ class TestGenericJastrowWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestGenericJastrowWF()
-    # t.setUp()
+    # unittest.main()
+    t = TestGenericJastrowWF()
+    t.setUp()
     # # t.test_forward()
     # # # t.test_local_energy()
     # # # t.test_kinetic_energy()
-    # t.test_gradients_wf()
+    t.test_gradients_wf()
     # t.test_gradients_pdf()
