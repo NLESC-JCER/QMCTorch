@@ -20,6 +20,11 @@ class BackFlowTransformation(nn.Module):
         self.nelec = mol.nelec
         self.ndim = 3
 
+        self.cuda = cuda
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
+
     def forward(self, pos, derivative=0):
 
         if derivative == 0:
@@ -115,7 +120,7 @@ class BackFlowTransformation(nn.Module):
             1 + bf.sum(-1), dim1=-1, dim2=-2)
 
         # eye 3x3 in 1x3x3x1x1
-        I33 = torch.eye(3, 3).view(1, 3, 3, 1, 1)
+        I33 = torch.eye(3, 3).view(1, 3, 3, 1, 1).to(self.device)
 
         # compute the delta_ab * delta_ij * (1 + sum k \neq i eta(rik))
         # Nbatch x Ndim x Ndim x Nelec x Nelec (diagonal matrix)
@@ -195,7 +200,7 @@ class BackFlowTransformation(nn.Module):
         dbf = dbf * dree
 
         # eye matrix in dim x dim
-        i33 = torch.eye(3, 3).reshape(1, 3, 3, 1, 1)
+        i33 = torch.eye(3, 3).reshape(1, 3, 3, 1, 1).to(self.device)
 
         # compute delta_ij delta_ab 2 sum_k dbf(ik) / dbeta_i
         term1 = 2 * i33 * \
