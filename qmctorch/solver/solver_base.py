@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-
+import os
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -53,7 +53,8 @@ class SolverBase:
 
         self.hdf5file = output
         if output is None:
-            basename = self.wf.mol.hdf5file.split('.')[0]
+            basename = os.path.basename(
+                self.wf.mol.hdf5file).split('.')[0]
             self.hdf5file = basename + '_QMCTorch.hdf5'
 
         if rank == 0:
