@@ -3,6 +3,8 @@ from qmctorch.wavefunction import SlaterJastrowOrbital
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision, btrace
 
+from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
+
 from torch.autograd import grad, gradcheck, Variable
 
 import numpy as np
@@ -10,7 +12,9 @@ import torch
 import unittest
 import itertools
 import os
-import operator
+
+
+torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 def hess(out, pos):
@@ -48,40 +52,56 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='Li 0 0 0; H 0 0 3.015',
+            atom='Li 0 0 0; H 0 0 1.',
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterJastrowOrbital(
-            mol,
-            kinetic='auto',
-            jastrow_type='pade_jastrow',
-            configs='single_double(2,4)',
-            include_all_mo=True)
+        self.wf = SlaterJastrowOrbital(mol,
+                                       kinetic='auto',
+                                       configs='ground_state',
+                                       jastrow_type=FullyConnectedJastrow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
-        self.wf.jastrow.weight.data = torch.rand(
-            self.wf.jastrow.weight.shape)
-
-        self.nbatch = 3
+        self.nbatch = 10
         self.pos = torch.as_tensor(np.random.rand(
             self.nbatch, self.wf.nelec*3))
-
         self.pos.requires_grad = True
 
     def test_forward(self):
         """Value of the wave function."""
         wfvals = self.wf(self.pos)
-        ref = torch.as_tensor([[-1.0935e-02], [6.4874e-02], [1.7879e-04],
-                               [1.5797e-02], [7.4684e-02], [-4.4445e-02],
-                               [-4.8149e-04], [-3.0355e-03], [-2.0027e-02],
-                               [5.1957e-05]])
+
+        ref = torch.as_tensor([[0.2339], [0.2092], [0.3335], [0.2806], [0.1317],
+                               [0.0996], [0.1210], [0.1406], [0.2626], [0.4675]])
 
         # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
+
+    def test_antisymmetry(self):
+        """Test that the wf values are antisymmetric
+        wrt exchange of 2 electrons of same spin."""
+        wfvals_ref = self.wf(self.pos)
+
+        if self.wf.nelec < 4:
+            print(
+                'Warning : antisymmetry cannot be tested with \
+                    only %d electrons' % self.wf.nelec)
+            return
+
+        # test spin up
+        pos_xup = self.pos.clone()
+        perm_up = list(range(self.wf.nelec))
+        perm_up[0] = 1
+        perm_up[1] = 0
+        pos_xup = pos_xup.reshape(self.nbatch, self.wf.nelec, 3)
+        pos_xup = pos_xup[:, perm_up, :].reshape(
+            self.nbatch, self.wf.nelec*3)
+
+        wfvals_xup = self.wf(pos_xup)
+        assert(torch.allclose(wfvals_ref, -wfvals_xup))
 
     def test_jacobian_mo(self):
         """Jacobian of the uncorrelated MOs."""
@@ -96,7 +116,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_grad_mo(self):
         """Gradients of the uncorrelated MOs."""
         mo = self.wf.pos2mo(self.pos)
-        dmo = self.wf.pos2mo(self.pos, derivative=1, jacobian=False)
+        dmo = self.wf.pos2mo(self.pos, derivative=1, sum_grad=False)
         dmo_grad = grad(
             mo, self.pos, grad_outputs=torch.ones_like(mo))[0]
 
@@ -126,7 +146,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
         """Gradients of the jastrow values."""
         jast = self.wf.ordered_jastrow(self.pos)
         djast = self.wf.ordered_jastrow(
-            self.pos, derivative=1, jacobian=False)
+            self.pos, derivative=1, sum_grad=False)
         djast_grad = grad(jast, self.pos,
                           grad_outputs=torch.ones_like(jast))[0]
 
@@ -181,7 +201,7 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
     def test_grad_wf(self):
         """Compute the gradients of the wf  wrt to xyz coord of each elec."""
         grad_jacobi = self.wf.gradients_jacobi(
-            self.pos, jacobian=False).squeeze()
+            self.pos, sum_grad=False).squeeze()
         grad_auto = self.wf.gradients_autograd(self.pos)
         assert torch.allclose(grad_jacobi, grad_auto)
 
@@ -206,4 +226,27 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+
+    set_torch_double_precision()
+
+    t = TestCorrelatedOrbitalWF()
+    t.setUp()
+    t.test_forward()
+    t.test_antisymmetry()
+
+    t.test_jacobian_mo()
+    t.test_grad_mo()
+    t.test_hess_mo()
+
+    t.test_jacobian_jast()
+    t.test_grad_jast()
+    t.test_hess_jast()
+
+    t.test_grad_cmo()
+    t.test_hess_cmo()
+
+    t.test_jacobian_wf()
+    t.test_grad_wf()
+
+    t.test_kinetic_energy()
+    t.test_local_energy()

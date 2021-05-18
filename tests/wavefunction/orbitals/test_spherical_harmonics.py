@@ -19,10 +19,10 @@ class TestSphericalHarmonics(unittest.TestCase):
         self.harmonics(self.pos, derivative=0)
 
     def test_grad(self):
-        self.harmonics(self.pos, derivative=1, jacobian=False)
+        self.harmonics(self.pos, derivative=1, sum_grad=False)
 
     def test_jac(self):
-        self.harmonics(self.pos, derivative=1, jacobian=True)
+        self.harmonics(self.pos, derivative=1, sum_grad=True)
 
     def test_lap(self):
         self.harmonics(self.pos, derivative=2)

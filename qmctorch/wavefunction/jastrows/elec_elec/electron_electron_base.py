@@ -168,7 +168,7 @@ class ElectronElectronBase(nn.Module):
             if at in self.__dict__:
                 self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, pos, derivative=0, jacobian=True):
+    def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
 
         Args:
@@ -176,7 +176,7 @@ class ElectronElectronBase(nn.Module):
                                   Size : Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0,1,2,).
                             Defaults to 0.
-            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+            sum_grad (bool, optional): Return the sum_grad (i.e. the sum of
                                        the derivatives) or the individual
                                        terms. Defaults to True.
                                        False only for derivative=1
@@ -184,8 +184,8 @@ class ElectronElectronBase(nn.Module):
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
                           derivative = 0  (Nmo) x Nbatch x 1
-                          derivative = 1  (Nmo) x Nbatch x Nelec (for jacobian = True)
-                          derivative = 1  (Nmo) x Nbatch x Ndim x Nelec (for jacobian = False)
+                          derivative = 1  (Nmo) x Nbatch x Nelec (for sum_grad = True)
+                          derivative = 1  (Nmo) x Nbatch x Ndim x Nelec (for sum_grad = False)
                           derivative = 2  (Nmo) x Nbatch x Nelec
         """
 
@@ -202,7 +202,7 @@ class ElectronElectronBase(nn.Module):
         elif derivative == 1:
             dr = self.extract_tri_up(self.edist(
                 pos, derivative=1)).view(nbatch, 3, -1)
-            return self._jastrow_derivative(r, dr, jast, jacobian)
+            return self._jastrow_derivative(r, dr, jast, sum_grad)
 
         elif derivative == 2:
 
@@ -221,10 +221,10 @@ class ElectronElectronBase(nn.Module):
                 pos, derivative=2)).view(nbatch, 3, -1)
 
             return(jast.prod(-1).unsqueeze(-1),
-                   self._jastrow_derivative(r, dr, jast, jacobian),
+                   self._jastrow_derivative(r, dr, jast, sum_grad),
                    self._jastrow_second_derivative(r, dr, d2r, jast))
 
-    def _jastrow_derivative(self, r, dr, jast, jacobian):
+    def _jastrow_derivative(self, r, dr, jast, sum_grad):
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -237,7 +237,7 @@ class ElectronElectronBase(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        if jacobian:
+        if sum_grad:
 
             prod_val = jast.prod(-1).unsqueeze(-1)
             djast = self._get_der_jastrow_elements(r, dr).sum(-2)

@@ -7,6 +7,7 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 
 from .second_derivative import second_derivative
+import matplotlib.pyplot as plt
 
 
 class TestRadialSlater(unittest.TestCase):
@@ -39,7 +40,7 @@ class TestRadialSlater(unittest.TestCase):
                                   self.wf.ao.bas_exp,
                                   xyz=xyz,
                                   derivative=[0, 1],
-                                  jacobian=False)
+                                  sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -70,7 +71,7 @@ class TestRadialSlater(unittest.TestCase):
                                   self.wf.ao.bas_exp,
                                   xyz=xyz,
                                   derivative=[0, 1],
-                                  jacobian=False)
+                                  sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -101,7 +102,7 @@ class TestRadialSlater(unittest.TestCase):
                                   self.wf.ao.bas_exp,
                                   xyz=xyz,
                                   derivative=[0, 1],
-                                  jacobian=False)
+                                  sum_grad=False)
         R = R.detach().numpy()
         dR = dR.detach().numpy()
         ielec = 0
@@ -146,7 +147,7 @@ class TestRadialSlater(unittest.TestCase):
                                        self.wf.ao.bas_exp,
                                        xyz=xyz,
                                        derivative=[0, 1, 2],
-                                       jacobian=False)
+                                       sum_grad=False)
 
         for iorb in range(7):
 

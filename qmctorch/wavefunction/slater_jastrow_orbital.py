@@ -7,6 +7,8 @@ from scipy.optimize import curve_fit
 from torch import nn
 import operator
 
+from torch._C import Value
+
 from .. import log
 from ..utils import register_extra_attributes
 from .orbitals.atomic_orbitals import AtomicOrbitals
@@ -58,7 +60,7 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
 
         self.log_data()
 
-    def ordered_jastrow(self, pos, derivative=0, jacobian=True):
+    def ordered_jastrow(self, pos, derivative=0, sum_grad=True):
         """Returns the value of the jastrow with the correct dimensions
 
         Args:
@@ -66,17 +68,17 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
                                   Size : Nbatch, Nelec x Ndim
             derivative (int, optional): order of the derivative (0,1,2,).
                             Defaults to 0.
-            jacobian (bool, optional): Return the jacobian (i.e. the sum of
+            sum_grad (bool, optional): Return the sum_grad (i.e. the sum of
                                        the derivatives) or the individual
                                        terms. Defaults to True.
                                        False only for derivative=1
 
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
-                          Nbatch, Nelec, Nmo (jacobian = True)
-                          Nbatch, Nelec, Nmo, Ndim (jacobian = False)
+                          Nbatch, Nelec, Nmo (sum_grad = True)
+                          Nbatch, Nelec, Nmo, Ndim (sum_grad = False)
         """
-        jast_vals = self.jastrow(pos, derivative, jacobian)
+        jast_vals = self.jastrow(pos, derivative, sum_grad)
 
         def permute(vals):
             """transpose the data depending on the number of dim."""
@@ -140,16 +142,16 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
     def ao2cmo(self, ao, jastrow):
         return jastrow * self.mo(self.mo_scf(ao))
 
-    def pos2mo(self, x, derivative=0, jacobian=True):
+    def pos2mo(self, x, derivative=0, sum_grad=True):
         """Compute the uncorrelated MOs from the positions."""
 
-        ao = self.ao(x, derivative=derivative, jacobian=jacobian)
-        if jacobian:
+        ao = self.ao(x, derivative=derivative, sum_grad=sum_grad)
+        if sum_grad:
             return self.ao2mo(ao)
         else:
             return self.ao2mo(ao.transpose(2, 3)).transpose(2, 3)
 
-    def pos2cmo(self, x, derivative=0, jacobian=True):
+    def pos2cmo(self, x, derivative=0, sum_grad=True):
         """Get the values of correlated MOs
 
         Arguments:
@@ -167,13 +169,13 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         elif derivative == 1:
 
             mo = self.pos2mo(x)
-            dmo = self.pos2mo(x, derivative=1, jacobian=jacobian)
+            dmo = self.pos2mo(x, derivative=1, sum_grad=sum_grad)
 
             jast = self.ordered_jastrow(x)
             djast = self.ordered_jastrow(
-                x, derivative=1, jacobian=jacobian)
+                x, derivative=1, sum_grad=sum_grad)
 
-            if jacobian:
+            if sum_grad:
                 return mo * djast.sum(1).unsqueeze(1) + jast * dmo
             else:
                 return mo.unsqueeze(-1) * djast.sum(1).unsqueeze(1) + jast.unsqueeze(-1) * dmo
@@ -192,7 +194,7 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
             jast, djast, d2jast = self.ordered_jastrow(x,
                                                        derivative=[
                                                            0, 1, 2],
-                                                       jacobian=False)
+                                                       sum_grad=False)
             # terms of the kin op
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
@@ -243,18 +245,22 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
-    def gradients_jacobi(self, x, jacobian=True):
+    def gradients_jacobi(self, x, sum_grad=True, pdf=False):
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
             x ([type]): [description]
         """
 
+        if pdf:
+            raise NotImplementedError(
+                'Gradients of the pdf not implemented for ', self.__name__)
+
         # get the CMO matrix
         cmo = self.pos2cmo(x)
 
         # get the grad of the wf
-        if jacobian:
+        if sum_grad:
             # bgrad = self.pos2cmo(x, derivative=1)
             bgrad = self.get_gradient_operator(x).sum(0)
         else:
@@ -282,52 +288,48 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         Returns:
             torch.tensor: matrix of the kinetic operator
         """
-        if 1:
-            mo = self.pos2mo(x)
-            dmo = self.pos2mo(x, derivative=1, jacobian=False)
-            d2mo = self.pos2mo(x, derivative=2)
+        mo = self.pos2mo(x)
+        dmo = self.pos2mo(x, derivative=1, sum_grad=False)
+        d2mo = self.pos2mo(x, derivative=2)
 
-            jast = self.ordered_jastrow(x)
-            djast = self.ordered_jastrow(
-                x, derivative=1, jacobian=False)
-            d2jast = self.ordered_jastrow(x, derivative=2)
+        jast = self.ordered_jastrow(x)
+        djast = self.ordered_jastrow(
+            x, derivative=1, sum_grad=False)
+        d2jast = self.ordered_jastrow(x, derivative=2)
 
-            # \Delta_n J * MO
-            d2jast_mo = d2jast.permute(1, 0, 2).unsqueeze(2) * mo
+        # \Delta_n J * MO
+        d2jast_mo = d2jast.permute(1, 0, 2).unsqueeze(2) * mo
 
-            # stride d2mo
-            eye = torch.eye(self.nelec).to(self.device)
-            d2mo = d2mo.unsqueeze(2) * eye.unsqueeze(-1)
+        # stride d2mo
+        eye = torch.eye(self.nelec).to(self.device)
+        d2mo = d2mo.unsqueeze(2) * eye.unsqueeze(-1)
 
-            # reshape d2mo to nelec, nbatch, nelec, nmo
-            d2mo = d2mo.permute(1, 0, 2, 3)
+        # reshape d2mo to nelec, nbatch, nelec, nmo
+        d2mo = d2mo.permute(1, 0, 2, 3)
 
-            # \Delta_n MO * J
-            d2mo_jast = d2mo * jast.repeat(1, self.nelec, 1)
+        # \Delta_n MO * J
+        d2mo_jast = d2mo * jast.repeat(1, self.nelec, 1)
 
-            # reformat to have Ndim, Nbatch, Nelec, Nmo
-            dmo = dmo.permute(3, 0, 1, 2)
+        # reformat to have Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(3, 0, 1, 2)
 
-            # stride
-            eye = torch.eye(self.nelec).to(self.device)
-            dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
+        # stride
+        eye = torch.eye(self.nelec).to(self.device)
+        dmo = dmo.unsqueeze(2) * eye.unsqueeze(-1)
 
-            # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
-            dmo = dmo.permute(2, 0, 1, 3, 4)
+        # reorder to have Nelec, Ndim, Nbatch, Nelec, Nmo
+        dmo = dmo.permute(2, 0, 1, 3, 4)
 
-            # reshape djast to Nelec, Ndim, Nbatch, 1, Nmo
-            djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
+        # reshape djast to Nelec, Ndim, Nbatch, 1, Nmo
+        djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
 
-            # \nabla jast \nabla mo
-            djast_dmo = (djast * dmo)
+        # \nabla jast \nabla mo
+        djast_dmo = (djast * dmo)
 
-            # sum over ndim -> Nelec, Nbatch, Nelec, Nmo
-            djast_dmo = djast_dmo.sum(1)
+        # sum over ndim -> Nelec, Nbatch, Nelec, Nmo
+        djast_dmo = djast_dmo.sum(1)
 
-            return d2mo_jast + d2jast_mo + 2*djast_dmo
-
-        else:
-            return self.pos2cmo(x, derivative=2)
+        return d2mo_jast + d2jast_mo + 2*djast_dmo
 
     def get_gradient_operator(self, x):
         """Compute the gradient operator
@@ -339,10 +341,10 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
         """
 
         mo = self.pos2mo(x)
-        dmo = self.pos2mo(x, derivative=1, jacobian=False)
+        dmo = self.pos2mo(x, derivative=1, sum_grad=False)
 
         jast = self.ordered_jastrow(x)
-        djast = self.ordered_jastrow(x, derivative=1, jacobian=False)
+        djast = self.ordered_jastrow(x, derivative=1, sum_grad=False)
 
         # reformat to have Nelec, Ndim, Nbatch, 1, Nmo
         djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)

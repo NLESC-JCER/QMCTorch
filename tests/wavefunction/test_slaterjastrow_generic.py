@@ -73,6 +73,29 @@ class TestGenericJastrowWF(unittest.TestCase):
     def test_forward(self):
         wfvals = self.wf(self.pos)
 
+    def test_antisymmetry(self):
+        """Test that the wf values are antisymmetric
+        wrt exchange of 2 electrons of same spin."""
+        wfvals_ref = self.wf(self.pos)
+
+        if self.wf.nelec < 4:
+            print(
+                'Warning : antisymmetry cannot be tested with \
+                    only %d electrons' % self.wf.nelec)
+            return
+
+        # test spin up
+        pos_xup = self.pos.clone()
+        perm_up = list(range(self.wf.nelec))
+        perm_up[0] = 1
+        perm_up[1] = 0
+        pos_xup = pos_xup.reshape(self.nbatch, self.wf.nelec, 3)
+        pos_xup = pos_xup[:, perm_up, :].reshape(
+            self.nbatch, self.wf.nelec*3)
+
+        wfvals_xup = self.wf(pos_xup)
+        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+
     def test_grad_mo(self):
         """Gradients of the MOs."""
 
@@ -131,6 +154,9 @@ class TestGenericJastrowWF(unittest.TestCase):
 
         assert torch.allclose(grads, grad_auto)
 
+        print(grads.reshape(10, self.wf.nelec, 3)[0])
+        print(grad_auto.reshape(10, self.wf.nelec, 3)[0])
+
     def test_gradients_pdf(self):
 
         grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
@@ -140,11 +166,12 @@ class TestGenericJastrowWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestGenericJastrowWF()
-    # t.setUp()
+    # unittest.main()
+    t = TestGenericJastrowWF()
+    t.setUp()
+    t.test_antisymmetry()
     # # t.test_forward()
     # # # t.test_local_energy()
     # # # t.test_kinetic_energy()
-    # t.test_gradients_wf()
+    t.test_gradients_wf()
     # t.test_gradients_pdf()

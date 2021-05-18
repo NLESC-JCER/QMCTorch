@@ -1,8 +1,8 @@
 from types import SimpleNamespace
-
+import itertools
 import numpy as np
 from pyscf import gto, scf
-
+import shutil
 from .calculator_base import CalculatorBase
 
 
@@ -28,7 +28,7 @@ class CalculatorPySCF(CalculatorBase):
         rhf = scf.RHF(mol).run()
 
         if self.savefile:
-            save_file_name = molname + '_pyscf.chkfile'
+            save_file_name = self.molname + '_pyscf.chkfile'
             shutil.copyfile(rhf.chkfile, save_file_name)
             self.savefile = save_file_name
 
@@ -121,6 +121,11 @@ class CalculatorPySCF(CalculatorBase):
             s, e = intervals[i], intervals[i+1]
             nao = len(np.unique(basis.index_ctr[s:e]))
             basis.nao_per_atom.append(nao)
+
+        # determine the number of contraction per
+        # atomic orbital
+        basis.nctr_per_ao = np.array(
+            [len(list(y)) for _, y in itertools.groupby(index_ctr)])
 
         basis.bas_coeffs = np.array(bas_coeff)
         basis.bas_exp = np.array(bas_exp)
