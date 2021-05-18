@@ -108,7 +108,8 @@ class AtomicOrbitals(nn.Module):
         self.to(self.device)
         attrs = ['bas_n', 'bas_coeffs',
                  'nshells', 'norm_cst',
-                 'index_ctr', 'nctr_per_ao']
+                 'index_ctr', 'nctr_per_ao',
+                 'nao_per_atom']
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
