@@ -24,6 +24,11 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
             backflow_kernel, mol, cuda)
         self.ndim = 3
 
+        self.cuda = cuda
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
+
     def forward(self, pos, derivative=0):
 
         if derivative == 0:
@@ -125,11 +130,12 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
             1 + bf.sum(-1), dim1=-1, dim2=-2)
 
         # eye 3x3 in 1x3x3x1x1
-        I33 = torch.eye(3, 3).view(1, 1, 3, 3, 1, 1)
+        eye_mat = torch.eye(3, 3).view(
+            1, 1, 3, 3, 1, 1).to(self.device)
 
         # compute the delta_ab * delta_ij * (1 + sum k \neq i eta(rik))
         # Nbatch x Ndim x Ndim x Nelec x Nelec (diagonal matrix)
-        delta_ab_delta_ij_bf = I33 * \
+        delta_ab_delta_ij_bf = eye_mat * \
             delta_ij_bf.view(nbatch, nao, 1, 1, nelec, nelec)
 
         # compute sum_k df(r_ik)/dbeta_i (alpha_i - alpha_k)
@@ -138,7 +144,8 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
             dbf_delta_ee.sum(-1), dim1=-1, dim2=-2)
 
         # compute delta_ab * f(rij)
-        delta_ab_bf = I33 * bf.view(nbatch, nao, 1, 1, nelec, nelec)
+        delta_ab_bf = eye_mat * \
+            bf.view(nbatch, nao, 1, 1, nelec, nelec)
 
         # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
         # nbatch d alpha_i / d beta_j
@@ -206,10 +213,11 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
         dbf = dbf * dree
 
         # eye matrix in dim x dim
-        i33 = torch.eye(3, 3).reshape(1, 1, 3, 3, 1, 1)
+        eye_mat = torch.eye(3, 3).reshape(
+            1, 1, 3, 3, 1, 1).to(self.device)
 
         # compute delta_ij delta_ab 2 sum_k dbf(ik) / dbeta_i
-        term1 = 2 * i33 * \
+        term1 = 2 * eye_mat * \
             torch.diag_embed(
                 dbf.sum(-1), dim1=-1, dim2=-2).reshape(nbatch, nao, 1, 3, nelec, nelec)
 
@@ -223,7 +231,8 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
             d2bf_delta_ee.sum(-1), dim1=-1, dim2=-2)
 
         # compute delta_ab * df(rij)/dbeta_j
-        term3 = 2 * i33 * dbf.reshape(nbatch, nao, 1, 3, nelec, nelec)
+        term3 = 2 * eye_mat * \
+            dbf.reshape(nbatch, nao, 1, 3, nelec, nelec)
 
         # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
         # nbatch d2 alpha_i / d2 beta_j
