@@ -1,3 +1,4 @@
+from tests.wavefunction.test_slaterjastrow import TestSlaterJastrow
 import unittest
 
 import numpy as np
@@ -9,8 +10,6 @@ from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow
 from qmctorch.utils import set_torch_double_precision
-
-from ..path_utils import PATH_TEST
 
 
 class TestLiHBackFlowPySCF(unittest.TestCase):
@@ -31,6 +30,7 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrowBackFlow(self.mol, kinetic='jacobi',
                                         configs='single_double(2,2)',
+                                        orbital_dependent_backflow=True,
                                         include_all_mo=True)
 
         # fc weights
@@ -89,10 +89,13 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
     def test3_wf_opt_grad_manual(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(track=['local_energy'],
+        self.solver.configure(track=['local_energy', 'parameters'],
                               loss='energy', grad='manual')
         obs = self.solver.run(5)
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    t = TestLiHBackFlowPySCF()
+    t.setUp()
+    t.test3_wf_opt_grad_manual()

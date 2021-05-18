@@ -29,6 +29,7 @@ class TestLiHBackFlowADF(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrowBackFlow(self.mol, kinetic='jacobi',
                                         configs='single_double(2,2)',
+                                        orbital_dependent_backflow=True,
                                         include_all_mo=True)
 
         # fc weights
@@ -80,7 +81,7 @@ class TestLiHBackFlowADF(unittest.TestCase):
     def test2_wf_opt_grad_auto(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(track=['local_energy'],
+        self.solver.configure(track=['local_energy', 'parameters'],
                               loss='energy', grad='auto')
         obs = self.solver.run(5)
 
@@ -93,4 +94,7 @@ class TestLiHBackFlowADF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    t = TestLiHBackFlowADF()
+    t.setUp()
+    t.test2_wf_opt_grad_auto()
