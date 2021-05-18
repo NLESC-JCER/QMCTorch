@@ -76,6 +76,29 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
     def test_forward(self):
         wfvals = self.wf(self.pos)
 
+    def test_antisymmetry(self):
+        """Test that the wf values are antisymmetric
+        wrt exchange of 2 electrons of same spin."""
+        wfvals_ref = self.wf(self.pos)
+
+        if self.wf.nelec < 4:
+            print(
+                'Warning : antisymmetry cannot be tested with \
+                    only %d electrons' % self.wf.nelec)
+            return
+
+        # test spin up
+        pos_xup = self.pos.clone()
+        perm_up = list(range(self.wf.nelec))
+        perm_up[0] = 1
+        perm_up[1] = 0
+        pos_xup = pos_xup.reshape(self.nbatch, self.wf.nelec, 3)
+        pos_xup = pos_xup[:, perm_up, :].reshape(
+            self.nbatch, self.wf.nelec*3)
+
+        wfvals_xup = self.wf(pos_xup)
+        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+
     def test_jacobian_mo(self):
         """Jacobian of the BF MOs."""
 
@@ -161,6 +184,7 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 if __name__ == "__main__":
     t = TestSlaterJastrowBackFlow()
     t.setUp()
+    t.test_antisymmetry()
     t.test_hess_mo()
     t.test_grad_mo()
     t.test_kinetic_energy()
