@@ -1,5 +1,5 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowBackFlow
+from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
 
@@ -62,8 +62,6 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
                                         configs='single_double(2,2)',
                                         backflow_kernel=BackFlowKernelInverse,
                                         orbital_dependent_backflow=False)
-
-        # self.wf.ao.backflow_weight.data *= 0.
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -184,8 +182,9 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
 if __name__ == "__main__":
     t = TestSlaterJastrowBackFlow()
     t.setUp()
-    t.test_antisymmetry()
-    t.test_hess_mo()
-    t.test_grad_mo()
-    t.test_kinetic_energy()
+    # t.test_antisymmetry()
+    t.test_baseline()
+    # t.test_hess_mo()
+    # t.test_grad_mo()
+    # t.test_kinetic_energy()
     # unittest.main()
