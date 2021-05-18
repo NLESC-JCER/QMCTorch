@@ -25,13 +25,6 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
         self.backflow_trans = OrbitalDependentBackFlowTransformation(
             mol, backflow_kernel=backflow_kernel, cuda=cuda)
 
-    def __repr__(self):
-        name = self.__class__.__name__
-        backflow = self.backflow_trans.backflow_kernel.__name__
-        return name + '(%s, %s, %d -> (%d,%d) )' + backflow % (self.radial_type, self.harmonics_type,
-                                                               self.nelec*self.ndim, self.nelec,
-                                                               self.norb)
-
     def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.
 
