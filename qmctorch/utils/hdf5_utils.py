@@ -203,7 +203,6 @@ def insert_group(obj, parent_grp, obj_name):
             own_grp = parent_grp.create_group(obj_name)
 
             for child_name in get_children_names(obj):
-
                 child_obj = get_child_object(obj, child_name)
                 insert_object(child_obj,  own_grp, child_name)
 
@@ -276,7 +275,8 @@ def insert_default(obj, parent_grp, obj_name):
     """
     try:
         parent_grp.create_dataset(obj_name, data=obj)
-    except:
+    except Exception as expt_message:
+        print(expt_message)
         print_insert_error(obj, obj_name)
 
 
@@ -288,6 +288,8 @@ def insert_list(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
+    np.warnings.filterwarnings(
+        'ignore', category=np.VisibleDeprecationWarning)
     try:
         parent_grp.create_dataset(obj_name, data=obj)
     except:
@@ -378,7 +380,7 @@ def children(obj):
         obj {object} -- the object to check
 
     Returns:
-        dict -- items 
+        dict -- items
     """
 
     if hasattr(obj, '__dict__'):
@@ -395,7 +397,7 @@ def get_children_names(obj):
         obj {object} -- the object to check
 
     Returns:
-        dict -- items 
+        dict -- items
     """
 
     if hasattr(obj, '__dict__'):
