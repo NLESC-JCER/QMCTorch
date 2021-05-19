@@ -25,7 +25,6 @@ class SolverSlaterJastrow(SolverBase):
             output (str, optional): hdf5 filename. Defaults to None.
             rank (int, optional): rank of he process. Defaults to 0.
         """
-
         SolverBase.__init__(self, wf, sampler,
                             optimizer, scheduler, output, rank)
 
