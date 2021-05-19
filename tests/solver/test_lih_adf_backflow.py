@@ -88,7 +88,7 @@ class TestLiHBackFlowADF(unittest.TestCase):
     def test3_wf_opt_grad_manual(self):
         self.solver.sampler = self.sampler
 
-        self.solver.configure(track=['local_energy'],
+        self.solver.configure(track=['local_energy', 'parameters'],
                               loss='energy', grad='manual')
         obs = self.solver.run(5)
 
