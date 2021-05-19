@@ -26,7 +26,7 @@ class PadeJastrow(ElectronElectronBase):
         super().__init__(nup, ndown, scale, scale_factor, cuda)
 
         self.weight = nn.Parameter(torch.as_tensor([w]),
-                                   requires_grad=True).to(self.device)
+                                   requires_grad=True)  # .to(self.device)
         register_extra_attributes(self, ['weight'])
 
         self.static_weight = self.get_static_weight()

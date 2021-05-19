@@ -19,7 +19,7 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """
         super().__init__(mol, cuda)
         self.weight = nn.Parameter(
-            torch.as_tensor([1E-3])).to(self.device)
+            torch.as_tensor([1E-3]))  # .to(self.device)
 
     def _backflow_kernel(self, ree):
         """Computes the backflow kernel:
