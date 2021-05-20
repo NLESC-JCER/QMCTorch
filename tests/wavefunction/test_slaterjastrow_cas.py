@@ -62,7 +62,9 @@ class TestOrbitalWF(unittest.TestCase):
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
-        self.pos = torch.Tensor(np.random.rand(10, mol.nelec*3))
+        self.nbatch = 10
+        self.pos = torch.Tensor(
+            np.random.rand(self.nbatch, mol.nelec*3))
         self.pos.requires_grad = True
 
     def test_forward(self):
@@ -80,6 +82,41 @@ class TestOrbitalWF(unittest.TestCase):
                             [0.1164],
                             [0.2506]])
         # assert torch.allclose(wfvals.data, ref, rtol=1E-4, atol=1E-4)
+
+    def test_antisymmetry(self):
+        """Test that the wf values are antisymmetric
+        wrt exchange of 2 electrons of same spin."""
+        wfvals_ref = self.wf(self.pos)
+
+        if self.wf.nelec < 4:
+            print(
+                'Warning : antisymmetry cannot be tested with \
+                    only %d electrons' % self.wf.nelec)
+            return
+
+        # test spin up
+        pos_xup = self.pos.clone()
+        perm_up = list(range(self.wf.nelec))
+        perm_up[0] = 1
+        perm_up[1] = 0
+        pos_xup = pos_xup.reshape(self.nbatch, self.wf.nelec, 3)
+        pos_xup = pos_xup[:, perm_up, :].reshape(
+            self.nbatch, self.wf.nelec*3)
+
+        wfvals_xup = self.wf(pos_xup)
+        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+
+        # test spin down
+        pos_xdn = self.pos.clone()
+        perm_dn = list(range(self.wf.nelec))
+        perm_dn[self.wf.mol.nup-1] = self.wf.mol.nup
+        perm_dn[self.wf.mol.nup] = self.wf.mol.nup-1
+        pos_xdn = pos_xdn.reshape(self.nbatch, self.wf.nelec, 3)
+        pos_xdn = pos_xdn[:, perm_up, :].reshape(
+            self.nbatch, self.wf.nelec*3)
+
+        wfvals_xdn = self.wf(pos_xdn)
+        assert(torch.allclose(wfvals_ref, -wfvals_xdn))
 
     def test_grad_mo(self):
         """Gradients of the MOs."""

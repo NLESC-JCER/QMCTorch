@@ -92,7 +92,6 @@ class Metropolis(SamplerBase):
                 self.ntherm = self.nstep + self.ntherm
 
             self.walkers.initialize(pos=pos)
-
             fx = pdf(self.walkers.pos)
 
             fx[fx == 0] = eps

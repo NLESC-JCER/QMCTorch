@@ -309,6 +309,9 @@ class SolverSlaterJastrow(SolverBase):
             nepoch (int): number of epoch to run
         """
 
+        # init the loss in case we have nepoch=0
+        cumulative_loss = 0
+
         # loop over the epoch
         for n in range(nepoch):
 
