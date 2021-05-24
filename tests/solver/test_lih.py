@@ -27,7 +27,6 @@ class TestLiH(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='single(2,2)',
-                                use_jastrow=True,
                                 include_all_mo=False)
 
         # sampler

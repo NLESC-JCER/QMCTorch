@@ -41,7 +41,6 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         # backflow wave function
         self.wf = SlaterJastrowBackFlow(self.mol,
                                         kinetic='jacobi',
-                                        use_jastrow=True,
                                         configs='single_double(2,2)',
                                         include_all_mo=True)
         self.wf.ao.backflow_trans.backflow_kernel.weight.data *= 0.
@@ -50,7 +49,6 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         # normal wave function
         self.wf_ref = SlaterJastrow(self.mol_ref,
                                     kinetic='jacobi',
-                                    use_jastrow=True,
                                     include_all_mo=True,
                                     configs='single_double(2,2)')
 

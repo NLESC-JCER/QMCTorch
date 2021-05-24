@@ -7,7 +7,7 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowOrbital
+from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
 from qmctorch.utils import set_torch_double_precision
 
 from ..path_utils import PATH_TEST
@@ -27,9 +27,9 @@ class TestLiHCorrelated(unittest.TestCase):
         self.mol = Molecule(load=path_hdf5)
 
         # wave function
-        self.wf = SlaterJastrowOrbital(self.mol, kinetic='jacobi',
-                                       configs='cas(2,2)',
-                                       include_all_mo=True)
+        self.wf = SlaterOrbitalDependentJastrow(self.mol, kinetic='jacobi',
+                                                configs='cas(2,2)',
+                                                include_all_mo=True)
 
         # fc weights
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)

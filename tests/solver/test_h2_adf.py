@@ -25,8 +25,7 @@ class TestH2ADF(unittest.TestCase):
 
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='auto',
-                                configs='single(2,2)',
-                                use_jastrow=True)
+                                configs='single(2,2)')
 
         # sampler
         self.sampler = Metropolis(

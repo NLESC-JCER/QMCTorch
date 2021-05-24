@@ -1,21 +1,19 @@
+
 import unittest
 
 import numpy as np
 import torch
 import torch.optim as optim
 
-from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
 
-from qmctorch.sampler import Hamiltonian, Metropolis
+from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import (plot_block, plot_blocking_energy,
-                            plot_correlation_coefficient, plot_energy,
-                            plot_integrated_autocorrelation_time,
-                            plot_walkers_traj)
+from qmctorch.utils import plot_energy
 
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowOrbital
+from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
 from qmctorch.utils import set_torch_double_precision
 
 __PLOT__ = False
@@ -41,12 +39,11 @@ class TestH2Correlated(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = SlaterJastrowOrbital(self.mol,
-                                       kinetic='auto',
-                                       configs='cas(2,2)',
-                                       jastrow_type=FullyConnectedJastrow,
-                                       # jastrow_type='pade_jastrow',
-                                       include_all_mo=True)
+        self.wf = SlaterOrbitalDependentJastrow(self.mol,
+                                                kinetic='auto',
+                                                configs='cas(2,2)',
+                                                jastrow_kernel=FullyConnectedJastrowKernel,
+                                                include_all_mo=True)
 
         # sampler
         self.sampler = Metropolis(

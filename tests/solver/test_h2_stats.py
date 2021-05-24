@@ -37,8 +37,7 @@ class TestH2Stat(unittest.TestCase):
 
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='single(2,2)',
-                                use_jastrow=True)
+                                configs='single(2,2)')
 
         # sampler
         self.sampler = Metropolis(
