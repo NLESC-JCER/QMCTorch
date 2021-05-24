@@ -158,15 +158,15 @@ class ElectronElectronBase(nn.Module):
         nbatch = inp.shape[0]
         return inp.masked_select(self.mask_tri_up).view(nbatch, -1)
 
-    def _to_device(self):
-        """Export the non parameter variable to the device."""
+    # def _to_device(self):
+    #     """Export the non parameter variable to the device."""
 
-        self.device = torch.device('cuda')
-        self.to(self.device)
-        attrs = ['static_weight']
-        for at in attrs:
-            if at in self.__dict__:
-                self.__dict__[at] = self.__dict__[at].to(self.device)
+    #     self.device = torch.device('cuda')
+    #     self.to(self.device)
+    #     attrs = ['static_weight']
+    #     for at in attrs:
+    #         if at in self.__dict__:
+    #             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.

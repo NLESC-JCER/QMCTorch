@@ -20,7 +20,7 @@ class PadeJastrowOrbital(ElectronElectronBase):
             cuda (bool, optional): [description]. Defaults to False.
         """
 
-        super(PadeJastrowOrbital, self).__init__(nup, ndown, cuda)
+        super().__init__(nup, ndown, cuda)
 
         self.weight = nn.Parameter(
             w * torch.ones(nmo), requires_grad=True)
@@ -66,24 +66,7 @@ class PadeJastrowOrbital(ElectronElectronBase):
         raise NotImplementedError(
             'SlaterJastrow Dependent Jastrow do not have static weight')
 
-    def _get_jastrow_elements(self, r):
-        r"""Get the elements of the jastrow matrix :
-        .. math::
-            out_{k,i,j} = \exp{ \frac{w r_{i,j}}{1+w_k r_{i,j}} }
-
-        where k runs over the MO
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                            Nbatch x Nelec_pair
-
-        Returns:
-            torch.tensor: matrix fof the jastrow elements
-                        Nmo x Nbatch x Nelec_pair
-        """
-        return torch.exp(self._compute_kernel(r))
-
-    def _compute_kernel(self, r):
+    def forward(self, r):
         """ Get the jastrow kernel.
         .. math::
             B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
@@ -102,7 +85,7 @@ class PadeJastrowOrbital(ElectronElectronBase):
 
         return self.get_cusp_weight() * r * denom
 
-    def _get_der_jastrow_elements(self, r, dr):
+    def compute_derivative(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
 
@@ -138,7 +121,7 @@ class PadeJastrowOrbital(ElectronElectronBase):
 
         return (a + b)
 
-    def _get_second_der_jastrow_elements(self, r, dr, d2r):
+    def compute_second_derivative(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 

@@ -1,32 +1,20 @@
-from copy import deepcopy
-
-import matplotlib.pyplot as plt
-import numpy as np
 import torch
-from scipy.optimize import curve_fit
-from torch import nn
 import operator
 
-from torch._C import Value
-
-from .. import log
-from ..utils import register_extra_attributes
-from .orbitals.atomic_orbitals import AtomicOrbitals
-from .pooling.orbital_configurations import OrbitalConfigurations
-from .pooling.slater_pooling import SlaterPooling
 from .slater_jastrow_base import SlaterJastrowBase
-from .jastrows.jastrow_correlated_orbitals import set_jastrow_correlated
+from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from .jastrows.elec_elec.orbital_dependent_jastrow_kernel import OrbitalDependentJastrowKernel
 
 
-class SlaterJastrowOrbital(SlaterJastrowBase):
+class SlaterOrbitalDependentJastrow(SlaterJastrowBase):
 
-    def __init__(self, mol, configs='ground_state',
+    def __init__(self, mol,
+                 configs='ground_state',
                  kinetic='jacobi',
-                 use_jastrow=True,
-                 jastrow_type='pade_jastrow',
+                 jastrow_kernel=PadeJastrowKernel,
+                 jastrow_kernel_kwargs={},
                  cuda=False,
-                 include_all_mo=True,
-                 **kwargs):
+                 include_all_mo=True):
         """Implementation of the QMC Network.
 
         Args:
@@ -42,21 +30,21 @@ class SlaterJastrowOrbital(SlaterJastrowBase):
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        if use_jastrow is False:
-            raise ValueError('use_jastrow = False is invalid for SlaterJastrowOrbital wave functions, \
-                              use SlaterJastrow wave function if you do not want to use Jastrow factors')
+        if jastrow_kernel is None:
+            raise ValueError(
+                'Orbital dependent Jastrow factor requires a valid jastrow kernel.')
 
-        super().__init__(mol, configs,
-                         kinetic, use_jastrow, jastrow_type,
-                         cuda, include_all_mo)
+        super().__init__(mol, configs, kinetic, cuda, include_all_mo)
+        self.use_jastrow = True
 
-        self.jastrow = set_jastrow_correlated(
-            jastrow_type, self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda, **kwargs)
+        self.jastrow = OrbitalDependentJastrowKernel(
+            self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda,
+            jastrow_kernel, jastrow_kernel_kwargs)
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)
 
-        self.jastrow_type = self.jastrow.__class__.__name__
+        self.jastrow_type = jastrow_kernel.__class__.__name__
 
         self.log_data()
 

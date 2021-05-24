@@ -1,33 +1,30 @@
-from copy import deepcopy
 
-import matplotlib.pyplot as plt
-import numpy as np
+
 import torch
-from scipy.optimize import curve_fit
+
 from torch import nn
 import operator
 
 from .. import log
-from ..utils import register_extra_attributes
+
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
-from .pooling.orbital_configurations import OrbitalConfigurations
-from .pooling.slater_pooling import SlaterPooling
 from .slater_jastrow_base import SlaterJastrowBase
-from .jastrows.jastrow import set_jastrow
 from .orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 
 
 class SlaterJastrowBackFlow(SlaterJastrowBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
-                 use_jastrow=True,
-                 jastrow_type='pade_jastrow',
-                 cuda=False,
-                 include_all_mo=True,
+                 jastrow_kernel=PadeJastrowKernel,
+                 jastrow_kernel_kwargs={},
                  backflow_kernel=BackFlowKernelInverse,
-                 orbital_dependent_backflow=False):
+                 orbital_dependent_backflow=False,
+                 cuda=False,
+                 include_all_mo=True,):
         """Implementation of the QMC Network.
 
         Args:
@@ -43,10 +40,9 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        super().__init__(mol, configs, kinetic,
-                         use_jastrow, jastrow_type,
-                         cuda, include_all_mo)
+        super().__init__(mol, configs, kinetic, cuda, include_all_mo)
 
+        # process the backflow transformation
         if orbital_dependent_backflow:
             self.ao = AtomicOrbitalsOrbitalDependentBackFlow(
                 mol, backflow_kernel, cuda)
@@ -54,8 +50,14 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             self.ao = AtomicOrbitalsBackFlow(
                 mol, backflow_kernel, cuda)
 
-        self.jastrow = set_jastrow(
-            jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
+        # process the Jastrow
+        self.jastrow = JastrowFactorElectronElectron(
+            self.mol.nup, self.mol.ndown, jastrow_kernel,
+            kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
+
+        if jastrow_kernel is not None:
+            self.use_jastrow = True
+            self.jastrow_type = jastrow_kernel.__name__
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)

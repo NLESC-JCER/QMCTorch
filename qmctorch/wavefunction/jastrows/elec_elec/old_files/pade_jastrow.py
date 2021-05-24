@@ -2,17 +2,17 @@ import torch
 from torch import nn
 
 from ....utils import register_extra_attributes
-from .electron_electron_base import ElectronElectronBase
+from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 
-class PadeJastrow(ElectronElectronBase):
+class PadeJastrow(JastrowKernelElectronElectronBase):
+
     def __init__(self, nup, ndown, w=1.,
                  scale=False, scale_factor=0.6,
                  cuda=False):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
-            J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
             B_{ij} = \\frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
         Args:
@@ -26,27 +26,30 @@ class PadeJastrow(ElectronElectronBase):
         super().__init__(nup, ndown, scale, scale_factor, cuda)
 
         self.weight = nn.Parameter(torch.as_tensor([w]),
-                                   requires_grad=True)  # .to(self.device)
+                                   requires_grad=True)
         register_extra_attributes(self, ['weight'])
 
         self.static_weight = self.get_static_weight()
 
-    def _get_jastrow_elements(self, r):
-        r"""Get the elements of the jastrow matrix :
-        .. math::
-            out_{i,j} = \exp{ \frac{b r_{i,j}}{1+b'r_{i,j}} }
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
+    def get_static_weight(self):
+        """Get the matrix of static weights
 
         Returns:
-            torch.tensor: matrix fof the jastrow elements
-                          Nbatch x Nelec x Nelec
+            torch.tensor: static weight (0.5 (0.25)for parallel(anti) spins
         """
-        return torch.exp(self._compute_kernel(r))
 
-    def _compute_kernel(self, r):
+        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
+                         torch.ones(self.nup, self.ndown)), dim=1)
+
+        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
+                           torch.ones(self.ndown, self.ndown)), dim=1)
+
+        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
+        static_weight = static_weight.masked_select(self.mask_tri_up)
+
+        return static_weight
+
+    def forward(self, r):
         """ Get the jastrow kernel.
         .. math::
             B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
@@ -61,7 +64,7 @@ class PadeJastrow(ElectronElectronBase):
         """
         return self.static_weight * r / (1.0 + self.weight * r)
 
-    def _get_der_jastrow_elements(self, r, dr):
+    def compute_derivative(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
 
@@ -91,7 +94,7 @@ class PadeJastrow(ElectronElectronBase):
 
         return (a + b)
 
-    def _get_second_der_jastrow_elements(self, r, dr, d2r):
+    def compute_second_derivative(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 

@@ -1,9 +1,10 @@
-from tests.wavefunction.test_slaterjastrow import TestSlaterJastrow
 import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.elec_elec.pade_jastrow import PadeJastrow
+
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -41,7 +42,8 @@ class TestPadeJastrow(unittest.TestCase):
 
         self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
-        self.jastrow = PadeJastrow(self.nup, self.ndown)
+        self.jastrow = JastrowFactorElectronElectron(
+            self.nup, self.ndown, PadeJastrowKernel)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
@@ -103,7 +105,7 @@ class TestPadeJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestPadeJastrow()
-    t.setUp()
-    t.test_grad_jastrow()
+    unittest.main()
+    # t = TestPadeJastrow()
+    # t.setUp()
+    # t.test_grad_jastrow()

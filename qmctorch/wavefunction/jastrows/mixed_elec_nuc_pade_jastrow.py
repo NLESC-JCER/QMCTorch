@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from .elec_elec.pade_jastrow import PadeJastrow
+from .elec_elec.old_files.pade_jastrow import PadeJastrow
 from .elec_nuclei.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
 
 

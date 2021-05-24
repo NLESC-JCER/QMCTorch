@@ -62,13 +62,34 @@ class TestSlaterJastrow(unittest.TestCase):
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
-        self.nbatch = 10
+        self.nbatch = 50
         self.pos = torch.Tensor(np.random.rand(
             self.nbatch,  self.wf.nelec*3))
         self.pos.requires_grad = True
 
     def test_forward(self):
         wfvals = self.wf(self.pos)
+
+    def test_ee_cusp(self):
+
+        import matplotlib.pyplot as plt
+        pos_x = torch.Tensor(np.random.rand(
+            self.nbatch,  self.wf.nelec, 3))
+
+        pos_x[:, 0, :] = torch.as_tensor([2., 2., 2.])
+        pos_x[:, 1, 0] = 2.
+        pos_x[:, 1, 1] = 2.
+        pos_x[:, 1, 2] = torch.linspace(1, 3, self.nbatch)
+
+        pos_x = pos_x.reshape(self.nbatch, self.wf.nelec*3)
+        wf_vals = self.wf(pos_x).detach().numpy()
+        ek_vals = self.wf.kinetic_energy_jacobi(
+            pos_x).detach().numpy()
+        plt.plot(wf_vals)
+        plt.show()
+
+        plt.plot(ek_vals)
+        plt.show()
 
     def test_antisymmetry(self):
         """Test that the wf values are antisymmetric
@@ -179,6 +200,7 @@ if __name__ == "__main__":
     # unittest.main()
     t = TestSlaterJastrow()
     t.setUp()
-    t.test_antisymmetry()
+    t.test_ee_cusp()
+    # t.test_antisymmetry()
     # t.test_gradients_wf()
     # t.test_gradients_pdf()

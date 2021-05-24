@@ -1,6 +1,6 @@
 import torch
-from .elec_elec.pade_jastrow_orbital import PadeJastrowOrbital
-from .elec_elec.generic_jastrow_orbital import GenericJastrowOrbitals
+from .elec_elec.old_files.pade_jastrow_orbital import PadeJastrowOrbital
+from .elec_elec.old_files.generic_jastrow_orbital import GenericJastrowOrbitals
 from ... import log
 
 
