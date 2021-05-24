@@ -1,11 +1,11 @@
 import torch
 from torch import nn
 
-from ....utils import register_extra_attributes
+from .....utils import register_extra_attributes
 from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 
-class PadeJastrowPolynomial(JastrowKernelElectronElectronBase):
+class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
     def __init__(self, nup, ndown, cuda,
                  order=2,
@@ -52,7 +52,7 @@ class PadeJastrowPolynomial(JastrowKernelElectronElectronBase):
         static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
         mask_tri_up = torch.triu(torch.ones_like(
-            static_weight)).type(torch.BoolTensor)
+            static_weight), diagonal=1).type(torch.BoolTensor)
         static_weight = static_weight.masked_select(mask_tri_up)
 
         return static_weight

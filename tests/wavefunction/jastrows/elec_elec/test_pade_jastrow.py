@@ -43,7 +43,9 @@ class TestPadeJastrow(unittest.TestCase):
         self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
         self.jastrow = JastrowFactorElectronElectron(
-            self.nup, self.ndown, PadeJastrowKernel)
+            self.nup, self.ndown,
+            PadeJastrowKernel,
+            kernel_kwargs={'w': 0.1})
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)

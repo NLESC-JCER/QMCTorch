@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.elec_elec.pade_jastrow import PadeJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_polynomial_kernel import PadeJastrowPolynomialKernel
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -33,7 +34,7 @@ def hess(out, pos):
     return hess
 
 
-class TestScaledPadeJastrow(unittest.TestCase):
+class TestScaledPadeJastrowPolynom(unittest.TestCase):
 
     def setUp(self):
 
@@ -42,11 +43,30 @@ class TestScaledPadeJastrow(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.jastrow = PadeJastrow(self.nup, self.ndown, scale=True)
+
+        self.jastrow = JastrowFactorElectronElectron(
+            self.nup, self.ndown, PadeJastrowPolynomialKernel,
+            kernel_kwargs={'order': 5,
+                           'weight_a': 0.1*torch.ones(5),
+                           'weight_b': 0.1*torch.ones(5)},
+            scale=True)
+
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
+
+    def test_grad_distance(self):
+
+        r = self.jastrow.edist(self.pos)
+        dr = self.jastrow.edist(self.pos, derivative=1)
+        dr_grad = grad(
+            r,
+            self.pos,
+            grad_outputs=torch.ones_like(r))[0]
+        gradcheck(self.jastrow.edist, self.pos)
+
+        assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
 
     def test_grad_jastrow(self):
 
@@ -56,22 +76,22 @@ class TestScaledPadeJastrow(unittest.TestCase):
             val,
             self.pos,
             grad_outputs=torch.ones_like(val))[0]
-
-        dval_grad = dval_grad.view(
-            self.nbatch, self.nelec, 3).sum(2)
         gradcheck(self.jastrow, self.pos)
 
-        assert torch.allclose(dval, dval_grad)
+        assert torch.allclose(dval, dval_grad.view(
+            self.nbatch, self.nelec, 3).sum(2))
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
 
     def test_hess_jastrow(self):
 
         val = self.jastrow(self.pos)
         d2val_grad = hess(val, self.pos)
+        d2val_grad = d2val_grad.view(
+            self.nbatch, self.nelec, 3).sum(2)
+
         d2val = self.jastrow(self.pos, derivative=2)
 
-        assert torch.allclose(d2val, d2val_grad.view(
-            self.nbatch, self.nelec, 3).sum(2))
+        assert torch.allclose(d2val, d2val_grad)
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
 

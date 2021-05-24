@@ -54,7 +54,7 @@ class JastrowKernelElectronElectronBase(nn.Module):
                           Nmo x Nbatch x Ndim x  Nelec_pair
         """
 
-        kernel = self.jastrow_function(r)
+        kernel = self.forward(r)
         ker_grad = self._grads(kernel, r)
 
         return ker_grad.unsqueeze(1) * dr
@@ -79,7 +79,7 @@ class JastrowKernelElectronElectronBase(nn.Module):
         """
         dr2 = dr * dr
 
-        kernel = self.jastrow_function(r)
+        kernel = self.forward(r)
         ker_hess, ker_grad = self._hess(kernel, r)
 
         jhess = (ker_hess).unsqueeze(1) * \

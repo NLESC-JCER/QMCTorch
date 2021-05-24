@@ -1,7 +1,7 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow, SlaterJastrowBackFlow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
 
 from torch.autograd import grad, gradcheck, Variable
 
@@ -33,7 +33,7 @@ class TestSlaterJastrowElectronCusp(unittest.TestCase):
 
         self.wf = SlaterJastrow(mol,
                                 use_jastrow=True,
-                                jastrow_type=FullyConnectedJastrow,
+                                jastrow_type=FullyConnectedJastrowKernel,
                                 kinetic='jacobi',
                                 include_all_mo=True,
                                 configs='ground_state')

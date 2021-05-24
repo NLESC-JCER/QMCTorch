@@ -3,7 +3,7 @@ import operator
 
 from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
-from .jastrows.elec_elec.orbital_dependent_jastrow_kernel import OrbitalDependentJastrowKernel
+from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 
 
 class SlaterOrbitalDependentJastrow(SlaterJastrowBase):
@@ -37,9 +37,12 @@ class SlaterOrbitalDependentJastrow(SlaterJastrowBase):
         super().__init__(mol, configs, kinetic, cuda, include_all_mo)
         self.use_jastrow = True
 
-        self.jastrow = OrbitalDependentJastrowKernel(
-            self.mol.nup, self.mol.ndown, self.nmo_opt, self.cuda,
-            jastrow_kernel, jastrow_kernel_kwargs)
+        self.jastrow = JastrowFactorElectronElectron(
+            self.mol.nup, self.mol.ndown, jastrow_kernel,
+            kernel_kwargs=jastrow_kernel_kwargs,
+            orbital_dependent_kernel=True,
+            number_of_orbitals=self.nmo_opt,
+            cuda=self.cuda)
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)

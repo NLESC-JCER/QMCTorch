@@ -27,27 +27,28 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
         self.prefac = torch.rand(1)
 
-    @staticmethod
-    def get_cusp_weights(npairs):
-        """Computes the cusp bias
+        self.cusp_weights = self.get_static_weight()
 
-        Args:
-            npairs (int): number of elec pairs
+    def get_static_weight(self):
+        """Get the matrix of static weights
+
+        Returns:
+            torch.tensor: static weight (0.5 (0.25) for parallel(anti) spins
         """
-        nelec = int(0.5 * (-1 + np.sqrt(1+8*npairs)))
-        weights = torch.zeros(npairs)
 
-        spin = torch.ones(nelec)
-        spin[:int(nelec/2)] = -1
-        ip = 0
-        for i1 in range(nelec):
-            for i2 in range(i1, nelec):
-                if spin[i1] == spin[i2]:
-                    weights[ip] = 0.25
-                else:
-                    weights[ip] = 0.5
-                ip += 1
-        return weights
+        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
+                         torch.ones(self.nup, self.ndown)), dim=1)
+
+        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
+                           torch.ones(self.ndown, self.ndown)), dim=1)
+
+        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
+
+        mask_tri_up = torch.triu(torch.ones_like(
+            static_weight), diagonal=1).type(torch.BoolTensor)
+        static_weight = static_weight.masked_select(mask_tri_up)
+
+        return static_weight
 
     def forward(self, x):
         """Compute the values of the individual f_ij=f(r_ij)
@@ -59,9 +60,6 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
             torch.tensor: values of the f_ij
         """
         nbatch, npairs = x.shape
-
-        if self.cusp_weights is None:
-            self.cusp_weights = self.get_cusp_weights(npairs)
         w = (x*self.cusp_weights)
 
         # reshape the input so that all elements are considered

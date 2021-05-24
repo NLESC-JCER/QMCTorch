@@ -1,11 +1,16 @@
 import torch
 from torch import nn
 from ..distance.electron_electron_distance import ElectronElectronDistance
+from .orbital_dependent_jastrow_kernel import OrbitalDependentJastrowKernel
 
 
 class JastrowFactorElectronElectron(nn.Module):
 
-    def __init__(self, nup, ndown, jastrow_kernel, kernel_kwargs={},
+    def __init__(self, nup, ndown,
+                 jastrow_kernel,
+                 kernel_kwargs={},
+                 orbital_dependent_kernel=False,
+                 number_of_orbitals=None,
                  scale=False, scale_factor=0.6,
                  cuda=False):
         r"""Base class for two body jastrow of the form:
@@ -32,8 +37,12 @@ class JastrowFactorElectronElectron(nn.Module):
             self.device = torch.device('cuda')
 
         # kernel function
-        self.jastrow_kernel = jastrow_kernel(
-            nup, ndown, cuda, **kernel_kwargs)
+        if orbital_dependent_kernel:
+            self.jastrow_kernel = OrbitalDependentJastrowKernel(
+                nup, ndown, number_of_orbitals, cuda, jastrow_kernel, kernel_kwargs)
+        else:
+            self.jastrow_kernel = jastrow_kernel(
+                nup, ndown, cuda, **kernel_kwargs)
 
         # mask to extract the upper diag of the matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()

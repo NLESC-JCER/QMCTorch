@@ -8,7 +8,7 @@ from .kernels.jastrow_kernel_electron_electron_base import JastrowKernelElectron
 class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
 
     def __init__(self, nup, ndown, nmo, cuda,
-                 jastrow_kernel, jastrow_kernel_kwargs):
+                 jastrow_kernel, kernel_kwargs={}):
         r"""Computes generic jastrow factor per MO
 
         .. math::
@@ -24,7 +24,7 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
         super().__init__(nup, ndown, cuda)
         self.nmo = nmo
         self.jastrow_functions = nn.ModuleList(
-            [jastrow_kernel(nup, ndown, cuda, jastrow_kernel_kwargs) for imo in range(self.nmo)])
+            [jastrow_kernel(nup, ndown, cuda, **kernel_kwargs) for _ in range(self.nmo)])
 
     def forward(self, r):
         """ Get the jastrow kernel.

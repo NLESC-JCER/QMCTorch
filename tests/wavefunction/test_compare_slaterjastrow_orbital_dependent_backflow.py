@@ -57,7 +57,6 @@ class TestCompareSlaterJastrowOrbitalDependentBackFlow(unittest.TestCase):
 
         self.wf = SlaterJastrowBackFlow(mol,
                                         kinetic='jacobi',
-                                        use_jastrow=True,
                                         include_all_mo=True,
                                         configs='single_double(2,2)',
                                         backflow_kernel=BackFlowKernelInverse,
@@ -68,7 +67,6 @@ class TestCompareSlaterJastrowOrbitalDependentBackFlow(unittest.TestCase):
 
         self.wf_ref = SlaterJastrow(mol,
                                     kinetic='jacobi',
-                                    use_jastrow=True,
                                     include_all_mo=True,
                                     configs='single_double(2,2)')
 

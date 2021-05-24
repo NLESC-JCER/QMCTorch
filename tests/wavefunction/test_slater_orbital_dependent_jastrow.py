@@ -1,16 +1,13 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowOrbital
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
 from qmctorch.utils import set_torch_double_precision, btrace
 
-from torch.autograd import grad, gradcheck, Variable
+from torch.autograd import grad, Variable
 
 import numpy as np
 import torch
 import unittest
-import itertools
-import os
-import operator
 
 
 def hess(out, pos):
@@ -37,7 +34,7 @@ def hess(out, pos):
     return hess
 
 
-class TestCorrelatedOrbitalWF(unittest.TestCase):
+class TestSlaterOrbitalDependentJastrow(unittest.TestCase):
 
     def setUp(self):
 
@@ -54,18 +51,15 @@ class TestCorrelatedOrbitalWF(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterJastrowOrbital(
+        self.wf = SlaterOrbitalDependentJastrow(
             mol,
             kinetic='auto',
-            jastrow_type='pade_jastrow',
+            jastrow_kernel=FullyConnectedJastrowKernel,
             configs='single_double(2,4)',
             include_all_mo=True)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
-
-        self.wf.jastrow.weight.data = torch.rand(
-            self.wf.jastrow.weight.shape)
 
         self.nbatch = 3
         self.pos = torch.as_tensor(np.random.rand(
