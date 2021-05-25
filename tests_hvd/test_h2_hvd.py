@@ -38,7 +38,7 @@ class TestH2Hvd(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='cas(2,2)',
-                                use_jastrow=True, cuda=False)
+                                cuda=False)
         self.wf.jastrow.weight.data[0] = 1.
 
         # sampler
