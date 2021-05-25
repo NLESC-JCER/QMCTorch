@@ -4,7 +4,8 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.elec_nuclei.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
+from qmctorch.wavefunction.jastrows.elec_nuclei.jastrow_factor_electron_nuclei import JastrowFactorElectronNuclei
+from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -43,8 +44,8 @@ class TestElectronNucleiPadeJastrow(unittest.TestCase):
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         self.atoms = torch.rand(4, 3)
-        self.jastrow = ElectronNucleiPadeJastrow(
-            self.nup, self.ndown, self.atoms)
+        self.jastrow = JastrowFactorElectronNuclei(
+            self.nup, self.ndown, self.atoms, PadeJastrowKernel)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)

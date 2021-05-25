@@ -1,8 +1,13 @@
+
 import torch
 from torch import nn
 
-from .elec_elec.old_files.pade_jastrow import PadeJastrow
-from .elec_nuclei.electron_nuclei_pade_jastrow import ElectronNucleiPadeJastrow
+
+from .elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
+from .elec_nuclei.jastrow_factor_electron_nuclei import JastrowFactorElectronNuclei
+
+from .elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from .elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecElec
 
 
 class MixedElecNucPadeJastrow(nn.Module):
@@ -21,10 +26,12 @@ class MixedElecNucPadeJastrow(nn.Module):
             w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
-        super(MixedElecNucPadeJastrow, self).__init__()
-        self.elec_nuc = ElectronNucleiPadeJastrow(
-            nup, ndown, atomic_pos, w=wen, cuda=cuda)
-        self.elec_elec = PadeJastrow(nup, ndown, w=wee, cuda=cuda)
+        super().__init__()
+
+        self.elec_nuc = JastrowFactorElectronNuclei(
+            nup, ndown, atomic_pos, PadeJastrowKernelElecNuc, kernel_kwargs={'w': wen})
+        self.elec_elec = JastrowFactorElectronElectron(
+            nup, ndown, PadeJastrowKernelElecElec, kernel_kwargs={'w': wee})
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.

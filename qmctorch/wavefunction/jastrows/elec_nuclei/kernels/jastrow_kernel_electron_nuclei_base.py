@@ -1,17 +1,15 @@
 import torch
 from torch import nn
 from torch.autograd import grad
-from ....utils import register_extra_attributes
-from .electron_nuclei_base import ElectronNucleiBase
+from ...distance.electron_nuclei_distance import ElectronNucleiDistance
 
 
-class ElectronNucleiGeneric(ElectronNucleiBase):
-    def __init__(self, nup, ndown, atoms, JastrowFunction, cuda, **kwargs):
-        r"""Computes the Simple Pade-Jastrow factor
+class JastrowKernelElectronNucleiBase(nn.Module):
+
+    def __init__(self, nup, ndown, atomic_pos, cuda, **kwargs):
+        r"""Base class for the elec-nuc jastrow factor
 
         .. math::
-            J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
-            B_{ij} = \\frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
         Args:
             nup (int): number of spin up electons
@@ -21,12 +19,20 @@ class ElectronNucleiGeneric(ElectronNucleiBase):
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
-        super(ElectronNucleiGeneric, self).__init__(
-            nup, ndown, atoms, cuda)
+        super().__init__()
+        self.nup, self.ndown = nup, ndown
+        self.cuda = cuda
 
-        self.jastrow_function = JastrowFunction(**kwargs)
+        self.nelec = nup + ndown
+        self.atoms = atomic_pos
+        self.natoms = atomic_pos.shape[0]
+        self.ndim = 3
 
-    def _get_jastrow_elements(self, r):
+        self.device = torch.device('cpu')
+        if self.cuda:
+            self.device = torch.device('cuda')
+
+    def forward(self, r):
         r"""Get the elements of the jastrow matrix :
         .. math::
             out_{i,j} = \exp{ \frac{b r_{i,j}}{1+b'r_{i,j}} }
@@ -39,24 +45,9 @@ class ElectronNucleiGeneric(ElectronNucleiBase):
             torch.tensor: matrix fof the jastrow elements
                           Nbatch x Nelec x Nelec
         """
-        return torch.exp(self._compute_kernel(r))
+        raise NotImplementedError()
 
-    def _compute_kernel(self, r):
-        """ Get the jastrow kernel.
-        .. math::
-            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix of the jastrow kernels
-                          Nbatch x Nelec x Nelec
-        """
-        return self.jastrow_function(r)
-
-    def _get_der_jastrow_elements(self, r, dr):
+    def compute_derivative(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
 
@@ -79,12 +70,12 @@ class ElectronNucleiGeneric(ElectronNucleiBase):
                           Nbatch x Ndim x Nelec x Nelec
         """
 
-        kernel = self.jastrow_function(r)
+        kernel = self.forward(r)
         ker_grad = self._grads(kernel, r)
 
         return ker_grad.unsqueeze(1) * dr
 
-    def _get_second_der_jastrow_elements(self, r, dr, d2r):
+    def compute_second_derivative(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 
@@ -109,7 +100,7 @@ class ElectronNucleiGeneric(ElectronNucleiBase):
 
         dr2 = dr * dr
 
-        kernel = self.jastrow_function(r)
+        kernel = self.forward(r)
 
         ker_hess, ker_grad = self._hess(kernel, r)
 

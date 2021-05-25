@@ -3,57 +3,10 @@ import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
-from qmctorch.wavefunction.jastrows.elec_nuclei.electron_nuclei_generic import ElectronNucleiGeneric
+from qmctorch.wavefunction.jastrows.elec_nuclei.jastrow_factor_electron_nuclei import JastrowFactorElectronNuclei
+from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
 
 torch.set_default_tensor_type(torch.DoubleTensor)
-
-
-class FullyConnectedJastrowElecNuc(torch.nn.Module):
-    def __init__(self):
-        """Defines a fully connected jastrow factors."""
-
-        super(FullyConnectedJastrowElecNuc, self).__init__()
-
-        self.fc1 = torch.nn.Linear(1, 16, bias=False)
-        self.fc2 = torch.nn.Linear(16, 8, bias=False)
-        self.fc3 = torch.nn.Linear(8, 1, bias=False)
-
-        torch.nn.init.uniform_(self.fc1.weight)
-        torch.nn.init.uniform_(self.fc2.weight)
-        torch.nn.init.uniform_(self.fc2.weight)
-
-        # self.fc1.weight.data *= 1E-3
-        # self.fc2.weight.data *= 1E-3
-        # self.fc3.weight.data *= 1E-3
-
-        self.nl_func = torch.nn.Sigmoid()
-
-    def forward(self, x):
-        """Compute the values of the individual f_ij=f(r_ij)
-
-        Args:
-            x (torch.tensor): e-e distance Nbatch, Nele_pairs
-
-        Returns:
-            torch.tensor: values of the f_ij
-        """
-        original_shape = x.shape
-
-        # reshape the input so that all elements
-        # are considered independently of each other
-        x = x.reshape(-1, 1)
-
-        x = self.fc1(x)
-        x = self.nl_func(x)
-        x = self.fc2(x)
-        x = self.nl_func(x)
-        x = self.fc3(x)
-        x = self.nl_func(x)
-
-        # reshape to the original shape
-        x = x.reshape(*original_shape)
-
-        return x
 
 
 def hess(out, pos):
@@ -90,8 +43,8 @@ class TestElectronNucleiGeneric(unittest.TestCase):
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         self.atoms = torch.rand(4, 3)
-        self.jastrow = ElectronNucleiGeneric(
-            self.nup, self.ndown, self.atoms, FullyConnectedJastrowElecNuc, False)
+        self.jastrow = JastrowFactorElectronNuclei(
+            self.nup, self.ndown, self.atoms, FullyConnectedJastrowKernel)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
