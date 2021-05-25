@@ -30,7 +30,7 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrowBackFlow(self.mol, kinetic='jacobi',
                                         configs='single_double(2,2)',
-                                        orbital_dependent_backflow=False,
+                                        orbital_dependent_backflow=True,
                                         include_all_mo=True)
 
         # fc weights

@@ -63,7 +63,12 @@ class BackFlowKernelBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        kernel_val = self._backflow_kernel(ree)
+        if ree.requires_grad == False:
+            ree.requires_grad = True
+
+        with torch.enable_grad():
+            kernel_val = self._backflow_kernel(ree)
+
         return self._grad(kernel_val, ree)
 
     def _backflow_kernel_second_derivative(self, ree):
@@ -75,8 +80,14 @@ class BackFlowKernelBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        kernel_val = self._backflow_kernel(ree)
-        hess_val, _ = self._hess(kernel_val, ree)
+        if ree.requires_grad == False:
+            ree.requires_grad = True
+
+        with torch.enable_grad():
+
+            kernel_val = self._backflow_kernel(ree)
+            hess_val, _ = self._hess(kernel_val, ree)
+
         return hess_val
 
     @staticmethod

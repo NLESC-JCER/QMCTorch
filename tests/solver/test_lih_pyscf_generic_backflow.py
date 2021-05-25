@@ -10,6 +10,9 @@ from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow
 from qmctorch.utils import set_torch_double_precision
+from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_fully_connected import BackFlowKernelFullyConnected
+from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_fully_connected import GenericBackFlowKernel
+from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_fully_connected import BackFlowKernelPowerSum
 
 
 class TestLiHBackFlowPySCF(unittest.TestCase):
@@ -30,6 +33,7 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrowBackFlow(self.mol, kinetic='jacobi',
                                         configs='single_double(2,2)',
+                                        backflow_kernel=BackFlowKernelPowerSum,
                                         orbital_dependent_backflow=False,
                                         include_all_mo=True)
 
@@ -95,7 +99,9 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestLiHBackFlowPySCF()
-    t.setUp()
-    t.test3_wf_opt_grad_manual()
+    unittest.main()
+    # t = TestLiHBackFlowPySCF()
+    # t.setUp()
+    # t.test_0_wavefunction()
+    # t.test1_single_point()
+    # # t.test3_wf_opt_grad_manual()
