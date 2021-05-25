@@ -94,17 +94,6 @@ class TestH2Correlated(unittest.TestCase):
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
 
-        # values on different arch
-        # expected_energy = [-1.1286007165908813,
-        #                    -1.099538658544285]
-
-        # # values on different arch
-        # expected_variance = [0.45748308300971985,
-        #                      0.5163105076990828]
-
-        # assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
-        # assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
-
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler
         self.solver.configure(

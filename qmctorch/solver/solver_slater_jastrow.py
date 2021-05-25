@@ -411,6 +411,8 @@ class SolverSlaterJastrow(SolverBase):
         if self.wf.jastrow.__repr__().startswith('GenericJastrow'):
             no_grad_eloc = False
 
+        # no_grad_eloc = False
+
         if self.loss.method in ['energy', 'weighted-energy']:
 
             ''' Get the gradient of the total energy

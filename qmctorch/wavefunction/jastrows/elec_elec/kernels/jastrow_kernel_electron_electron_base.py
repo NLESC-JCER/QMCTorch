@@ -54,8 +54,13 @@ class JastrowKernelElectronElectronBase(nn.Module):
                           Nmo x Nbatch x Ndim x  Nelec_pair
         """
 
-        kernel = self.forward(r)
-        ker_grad = self._grads(kernel, r)
+        if r.requires_grad == False:
+            r.requires_grad = True
+
+        with torch.enable_grad():
+
+            kernel = self.forward(r)
+            ker_grad = self._grads(kernel, r)
 
         return ker_grad.unsqueeze(1) * dr
 
@@ -79,11 +84,16 @@ class JastrowKernelElectronElectronBase(nn.Module):
         """
         dr2 = dr * dr
 
-        kernel = self.forward(r)
-        ker_hess, ker_grad = self._hess(kernel, r)
+        if r.requires_grad == False:
+            r.requires_grad = True
 
-        jhess = (ker_hess).unsqueeze(1) * \
-            dr2 + ker_grad.unsqueeze(1) * d2r
+        with torch.enable_grad():
+
+            kernel = self.forward(r)
+            ker_hess, ker_grad = self._hess(kernel, r)
+
+            jhess = (ker_hess).unsqueeze(1) * \
+                dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
 
