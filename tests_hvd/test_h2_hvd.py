@@ -39,7 +39,6 @@ class TestH2Hvd(unittest.TestCase):
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='cas(2,2)',
                                 cuda=False)
-        self.wf.jastrow.weight.data[0] = 1.
 
         # sampler
         self.sampler = Metropolis(
