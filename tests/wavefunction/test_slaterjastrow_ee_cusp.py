@@ -37,9 +37,6 @@ class TestSlaterJastrowElectronCusp(unittest.TestCase):
                                 include_all_mo=True,
                                 configs='ground_state')
 
-        # self.wf.ao.backflow_trans.backflow_kernel.weight.data = torch.as_tensor([
-        # 0.1])
-
         self.nbatch = 100
 
     def test_ee_cusp(self):
@@ -58,15 +55,6 @@ class TestSlaterJastrowElectronCusp(unittest.TestCase):
 
         pos_x = pos_x.reshape(self.nbatch, self.wf.nelec*3)
         pos_x.requires_grad = True
-
-        # wf_vals = self.wf(pos_x).detach().numpy()
-        # ek_vals = self.wf.kinetic_energy(
-        #     pos_x).detach().numpy()
-        # plt.plot(wf_vals)
-        # plt.show()
-
-        # plt.plot(ek_vals)
-        # plt.show()
 
         x = x.detach().numpy()
         j = self.wf.jastrow(pos_x).detach().numpy()

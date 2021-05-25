@@ -14,7 +14,7 @@ def btrace(M):
 
 class OrbitalTest(SlaterJastrow):
     def __init__(self, mol):
-        super(OrbitalTest, self).__init__(mol, use_jastrow=True)
+        super(OrbitalTest, self).__init__(mol)
 
     def first_der_autograd(self, x):
         """Compute the first derivative of the AO using autograd
