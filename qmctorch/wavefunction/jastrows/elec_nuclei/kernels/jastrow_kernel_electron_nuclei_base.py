@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from torch.autograd import grad
-from ...distance.electron_nuclei_distance import ElectronNucleiDistance
 
 
 class JastrowKernelElectronNucleiBase(nn.Module):

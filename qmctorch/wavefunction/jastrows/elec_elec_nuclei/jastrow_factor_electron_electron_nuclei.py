@@ -5,9 +5,12 @@ from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 import itertools
 
 
-class ElectronElectronNucleisBase(nn.Module):
+class JastrowFactorElectronElectronNuclei(nn.Module):
 
-    def __init__(self, nup, ndown, atomic_pos, cuda=False):
+    def __init__(self, nup, ndown, atomic_pos,
+                 jastrow_kernel,
+                 kernel_kwargs={},
+                 cuda=False):
         r"""Base class for two body jastrow of the form:
 
         .. math::
@@ -33,25 +36,22 @@ class ElectronElectronNucleisBase(nn.Module):
         if self.cuda:
             self.device = torch.device('cuda')
 
+        # kernel function
+        self.jastrow_kernel = jastrow_kernel(nup, ndown,
+                                             atomic_pos,
+                                             cuda,
+                                             **kernel_kwargs)
+
+        # index to extract tri up matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
         self.index_elec = [
             self.index_row.tolist(), self.index_col.tolist()]
 
+        # distance calculator
         self.elel_dist = ElectronElectronDistance(
             self.nelec, self.ndim)
         self.elnu_dist = ElectronNucleiDistance(
             self.nelec, self.atoms, self.ndim)
-
-        # choose the partial derivative method
-        method = 'square'
-        dict_method = {'col_perm': self._partial_derivative_col_perm,
-                       'square': self._partial_dervivative_square}
-        self.partial_derivative = dict_method[method]
-
-        if method == 'col_perm':
-            raise ValueError(' col_perm is deprecated')
-            self.idx_col_perm = torch.LongTensor(list(itertools.combinations(
-                range(self.nelec-1), 2))).to(self.device)
 
     def get_static_weight(self):
         """Get the matrix of static weights
@@ -70,67 +70,6 @@ class ElectronElectronNucleisBase(nn.Module):
         static_weight = static_weight.masked_select(self.mask_tri_up)
 
         return static_weight
-
-    def _get_jastrow_elements(self, r):
-        r"""Get the elements of the jastrow matrix :
-        .. math::
-            out_{i,j} = \exp{ U(r_{ij}) }
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix fof the jastrow elements
-                          Nbatch x Nelec x Nelec
-        """
-        raise NotImplementedError('Jastrow element not implemented')
-
-    def _get_der_jastrow_elements(self, r, dr):
-        """Get the elements of the derivative of the jastrow kernels
-        wrt to the first electrons
-
-        .. math::
-
-            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-            dr (torch.tensor): matrix of the derivative of the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix fof the derivative of the jastrow elements
-                          Nbatch x Ndim x Nelec x Nelec
-        """
-        raise NotImplementedError(
-            'Jastrow derivative not implemented')
-
-    def _get_second_der_jastrow_elements(self, r, dr, d2r):
-        """Get the elements of the pure 2nd derivative of the jastrow kernels
-        wrt to the first electron
-
-        .. math ::
-
-            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-            dr (torch.tensor): matrix of the derivative of the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of
-                                the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of
-                          the jastrow elements
-                          Nbatch x Ndim x Nelec x Nelec
-        """
-        raise NotImplementedError(
-            'Jastrow second derivative not implemented')
 
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix
@@ -269,32 +208,34 @@ class ElectronElectronNucleisBase(nn.Module):
         nbatch = size[0]
 
         r = self.assemble_dist(pos)
-        jast = self._get_jastrow_elements(r)
+        kern_vals = self.jastrow_kernel(r)
+        jast = torch.exp(kern_vals.view(nbatch, -1).sum(-1))
 
         if derivative == 0:
-            return jast.view(nbatch, -1).prod(-1).unsqueeze(-1)
+            return jast.unsqueeze(-1)
 
         elif derivative == 1:
             dr = self.assemble_dist_deriv(pos, 1)
-            return self._jastrow_derivative(r, dr, jast, sum_grad)
+            return self.jastrow_factor_derivative(r, dr, jast, sum_grad)
 
         elif derivative == 2:
 
             dr = self.assemble_dist_deriv(pos, 1)
             d2r = self.assemble_dist_deriv(pos, 2)
 
-            return self._jastrow_second_derivative(r, dr, d2r, jast)
+            return self.jastrow_factor_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
 
             dr = self.assemble_dist_deriv(pos, 1)
             d2r = self.assemble_dist_deriv(pos, 2)
 
-            return(jast.prod(-1).unsqueeze(-1),
-                   self._jastrow_derivative(r, dr, jast, sum_grad),
-                   self._jastrow_second_derivative(r, dr, d2r, jast))
+            return(jast,
+                   self.jastrow_factor_derivative(
+                       r, dr, jast, sum_grad),
+                   self.jastrow_factor_second_derivative(r, dr, d2r, jast))
 
-    def _jastrow_derivative(self, r, dr, jast, sum_grad):
+    def jastrow_factor_derivative(self, r, dr, jast, sum_grad):
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -309,18 +250,16 @@ class ElectronElectronNucleisBase(nn.Module):
         nbatch = r.shape[0]
         if sum_grad:
 
-            prod_val = jast.view(nbatch, -1).prod(-1)
-
             # derivative of the jastrow elements
             # nbatch x ndim x natom x nelec_pair x 3
             # last dim is (ria rja rij)
-            djast = self._get_der_jastrow_elements(r, dr)
+            djast = self.jastrow_kernel.compute_derivative(r, dr)
 
             # sum dim and atom
             djast = djast.sum([1, 2])
 
             # multiply with the product of jastrow el values
-            djast = djast * prod_val.unsqueeze(-1).unsqueeze(-1)
+            djast = djast * jast.unsqueeze(-1).unsqueeze(-1)
 
             # create the output vector with size nbatch x nelec
             out_shape = list(djast.shape[:-2]) + [self.nelec]
@@ -336,18 +275,15 @@ class ElectronElectronNucleisBase(nn.Module):
 
         else:
 
-            # product of jastrow terms
-            prod_val = jast.view(nbatch, -1).prod(-1)
-
             # derivative of the jastrow elements
             # nbatch x ndim x natom x nelec_pair x 3
             # last dim is (ria rja rij)
-            djast = self._get_der_jastrow_elements(r, dr)
+            djast = self.jastrow_kernel.compute_derivative(r, dr)
 
             # sum atom
             djast = djast.sum(2)
             djast = djast * \
-                prod_val.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+                jast.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
             # might cause problems with backward cause in place operation
             out_shape = list(djast.shape[:-2]) + [self.nelec]
@@ -363,7 +299,7 @@ class ElectronElectronNucleisBase(nn.Module):
 
         return out
 
-    def _jastrow_second_derivative(self, r, dr, d2r, jast):
+    def jastrow_factor_second_derivative(self, r, dr, d2r, jast):
         """Compute the value of the pure 2nd derivative of the Jastrow factor
 
         Args:
@@ -377,13 +313,11 @@ class ElectronElectronNucleisBase(nn.Module):
         """
         nbatch = r.shape[0]
 
-        # product of the jast
-        prod_val = jast.view(nbatch, -1).prod(-1)
-
         # puresecond derivative of the jast el
         # nbatch x ndim x natom x nelec_pair x 3
         # last dim is (ria rja rij)
-        d2jast = self._get_second_der_jastrow_elements(r, dr, d2r)
+        d2jast = self.jastrow_kernel.compute_second_derivative(
+            r, dr, d2r)
 
         # sum over the dim and the atom
         d2jast = d2jast.sum([1, 2])
@@ -401,40 +335,14 @@ class ElectronElectronNucleisBase(nn.Module):
         hess_jast.index_add_(-1, self.index_col, d2jast[..., 1])
 
         # mixed terms
-        djast = self._get_der_jastrow_elements(r, dr)
+        djast = self.jastrow_kernel.compute_derivative(r, dr)
 
         # add partial derivative
         hess_jast = hess_jast + self.partial_derivative(djast)
 
-        return hess_jast * prod_val.unsqueeze(-1)
+        return hess_jast * jast.unsqueeze(-1)
 
-    def _partial_derivative_col_perm(self, djast):
-        """Get the product of the mixed second deriative terms using column permuatation.
-
-        .. math ::
-
-            d B_{ij} / d x_i * d B_{kl} / d x_k
-
-        Args:
-            djast (torch.tensor): first derivative of the jastrow kernels
-
-        Returns:
-            torch.tensor:
-        """
-
-        if len(self.idx_col_perm) > 0:
-            tmp_shape = list(
-                djast.shape[:-1]) + [self.nelec, self.nelec-1]
-            tmp = torch.zeros(tmp_shape).to(self.device)
-            tmp[..., self.index_row, self.index_col-1] = djast
-            tmp[..., self.index_col, self.index_row] = -djast
-            return 2*tmp[..., self.idx_col_perm].prod(-1).sum(-3).sum(-1)
-        else:
-            out_shape = list(
-                djast.shape[:-2]) + [self.nelec]
-            return torch.zeros(out_shape).to(self.device)
-
-    def _partial_dervivative_square(self, djast):
+    def partial_derivative(self, djast):
         """[summary]
 
         Args:
