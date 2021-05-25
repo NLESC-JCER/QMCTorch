@@ -90,7 +90,7 @@ class TestGenericJastrowWF(unittest.TestCase):
         pos_xup = pos_xup[:, perm_up, :].reshape(
             self.nbatch, self.wf.nelec*3)
 
-        minus_wfvals_xup = self.wf(pos_xup)
+        minus_wfvals_xup = -self.wf(pos_xup)
         assert(torch.allclose(wfvals_ref, minus_wfvals_xup))
 
     def test_grad_mo(self):

@@ -70,17 +70,23 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
         """
 
         out = None
-        for jast in self.jastrow_functions:
 
-            kernel = jast(r)
-            ker_grad = self._grads(kernel, r)
-            ker_grad = ker_grad.unsqueeze(1) * dr
-            ker_grad = ker_grad.unsqueeze(0).detach().clone()
+        if r.requires_grad == False:
+            r.requires_grad = True
 
-            if out is None:
-                out = ker_grad
-            else:
-                out = torch.cat((out, ker_grad), axis=0)
+        with torch.enable_grad():
+
+            for jast in self.jastrow_functions:
+
+                kernel = jast(r)
+                ker_grad = self._grads(kernel, r)
+                ker_grad = ker_grad.unsqueeze(1) * dr
+                ker_grad = ker_grad.unsqueeze(0).detach().clone()
+
+                if out is None:
+                    out = ker_grad
+                else:
+                    out = torch.cat((out, ker_grad), axis=0)
 
         return out
 
@@ -107,22 +113,27 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
                           Nmo x Nbatch x Ndim x Nelec_pair
         """
         dr2 = dr * dr
-
         out = None
-        for jast in self.jastrow_functions:
 
-            kernel = jast(r)
-            ker_hess, ker_grad = self._hess(kernel, r)
+        if r.requires_grad == False:
+            r.requires_grad = True
 
-            jhess = (ker_hess).unsqueeze(1) * \
-                dr2 + ker_grad.unsqueeze(1) * d2r
+        with torch.enable_grad():
 
-            jhess = jhess.unsqueeze(0)
+            for jast in self.jastrow_functions:
 
-            if out is None:
-                out = jhess
-            else:
-                out = torch.cat((out, jhess))
+                kernel = jast(r)
+                ker_hess, ker_grad = self._hess(kernel, r)
+
+                jhess = (ker_hess).unsqueeze(1) * \
+                    dr2 + ker_grad.unsqueeze(1) * d2r
+
+                jhess = jhess.unsqueeze(0)
+
+                if out is None:
+                    out = jhess
+                else:
+                    out = torch.cat((out, jhess))
 
         return out
 

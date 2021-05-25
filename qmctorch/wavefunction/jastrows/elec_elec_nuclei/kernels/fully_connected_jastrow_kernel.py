@@ -3,6 +3,7 @@ from .jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronE
 
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronNucleiBase):
+
     def __init__(self, nup, ndown, atomic_pos, cuda):
         """Defines a fully connected jastrow factors."""
 

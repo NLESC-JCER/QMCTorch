@@ -37,8 +37,8 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
 
         # jastrow weights
-        self.wf.jastrow.weight.data = torch.rand(
-            self.wf.jastrow.weight.shape)
+        self.wf.jastrow.jastrow_kernel.weight.data = torch.rand(
+            self.wf.jastrow.jastrow_kernel.weight.shape)
 
         # sampler
         self.sampler = Metropolis(

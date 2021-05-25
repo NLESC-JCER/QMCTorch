@@ -32,8 +32,7 @@ class TestSlaterJastrowElectronCusp(unittest.TestCase):
             redo_scf=True)
 
         self.wf = SlaterJastrow(mol,
-                                use_jastrow=True,
-                                jastrow_type=FullyConnectedJastrowKernel,
+                                jastrow_kernel=FullyConnectedJastrowKernel,
                                 kinetic='jacobi',
                                 include_all_mo=True,
                                 configs='ground_state')

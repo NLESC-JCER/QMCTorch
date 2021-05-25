@@ -90,13 +90,3 @@ class TestElectronNucleiGeneric(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    # nup, ndown = 4, 4
-    # nelec = nup + ndown
-    # atoms = torch.rand(4, 3)
-    # jastrow = ElectronNucleiPadeJastrow(nup, ndown, atoms)
-    # nbatch = 5
-
-    # pos = torch.rand(nbatch, nelec * 3)
-    # pos.requires_grad = True
-
-    # jastrow.edist(pos, derivative=2)

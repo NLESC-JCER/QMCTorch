@@ -59,9 +59,10 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
 
         # jastrow weights
         self.random_jastrow_weight = torch.rand(
-            self.wf.jastrow.weight.shape)
-        self.wf.jastrow.weight.data = self.random_jastrow_weight.clone()
-        self.wf_ref.jastrow.weight.data = self.random_jastrow_weight.clone()
+            self.wf.jastrow.jastrow_kernel.weight.shape)
+
+        self.wf.jastrow.jastrow_kernel.weight.data = self.random_jastrow_weight.clone()
+        self.wf_ref.jastrow.jastrow_kernel.weight.data = self.random_jastrow_weight.clone()
 
         reset_generator()
         # sampler
