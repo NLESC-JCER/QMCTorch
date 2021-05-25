@@ -1,4 +1,10 @@
+
+
 from torch import nn
+from .elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from .elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from .elec_nuclei.jastrow_factor_electron_nuclei import JastrowFactorElectronNuclei
+from .elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import JastrowFactorElectronElectronNuclei
 
 
 class UnityTerm(nn.Module):
@@ -17,36 +23,61 @@ class UnityTerm(nn.Module):
             return [1., 0., 0.]
 
 
-class JastrowAssembler(nn.Module):
+class JastrowFactorCombinedTerms(nn.Module):
 
-    def __init__(self, nup, ndown, jastrow_terms, cuda=False):
-        """Jastrow product
+    def __init__(self, nup, ndown, atomic_pos,
+                 elec_elec_kernel=PadeJastrowKernel,
+                 elec_elec_kernel_kwargs={},
+                 elec_nuc_kernel=None,
+                 elec_nuc_kernel_kwargs={},
+                 elec_elec_nuc_kernel=None,
+                 elec_elec_nuc_kernel_kwargs={},
+                 cuda=False):
+        """[summary]
 
         Args:
             nup ([type]): [description]
             ndown ([type]): [description]
-            jastrow_terms ([type]): [description]
+            atomic_pos ([type]): [description]
+            elec_elec_kernel ([type], optional): [description]. Defaults to PadeJastrowKernel.
+            elec_elec_kernel_kwargs (dict, optional): [description]. Defaults to {}.
+            elec_nuc_kernel ([type], optional): [description]. Defaults to None.
+            elec_nuc_kernel_kwargs (dict, optional): [description]. Defaults to {}.
+            elec_elec_nuc_kernel ([type], optional): [description]. Defaults to None.
+            elec_elec_nuc_kernel_kwargs (dict, optional): [description]. Defaults to {}.
             cuda (bool, optional): [description]. Defaults to False.
         """
 
         super().__init__()
+        self.nup = nup
+        self.ndown = ndown
+        self.cuda = cuda
 
-        for k in jastrow_terms.keys():
-            if k not in ['elec_nuc', 'elec_elec', 'elec_elec_nuc']:
-                raise KeyError("Jastrow key not valid")
+        if elec_elec_kernel is None:
+            self.elec_elec = UnityTerm()
+        else:
+            self.elec_elec = JastrowFactorElectronElectron(nup, ndown,
+                                                           elec_elec_kernel,
+                                                           elec_elec_kernel_kwargs,
+                                                           cuda=cuda)
 
-        if 'elec_nuc' not in jastrow_terms.keys():
-            jastrow_terms['elec_nuc'] = UnityTerm()
+        if elec_nuc_kernel is None:
+            self.elec_nuc = UnityTerm()
+        else:
+            self.elec_nuc = JastrowFactorElectronNuclei(nup, ndown,
+                                                        atomic_pos,
+                                                        elec_nuc_kernel,
+                                                        elec_nuc_kernel_kwargs,
+                                                        cuda=cuda)
 
-        if 'elec_elec' not in jastrow_terms.keys():
-            jastrow_terms['elec_elec'] = UnityTerm()
-
-        if 'elec_elec_nuc' not in jastrow_terms.keys():
-            jastrow_terms['elec_elec_nuc'] = UnityTerm()
-
-        self.elec_nuc = jastrow_terms['elec_nuc']
-        self.elec_elec = jastrow_terms['elec_elec']
-        self.elec_elec_nuc = jastrow_terms['elec_elec_nuc']
+        if elec_elec_nuc_kernel is None:
+            self.elec_elec_nuc = UnityTerm()
+        else:
+            self.elec_elec_nuc = JastrowFactorElectronElectronNuclei(nup, ndown,
+                                                                     atomic_pos,
+                                                                     elec_elec_nuc_kernel,
+                                                                     elec_elec_nuc_kernel_kwargs,
+                                                                     cuda=cuda)
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.

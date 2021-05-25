@@ -101,13 +101,9 @@ class BackFlowKernelPowerSum(BackFlowKernelBase):
         """
 
         original_shape = ree.shape
-
         x = ree.reshape(-1, 1)
-
         x = x.repeat(1, self.order)
-
         x = x.cumprod(dim=-1)
-
         x = self.fc(x)
         x = x.reshape(*original_shape)
 

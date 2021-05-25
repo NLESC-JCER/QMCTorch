@@ -35,13 +35,13 @@ class SlaterJastrow(SlaterJastrowBase):
         super().__init__(mol, configs, kinetic, cuda, include_all_mo)
 
         # process the Jastrow
-        self.jastrow = JastrowFactorElectronElectron(
-            self.mol.nup, self.mol.ndown, jastrow_kernel,
-            kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
-
         if jastrow_kernel is not None:
+
             self.use_jastrow = True
             self.jastrow_type = jastrow_kernel.__name__
+            self.jastrow = JastrowFactorElectronElectron(
+                self.mol.nup, self.mol.ndown, jastrow_kernel,
+                kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)

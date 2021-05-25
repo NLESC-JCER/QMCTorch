@@ -54,6 +54,7 @@ class MixedElecNucPadeJastrow(nn.Module):
         """
 
         if derivative == 0:
+
             return self.elec_elec(pos) * self.elec_nuc(pos)
 
         elif derivative == 1:
