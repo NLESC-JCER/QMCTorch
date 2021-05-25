@@ -2,18 +2,22 @@
 import torch
 from torch import nn
 from functools import reduce
-from .elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+
 from .elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 from .elec_nuclei.jastrow_factor_electron_nuclei import JastrowFactorElectronNuclei
 from .elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import JastrowFactorElectronElectronNuclei
+
+
+from .elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecElec
+from .elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
 
 
 class JastrowFactorCombinedTerms(nn.Module):
 
     def __init__(self, nup, ndown, atomic_pos,
                  jastrow_kernel={
-                     'ee': PadeJastrowKernel,
-                     'en': None,
+                     'ee': PadeJastrowKernelElecElec,
+                     'en': PadeJastrowKernelElecNuc,
                      'een': None},
                  jastrow_kernel_kwargs={
                      'ee': {},
