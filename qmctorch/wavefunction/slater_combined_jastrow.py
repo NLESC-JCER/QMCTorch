@@ -4,8 +4,9 @@ import numpy as np
 import torch
 from .slater_jastrow import SlaterJastrow
 
-from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecElec
 from .jastrows.jastrow_factor_combined_terms import JastrowFactorCombinedTerms
+from .jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
 
 
 class SlaterCombinedJastrow(SlaterJastrow):
@@ -13,8 +14,8 @@ class SlaterCombinedJastrow(SlaterJastrow):
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
                  jastrow_kernel={
-                     'ee': PadeJastrowKernel,
-                     'en': None,
+                     'ee': PadeJastrowKernelElecElec,
+                     'en': PadeJastrowKernelElecNuc,
                      'een': None},
                  jastrow_kernel_kwargs={
                      'ee': {},
@@ -53,7 +54,8 @@ class SlaterCombinedJastrow(SlaterJastrow):
             self.jastrow_type = 'JastrowFactorCombinedTerms'
 
             self.jastrow = JastrowFactorCombinedTerms(
-                self.mol.nup, self.mol.ndown, self.mol.atoms,
+                self.mol.nup, self.mol.ndown,
+                torch.as_tensor(self.mol.atom_coords),
                 jastrow_kernel=jastrow_kernel,
                 jastrow_kernel_kwargs=jastrow_kernel_kwargs,
                 cuda=cuda)

@@ -174,4 +174,7 @@ class TestSlaterCombinedJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    unittest.main()
+    # unittest.main()
+    t = TestSlaterCombinedJastrow()
+    t.setUp()
+    t.test_kinetic_energy()

@@ -51,7 +51,7 @@ class JastrowFactorCombinedTerms(nn.Module):
             if k not in jastrow_kernel.keys():
                 jastrow_kernel[k] = None
             if k not in jastrow_kernel_kwargs.keys():
-                jastrow_kernel[k] = {}
+                jastrow_kernel_kwargs[k] = {}
 
         if jastrow_kernel['ee'] is not None:
 
@@ -104,15 +104,20 @@ class JastrowFactorCombinedTerms(nn.Module):
             return self.get_combined_values(jast_vals)
 
         elif derivative == 1:
-
-            jast_vals = [term(pos) for term in self.jastrow_terms]
+            if sum_grad:
+                jast_vals = [term(pos) for term in self.jastrow_terms]
+            else:
+                jast_vals = [term(pos).unsqueeze(-1)
+                             for term in self.jastrow_terms]
             djast_vals = [term(pos, derivative=1, sum_grad=sum_grad)
                           for term in self.jastrow_terms]
+
             return self.get_derivative_combined_values(jast_vals, djast_vals)
 
         elif derivative == 2:
 
-            jast_vals = [term(pos) for term in self.jastrow_terms]
+            jast_vals = [term(pos)
+                         for term in self.jastrow_terms]
             djast_vals = [term(pos, derivative=1, sum_grad=False)
                           for term in self.jastrow_terms]
             d2jast_vals = [term(pos, derivative=2)
@@ -127,10 +132,22 @@ class JastrowFactorCombinedTerms(nn.Module):
             d2jast_vals = [term(pos, derivative=2)
                            for term in self.jastrow_terms]
 
-            return(self.get_combined_values(jast_vals),
-                   self.get_derivative_combined_values(
-                       jast_vals, djast_vals),
-                   self.get_second_derivative_combined_values(jast_vals, djast_vals, d2jast_vals))
+            # combine the jastrow terms
+            out_jast = self.get_combined_values(jast_vals)
+
+            # combine the second derivative
+            out_d2jast = self.get_second_derivative_combined_values(
+                jast_vals, djast_vals, d2jast_vals)
+
+            # unsqueeze the jast terms to be compatible with the
+            # derivative
+            jast_vals = [j.unsqueeze(-1) for j in jast_vals]
+
+            # combine the derivative
+            out_djast = self.get_derivative_combined_values(
+                jast_vals, djast_vals)
+
+            return(out_jast, out_djast, out_d2jast)
 
         else:
             raise ValueError('derivative not understood')
@@ -138,7 +155,10 @@ class JastrowFactorCombinedTerms(nn.Module):
     @ staticmethod
     def get_combined_values(jast_vals):
         """Compute the product of all terms in jast_vals."""
-        return reduce(lambda x, y: x*y, jast_vals)
+        if len(jast_vals) == 1:
+            return jast_vals[0]
+        else:
+            return reduce(lambda x, y: x*y, jast_vals)
 
     @ staticmethod
     def get_derivative_combined_values(jast_vals, djast_vals):
@@ -147,13 +167,16 @@ class JastrowFactorCombinedTerms(nn.Module):
             J = A * B * C
             \\frac{d J}{dx} = \\frac{d A}{dx} B C + A \\frac{d B}{dx} C + A B \\frac{d C}{dx}
         """
-        out = 0.
-        nterms = len(jast_vals)
-        for i in range(nterms):
-            tmp = jast_vals.copy()
-            tmp[i] = djast_vals[i]
-            out += reduce(lambda x, y: x*y, tmp)
-        return out
+        if len(djast_vals) == 1:
+            return djast_vals[0]
+        else:
+            out = 0.
+            nterms = len(jast_vals)
+            for i in range(nterms):
+                tmp = jast_vals.copy()
+                tmp[i] = djast_vals[i]
+                out += reduce(lambda x, y: x*y, tmp)
+            return out
 
     @ staticmethod
     def get_second_derivative_combined_values(jast_vals, djast_vals, d2jast_vals):
@@ -163,18 +186,27 @@ class JastrowFactorCombinedTerms(nn.Module):
             \\frac{d^2 J}{dx^2} = \\frac{d^2 A}{dx^2} B C + A \\frac{d^2 B}{dx^2} C + A B \\frac{d^2 C}{dx^2} \\
                                + 2( \\frac{d A}{dx} \\frac{dB}{dx} C + \\frac{d A}{dx} B \\frac{dC}{dx} + A \\frac{d B}{dx} \\frac{dC}{dx} )
         """
-        out = 0.
-        nterms = len(jast_vals)
-        for i in range(nterms):
+        if len(d2jast_vals) == 1:
+            return d2jast_vals[0]
+        else:
+            out = 0.
+            nterms = len(jast_vals)
+            for i in range(nterms):
 
-            # d2a * b * c
-            tmp = jast_vals.copy()
-            tmp[i] = d2jast_vals[i]
-            out = out + reduce(lambda x, y: x*y, tmp)
+                # d2a * b * c
+                tmp = jast_vals.copy()
+                tmp[i] = d2jast_vals[i]
+                out = out + reduce(lambda x, y: x*y, tmp)
 
-            # da * db * c
-            tmp = djast_vals.copy()
-            tmp[i] = jast_vals[i].unsqueeze(-1)
-            out = out + (2*reduce(lambda x, y: x*y, tmp)).sum(1)
+            for i in range(nterms-1):
+                for j in range(i+1, nterms):
 
-        return out
+                    # da * db * c
+                    tmp = jast_vals.copy()
+                    tmp[i] = djast_vals[i]
+                    tmp[j] = djast_vals[j]
+
+                    out = out + \
+                        (2.*reduce(lambda x, y: x*y, tmp)).sum(1)
+
+            return out
