@@ -6,7 +6,7 @@ from torch.autograd import Variable, grad, gradcheck
 import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.manual_seed(101)

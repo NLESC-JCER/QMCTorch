@@ -2,8 +2,8 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow
 
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 from qmctorch.utils import set_torch_double_precision
 
@@ -102,7 +102,7 @@ class TestSlaterJastrowOrbitalDependentBackFlow(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xup))
 
     def test_jacobian_mo(self):
         """Jacobian of the BF MOs."""

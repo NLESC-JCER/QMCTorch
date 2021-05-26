@@ -88,7 +88,7 @@ class TestSlaterJastrow(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xup))
 
         # test spin down
         pos_xdn = self.pos.clone()
@@ -100,7 +100,7 @@ class TestSlaterJastrow(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xdn = self.wf(pos_xdn)
-        assert(torch.allclose(wfvals_ref, -wfvals_xdn))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xdn))
 
     def test_grad_mo(self):
         """Gradients of the MOs."""

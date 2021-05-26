@@ -3,8 +3,6 @@ import unittest
 import numpy as np
 import torch
 
-from qmctorch.utils import (plot_block, plot_data, plot_energy,
-                            plot_walkers_traj)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from ...path_utils import PATH_TEST

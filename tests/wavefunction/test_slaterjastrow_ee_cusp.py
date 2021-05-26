@@ -1,15 +1,11 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow, SlaterJastrowBackFlow
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
-
-from torch.autograd import grad, gradcheck, Variable
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 
 import numpy as np
 import torch
 import unittest
-import itertools
-import os
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 

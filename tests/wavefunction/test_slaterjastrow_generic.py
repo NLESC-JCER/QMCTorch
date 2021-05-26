@@ -1,7 +1,7 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 
 from torch.autograd import grad, gradcheck, Variable
 
@@ -90,8 +90,8 @@ class TestGenericJastrowWF(unittest.TestCase):
         pos_xup = pos_xup[:, perm_up, :].reshape(
             self.nbatch, self.wf.nelec*3)
 
-        minus_wfvals_xup = -self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, minus_wfvals_xup))
+        wfvals_xup = self.wf(pos_xup)
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xup))
 
     def test_grad_mo(self):
         """Gradients of the MOs."""

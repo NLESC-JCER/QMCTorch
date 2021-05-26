@@ -10,7 +10,7 @@ from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_fully_connected import BackFlowKernelPowerSum
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelPowerSum
 
 
 class TestLiHBackFlowPySCF(unittest.TestCase):

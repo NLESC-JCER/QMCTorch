@@ -1,6 +1,6 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 from qmctorch.utils import set_torch_double_precision, btrace
 
 from torch.autograd import grad, Variable
@@ -97,7 +97,7 @@ class TestSlaterOrbitalDependentJastrow(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+        assert(torch.allclose(wfvals_ref, -1.*wfvals_xup))
 
     def test_jacobian_mo(self):
         """Jacobian of the uncorrelated MOs."""

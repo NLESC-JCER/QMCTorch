@@ -7,8 +7,6 @@ from torch.autograd import grad, gradcheck, Variable
 import numpy as np
 import torch
 import unittest
-import itertools
-import os
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -104,7 +102,7 @@ class TestOrbitalWF(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xup))
 
         # test spin down
         pos_xdn = self.pos.clone()
@@ -116,7 +114,7 @@ class TestOrbitalWF(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xdn = self.wf(pos_xdn)
-        assert(torch.allclose(wfvals_ref, -wfvals_xdn))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xdn))
 
     def test_grad_mo(self):
         """Gradients of the MOs."""

@@ -10,12 +10,11 @@ from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import plot_energy
 
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
 from qmctorch.utils import set_torch_double_precision
-
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 __PLOT__ = False
 
 
