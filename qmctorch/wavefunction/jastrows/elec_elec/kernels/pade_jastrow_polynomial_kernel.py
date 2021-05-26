@@ -35,6 +35,7 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
         self.set_variational_weights(weight_a, weight_b)
 
         self.static_weight = self.get_static_weight()
+        self.requires_autograd = False
 
     def get_static_weight(self):
         """Get the matrix of static weights

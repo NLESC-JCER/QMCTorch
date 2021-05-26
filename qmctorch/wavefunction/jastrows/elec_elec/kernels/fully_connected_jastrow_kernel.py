@@ -28,6 +28,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.prefac = torch.rand(1)
 
         self.cusp_weights = self.get_static_weight()
+        self.requires_autograd = True
 
     def get_static_weight(self):
         """Get the matrix of static weights

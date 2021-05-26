@@ -28,6 +28,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronNucleiBase):
         self.fc3 = nn.Linear(8, 1, bias=False)
 
         self.nl_func = torch.nn.Sigmoid()
+        self.requires_autograd = True
 
     def forward(self, x):
         """ Get the jastrow kernel.

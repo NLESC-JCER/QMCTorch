@@ -1,12 +1,6 @@
 import torch
-from torch import nn
 
-from .norm_orbital import atomic_orbital_norm
-from .radial_functions import (
-    radial_gaussian, radial_gaussian_pure, radial_slater, radial_slater_pure)
-from .spherical_harmonics import Harmonics
 from .atomic_orbitals import AtomicOrbitals
-from ..jastrows.distance.electron_electron_distance import ElectronElectronDistance
 from .backflow.backflow_transformation import BackFlowTransformation
 
 

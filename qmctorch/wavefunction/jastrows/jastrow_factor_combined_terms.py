@@ -27,15 +27,11 @@ class JastrowFactorCombinedTerms(nn.Module):
         """[summary]
 
         Args:
-            nup ([type]): [description]
-            ndown ([type]): [description]
-            atomic_pos ([type]): [description]
-            elec_elec_kernel ([type], optional): [description]. Defaults to PadeJastrowKernel.
-            elec_elec_kernel_kwargs (dict, optional): [description]. Defaults to {}.
-            elec_nuc_kernel ([type], optional): [description]. Defaults to None.
-            elec_nuc_kernel_kwargs (dict, optional): [description]. Defaults to {}.
-            elec_elec_nuc_kernel ([type], optional): [description]. Defaults to None.
-            elec_elec_nuc_kernel_kwargs (dict, optional): [description]. Defaults to {}.
+            nup (int): number of spin up electron
+            ndown (int): number opf spin down electron
+            atomic_pos (torch tensor): atomic positions
+            jastrow_kernel ([dict]): kernels of the jastrow factor
+            jastrow_kernel_kwargs (dict): keyword argument of the kernels
             cuda (bool, optional): [description]. Defaults to False.
         """
 
@@ -52,6 +48,8 @@ class JastrowFactorCombinedTerms(nn.Module):
                 jastrow_kernel[k] = None
             if k not in jastrow_kernel_kwargs.keys():
                 jastrow_kernel_kwargs[k] = {}
+
+        self.requires_autograd = True
 
         if jastrow_kernel['ee'] is not None:
 
@@ -104,6 +102,7 @@ class JastrowFactorCombinedTerms(nn.Module):
             return self.get_combined_values(jast_vals)
 
         elif derivative == 1:
+
             if sum_grad:
                 jast_vals = [term(pos) for term in self.jastrow_terms]
             else:

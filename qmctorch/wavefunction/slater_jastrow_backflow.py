@@ -10,7 +10,7 @@ from .. import log
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
 from .slater_jastrow_base import SlaterJastrowBase
-from .orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from .orbitals.backflow.kernels import BackFlowKernelInverse
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
 from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 

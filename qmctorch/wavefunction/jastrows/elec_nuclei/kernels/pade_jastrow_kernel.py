@@ -29,6 +29,7 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
         register_extra_attributes(self, ['weight'])
 
         self.static_weight = torch.as_tensor([1.])
+        self.requires_autograd = True
 
     def forward(self, r):
         """ Get the jastrow kernel.

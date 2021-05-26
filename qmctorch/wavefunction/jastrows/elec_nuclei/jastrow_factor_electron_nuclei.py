@@ -41,6 +41,9 @@ class JastrowFactorElectronNuclei(nn.Module):
                                              atomic_pos, cuda,
                                              **kernel_kwargs)
 
+        # requires autograd to compute derivatives
+        self.requires_autograd = self.jastrow_kernel.requires_autograd
+
         # elec-nuc distances
         self.edist = ElectronNucleiDistance(
             self.nelec, self.atoms, self.ndim)

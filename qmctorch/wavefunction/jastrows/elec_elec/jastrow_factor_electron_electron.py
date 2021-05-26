@@ -36,6 +36,8 @@ class JastrowFactorElectronElectron(nn.Module):
         if self.cuda:
             self.device = torch.device('cuda')
 
+        self.requires_autograd = True
+
         # kernel function
         if orbital_dependent_kernel:
             self.jastrow_kernel = OrbitalDependentJastrowKernel(
@@ -43,6 +45,7 @@ class JastrowFactorElectronElectron(nn.Module):
         else:
             self.jastrow_kernel = jastrow_kernel(
                 nup, ndown, cuda, **kernel_kwargs)
+            self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # mask to extract the upper diag of the matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()

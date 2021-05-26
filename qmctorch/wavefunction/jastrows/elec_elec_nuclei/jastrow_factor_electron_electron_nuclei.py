@@ -42,6 +42,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                                              cuda,
                                              **kernel_kwargs)
 
+        # requires autograd to compute derivatives
+        self.requires_autograd = self.jastrow_kernel.requires_autograd
+
         # index to extract tri up matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
         self.index_elec = [

@@ -30,6 +30,7 @@ class JastrowKernelElectronNucleiBase(nn.Module):
         self.device = torch.device('cpu')
         if self.cuda:
             self.device = torch.device('cuda')
+        self.requires_autograd = True
 
     def forward(self, r):
         r"""Get the elements of the jastrow matrix :
