@@ -1,7 +1,7 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 
 from torch.autograd import grad, gradcheck, Variable
 
