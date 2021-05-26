@@ -46,7 +46,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
         mask_tri_up = torch.triu(torch.ones_like(
-            static_weight), diagonal=1).type(torch.BoolTensor)
+            static_weight), diagonal=1).type(torch.BoolTensor).to(self.device)
         static_weight = static_weight.masked_select(mask_tri_up)
 
         return static_weight
