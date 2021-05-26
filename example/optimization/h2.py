@@ -1,3 +1,4 @@
+
 from torch import optim
 
 from qmctorch.scf import Molecule
@@ -7,6 +8,7 @@ from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
 
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
 # ground state energy : -31.688 eV -> -1.16 hartree
@@ -23,8 +25,7 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='single_double(2,2)',
-                   jastrow='pade_jastrow',
-                   use_jastrow=True)
+                   jastrow_kernel=PadeJastrowKernel)
 
 wf.jastrow.weight.data[0] = 1.
 

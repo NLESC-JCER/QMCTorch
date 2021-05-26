@@ -3,8 +3,8 @@ from time import time
 
 import torch
 from torch.utils.data import DataLoader
-
-from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
+from qmctorch.utils import (DataSet, Loss,
+                            OrthoReg, add_group_attr,
                             dump_to_hdf5)
 
 from .. import log

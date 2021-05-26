@@ -23,10 +23,7 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='cas(2,2)',
-                   use_jastrow=True,
                    cuda=True)
-
-wf.jastrow.weight.data[0] = 1.
 
 # sampler
 sampler = Metropolis(nwalkers=2000,

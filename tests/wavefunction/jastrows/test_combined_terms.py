@@ -5,8 +5,8 @@ import torch
 from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms import JastrowFactorCombinedTerms
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecElec
-from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowKernelElecElec
+from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
