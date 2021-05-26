@@ -6,7 +6,7 @@ import torch.optim as optim
 import horovod.torch as hvd
 from mpi4py import MPI
 
-from qmctorch.sampler import Hamiltonian, Metropolis
+from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrowHorovod
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
