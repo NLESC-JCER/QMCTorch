@@ -6,17 +6,13 @@ from torch.autograd import grad
 class JastrowKernelElectronElectronNucleiBase(nn.Module):
 
     def __init__(self, nup, ndown, atomic_pos, cuda, **kwargs):
-        r"""Computes the Simple Pade-Jastrow factor
+        r"""Base Class for the elec-elec-nuc jastrow kernel
 
-        .. math::
-            J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
-            B_{ij} = \\frac{w_0 r_{i,j}}{1 + w r_{i,j}}
 
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
             atoms (torch.tensor): atomic positions of the atoms
-            w (float, optional): Value of the variational parameter. Defaults to 1..
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 

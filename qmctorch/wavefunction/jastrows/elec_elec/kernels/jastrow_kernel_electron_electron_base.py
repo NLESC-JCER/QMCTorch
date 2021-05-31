@@ -26,10 +26,7 @@ class JastrowKernelElectronElectronBase(nn.Module):
 
     def forward(self, r):
         r"""Get the elements of the jastrow matrix :
-        .. math::
-            out_{k,i,j} = \exp{ \frac{w r_{i,j}}{1+w_k r_{i,j}} }
 
-        where k runs over the MO
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -38,6 +35,20 @@ class JastrowKernelElectronElectronBase(nn.Module):
         Returns:
             torch.tensor: matrix fof the jastrow elements
                         Nmo x Nbatch x Nelec_pair
+
+        Note:
+            The kernel receives a [Nbatch x Npair] tensor.
+            The kernel must first reshape that tensor to a [Nbatch*Npair, 1].
+            The kernel must process this tensor to another [Nbatch*Npair, 1] tensor.
+            The kenrel must reshape the output to a [Nbatch x Npair] tensor.
+
+        Example:
+            >>> def forward(self, x):
+            >>>     nbatch, npairs = x.shape
+            >>>     x = x.reshape(-1, 1)
+            >>>     x = self.fc1(x)
+            >>>     ...
+            >>>     return(x.reshape(nbatch, npairs))
         """
         raise NotImplementedError()
 

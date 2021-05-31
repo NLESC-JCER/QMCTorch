@@ -8,17 +8,20 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
     def __init__(self, nup, ndown, cuda, w=1.):
-        r"""Computes the Simple Pade-Jastrow factor
+        """Computes the Simple Pade-Jastrow factor
 
         .. math::
-            B_{ij} = \\frac{w_0 r_{i,j}}{1 + w r_{i,j}}
+            B_{ij} = \\frac{w_0 r_{ij}}{1 + w r_{ij}}
+
+        where :math:`w_0` equals 0.5 for parallel spin and 0.25 for antiparallel spin
 
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
+            cuda (bool): Turns GPU ON/OFF.
             w (float, optional): Value of the variational parameter.
                                  Defaults to 1.
-            cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
+
         """
 
         super().__init__(nup, ndown, cuda)
@@ -34,7 +37,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
         """Get the matrix of static weights
 
         Returns:
-            torch.tensor: static weight (0.5 (0.25) for parallel(anti) spins
+            torch.tensor: matrix of the static weights
         """
 
         bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
@@ -53,8 +56,9 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
     def forward(self, r):
         """ Get the jastrow kernel.
+
         .. math::
-            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
+            B_{ij} = \\frac{w_0 r_{i,j}}{1+w r_{i,j}}
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -72,11 +76,16 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
         .. math::
 
-            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
+            \\frac{d B_{ij}}{d k_i} =  \\frac{d B_{ij}}{ d k_j }  = - \\frac{d B_{ji}}{d k_i}
 
-            out_{k,i,j} = A1 + A2
-            A1_{kij} = w0 \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})
-            A2_{kij} = - w0 w' r_{ij} \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})^2
+        .. math::
+            \\text{out}_{k,i,j} = A1 + A2
+
+        .. math::
+            A1_{kij} = w0 \\frac{dr_{ij}}{dk_i}  \\frac{1}{1 + w r_{ij}}
+
+        .. math::
+            A2_{kij} = - w0 w' r_{ij} \\frac{dr_{ij}}{dk_i} \\frac{1}{1 + w r_{ij}}^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -102,15 +111,14 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
         .. math ::
 
-            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
+            \\frac{d^2 B_{ij}}{d k_i^2} =  \\frac{d^2 B_{ij}}{d k_j^2} = \\frac{d^2 B_{ji}}{ d k_i^2}
 
         Args:
             r (torch.tensor): matrix of the e-e distances
                               Nbatch x Nelec x Nelec
             dr (torch.tensor): matrix of the derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of
-                                the e-e distances
+            d2r (torch.tensor): matrix of the 2nd derivative of the e-e distances
                               Nbatch x Ndim x Nelec x Nelec
 
         Returns:

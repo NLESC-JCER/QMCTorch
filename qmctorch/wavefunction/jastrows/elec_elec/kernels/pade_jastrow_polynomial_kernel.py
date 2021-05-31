@@ -11,13 +11,20 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
                  order=2,
                  weight_a=None,
                  weight_b=None):
-        r"""Computes a polynomial Pade-Jastrow factor
+        """Computes a polynomial Pade-Jastrow factor
 
         .. math::
 
             B_{ij} =  \\frac{P_{ij}}{Q_{ij}}
 
+        with :
+        .. math::
+
             P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
+
+        and :
+
+        .. math
             Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 + ...
 
         Args:
@@ -88,11 +95,11 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
     def forward(self, r):
         """ Get the jastrow kernel.
+
         .. math::
+
             B_{ij} = \\frac{P_{ij}}{Q_{ij}}
 
-            P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
-            Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 + ...
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -110,17 +117,30 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
 
+        The derivative is given by:
+
         .. math::
 
-            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
+            \\text{out}_{k,i,j} = \\frac{P'Q - PQ'}{Q^2}
 
-            out_{k,i,j} = \\frac{P'Q - PQ'}{Q^2}
+        with:
 
+        .. math::
             P_{ij} = a_1 r_{i,j} + a_2 r_{ij}^2 + ....
             Q_{ij} = 1 + b_1 r_{i,j} + b_2 r_{ij}^2 +
 
+        and :
+
+        .. math::
+
             P'_{ij} = a_1 dr + a_2 2 r dr + a_r 3 dr r^2 + ....
             Q'_{ij} = b_1 dr + b_2 2 r dr + b_r 3 dr r^2 + ....
+
+        Due to the properties of the derivative we have
+        .. math::
+
+            \\frac{d B_{ij}}{d k_i} =  \\frac{d B_{ij}}{d k_j}  = -\\frac{d B_{ji}{d k_i}
+
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -145,9 +165,10 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 
-        .. math ::
+        Due to the properties of the derivative we have
+        .. math::
 
-            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
+            \\frac{d B_{ij}}{d k_i} =  \\frac{d B_{ij}}{d k_j}  = \\frac{d B_{ji}{d k_i}
 
         Args:
             r (torch.tensor): matrix of the e-e distances

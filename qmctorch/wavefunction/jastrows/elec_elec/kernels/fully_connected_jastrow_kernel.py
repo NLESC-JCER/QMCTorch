@@ -52,7 +52,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         return static_weight
 
     def forward(self, x):
-        """Compute the values of the individual f_ij=f(r_ij)
+        """Compute the kernel values
 
         Args:
             x (torch.tensor): e-e distance Nbatch, Nele_pairs

@@ -23,7 +23,7 @@ class Hamiltonian(SamplerBase):
             ndim (int, optional): total number of dimension. Defaults to 1.
             init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
             L (int, optional): length of the trajectory . Defaults to 10.
-            with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
+            cuda (bool, optional): use tqdm to monitor progress
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
@@ -33,6 +33,15 @@ class Hamiltonian(SamplerBase):
 
     @staticmethod
     def get_grad(func, inp):
+        """get the gradient of the pdf using autograd
+
+        Args:
+            func (callable): function to compute the pdf
+            inp (torch.tensor): input of the function
+
+        Returns:
+            torch.tensor: gradients of the wavefunction
+        """
         inp.requires_grad = True
         val = func(inp)
         z = Variable(torch.ones(val.shape))
@@ -44,6 +53,14 @@ class Hamiltonian(SamplerBase):
 
     @staticmethod
     def log_func(func):
+        """Compute the negative log of  a function
+
+        Args:
+            func (callable): input function
+
+        Returns:
+            callable: negative log of the function
+        """
         return lambda x: -torch.log(func(x))
 
     def __call__(self, pdf, pos=None, with_tqdm=True):
@@ -53,11 +70,6 @@ class Hamiltonian(SamplerBase):
             pdf {callable} -- density to sample
             pos (torch.tensor): precalculated position to start with
             with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
-
-        Keyword Arguments:
-            ntherm {int} -- number of iterations needed to thermalize (default: {10})
-            ndecor {int} -- number of iterations needed to decorelate (default: {10})
-            pos {torch.tensor} -- initial position of the walker (default: {None})
 
         Returns:
             torch.tensor -- sampling points
@@ -101,17 +113,18 @@ class Hamiltonian(SamplerBase):
 
     @staticmethod
     def _step(U, get_grad, epsilon, L, qinit):
-        '''Propagates all the walkers over on traj
+        """Take one step of the sampler
+
         Args:
             U (callable): the target pdf
             get_grad (callable) : get the value of the target dist gradient
             epsilon (float) : step size
             L (int) : number of steps in the traj
             qinit (array) : initial positon of the walkers
+
         Returns:
-            q : new positions of the walkers
-            rate : accept rate
-        '''
+            torch.tensor, float:
+        """
 
         # init the momentum
         q = qinit.clone()

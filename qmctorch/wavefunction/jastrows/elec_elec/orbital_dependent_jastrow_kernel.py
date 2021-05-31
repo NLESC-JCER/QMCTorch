@@ -9,16 +9,15 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
 
     def __init__(self, nup, ndown, nmo, cuda,
                  jastrow_kernel, kernel_kwargs={}):
-        r"""Computes generic jastrow factor per MO
-
-        .. math::
-            J = \prod_{i<j} \exp(B_{ij}) \quad \quad \\text{with} \quad \quad
-            B^k_{ij} = \\frac{w_0 r_{i,j}}{1 + w_k r_{i,j}}
+        """Transform a kernel into a orbital dependent kernel
 
         Args:
-            nup ([type]): [description]
-            down ([type]): [description]
-            cuda (bool, optional): [description]. Defaults to False.
+            nup (int): number of spin up electrons
+            ndown (int): number of spin down electron
+            nmo (int): number of orbital
+            cuda (bool): use GPUs
+            jastrow_kernel (kernel function): kernel to be used
+            kernel_kwargs (dict): keyword arguments of the kernel
         """
 
         super().__init__(nup, ndown, cuda)
@@ -49,14 +48,6 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
     def compute_derivative(self, r, dr):
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
-
-        .. math::
-
-            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
-
-            out_{k,i,j} = A1 + A2
-            A1_{kij} = w0 \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})
-            A2_{kij} = - w0 w' r_{ij} \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -94,9 +85,6 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 
-        .. math ::
-
-            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -138,34 +126,40 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
         return out
 
     @staticmethod
-    def _grads(val, pos):
+    def _grads(val, r):
         """Get the gradients of the jastrow values
         of a given orbital terms
 
         Args:
-            pos ([type]): [description]
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec_pair
 
         Returns:
-            [type]: [description]
+            torch.tensor: gradients of the values wrt to ee distance
         """
-        return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
+        return grad(val, r, grad_outputs=torch.ones_like(val))[0]
 
     @staticmethod
-    def _hess(val, pos):
+    def _hess(val, r):
         """get the hessian of the jastrow values.
         of a given orbital terms
         Warning thos work only because the orbital term are dependent
         of a single rij term, i.e. fij = f(rij)
 
+
         Args:
-            pos ([type]): [description]
+            r (torch.tensor): matrix of the e-e distances
+                              Nbatch x Nelec_pair
+
+        Returns:
+            torch.tensor: second derivative of the values wrt to ee distance
         """
 
-        gval = grad(val, pos,
+        gval = grad(val, r,
                     grad_outputs=torch.ones_like(val),
                     create_graph=True)[0]
 
-        hval = grad(gval, pos,
+        hval = grad(gval, r,
                     grad_outputs=torch.ones_like(gval))[0]
 
         return hval, gval

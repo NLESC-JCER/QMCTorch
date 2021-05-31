@@ -13,15 +13,21 @@ class JastrowFactorElectronElectron(nn.Module):
                  number_of_orbitals=None,
                  scale=False, scale_factor=0.6,
                  cuda=False):
-        r"""Base class for two body jastrow of the form:
+        """Electron-Electron Jastrow factor.
 
         .. math::
-            J = \prod_{i<j} \exp(Kernel(r_{rij}))
+            J = \\prod_{i<j} \\exp(\\text{Kernel}(r_{ij}))
 
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
-            cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
+            jastrow_kernel (kernel): class of a electron-electron Jastrow kernel
+            kernel_kwargs (dict, optional): keyword argument of the kernel. Defaults to {}.
+            orbital_dependent_kernel (bool, optional): Make the kernel orbital dependent. Defaults to False.
+            number_of_orbitals (int, optional): number of orbitals for orbital dependent kernels. Defaults to None.
+            scale (bool, optional): use scaled electron-electron distance. Defaults to False.
+            scale_factor (float, optional): scaling factor. Defaults to 0.6.
+            cuda (bool, optional): use cuda. Defaults to False.
         """
 
         super().__init__()
@@ -78,7 +84,7 @@ class JastrowFactorElectronElectron(nn.Module):
         r"""extract the upper triangular elements
 
         Args:
-            input (torch.tensor): input matrices (nbatch, n, n)
+            inp (torch.tensor): input matrices (nbatch, n, n)
 
         Returns:
             torch.tensor: triangular up element (nbatch, -1)
@@ -87,7 +93,15 @@ class JastrowFactorElectronElectron(nn.Module):
         return inp.masked_select(self.mask_tri_up).view(nbatch, -1)
 
     def get_edist_unique(self, pos, derivative=0):
-        """Get the unique elements of the edit matrix."""
+        """Get the unique elements of the electron-electron distance matrix.
+
+        Args:
+            pos (torch.tensor): positions of the electrons (Nbatch, Nelec*3)
+            derivative(int, optional): order of the derivative
+
+        Returns:
+            torch.tensor: unique values of the electron-electron distance matrix
+        """
 
         if derivative == 0:
             return self.extract_tri_up(self.edist(pos))
@@ -158,9 +172,11 @@ class JastrowFactorElectronElectron(nn.Module):
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
-            r (torch.tensor): ee distance matrix Nbatch x Nelec x Nelec
+            r (torch.tensor): distance matrix Nbatch x Nelec x Nelec
+            dr (torch.tensor): derivative of the distance matrix Nbatch x Nelec x Nelec x 3
             jast (torch.tensor): values of the jastrow elements
                                  Nbatch x Nelec x Nelec
+            sum_grad (bool): return the sum of the gradient or the individual components
 
         Returns:
             torch.tensor: gradient of the jastrow factors
@@ -197,7 +213,9 @@ class JastrowFactorElectronElectron(nn.Module):
         """Compute the value of the pure 2nd derivative of the Jastrow factor
 
         Args:
-            r (torch.tensor): ee distance matrix Nbatch x Nelec x Nelec
+            r (torch.tensor): distance matrix Nbatch x Nelec x Nelec
+            dr (torch.tensor): derivative of the distance matrix Nbatch x Nelec x Nelec x 3
+            d2r (torch.tensor): 2nd derivative of the distance matrix Nbatch x Nelec x Nelec x 3
             jast (torch.tensor): values of the ajstrow elements
                                  Nbatch x Nelec x Nelec
 
@@ -224,10 +242,10 @@ class JastrowFactorElectronElectron(nn.Module):
         return hess_jast * jast
 
     def partial_derivative(self, djast):
-        """[summary]
+        """Computes the partial derivative
 
         Args:
-            djast ([type]): [description]
+            djast (torch.tensor): values of the derivative of the jastrow kernels
         """
 
         out_shape = list(djast.shape[:-1]) + [self.nelec]

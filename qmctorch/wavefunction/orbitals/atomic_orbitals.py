@@ -114,7 +114,7 @@ class AtomicOrbitals(nn.Module):
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
-        r"""Computes the values of the atomic orbitals.
+        """Computes the values of the atomic orbitals.
 
         .. math::
             \phi_i(r_j) = \sum_n c_n \\text{Rad}^{i}_n(r_j) \\text{Y}^{i}_n(r_j)

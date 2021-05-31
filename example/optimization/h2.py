@@ -9,6 +9,7 @@ from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
 
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
 # ground state energy : -31.688 eV -> -1.16 hartree

@@ -24,7 +24,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
                  backflow_kernel=BackFlowKernelInverse,
                  orbital_dependent_backflow=False,
                  cuda=False,
-                 include_all_mo=True,):
+                 include_all_mo=True):
         """Implementation of the QMC Network.
 
         Args:
