@@ -6,7 +6,7 @@ from .backflow.orbital_dependent_backflow_transformation import OrbitalDependent
 
 class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
-    def __init__(self, mol, backflow_kernel, cuda=False):
+    def __init__(self, mol, backflow_kernel, backflow_kernel_kwargs={}, cuda=False):
         """Computes the value of atomic orbitals
 
         Args:
@@ -16,8 +16,10 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         super().__init__(mol, cuda)
         dtype = torch.get_default_dtype()
-        self.backflow_trans = OrbitalDependentBackFlowTransformation(
-            mol, backflow_kernel=backflow_kernel, cuda=cuda)
+        self.backflow_trans = OrbitalDependentBackFlowTransformation(mol,
+                                                                     backflow_kernel=backflow_kernel,
+                                                                     backflow_kernel_kwargs=backflow_kernel_kwargs,
+                                                                     cuda=cuda)
 
     def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
         r"""Computes the values of the atomic orbitals.

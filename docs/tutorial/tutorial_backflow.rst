@@ -14,10 +14,10 @@ We can then use this base class to create a new Jastrow Factor. This is done in 
 
 >>> class MyBackflow(BackFlowKernelBase)
 >>>
->>>     def __init__(self, mol, cuda):
+>>>     def __init__(self, mol, cuda, size=16):
 >>>         super().__init__(nup, ndown, cuda)
->>>         self.fc1 = nn.Linear(1, 16, bias=False)
->>>         self.fc2 = nn.Linear(16, 1, bias=False)
+>>>         self.fc1 = nn.Linear(1, size, bias=False)
+>>>         self.fc2 = nn.Linear(size, 1, bias=False)
 >>>
 >>>     def forward(self, x):
 >>>         nbatch, npair = x.shape
