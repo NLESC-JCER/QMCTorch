@@ -77,7 +77,12 @@ class CalculatorADF(CalculatorBase):
             sett.input.basis.path = self.additional_basis_path
         sett.input.basis.core = 'None'
         sett.input.symmetry = 'nosym'
-        sett.input.XC.HartreeFock = ''
+
+        if self.scf.lower() == 'hf':
+            sett.input.XC.HartreeFock = ''
+
+        elif self.scf.lower() == 'dft':
+            sett.input.XC.LDA = 'VWN'
 
         # correct unit
         if self.units == 'angs':

@@ -11,6 +11,7 @@ class TestMolecule(unittest.TestCase):
         mol = Molecule(
             atom='H 0. 0. 0.; H 0. 0. 1.',
             unit='bohr',
+            scf='hf',
             calculator='pyscf',
             basis='sto-3g',
             redo_scf=True)
@@ -38,6 +39,19 @@ class TestMolecule(unittest.TestCase):
         domain_atomic = mol.domain('atomic')
         assert np.all(domain_atomic['atom_coords'] == np.array([[0., 0., 0.],
                                                                 [0., 0., 1.]]))
+
+    def test4_create_dft(self):
+
+        # molecule
+        mol = Molecule(
+            atom='H 0. 0. 0.; H 0. 0. 1.',
+            unit='bohr',
+            calculator='pyscf',
+            scf='dft',
+            basis='sto-3g',
+            redo_scf=True)
+
+        mol.print_total_energy()
 
 
 if __name__ == "__main__":

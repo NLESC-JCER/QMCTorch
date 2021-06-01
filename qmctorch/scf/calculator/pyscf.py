@@ -1,7 +1,7 @@
 from types import SimpleNamespace
 import itertools
 import numpy as np
-from pyscf import gto, scf
+from pyscf import gto, scf, dft
 import shutil
 from .calculator_base import CalculatorBase
 
@@ -25,14 +25,22 @@ class CalculatorPySCF(CalculatorBase):
             basis=self.basis_name,
             unit=self.units,
             cart=False)
-        rhf = scf.RHF(mol).run()
+
+        if self.scf.lower() == 'hf':
+            pyscf_data = scf.RHF(mol).run()
+
+        elif self.scf.lower() == 'dft':
+            pyscf_data = dft.RKS(mol)
+            pyscf_data.xc = 'lda, vwn'
+            pyscf_data = pyscf_data.newton()
+            pyscf_data.kernel()
 
         if self.savefile:
             save_file_name = self.molname + '_pyscf.chkfile'
-            shutil.copyfile(rhf.chkfile, save_file_name)
+            shutil.copyfile(pyscf_data.chkfile, save_file_name)
             self.savefile = save_file_name
 
-        basis = self.get_basis_data(mol, rhf)
+        basis = self.get_basis_data(mol, pyscf_data)
         return basis
 
     def get_basis_data(self, mol, rhf):
