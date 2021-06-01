@@ -50,9 +50,12 @@ If a valid SCM license is found  QMCTorch can use `ADF` as a backend by simply s
 >>> mol = Molecule(atom='H 0. 0. 0; H 0. 0. 1.', unit='angs',
 >>>               calculator='adf', basis='dzp')
 
-Here as well the `basis` keyword argument specifies the basis set used in the scf calculation.
+Here as well the ``basis`` keyword argument specifies the basis set used in the scf calculation.
 The list of supported basis set can be found here : https://www.scm.com/doc/ADF/Input/Basis_sets_and_atomic_fragments.html
 
+Additional basis sets, namely VB1, VB2, VB3, CVB1, CVB2 and CVB3, are available. These are STO valence and core-valence basis set presented by Ema et. al
+in  "Polarized basis sets for Slater-type orbitals: H to Ne atoms", https://doi.org/10.1002/jcc.10227. Changing the ``basis``
+ keyword argument to : ``basis=VB1``` will for examle use the small VB1 basis set during the SCF calculation.
 
 Loading a SCF calculation
 ----------------------------------
