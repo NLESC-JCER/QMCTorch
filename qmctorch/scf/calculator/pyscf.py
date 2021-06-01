@@ -31,7 +31,7 @@ class CalculatorPySCF(CalculatorBase):
 
         elif self.scf.lower() == 'dft':
             pyscf_data = dft.RKS(mol)
-            pyscf_data.xc = 'lda,vwn'
+            pyscf_data.xc = 'lda, vwn'
             pyscf_data = pyscf_data.newton()
             pyscf_data.kernel()
 
