@@ -3,8 +3,6 @@ import unittest
 import numpy as np
 import torch
 
-from qmctorch.utils import (plot_block, plot_data, plot_energy,
-                            plot_walkers_traj)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from ...path_utils import PATH_TEST
@@ -27,7 +25,6 @@ class TestRadialSlater(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='ground_state',
-                                use_jastrow=True,
                                 include_all_mo=False)
 
     def test_first_derivative_x(self):

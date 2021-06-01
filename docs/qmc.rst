@@ -1,4 +1,4 @@
 Quantum Monte Carlo
 ========================
 
-TODO write a short recap of QMC techniques
+TODO : Quantum Monte Carlo a 10 min introduction

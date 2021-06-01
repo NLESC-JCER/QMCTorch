@@ -1,23 +1,20 @@
+
 import unittest
 
 import numpy as np
 import torch
 import torch.optim as optim
 
-from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
 
-from qmctorch.sampler import Hamiltonian, Metropolis
+from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import (plot_block, plot_blocking_energy,
-                            plot_correlation_coefficient, plot_energy,
-                            plot_integrated_autocorrelation_time,
-                            plot_walkers_traj)
+from qmctorch.utils import plot_energy
 
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowOrbital
+from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
 from qmctorch.utils import set_torch_double_precision
-
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 __PLOT__ = False
 
 
@@ -41,12 +38,11 @@ class TestH2Correlated(unittest.TestCase):
             basis='sto-3g')
 
         # wave function
-        self.wf = SlaterJastrowOrbital(self.mol,
-                                       kinetic='auto',
-                                       configs='cas(2,2)',
-                                       jastrow_type=FullyConnectedJastrow,
-                                       # jastrow_type='pade_jastrow',
-                                       include_all_mo=True)
+        self.wf = SlaterOrbitalDependentJastrow(self.mol,
+                                                kinetic='auto',
+                                                configs='cas(2,2)',
+                                                jastrow_kernel=FullyConnectedJastrowKernel,
+                                                include_all_mo=True)
 
         # sampler
         self.sampler = Metropolis(
@@ -96,17 +92,6 @@ class TestH2Correlated(unittest.TestCase):
         # sample and compute observables
         obs = self.solver.single_point()
         e, v = obs.energy, obs.variance
-
-        # values on different arch
-        # expected_energy = [-1.1286007165908813,
-        #                    -1.099538658544285]
-
-        # # values on different arch
-        # expected_variance = [0.45748308300971985,
-        #                      0.5163105076990828]
-
-        # assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
-        # assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
 
     def test3_wf_opt(self):
         self.solver.sampler = self.sampler

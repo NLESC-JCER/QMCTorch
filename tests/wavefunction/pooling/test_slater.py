@@ -20,12 +20,10 @@ class TestSlater(unittest.TestCase):
 
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='single_double(6,6)',
-                                use_jastrow=True,
                                 include_all_mo=False)
 
         self.wf_allmo = SlaterJastrow(self.mol, kinetic='jacobi',
                                       configs='single_double(6,6)',
-                                      use_jastrow=True,
                                       include_all_mo=True)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)

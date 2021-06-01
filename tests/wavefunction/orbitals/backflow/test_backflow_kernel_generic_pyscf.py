@@ -3,11 +3,11 @@ import unittest
 import torch
 from pyscf import gto
 from torch import nn
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 import numpy as np
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_base import BackFlowKernelBase
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelBase
 from qmctorch.wavefunction.jastrows.distance.electron_electron_distance import ElectronElectronDistance
 torch.set_default_tensor_type(torch.DoubleTensor)
 

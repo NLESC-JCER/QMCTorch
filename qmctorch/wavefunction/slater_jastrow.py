@@ -1,28 +1,19 @@
-from copy import deepcopy
 
-import matplotlib.pyplot as plt
+
 import numpy as np
 import torch
-from scipy.optimize import curve_fit
-from torch import nn
-from torch.autograd import grad
-
-from .. import log
-from ..utils import register_extra_attributes
-from .orbitals.atomic_orbitals import AtomicOrbitals
-from .pooling.orbital_configurations import OrbitalConfigurations
-from .pooling.slater_pooling import SlaterPooling
-from .jastrows.jastrow import set_jastrow
 from .slater_jastrow_base import SlaterJastrowBase
-from .jastrows.jastrow import set_jastrow
+
+from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 
 
 class SlaterJastrow(SlaterJastrowBase):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
-                 use_jastrow=True,
-                 jastrow_type='pade_jastrow',
+                 jastrow_kernel=PadeJastrowKernel,
+                 jastrow_kernel_kwargs={},
                  cuda=False,
                  include_all_mo=True):
         """Implementation of the QMC Network.
@@ -31,7 +22,8 @@ class SlaterJastrow(SlaterJastrowBase):
             mol (qmc.wavefunction.Molecule): a molecule object
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-            use_jastrow (bool, optional): turn jastrow factor ON/OFF. Defaults to True.
+            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
+            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
@@ -40,11 +32,16 @@ class SlaterJastrow(SlaterJastrowBase):
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        super().__init__(mol, configs, kinetic,
-                         use_jastrow, jastrow_type, cuda, include_all_mo)
+        super().__init__(mol, configs, kinetic, cuda, include_all_mo)
 
-        self.jastrow = set_jastrow(
-            jastrow_type, self.mol.nup, self.mol.ndown, self.cuda)
+        # process the Jastrow
+        if jastrow_kernel is not None:
+
+            self.use_jastrow = True
+            self.jastrow_type = jastrow_kernel.__name__
+            self.jastrow = JastrowFactorElectronElectron(
+                self.mol.nup, self.mol.ndown, jastrow_kernel,
+                kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)

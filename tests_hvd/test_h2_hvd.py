@@ -6,7 +6,7 @@ import torch.optim as optim
 import horovod.torch as hvd
 from mpi4py import MPI
 
-from qmctorch.sampler import Hamiltonian, Metropolis
+from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrowHorovod
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
@@ -38,8 +38,7 @@ class TestH2Hvd(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='cas(2,2)',
-                                use_jastrow=True, cuda=False)
-        self.wf.jastrow.weight.data[0] = 1.
+                                cuda=False)
 
         # sampler
         self.sampler = Metropolis(

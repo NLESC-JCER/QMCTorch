@@ -10,6 +10,9 @@ class ElectronElectronDistance(nn.Module):
     def __init__(self, nelec, ndim=3, scale=False, scale_factor=0.6):
         """Computes the electron-electron distances
 
+        .. math::
+            r_{ij} = \\sqrt{ (x_i-x_j)^2 + (y_i-y_j)^2 + (z_i-z_j)^2}
+
         Args:
             nelec (int): number of electrons
             ndim (int): number of spatial dimensions
@@ -49,7 +52,7 @@ class ElectronElectronDistance(nn.Module):
         which is different from :
 
         .. math::
-            \\frac{d r_{ij}}{dx_j}
+            \\frac{d r_{ij}}{dx_j} = -\\frac{dr_{ij}}{dx_i}
 
         Args:
             input (torch.tesnor): position of the electron \n
@@ -98,7 +101,7 @@ class ElectronElectronDistance(nn.Module):
                 return d2_dist
 
     def safe_sqrt(self, dist):
-        """Compute the sqrt of dist
+        """Compute the square root of the electron electron distance matrix.
 
         Args:
             dist (torch.tensor): ee distances squared
@@ -125,7 +128,10 @@ class ElectronElectronDistance(nn.Module):
         return dist
 
     def get_der_distance(self, pos, dist):
-        """Get the derivative of the distance
+        """Get the derivative of the electron electron distance matrix.
+
+        .. math::
+            \\frac{d r_{ij}}{d x_i}
 
         Args:
             pos (torch.tensor): positions of the electrons
@@ -147,7 +153,10 @@ class ElectronElectronDistance(nn.Module):
         return diff_axis * invr
 
     def get_second_der_distance(self, pos, dist):
-        """Get the derivative of the distance
+        """Get the second derivative of the electron electron distance matrix.
+
+        .. math::
+            \\frac{d^2 r_{ij}}{d x_i^2}
 
         Args:
             pos (torch.tensor): positions of the electrons

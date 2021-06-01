@@ -1,16 +1,13 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
-from qmctorch.utils import set_torch_double_precision, btrace
-
-from qmctorch.wavefunction.jastrows.elec_elec.fully_connected_jastrow import FullyConnectedJastrow
+from qmctorch.utils import set_torch_double_precision
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 
 from torch.autograd import grad, gradcheck, Variable
 
 import numpy as np
 import torch
 import unittest
-import itertools
-import os
 
 
 torch.set_default_tensor_type(torch.DoubleTensor)
@@ -60,7 +57,7 @@ class TestGenericJastrowWF(unittest.TestCase):
         self.wf = SlaterJastrow(mol,
                                 kinetic='auto',
                                 configs='ground_state',
-                                jastrow_type=FullyConnectedJastrow)
+                                jastrow_kernel=FullyConnectedJastrowKernel)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -94,7 +91,7 @@ class TestGenericJastrowWF(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xup))
 
     def test_grad_mo(self):
         """Gradients of the MOs."""
@@ -154,8 +151,9 @@ class TestGenericJastrowWF(unittest.TestCase):
 
         assert torch.allclose(grads, grad_auto)
 
-        print(grads.reshape(10, self.wf.nelec, 3)[0])
-        print(grad_auto.reshape(10, self.wf.nelec, 3)[0])
+        grads = grads.reshape(10, self.wf.nelec, 3)
+        grad_auto = grad_auto.reshape(10, self.wf.nelec, 3)
+        assert(torch.allclose(grads, grad_auto))
 
     def test_gradients_pdf(self):
 
@@ -166,12 +164,12 @@ class TestGenericJastrowWF(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestGenericJastrowWF()
-    t.setUp()
-    t.test_antisymmetry()
-    # # t.test_forward()
-    # # # t.test_local_energy()
-    # # # t.test_kinetic_energy()
-    t.test_gradients_wf()
-    # t.test_gradients_pdf()
+    unittest.main()
+    # t = TestGenericJastrowWF()
+    # t.setUp()
+    # t.test_antisymmetry()
+    # # # t.test_forward()
+    # # # # t.test_local_energy()
+    # # # # t.test_kinetic_energy()
+    # t.test_gradients_wf()
+    # # t.test_gradients_pdf()

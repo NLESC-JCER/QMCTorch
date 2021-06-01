@@ -1,12 +1,6 @@
 import torch
-from torch import nn
 
-from .norm_orbital import atomic_orbital_norm
-from .radial_functions import (
-    radial_gaussian, radial_gaussian_pure, radial_slater, radial_slater_pure)
-from .spherical_harmonics import Harmonics
 from .atomic_orbitals import AtomicOrbitals
-from ..jastrows.distance.electron_electron_distance import ElectronElectronDistance
 from .backflow.backflow_transformation import BackFlowTransformation
 
 
@@ -26,12 +20,20 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             mol, backflow_kernel=backflow_kernel, cuda=cuda)
 
     def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
-        r"""Computes the values of the atomic orbitals.
+        """Computes the values of the atomic orbitals.
 
         .. math::
-            \phi_i(r_j) = \sum_n c_n \\text{Rad}^{i}_n(r_j) \\text{Y}^{i}_n(r_j)
+            \phi_i(q_j) = \sum_n c_n \\text{Rad}^{i}_n(q_j) \\text{Y}^{i}_n(q_j)
 
-        where Rad is the radial part and Y the spherical harmonics part.
+        where :math: `\\text{Rad}^{i}_n(r_j)` is the radial part and :math: `\\text{Y}^{i}_n(r_j)` the spherical harmonics part.
+
+        The electronic positions are calculated via a backflow transformation :
+
+        .. math::
+
+            q_i = r_i + \\sum_{j\\neq i} \\text{Kernel}(r_{ij}) (r_i-r_j)
+
+
         It is also possible to compute the first and second derivatives
 
         .. math::
@@ -47,8 +49,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
             sum_grad (bool, optional): Return the sum_grad (i.e. the sum of
                                        the derivatives) or the individual
                                        terms. Defaults to True.
-                                       False only for derivative=1
-
+            sum_hess (bool, optional): Return the sum_hess (i.e. the sum of
+                                       the derivatives) or the individual
+                                       terms. Defaults to True.
             one_elec (bool, optional): if only one electron is in input
 
         Returns:
@@ -58,7 +61,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         Examples::
             >>> mol = Molecule('h2.xyz')
-            >>> ao = AtomicOrbitals(mol)
+            >>> ao = AtomicOrbitalsBackflow(mol)
             >>> pos = torch.rand(100,6)
             >>> aovals = ao(pos)
             >>> daovals = ao(pos,derivative=1)

@@ -3,8 +3,8 @@ from time import time
 
 import torch
 from torch.utils.data import DataLoader
-
-from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
+from qmctorch.utils import (DataSet, Loss,
+                            OrthoReg, add_group_attr,
                             dump_to_hdf5)
 
 from .. import log
@@ -408,7 +408,7 @@ class SolverSlaterJastrow(SolverBase):
         if self.wf.kinetic_method == 'auto':
             no_grad_eloc = False
 
-        if self.wf.jastrow.__repr__().startswith('GenericJastrow'):
+        if self.wf.jastrow.requires_autograd:
             no_grad_eloc = False
 
         if self.loss.method in ['energy', 'weighted-energy']:

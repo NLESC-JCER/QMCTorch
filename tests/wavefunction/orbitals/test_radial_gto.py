@@ -7,7 +7,6 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 
 from .second_derivative import second_derivative
-import matplotlib.pyplot as plt
 
 
 class TestRadialSlater(unittest.TestCase):
@@ -25,7 +24,6 @@ class TestRadialSlater(unittest.TestCase):
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='ground_state',
-                                use_jastrow=True,
                                 include_all_mo=False)
 
     def test_first_derivative_x(self):

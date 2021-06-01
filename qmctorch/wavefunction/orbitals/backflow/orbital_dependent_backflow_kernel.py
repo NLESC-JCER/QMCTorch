@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-from torch.autograd import grad, Variable
 
 
 class OrbitalDependentBackFlowKernel(nn.Module):

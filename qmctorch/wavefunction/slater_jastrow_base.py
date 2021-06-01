@@ -17,10 +17,9 @@ from .wf_base import WaveFunction
 
 class SlaterJastrowBase(WaveFunction):
 
-    def __init__(self, mol, configs='ground_state',
+    def __init__(self, mol,
+                 configs='ground_state',
                  kinetic='jacobi',
-                 use_jastrow=True,
-                 jastrow_type='pade_jastrow',
                  cuda=False,
                  include_all_mo=True):
         """Implementation of the QMC Network.
@@ -84,8 +83,8 @@ class SlaterJastrowBase(WaveFunction):
             self.mo.to(self.device)
 
         # jastrow
-        self.use_jastrow = use_jastrow
-        self.jastrow_type = jastrow_type
+        self.jastrow_type = None
+        self.use_jastrow = False
 
         #  define the SD pooling layer
         self.pool = SlaterPooling(self.configs_method,
@@ -125,7 +124,7 @@ class SlaterJastrowBase(WaveFunction):
         log.info('  Jastrow factor      : {0}', self.use_jastrow)
         if self.use_jastrow:
             log.info(
-                '  Jastrow type        : {0}', self.jastrow_type)
+                '  Jastrow kernel      : {0}', self.jastrow_type)
         log.info('  Highest MO included : {0}', self.nmo_opt)
         log.info('  Configurations      : {0}', self.configs_method)
         log.info('  Number of confs     : {0}', self.nci)
@@ -251,8 +250,6 @@ class SlaterJastrowBase(WaveFunction):
         # returns new orbital instance
         return self.__class__(new_mol, configs=self.configs_method,
                               kinetic=self.kinetic_method,
-                              use_jastrow=self.use_jastrow,
-                              jastrow_type=self.jastrow_type,
                               cuda=self.cuda,
                               include_all_mo=self.include_all_mo)
 

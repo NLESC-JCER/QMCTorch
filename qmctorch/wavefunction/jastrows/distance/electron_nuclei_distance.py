@@ -10,6 +10,9 @@ class ElectronNucleiDistance(nn.Module):
     def __init__(self, nelec, atomic_pos, ndim=3, scale=False, scale_factor=0.6):
         """Computes the electron-nuclei distances
 
+        .. math::
+            r_{iA} = \\sqrt{ (x_i-x_A)^2 + (y_i-y_A)^2 + (z_i-z_A)^2}
+
         Args:
             nelec (int): number of electrons
             atomic_pos (tensor): positions of the atoms
@@ -34,18 +37,8 @@ class ElectronNucleiDistance(nn.Module):
         self.kappa = scale_factor
 
     def forward(self, input, derivative=0):
-        """Compute the pairwise distance between the electrons
-        or its derivative. \n
-
-        When required, the derivative is computed wrt to the first electron i.e.
-
-        .. math::
-            \\frac{dr_{ij}}{dx_i}
-
-        which is different from :
-
-        .. math::
-            \\frac{d r_{ij}}{dx_j}
+        """Compute the pairwise distances between electrons and atoms
+        or their derivative.
 
         Args:
             input (torch.tesnor): position of the electron \n
@@ -93,7 +86,11 @@ class ElectronNucleiDistance(nn.Module):
                 return d2_dist
 
     def get_der_distance(self, pos, dist):
-        """Get the derivative of the distance
+        """Get the derivative of the electron-nuclei distance matrix
+
+        .. math::
+            \\frac{d r_{iA}}{d x_i}
+
 
         Args:
             pos (torch.tensor): positions of the electrons
@@ -110,7 +107,10 @@ class ElectronNucleiDistance(nn.Module):
         return (diff_axis * invr).permute(0, 3, 1, 2)
 
     def get_second_der_distance(self, pos, dist):
-        """Get the derivative of the distance
+        """Get the derivative of the electron-nuclei distance matrix
+
+        .. math::
+            \\frac{d^2 r_{iA}}{d x_i^2}
 
         Args:
             pos (torch.tensor): positions of the electrons

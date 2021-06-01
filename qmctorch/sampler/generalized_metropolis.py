@@ -15,12 +15,18 @@ class GeneralizedMetropolis(SamplerBase):
                  nelec=1, ndim=1,
                  init={'type': 'uniform', 'min': -5, 'max': 5},
                  cuda=False):
-        """Metroplis Hasting sampler
+        """Generalized Metropolis Hasting sampler
 
         Args:
-            walkers (walkers): a walker object
-            nstep (int, optional): [description]. Defaults to 1000.
-            step_size (int, optional): [description]. Defaults to 3.
+            nwalkers (int, optional): number of walkers. Defaults to 100.
+            nstep (int, optional): number of steps. Defaults to 1000.
+            step_size (int, optional): size of the steps. Defaults to 3.
+            ntherm (int, optional): number of steps for thermalization. Defaults to -1.
+            ndecor (int, optional): number of steps for decorelation. Defaults to 1.
+            nelec (int, optional): number of electron. Defaults to 1.
+            ndim (int, optional): number of dimensions. Defaults to 1.
+            init (dict, optional): method to initialize the walkers. Defaults to {'type': 'uniform', 'min': -5, 'max': 5}.
+            cuda (bool, optional): use cuda. Defaults to False.
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
@@ -34,6 +40,7 @@ class GeneralizedMetropolis(SamplerBase):
             pdf (callable): probability distribution function to be sampled
             pos (torch.tensor, optional): position to start with.
                                           Defaults to None.
+            with_tqdm (bool, optional): use tqdm to monitor progress
 
         Returns:
             torch.tensor: positions of the walkers
@@ -102,7 +109,7 @@ class GeneralizedMetropolis(SamplerBase):
         """Move electron one at a time in a vectorized way.
 
         Args:
-            step_size (float): size of the MC moves
+            drift (torch.tensor): drift velocity of the walkers
 
         Returns:
             torch.tensor: new positions of the walkers
@@ -123,6 +130,15 @@ class GeneralizedMetropolis(SamplerBase):
         return new_pos.view(self.nwalkers, self.nelec * self.ndim)
 
     def _move(self, drift, index):
+        """Move a walker.
+
+        Args:
+            drift (torch.tensor): drift velocity
+            index (int): indx of the electron to move
+
+        Returns:
+            torch.tensor: position of the walkers
+        """
 
         d = drift.view(self.nwalkers,
                        self.nelec, self.ndim)
@@ -134,10 +150,29 @@ class GeneralizedMetropolis(SamplerBase):
             + mv.sample((self.nwalkers, 1)).squeeze()
 
     def trans(self, xf, xi, drifti):
+        """transform the positions
+
+        Args:
+            xf ([type]): [description]
+            xi ([type]): [description]
+            drifti ([type]): [description]
+
+        Returns:
+            [type]: [description]
+        """
         a = (xf - xi - drifti * self.step_size).norm(dim=1)
         return torch.exp(- 0.5 * a / self.step_size)
 
     def get_drift(self, pdf, x):
+        """Compute the drift velocity
+
+        Args:
+            pdf (callable): function that returns the density
+            x (torch.tensor): positions of the walkers
+
+        Returns:
+            torch.tensor: drift velocity
+        """
         with torch.enable_grad():
 
             x.requires_grad = True
@@ -155,7 +190,7 @@ class GeneralizedMetropolis(SamplerBase):
             P (torch.tensor): probability of each move
 
         Returns:
-            t0rch.tensor: the indx of the accepted moves
+            torch.tensor: the indx of the accepted moves
         """
         P[P > 1] = 1.0
         tau = torch.rand(self.walkers.nwalkers).double()

@@ -1,16 +1,14 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 
-from torch.autograd import grad, gradcheck, Variable
+from torch.autograd import grad, Variable
 
 import numpy as np
 import torch
 import unittest
-import itertools
-import os
-import operator
+
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
@@ -57,7 +55,6 @@ class TestCompareSlaterJastrowOrbitalDependentBackFlow(unittest.TestCase):
 
         self.wf = SlaterJastrowBackFlow(mol,
                                         kinetic='jacobi',
-                                        use_jastrow=True,
                                         include_all_mo=True,
                                         configs='single_double(2,2)',
                                         backflow_kernel=BackFlowKernelInverse,
@@ -68,7 +65,6 @@ class TestCompareSlaterJastrowOrbitalDependentBackFlow(unittest.TestCase):
 
         self.wf_ref = SlaterJastrow(mol,
                                     kinetic='jacobi',
-                                    use_jastrow=True,
                                     include_all_mo=True,
                                     configs='single_double(2,2)')
 

@@ -7,7 +7,7 @@ import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.wavefunction.orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
-from qmctorch.wavefunction.orbitals.backflow.backflow_kernel_inverse import BackFlowKernelInverse
+from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.manual_seed(101)

@@ -10,8 +10,7 @@ mol = Molecule(atom='water.xyz', unit='angs',
 
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
-                   configs='ground_state',
-                   use_jastrow=True)
+                   configs='ground_state')
 
 # sampler
 sampler = Metropolis(nwalkers=100, nstep=500, step_size=0.25,

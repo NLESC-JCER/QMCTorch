@@ -7,8 +7,6 @@ from torch.autograd import grad, gradcheck, Variable
 import numpy as np
 import torch
 import unittest
-import itertools
-import os
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -55,20 +53,19 @@ class TestSlaterJastrow(unittest.TestCase):
             redo_scf=True)
 
         self.wf = SlaterJastrow(mol,
-                                use_jastrow=True,
                                 kinetic='auto',
                                 include_all_mo=False,
                                 configs='single_double(2,2)')
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
-        self.nbatch = 10
+        self.nbatch = 11
         self.pos = torch.Tensor(np.random.rand(
             self.nbatch,  self.wf.nelec*3))
         self.pos.requires_grad = True
 
     def test_forward(self):
-        wfvals = self.wf(self.pos)
+        _ = self.wf(self.pos)
 
     def test_antisymmetry(self):
         """Test that the wf values are antisymmetric
@@ -91,7 +88,7 @@ class TestSlaterJastrow(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -wfvals_xup))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xup))
 
         # test spin down
         pos_xdn = self.pos.clone()
@@ -103,7 +100,7 @@ class TestSlaterJastrow(unittest.TestCase):
             self.nbatch, self.wf.nelec*3)
 
         wfvals_xdn = self.wf(pos_xdn)
-        assert(torch.allclose(wfvals_ref, -wfvals_xdn))
+        assert(torch.allclose(wfvals_ref, -1*wfvals_xdn))
 
     def test_grad_mo(self):
         """Gradients of the MOs."""
@@ -120,7 +117,7 @@ class TestSlaterJastrow(unittest.TestCase):
 
         assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
         assert(torch.allclose(dmo.sum(-1),
-                              dmo_grad.view(10, self.wf.nelec, 3).sum(-1)))
+                              dmo_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1)))
 
     def test_hess_mo(self):
         """Hessian of the MOs."""
@@ -132,10 +129,10 @@ class TestSlaterJastrow(unittest.TestCase):
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
 
         assert(torch.allclose(d2val.sum(-1).sum(-1),
-                              d2val_grad.view(10, self.wf.nelec, 3).sum(-1).sum(-1)))
+                              d2val_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1).sum(-1)))
 
         assert(torch.allclose(d2val.sum(-1),
-                              d2val_grad.view(10, self.wf.nelec, 3).sum(-1)))
+                              d2val_grad.view(self.nbatch, self.wf.nelec, 3).sum(-1)))
 
     def test_local_energy(self):
 
@@ -161,11 +158,12 @@ class TestSlaterJastrow(unittest.TestCase):
         grads = self.wf.gradients_jacobi(
             self.pos, sum_grad=False).squeeze()
         grad_auto = self.wf.gradients_autograd(self.pos)
-        print(grads.sum(), grad_auto.sum())
+
         assert torch.allclose(grads.sum(), grad_auto.sum())
 
-        print(grads.reshape(10, self.wf.nelec, 3)[0])
-        print(grad_auto.reshape(10, self.wf.nelec, 3)[0])
+        grads = grads.reshape(self.nbatch, self.wf.nelec, 3)
+        grad_auto = grad_auto.reshape(self.nbatch, self.wf.nelec, 3)
+        assert(torch.allclose(grads, grad_auto))
 
     def test_gradients_pdf(self):
 
@@ -176,9 +174,4 @@ class TestSlaterJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestSlaterJastrow()
-    t.setUp()
-    t.test_antisymmetry()
-    # t.test_gradients_wf()
-    # t.test_gradients_pdf()
+    unittest.main()
