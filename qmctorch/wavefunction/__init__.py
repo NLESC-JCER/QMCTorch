@@ -1,4 +1,5 @@
-__all__ = ['WaveFunction', 'SlaterJastrow']
+__all__ = ['WaveFunction', 'SlaterJastrow', 'SlaterCombinedJastrow',
+           'SlaterJastrowBackFlow', 'SlaterOrbitalDependentJastrow']
 
 from .wf_base import WaveFunction
 from .slater_jastrow import SlaterJastrow

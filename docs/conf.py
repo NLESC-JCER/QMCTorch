@@ -62,6 +62,7 @@ autodoc_mock_imports = [
     'numpy',
     'scipy',
     'h5py',
+    'twiggy',
     'scipy.signal',
     'torch',
     'torch.utils',
