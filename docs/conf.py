@@ -79,6 +79,7 @@ autodoc_mock_imports = [
     'pandas',
     'pyscf',
     'adf',
+    'scm',
     'tqdm',
     'ase',
     'horovod']
