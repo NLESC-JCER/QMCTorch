@@ -63,6 +63,7 @@ autodoc_mock_imports = [
     'scipy',
     'h5py',
     'twiggy',
+    'mpi4py',
     'scipy.signal',
     'torch',
     'torch.utils',
