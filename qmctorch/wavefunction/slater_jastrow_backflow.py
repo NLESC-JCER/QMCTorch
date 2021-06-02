@@ -22,6 +22,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
                  jastrow_kernel=PadeJastrowKernel,
                  jastrow_kernel_kwargs={},
                  backflow_kernel=BackFlowKernelInverse,
+                 backflow_kernel_kwargs={},
                  orbital_dependent_backflow=False,
                  cuda=False,
                  include_all_mo=True):
@@ -45,10 +46,10 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         # process the backflow transformation
         if orbital_dependent_backflow:
             self.ao = AtomicOrbitalsOrbitalDependentBackFlow(
-                mol, backflow_kernel, cuda)
+                mol, backflow_kernel, backflow_kernel_kwargs, cuda)
         else:
             self.ao = AtomicOrbitalsBackFlow(
-                mol, backflow_kernel, cuda)
+                mol, backflow_kernel, backflow_kernel_kwargs, cuda)
 
         # process the Jastrow
         self.jastrow = JastrowFactorElectronElectron(

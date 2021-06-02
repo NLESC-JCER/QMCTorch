@@ -7,7 +7,7 @@ from .orbital_dependent_backflow_kernel import OrbitalDependentBackFlowKernel
 
 class OrbitalDependentBackFlowTransformation(nn.Module):
 
-    def __init__(self, mol, backflow_kernel, cuda=False):
+    def __init__(self, mol, backflow_kernel, backflow_kernel_kwargs={}, cuda=False):
         """Transform the electorn coordinates into backflow coordinates.
         see : Orbital-dependent backflow wave functions for real-space quantum Monte Carlo
         https://arxiv.org/abs/1910.07167
@@ -21,7 +21,7 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
         self.nelec = mol.nelec
         self.nao = mol.basis.nao
         self.backflow_kernel = OrbitalDependentBackFlowKernel(
-            backflow_kernel, mol, cuda)
+            backflow_kernel, backflow_kernel_kwargs, mol, cuda)
         self.ndim = 3
 
         self.cuda = cuda

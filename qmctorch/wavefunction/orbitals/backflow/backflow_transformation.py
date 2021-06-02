@@ -6,7 +6,7 @@ from ...jastrows.distance.electron_electron_distance import ElectronElectronDist
 
 class BackFlowTransformation(nn.Module):
 
-    def __init__(self, mol, backflow_kernel, cuda=False):
+    def __init__(self, mol, backflow_kernel, backflow_kernel_kwargs={}, cuda=False):
         """Transform the electorn coordinates into backflow coordinates.
         see : Orbital-dependent backflow wave functions for real-space quantum Monte Carlo
         https://arxiv.org/abs/1910.07167
@@ -15,7 +15,9 @@ class BackFlowTransformation(nn.Module):
             \\bold{q}_i = \\bold{r}_i + \\sum_{j\neq i} \\eta(r_{ij})(\\bold{r}_i - \\bold{r}_j)
         """
         super().__init__()
-        self.backflow_kernel = backflow_kernel(mol, cuda)
+        self.backflow_kernel = backflow_kernel(mol,
+                                               cuda,
+                                               **backflow_kernel_kwargs)
         self.edist = ElectronElectronDistance(mol.nelec)
         self.nelec = mol.nelec
         self.ndim = 3

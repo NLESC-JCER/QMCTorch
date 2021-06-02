@@ -20,7 +20,6 @@ you need to do on your code is to specify `cuda=True` in the declaration of the 
 >>> # define the wave function
 >>> wf = SlaterJastrow(mol, kinetic='jacobi',
 >>>             configs='cas(2,2)',
->>>             use_jastrow=True,
 >>>             cuda=True)
 
 This will automatically port all the necesaary tensors to the GPU and offload all the corresponding operation
