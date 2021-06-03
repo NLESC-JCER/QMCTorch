@@ -61,7 +61,11 @@ class TestSlaterCombinedJastrow(unittest.TestCase):
                                         jastrow_kernel={
                                             'ee': PadeJastrowKernelElecElec,
                                             'en': PadeJastrowKernelElecNuc,
-                                            'een': BoysHandyJastrowKernel})
+                                            'een': BoysHandyJastrowKernel},
+                                        jastrow_kernel_kwargs={
+                                            'ee': {'w': 1.},
+                                            'en': {'w': 1.},
+                                            'een': {'nterm': 3}})
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
