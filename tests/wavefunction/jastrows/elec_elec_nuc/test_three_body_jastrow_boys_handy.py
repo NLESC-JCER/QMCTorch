@@ -79,6 +79,23 @@ class TestThreeBodyBoysHandy(unittest.TestCase):
 
         assert(torch.allclose(dr, dr_grad, atol=1E-5))
 
+    def test_symmetry(self):
+
+        val = self.jastrow(self.pos)
+
+        # test spin up
+        pos_xup = self.pos.clone()
+        perm_up = list(range(self.nelec))
+        perm_up[0] = 1
+        perm_up[1] = 0
+        pos_xup = pos_xup.reshape(self.nbatch, self.nelec, 3)
+        pos_xup = pos_xup[:, perm_up, :].reshape(
+            self.nbatch, self.nelec*3)
+
+        val_xup = self.jastrow(pos_xup)
+
+        assert(torch.allclose(val, val_xup, atol=1E-3))
+
     def test_jacobian_jastrow(self):
 
         val = self.jastrow(self.pos)
@@ -107,8 +124,8 @@ class TestThreeBodyBoysHandy(unittest.TestCase):
             self.nbatch, self.nelec, 3)
 
         assert(torch.allclose(dval.sum(), dval_grad.sum()))
-        print(dval.permute(0, 2, 1))
-        print(dval_grad)
+        # print(dval.permute(0, 2, 1))
+        # print(dval_grad)
         assert torch.allclose(dval.permute(0, 2, 1), dval_grad)
 
     def test_hess_jastrow(self):
@@ -117,15 +134,16 @@ class TestThreeBodyBoysHandy(unittest.TestCase):
         d2val_grad = hess(val, self.pos).view(
             self.nbatch, self.nelec, 3).sum(2)
         d2val = self.jastrow(self.pos, derivative=2)
-        print(torch.abs(d2val_grad-d2val))
+        # print(torch.abs(d2val_grad-d2val))
 
         assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
         assert torch.allclose(d2val, d2val_grad)
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestThreeBodyBoysHandy()
-    t.setUp()
-    t.test_grad_jastrow()
-    t.test_hess_jastrow()
+    unittest.main()
+    # t = TestThreeBodyBoysHandy()
+    # t.setUp()
+    # t.test_symmetry()
+    # t.test_grad_jastrow()
+    # t.test_hess_jastrow()
