@@ -202,6 +202,7 @@ class JastrowFactorCombinedTerms(nn.Module):
 
                     # da * db * c
                     tmp = jast_vals.copy()
+                    tmp = [j.unsqueeze(-1) for j in tmp]
                     tmp[i] = djast_vals[i]
                     tmp[j] = djast_vals[j]
 

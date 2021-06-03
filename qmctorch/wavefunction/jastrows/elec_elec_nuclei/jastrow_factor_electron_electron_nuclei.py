@@ -1,9 +1,10 @@
 import torch
 from torch import nn
-from torch._C import Value
+import torch
+from torch.autograd import Variable, grad
+
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
-import itertools
 
 
 class JastrowFactorElectronElectronNuclei(nn.Module):
@@ -56,6 +57,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             self.nelec, self.ndim)
         self.elnu_dist = ElectronNucleiDistance(
             self.nelec, self.atoms, self.ndim)
+
+        # method to compute the second derivative
+        self.auto_second_derivative = True
 
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix
@@ -208,20 +212,30 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         elif derivative == 2:
 
-            dr = self.assemble_dist_deriv(pos, 1)
-            d2r = self.assemble_dist_deriv(pos, 2)
+            if self.auto_second_derivative:
+                return self.jastrow_factor_second_derivative_auto(pos, jast=jast.unsqueeze(-1))
 
-            return self.jastrow_factor_second_derivative(r, dr, d2r, jast)
+            else:
+                dr = self.assemble_dist_deriv(pos, 1)
+                d2r = self.assemble_dist_deriv(pos, 2)
+
+                return self.jastrow_factor_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
 
             dr = self.assemble_dist_deriv(pos, 1)
-            d2r = self.assemble_dist_deriv(pos, 2)
+            djast = self.jastrow_factor_derivative(
+                r, dr, jast, sum_grad)
 
-            return(jast,
-                   self.jastrow_factor_derivative(
-                       r, dr, jast, sum_grad),
-                   self.jastrow_factor_second_derivative(r, dr, d2r, jast))
+            if self.auto_second_derivative:
+                d2jast = self.jastrow_factor_second_derivative_auto(
+                    pos, jast=jast.unsqueeze(-1))
+            else:
+                d2r = self.assemble_dist_deriv(pos, 2)
+                d2jast = self.jastrow_factor_second_derivative(
+                    r, dr, d2r, jast)
+
+            return(jast.unsqueeze(-1), djast, d2jast)
 
         else:
             raise ValueError('Derivative value nor recognized')
@@ -338,6 +352,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         Args:
             djast ([type]): [description]
         """
+        # djast = djast.sum(2)
 
         # create the output vector with size nbatch x nelec
         out_shape = list(djast.shape[:-2]) + [self.nelec]
@@ -351,4 +366,44 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         out.index_add_(-1, self.index_row, djast[..., 0])
         out.index_add_(-1, self.index_col, djast[..., 1])
 
+        # print(out.shape)
+        # return (out**2).sum(1)
         return ((out.sum(2))**2).sum(1)
+
+    def jastrow_factor_second_derivative_auto(self, pos, jast=None):
+        """Compute the second derivative of the jastrow factor automatically.
+        This is needed for complicate kernels where the partial derivatives of
+        the kernels are difficult to organize in a total derivaitve e.e Boys-Handy
+
+        Args:
+            pos ([type]): [description]
+        """
+
+        def hess(out, pos):
+
+            # compute the jacobian
+            z = Variable(torch.ones_like(out))
+            jacob = grad(out, pos,
+                         grad_outputs=z,
+                         only_inputs=True,
+                         create_graph=True)[0]
+
+            # compute the diagonal element of the Hessian
+            z = Variable(torch.ones(jacob.shape[0])).to(self.device)
+            hess = torch.zeros_like(jacob)
+
+            for idim in range(jacob.shape[1]):
+
+                tmp = grad(jacob[:, idim], pos,
+                           grad_outputs=z,
+                           only_inputs=True,
+                           create_graph=True)[0]
+
+                hess[:, idim] = tmp[:, idim]
+
+            return hess
+
+        nbatch = pos.shape[0]
+        if jast is None:
+            jast = self.forward(pos)
+        return hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)

@@ -33,7 +33,7 @@ def hess(out, pos):
     return hess
 
 
-class TestThreeBodyGeneric(unittest.TestCase):
+class TestThreeBodyFullyConnected(unittest.TestCase):
 
     def setUp(self):
 

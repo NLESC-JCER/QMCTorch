@@ -1,6 +1,8 @@
 import torch
 from torch import nn
 from torch.autograd import grad
+from torch.autograd.grad_mode import F
+from torch.autograd.variable import Variable
 
 
 class JastrowKernelElectronElectronNucleiBase(nn.Module):
@@ -30,43 +32,22 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
             self.device = torch.device('cuda')
         self.requires_autograd = True
 
-    def forward(self, r):
-        """ Get the jastrow kernel.
-        .. math::
-            B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
+    def forward(self, x):
+        """Compute the values of the kernel
 
         Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
+            x (torch.tensor): e-e and e-n distances distance (Nbatch, Natom, Nelec_pairs, 3)
+                              the last dimension holds the values [R_{iA}, R_{jA}, r_{ij}]
+                              in that order.
 
         Returns:
-            torch.tensor: matrix of the jastrow kernels
-                          Nbatch x Nelec x Nelec
+            torch.tensor: values of the kernel (Nbatch, Natom, Nelec_pairs, 1)
+
         """
         raise NotImplementedError()
 
     def compute_derivative(self, r, dr):
-        """Get the elements of the derivative of the jastrow kernels
-        wrt to the first electrons
-
-        .. math::
-
-            d B_{ij} / d k_i =  d B_{ij} / d k_j  = - d B_{ji} / d k_i
-
-            out_{k,i,j} = A1 + A2
-            A1_{kij} = w0 \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})
-            A2_{kij} = - w0 w' r_{ij} \frac{dr_{ij}}{dk_i} / (1 + w r_{ij})^2
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-            dr (torch.tensor): matrix of the derivative of the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix fof the derivative of the jastrow elements
-                          Nbatch x Ndim x Nelec x Nelec
-        """
+        """Get the elements of the derivative of the jastrow kernels."""
 
         kernel = self.forward(r)
         ker_grad = self._grads(kernel, r)
@@ -78,32 +59,13 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         return out
 
     def compute_second_derivative(self, r, dr, d2r):
-        """Get the elements of the pure 2nd derivative of the jastrow kernels
-        wrt to the first electron
-
-        .. math ::
-
-            d^2 B_{ij} / d k_i^2 =  d^2 B_{ij} / d k_j^2 = d^2 B_{ji} / d k_i^2
-
-        Args:
-            r (torch.tensor): matrix of the e-e distances
-                              Nbatch x Nelec x Nelec
-            dr (torch.tensor): matrix of the derivative of the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-            d2r (torch.tensor): matrix of the 2nd derivative of
-                                the e-e distances
-                              Nbatch x Ndim x Nelec x Nelec
-
-        Returns:
-            torch.tensor: matrix fof the pure 2nd derivative of
-                          the jastrow elements
-                          Nbatch x Ndim x Nelec x Nelec
+        """Get the elements of the pure 2nd derivative of the jastrow kernels.
         """
 
         dr2 = dr * dr
 
         kernel = self.forward(r)
-        ker_hess, ker_grad = self._hess(kernel, r)
+        ker_hess, ker_grad = self._hess(kernel, r, self.device)
 
         jhess = ker_hess.unsqueeze(1) * \
             dr2 + ker_grad.unsqueeze(1) * d2r
@@ -124,11 +86,8 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
 
     @staticmethod
-    def _hess(val, pos):
+    def _hess(val, pos, device):
         """get the hessian of the jastrow values.
-        of a given orbital terms
-        Warning thos work only because the orbital term are dependent
-        of a single rij term, i.e. fij = f(rij)
 
         Args:
             pos ([type]): [description]
@@ -138,7 +97,16 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
                     grad_outputs=torch.ones_like(val),
                     create_graph=True)[0]
 
-        hval = grad(gval, pos,
-                    grad_outputs=torch.ones_like(gval))[0]
+        grad_out = Variable(torch.ones(
+            *gval.shape[:-1])).to(device)
+        hval = torch.zeros_like(gval).to(device)
+
+        for idim in range(gval.shape[-1]):
+
+            tmp = grad(gval[..., idim], pos,
+                       grad_outputs=grad_out,
+                       only_inputs=True,
+                       create_graph=True)[0]
+            hval[..., idim] = tmp[..., idim]
 
         return hval, gval

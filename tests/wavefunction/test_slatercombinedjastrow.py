@@ -1,7 +1,9 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterCombinedJastrow
 from qmctorch.utils import set_torch_double_precision
-
+from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowKernelElecElec
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import BoysHandyJastrowKernel
 from torch.autograd import grad, gradcheck, Variable
 
 import numpy as np
@@ -55,7 +57,11 @@ class TestSlaterCombinedJastrow(unittest.TestCase):
         self.wf = SlaterCombinedJastrow(mol,
                                         kinetic='auto',
                                         include_all_mo=False,
-                                        configs='single_double(2,2)')
+                                        configs='single_double(2,2)',
+                                        jastrow_kernel={
+                                            'ee': PadeJastrowKernelElecElec,
+                                            'en': PadeJastrowKernelElecNuc,
+                                            'een': BoysHandyJastrowKernel})
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -174,7 +180,7 @@ class TestSlaterCombinedJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestSlaterCombinedJastrow()
-    t.setUp()
-    t.test_kinetic_energy()
+    unittest.main()
+    # t = TestSlaterCombinedJastrow()
+    # t.setUp()
+    # t.test_kinetic_energy()
