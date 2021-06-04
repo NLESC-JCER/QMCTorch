@@ -13,10 +13,10 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                  jastrow_kernel,
                  kernel_kwargs={},
                  cuda=False):
-        r"""Jastrow Factor of the elec-elec-nuc term:
+        """Jastrow Factor of the elec-elec-nuc term:
 
         .. math::
-            J = \prod_{i<j} \exp(B(r_{rij}))
+            J =  \\exp\\left(  \\sum_A \\sum_{i<j} K(R_{iA}, r_{jA}, r_{rij}) \\right)
 
         Args:
             nup (int): number of spin up electons
@@ -59,6 +59,11 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             self.nelec, self.atoms, self.ndim)
 
         # method to compute the second derivative
+        # If False jastrow_factor_second_derivative will be used
+        # this method  only works when the kernel does not multiply
+        # the different terms e.g : k = f(r_ij) + g(R_iA) + g(R_jA)
+        # For non-lienar kernels e.g. : k = f(r_ij) * g(R_iA) * g(R_jA)
+        # auto_second_derivative must be set to True.
         self.auto_second_derivative = True
 
     def get_mask_tri_up(self):
@@ -352,7 +357,6 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         Args:
             djast ([type]): [description]
         """
-        # djast = djast.sum(2)
 
         # create the output vector with size nbatch x nelec
         out_shape = list(djast.shape[:-2]) + [self.nelec]
@@ -366,8 +370,6 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         out.index_add_(-1, self.index_row, djast[..., 0])
         out.index_add_(-1, self.index_col, djast[..., 1])
 
-        # print(out.shape)
-        # return (out**2).sum(1)
         return ((out.sum(2))**2).sum(1)
 
     def jastrow_factor_second_derivative_auto(self, pos, jast=None):
