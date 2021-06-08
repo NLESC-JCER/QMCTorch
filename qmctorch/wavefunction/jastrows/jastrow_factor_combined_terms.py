@@ -70,8 +70,8 @@ class JastrowFactorCombinedTerms(nn.Module):
 
             self.jastrow_terms.append(JastrowFactorElectronElectronNuclei(nup, ndown,
                                                                           atomic_pos,
-                                                                          jastrow_kernel['en'],
-                                                                          jastrow_kernel_kwargs['en'],
+                                                                          jastrow_kernel['een'],
+                                                                          jastrow_kernel_kwargs['een'],
                                                                           cuda=cuda))
         self.nterms = len(self.jastrow_terms)
 
@@ -202,6 +202,7 @@ class JastrowFactorCombinedTerms(nn.Module):
 
                     # da * db * c
                     tmp = jast_vals.copy()
+                    tmp = [j.unsqueeze(-1) for j in tmp]
                     tmp[i] = djast_vals[i]
                     tmp[j] = djast_vals[j]
 
