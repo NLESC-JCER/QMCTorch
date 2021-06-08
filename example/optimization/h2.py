@@ -4,7 +4,7 @@ from torch import optim
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.sampler import Metropolis
+from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
 
@@ -19,8 +19,8 @@ set_torch_double_precision()
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='adf',
-               basis='dzp',
+               calculator='pyscf',
+               basis='sto-3g',
                unit='bohr')
 
 # define the wave function
@@ -28,14 +28,20 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='single_double(2,2)',
                    jastrow_kernel=PadeJastrowKernel)
 
-wf.jastrow.weight.data[0] = 1.
+# resulted in error for me:
+# wf.jastrow.weight.data[0] = 1.
 
 # sampler
-sampler = Metropolis(nwalkers=200,
-                     nstep=200, step_size=0.2,
-                     ntherm=-1, ndecor=100,
-                     nelec=wf.nelec, init=mol.domain('atomic'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+# sampler = Metropolis(nwalkers=200,
+#                      nstep=200, step_size=0.2,
+#                      ntherm=-1, ndecor=100,
+#                      nelec=wf.nelec, init=mol.domain('atomic'),
+#                      move={'type': 'all-elec', 'proba': 'normal'})
+
+sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
+                      step_size=0.1, L=30,
+                      ntherm=-1, ndecor=10,
+                      init=mol.domain('atomic'))
 
 
 # optimizer

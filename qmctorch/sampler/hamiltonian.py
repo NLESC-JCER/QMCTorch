@@ -1,9 +1,8 @@
 import torch
-from torch.autograd import Variable
 from tqdm import tqdm
 
-from .. import log
 from .sampler_base import SamplerBase
+from .. import log
 
 
 class Hamiltonian(SamplerBase):
@@ -15,15 +14,15 @@ class Hamiltonian(SamplerBase):
 
         Args:
             nwalkers (int, optional): Number of walkers. Defaults to 100.
-            nstep (int, optional): Number of steps. Defaults to 1000.
-            step_size (int, optional): length of the step. Defaults to 3.
+            nstep (int, optional): Number of steps. Defaults to 100.
+            step_size (int, optional): length of the step. Defaults to 0.1.
             nelec (int, optional): total number of electrons. Defaults to 1.
-            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
-            ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
-            ndim (int, optional): total number of dimension. Defaults to 1.
+            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep only last position
+            ndecor (int, optional): number of mc step for decorrelation. Defaults to 1.
+            ndim (int, optional): total number of dimension. Defaults to 3.
             init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
             L (int, optional): length of the trajectory . Defaults to 10.
-            cuda (bool, optional): use tqdm to monitor progress
+            cuda (bool, optional): use cuda.
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
@@ -42,14 +41,15 @@ class Hamiltonian(SamplerBase):
         Returns:
             torch.tensor: gradients of the wavefunction
         """
+        if inp.grad is not None:
+            inp.grad.zero_()
         inp.requires_grad = True
+
         val = func(inp)
-        z = Variable(torch.ones(val.shape))
-        val.backward(z)
-        fgrad = inp.grad.data
-        inp.grad.data.zero_()
+        val.backward(torch.ones(val.shape))
+
         inp.requires_grad = False
-        return fgrad
+        return inp.grad
 
     @staticmethod
     def log_func(func):
@@ -101,9 +101,9 @@ class Hamiltonian(SamplerBase):
             rate += _r
 
             # store
-            if (istep >= self.ntherm):
-                if (idecor % self.ndecor == 0):
-                    pos.append(self.walkers.pos.detach())
+            if istep >= self.ntherm:
+                if idecor % self.ndecor == 0:
+                    pos.append(self.walkers.pos)
                 idecor += 1
 
         # print stats
@@ -112,7 +112,7 @@ class Hamiltonian(SamplerBase):
         return torch.cat(pos).requires_grad_()
 
     @staticmethod
-    def _step(U, get_grad, epsilon, L, qinit):
+    def _step(U, get_grad, epsilon, L, q_init):
         """Take one step of the sampler
 
         Args:
@@ -120,29 +120,30 @@ class Hamiltonian(SamplerBase):
             get_grad (callable) : get the value of the target dist gradient
             epsilon (float) : step size
             L (int) : number of steps in the traj
-            qinit (array) : initial positon of the walkers
+            q_init (torch.Tensor) : initial positon of the walkers
 
         Returns:
             torch.tensor, float:
         """
 
+        q = q_init.clone()
+
         # init the momentum
-        q = qinit.clone()
         p = torch.randn(q.shape)
 
         # initial energy terms
-        Einit = U(q) + 0.5 * (p*p).sum(1)
+        E_init = U(q) + 0.5 * (p*p).sum(1)
 
         # half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)
 
         # full steps in q and p space
         for iL in range(L - 1):
-            q = q + epsilon * p
-            p -= 0.5 * epsilon * get_grad(U, q)
+            q += epsilon * p
+            p -= epsilon * get_grad(U, q)
 
         # last full step in pos space
-        q = q + epsilon * p
+        q += epsilon * p
 
         # half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)
@@ -151,14 +152,14 @@ class Hamiltonian(SamplerBase):
         p = -p
 
         # current energy term
-        Enew = U(q) + 0.5 * (p*p).sum(1)
+        E_new = U(q) + 0.5 * (p*p).sum(1)
 
-        # metropolix accept/reject
-        eps = torch.rand(Enew.shape)
-        cond = (torch.exp(Einit - Enew) < eps).view(-1)
-        q[cond] = qinit[cond]
+        # metropolis accept/reject
+        eps = torch.rand(E_new.shape)
+        rejected = (torch.exp(E_init - E_new) < eps)
+        q[rejected] = q_init[rejected]
 
-        # comute the accept rate
-        rate = cond.sum().float() / cond.shape[0]
+        # compute the accept rate
+        rate = 1 - rejected.sum().float() / rejected.shape[0]
 
         return q, rate
