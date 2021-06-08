@@ -28,16 +28,7 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='single_double(2,2)',
                    jastrow_kernel=PadeJastrowKernel)
 
-# resulted in error for me:
-# wf.jastrow.weight.data[0] = 1.
-
 # sampler
-# sampler = Metropolis(nwalkers=200,
-#                      nstep=200, step_size=0.2,
-#                      ntherm=-1, ndecor=100,
-#                      nelec=wf.nelec, init=mol.domain('atomic'),
-#                      move={'type': 'all-elec', 'proba': 'normal'})
-
 sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
                       step_size=0.1, L=30,
                       ntherm=-1, ndecor=10,
