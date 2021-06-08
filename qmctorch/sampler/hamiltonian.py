@@ -41,14 +41,15 @@ class Hamiltonian(SamplerBase):
         Returns:
             torch.tensor: gradients of the wavefunction
         """
-        if inp.grad is not None:
-            inp.grad.zero_()
-        inp.requires_grad = True
+        with torch.enable_grad():
+            if inp.grad is not None:
+                inp.grad.zero_()
+            inp.requires_grad = True
 
-        val = func(inp)
-        val.backward(torch.ones(val.shape))
+            val = func(inp)
+            val.backward(torch.ones(val.shape))
 
-        inp.requires_grad = False
+            inp.requires_grad = False
         return inp.grad
 
     @staticmethod
