@@ -103,12 +103,12 @@ class TestH2(unittest.TestCase):
         e, v = obs.energy, obs.variance
 
         # values on different arch
-        expected_energy = [-1.077970027923584,
-                           -1.027975961270174]
+        expected_energy = [-1.0877732038497925,
+                           -1.088576]
 
         # values on different arch
-        expected_variance = [0.17763596773147583,
-                             0.19953053065068135]
+        expected_variance = [0.14341972768306732,
+                             0.163771]
 
         assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
         assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
