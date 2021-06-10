@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch
 from tqdm import tqdm
 
@@ -7,22 +9,30 @@ from .. import log
 
 class Hamiltonian(SamplerBase):
 
-    def __init__(self, nwalkers=100, nstep=100, nelec=1, ndim=3,
-                 step_size=0.1, ntherm=-1, ndecor=1, init={'min': -2, 'max': 2}, L=10,
-                 cuda=False):
+    def __init__(self,
+                 nwalkers: int = 100,
+                 nstep: int = 100,
+                 step_size: float = 0.2,
+                 L: int = 10,
+                 ntherm: int = -1,
+                 ndecor: int = 1,
+                 nelec: int = 1,
+                 ndim: int = 3,
+                 init: Dict = {'min': -5, 'max': 5},
+                 cuda: bool = False):
         """Hamiltonian Monte Carlo Sampler.
 
         Args:
             nwalkers (int, optional): Number of walkers. Defaults to 100.
             nstep (int, optional): Number of steps. Defaults to 100.
-            step_size (int, optional): length of the step. Defaults to 0.1.
+            step_size (int, optional): length of the step. Defaults to 0.2.
+            L (int, optional): length of the trajectory . Defaults to 10.
             nelec (int, optional): total number of electrons. Defaults to 1.
             ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep only last position
             ndecor (int, optional): number of mc step for decorrelation. Defaults to 1.
             ndim (int, optional): total number of dimension. Defaults to 3.
             init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
-            L (int, optional): length of the trajectory . Defaults to 10.
-            cuda (bool, optional): use cuda.
+            cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
         """
 
         SamplerBase.__init__(self, nwalkers, nstep,
