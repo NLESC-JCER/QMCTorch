@@ -37,18 +37,19 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         nelec = self.nup + self.ndown
 
         self.var_cusp_weight = nn.Parameter(
-            torch.as_tensor([0., 0.]))
+            torch.as_tensor([0., 0.])).to(self.device)
 
-        self.idx_pair = []
+        idx_pair = []
         for i in range(nelec-1):
             ispin = 0 if i < self.nup else 1
             for j in range(i+1, nelec):
                 jspin = 0 if j < self.nup else 1
 
                 if ispin == jspin:
-                    self.idx_pair.append(0)
+                    idx_pair.append(0)
                 else:
-                    self.idx_pair.append(1)
+                    idx_pair.append(1)
+        self.idx_pair = torch.as_tensor(idx_pair).to(self.device)
 
     def get_static_weight(self):
         """Get the matrix of static weights
