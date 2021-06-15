@@ -28,7 +28,7 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
             torch.as_tensor([w]), requires_grad=True).to(self.device)
         register_extra_attributes(self, ['weight'])
 
-        self.static_weight = torch.as_tensor([1.])
+        self.static_weight = torch.as_tensor([1.]).to(self.device)
         self.requires_autograd = True
 
     def forward(self, r):
