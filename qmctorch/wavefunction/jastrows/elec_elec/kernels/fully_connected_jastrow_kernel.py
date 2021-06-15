@@ -37,7 +37,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         nelec = self.nup + self.ndown
 
         self.var_cusp_weight = nn.Parameter(
-            torch.as_tensor([0., 0.])).to(self.device)
+            torch.as_tensor([0., 0.]))
 
         idx_pair = []
         for i in range(nelec-1):
