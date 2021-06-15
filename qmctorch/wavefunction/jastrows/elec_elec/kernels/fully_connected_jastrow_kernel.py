@@ -6,23 +6,25 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
-    def __init__(self,  nup, ndown, cuda):
+    def __init__(self,  nup, ndown, cuda,
+                 size1=16, size2=8,
+                 activation=torch.nn.Sigmoid()):
         """Defines a fully connected jastrow factors."""
 
         super().__init__(nup, ndown, cuda)
 
         self.cusp_weights = None
 
-        self.fc1 = nn.Linear(1, 16, bias=False)
-        self.fc2 = nn.Linear(16, 8, bias=False)
-        self.fc3 = nn.Linear(8, 1, bias=False)
+        self.fc1 = nn.Linear(1, size1, bias=False)
+        self.fc2 = nn.Linear(size1, size2, bias=False)
+        self.fc3 = nn.Linear(size2, 1, bias=False)
 
         eps = 1E-6
         self.fc1.weight.data *= eps
         self.fc2.weight.data *= eps
         self.fc3.weight.data *= eps
 
-        self.nl_func = torch.nn.Sigmoid()
+        self.nl_func = activation
         #self.nl_func = lambda x:  x
 
         self.prefac = torch.rand(1)
