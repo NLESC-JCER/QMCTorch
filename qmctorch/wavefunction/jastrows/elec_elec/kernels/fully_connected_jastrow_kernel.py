@@ -17,18 +17,38 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc2 = nn.Linear(16, 8, bias=False)
         self.fc3 = nn.Linear(8, 1, bias=False)
 
-        eps = 1E-4
+        eps = 1E-6
         self.fc1.weight.data *= eps
         self.fc2.weight.data *= eps
         self.fc3.weight.data *= eps
 
         self.nl_func = torch.nn.Sigmoid()
-        # self.nl_func = lambda x:  x
+        #self.nl_func = lambda x:  x
 
         self.prefac = torch.rand(1)
 
         self.cusp_weights = self.get_static_weight()
         self.requires_autograd = True
+        self.get_var_weight()
+
+    def get_var_weight(self):
+        """define the variational weight."""
+
+        nelec = self.nup + self.ndown
+
+        self.var_cusp_weight = nn.Parameter(
+            torch.as_tensor([0., 0.]))
+
+        self.idx_pair = []
+        for i in range(nelec-1):
+            ispin = 0 if i < self.nup else 1
+            for j in range(i+1, nelec):
+                jspin = 0 if j < self.nup else 1
+
+                if ispin == jspin:
+                    self.idx_pair.append(0)
+                else:
+                    self.idx_pair.append(1)
 
     def get_static_weight(self):
         """Get the matrix of static weights
@@ -78,6 +98,5 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         x = x.reshape(nbatch, npairs)
 
         # add the cusp weight
-        x = x + w
-
+        x = x + self.var_cusp_weight[self.idx_pair]
         return x
