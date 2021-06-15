@@ -27,14 +27,14 @@ class JastrowFactorElectronNuclei(nn.Module):
         self.ndown = ndown
         self.nelec = nup + ndown
 
-        self.atoms = atomic_pos
-        self.natoms = atomic_pos.shape[0]
-        self.ndim = 3
-
         self.cuda = cuda
         self.device = torch.device('cpu')
         if self.cuda:
             self.device = torch.device('cuda')
+
+        self.atoms = atomic_pos.to(self.device)
+        self.natoms = atomic_pos.shape[0]
+        self.ndim = 3
 
         # kernel function
         self.jastrow_kernel = jastrow_kernel(nup, ndown,
