@@ -43,8 +43,8 @@ class SlaterJastrow(SlaterJastrowBase):
                 self.mol.nup, self.mol.ndown, jastrow_kernel,
                 kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
 
-        if self.cuda:
-            self.jastrow = self.jastrow.to(self.device)
+            if self.cuda:
+                self.jastrow = self.jastrow.to(self.device)
 
         self.log_data()
 
