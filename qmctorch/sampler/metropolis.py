@@ -25,11 +25,11 @@ class Metropolis(SamplerBase):
         Args:
             nwalkers (int, optional): Number of walkers. Defaults to 100.
             nstep (int, optional): Number of steps. Defaults to 1000.
-            step_size (int, optional): length of the step. Defaults to 3.
+            step_size (int, optional): length of the step. Defaults to 0.2.
             nelec (int, optional): total number of electrons. Defaults to 1.
             ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
             ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
-            ndim (int, optional): total number of dimension. Defaults to 1.
+            ndim (int, optional): total number of dimension. Defaults to 3.
             init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
 
             move (dict, optional): method to move the electrons. default('all-elec','normal') \n
