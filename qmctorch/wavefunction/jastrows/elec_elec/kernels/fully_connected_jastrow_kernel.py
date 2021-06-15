@@ -8,7 +8,8 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
     def __init__(self,  nup, ndown, cuda,
                  size1=16, size2=8,
-                 activation=torch.nn.Sigmoid()):
+                 activation=torch.nn.Sigmoid(),
+                 include_cusp_weight=True):
         """Defines a fully connected jastrow factors."""
 
         super().__init__(nup, ndown, cuda)
@@ -32,6 +33,8 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.cusp_weights = self.get_static_weight()
         self.requires_autograd = True
         self.get_var_weight()
+
+        self.include_cusp_weight = include_cusp_weight
 
     def get_var_weight(self):
         """define the variational weight."""
@@ -84,7 +87,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
             torch.tensor: values of the f_ij
         """
         nbatch, npairs = x.shape
-        w = (x*self.cusp_weights)
+        # w = (x*self.cusp_weights)
 
         # reshape the input so that all elements are considered
         # independently of each other
@@ -101,5 +104,6 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         x = x.reshape(nbatch, npairs)
 
         # add the cusp weight
-        x = x + self.var_cusp_weight[self.idx_pair]
+        if self.include_cusp_weight:
+            x = x + self.var_cusp_weight[self.idx_pair]
         return x
