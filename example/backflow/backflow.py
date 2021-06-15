@@ -1,3 +1,4 @@
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 import torch
 from torch import nn
 
@@ -22,7 +23,7 @@ class MyBackflow(BackFlowKernelBase):
 
 # define the molecule
 mol = Molecule(atom='Li 0. 0. 0.; H 3.14 0. 0.', unit='angs',
-               calculator='pyscf', basis='sto-3g', name='water')
+               calculator='pyscf', basis='sto-3g', name='LiH')
 
 # define the wave function
 wf = SlaterJastrowBackFlow(mol, kinetic='jacobi',

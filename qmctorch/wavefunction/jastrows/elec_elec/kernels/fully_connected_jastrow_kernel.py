@@ -17,7 +17,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc2 = nn.Linear(16, 8, bias=False)
         self.fc3 = nn.Linear(8, 1, bias=False)
 
-        eps = 1E-0
+        eps = 1E-4
         self.fc1.weight.data *= eps
         self.fc2.weight.data *= eps
         self.fc3.weight.data *= eps
