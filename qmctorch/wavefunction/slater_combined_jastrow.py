@@ -60,7 +60,8 @@ class SlaterCombinedJastrow(SlaterJastrow):
                 jastrow_kernel_kwargs=jastrow_kernel_kwargs,
                 cuda=cuda)
 
-        if self.cuda:
-            self.jastrow = self.jastrow.to(self.device)
+            if self.cuda:
+                for term in self.jastrow.jastrow_terms:
+                    term = term.to(self.device)
 
         self.log_data()
