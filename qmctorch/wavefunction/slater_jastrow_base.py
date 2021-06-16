@@ -196,7 +196,7 @@ class SlaterJastrowBase(WaveFunction):
 
         # change basis to sto
         basis.radial_type = 'sto_pure'
-        basis.nshells = self.ao.nao_per_atom.numpy()
+        basis.nshells = self.ao.nao_per_atom.detach().cpu().numpy()
 
         # reset basis data
         basis.index_ctr = np.arange(nao)
