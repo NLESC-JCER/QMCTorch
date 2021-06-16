@@ -1,26 +1,33 @@
 
 
+import numpy as np
 import torch
+from .slater_jastrow import SlaterJastrow
 
-from torch import nn
 import operator
 
-from .. import log
+from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecElec
+from .jastrows.jastrow_factor_combined_terms import JastrowFactorCombinedTerms
+from .jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
+
 
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
-from .slater_jastrow_base import SlaterJastrowBase
 from .orbitals.backflow.kernels import BackFlowKernelInverse
-from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
-from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 
 
-class SlaterJastrowBackFlow(SlaterJastrowBase):
+class SlaterCombinedJastrowBackflow(SlaterJastrow):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
-                 jastrow_kernel=PadeJastrowKernel,
-                 jastrow_kernel_kwargs={},
+                 jastrow_kernel={
+                     'ee': PadeJastrowKernelElecElec,
+                     'en': PadeJastrowKernelElecNuc,
+                     'een': None},
+                 jastrow_kernel_kwargs={
+                     'ee': {},
+                     'en': {},
+                     'een': {}},
                  backflow_kernel=BackFlowKernelInverse,
                  backflow_kernel_kwargs={},
                  orbital_dependent_backflow=False,
@@ -32,8 +39,8 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             mol (qmc.wavefunction.Molecule): a molecule object
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
-            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
+            jastrow_kernel (dict, optional) : dictionary of jastrow kernels classes
+            jastrow_kernel_kwargs (dict, optional) : dictionary of keywords arguments for the jastrow kernel contructor
             backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation
             backflow_kernel_kwargs (dict, optional) : keyword arguments for the backflow kernel contructor
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
@@ -44,7 +51,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        super().__init__(mol, configs, kinetic, cuda, include_all_mo)
+        super().__init__(mol, configs, kinetic, None, {}, cuda, include_all_mo)
 
         # process the backflow transformation
         if orbital_dependent_backflow:
@@ -54,18 +61,31 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             self.ao = AtomicOrbitalsBackFlow(
                 mol, backflow_kernel, backflow_kernel_kwargs, cuda)
 
-        # process the Jastrow
-        self.jastrow = JastrowFactorElectronElectron(
-            self.mol.nup, self.mol.ndown, jastrow_kernel,
-            kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
-
-        if jastrow_kernel is not None:
-            self.use_jastrow = True
-            self.jastrow_type = jastrow_kernel.__name__
-
         if self.cuda:
-            self.jastrow = self.jastrow.to(self.device)
             self.ao = self.ao.to(self.device)
+
+        # process the Jastrow
+        if jastrow_kernel is not None:
+
+            for k in ['ee', 'en', 'een']:
+                if k not in jastrow_kernel.keys():
+                    jastrow_kernel[k] = None
+                if k not in jastrow_kernel_kwargs.keys():
+                    jastrow_kernel_kwargs[k] = None
+
+            self.use_jastrow = True
+            self.jastrow_type = 'JastrowFactorCombinedTerms'
+
+            self.jastrow = JastrowFactorCombinedTerms(
+                self.mol.nup, self.mol.ndown,
+                torch.as_tensor(self.mol.atom_coords),
+                jastrow_kernel=jastrow_kernel,
+                jastrow_kernel_kwargs=jastrow_kernel_kwargs,
+                cuda=cuda)
+
+            if self.cuda:
+                for term in self.jastrow.jastrow_terms:
+                    term = term.to(self.device)
 
         self.log_data()
 
