@@ -77,7 +77,12 @@ class CalculatorADF(CalculatorBase):
             sett.input.basis.path = self.additional_basis_path
         sett.input.basis.core = 'None'
         sett.input.symmetry = 'nosym'
-        sett.input.XC.HartreeFock = ''
+
+        if self.scf.lower() == 'hf':
+            sett.input.XC.HartreeFock = ''
+
+        elif self.scf.lower() == 'dft':
+            sett.input.XC.LDA = 'VWN'
 
         # correct unit
         if self.units == 'angs':
@@ -159,6 +164,7 @@ class CalculatorADF(CalculatorBase):
         basis.nshells = basis_nshells
         basis.nao_per_atom = basis_nshells
         basis.index_ctr = np.arange(nao)
+        basis.nctr_per_ao = np.ones(nao)
 
         basis.bas_kx = np.array(basis_bas_kx)
         basis.bas_ky = np.array(basis_bas_ky)

@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-
+import os
 import numpy as np
 import torch
 from tqdm import tqdm
@@ -30,10 +30,14 @@ class SolverBase:
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device('cpu')
-        self.task = None
+
+        # member defined in the child and or method
+        self.dataloader = None
+        self.loss = None
+        self.obs_dict = None
 
         # if pos are needed for the optimizer (obsolete ?)
-        if 'lpos_needed' not in self.opt.__dict__.keys():
+        if self.opt is not None and 'lpos_needed' not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
 
         # distributed model
@@ -49,7 +53,8 @@ class SolverBase:
 
         self.hdf5file = output
         if output is None:
-            basename = self.wf.mol.hdf5file.split('.')[0]
+            basename = os.path.basename(
+                self.wf.mol.hdf5file).split('.')[0]
             self.hdf5file = basename + '_QMCTorch.hdf5'
 
         if rank == 0:
@@ -61,11 +66,11 @@ class SolverBase:
         """Configure the resampling
 
         Args:
-            mode (str, optional): method to resample : 'full', 'update', 'never' 
+            mode (str, optional): method to resample : 'full', 'update', 'never'
                                   Defaults to 'update'.
             resample_every (int, optional): Number of optimization steps between resampling
                                  Defaults to 1.
-            nstep_update (int, optional): Number of MC steps in update mode. 
+            nstep_update (int, optional): Number of MC steps in update mode.
                                           Defaults to 25.
         """
 
@@ -116,7 +121,8 @@ class SolverBase:
         if 'energy' not in obs_name:
             obs_name += ['energy']
 
-        if self.task == 'geo_opt' and 'geometry' not in obs_name:
+        # add the geometry of the system
+        if 'geometry' not in obs_name:
             obs_name += ['geometry']
 
         for k in obs_name:
@@ -326,9 +332,6 @@ class SolverBase:
             epoch (int): epoch
             loss (float): current value of the loss
             filename (str): name to save the file
-
-        Returns:
-            float: loss (?)
         """
         filename = 'checkpoint_epoch%d.pth' % epoch
         torch.save({

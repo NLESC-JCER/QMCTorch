@@ -1,7 +1,7 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverOrbital
+from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import plot_walkers_traj
 
 # define the molecule
@@ -9,9 +9,8 @@ mol = Molecule(atom='water.xyz', unit='angs',
                calculator='pyscf', basis='sto-3g', name='water')
 
 # define the wave function
-wf = Orbital(mol, kinetic='jacobi',
-             configs='ground_State',
-             use_jastrow=True)
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   configs='ground_state')
 
 # sampler
 sampler = Metropolis(nwalkers=100, nstep=500, step_size=0.25,
@@ -20,7 +19,7 @@ sampler = Metropolis(nwalkers=100, nstep=500, step_size=0.25,
                      move={'type': 'one-elec', 'proba': 'normal'})
 
 # solver
-solver = SolverOrbital(wf=wf, sampler=sampler)
+solver = SolverSlaterJastrow(wf=wf, sampler=sampler)
 
 # single point
 obs = solver.single_point()

@@ -177,12 +177,12 @@ class WaveFunction(torch.nn.Module):
 
          Examples::
              >>> mol = Molecule('h2.xyz', calculator='adf', basis = 'dzp')
-             >>> wf = Orbital(mol, configs='cas(2,2)')
+             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
              >>> pos = torch.rand(500,6)
              >>> vals = wf.local_energy(pos)
 
          Note:
-            by default kinetic_energy refers to kinetic_energy_autograd 
+            by default kinetic_energy refers to kinetic_energy_autograd
             users can overwrite it to poit to any other methods
             see kinetic_energy_jacobi in wf_orbital
          """
@@ -238,7 +238,7 @@ class WaveFunction(torch.nn.Module):
 
         Args:
             filename (str): hdf5 filename
-            group (str, optional): group in the hdf5 file where the model is stored. 
+            group (str, optional): group in the hdf5 file where the model is stored.
                                    Defaults to 'wf_opt'.
             model (str, optional): 'best' or ' last'. Defaults to 'best'.
         """
@@ -246,6 +246,6 @@ class WaveFunction(torch.nn.Module):
         grp = f5[group]['models'][model]
         data = dict()
         for name, val in grp.items():
-            data[name] = torch.tensor(val)
+            data[name] = torch.as_tensor(val)
         self.load_state_dict(data)
         f5.close()

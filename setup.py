@@ -48,7 +48,7 @@ setup(
     extras_require={
         'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
-        'test': ['coverage', 'pycodestyle', 'pytest', 'pytest-cov',
-                 'pytest-runner'],
+        'test': ['pytest', 'pytest-runner',
+                 'coverage', 'coveralls', 'pycodestyle'],
     }
 )

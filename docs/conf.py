@@ -62,6 +62,8 @@ autodoc_mock_imports = [
     'numpy',
     'scipy',
     'h5py',
+    'twiggy',
+    'mpi4py',
     'scipy.signal',
     'torch',
     'torch.utils',
@@ -77,6 +79,7 @@ autodoc_mock_imports = [
     'pandas',
     'pyscf',
     'adf',
+    'scm',
     'tqdm',
     'ase',
     'horovod']

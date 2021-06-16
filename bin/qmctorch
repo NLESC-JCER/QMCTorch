@@ -3,7 +3,7 @@ import os
 import argparse
 
 
-dist_solvers = ['SolverOrbitalHorovod']
+dist_solvers = ['SolverSlaterJastrowHorovod']
 
 
 def check_file(fname):

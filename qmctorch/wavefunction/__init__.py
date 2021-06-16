@@ -1,5 +1,10 @@
-__all__ = ['WaveFunction', 'Orbital']
+__all__ = ['WaveFunction', 'SlaterJastrow', 'SlaterCombinedJastrow',
+           'SlaterJastrowBackFlow', 'SlaterOrbitalDependentJastrow',
+           'SlaterCombinedJastrowBackflow']
 
 from .wf_base import WaveFunction
-from .wf_orbital import Orbital
-from .wf_correlated_orbital import CorrelatedOrbital
+from .slater_jastrow import SlaterJastrow
+from .slater_combined_jastrow import SlaterCombinedJastrow
+from .slater_jastrow_backflow import SlaterJastrowBackFlow
+from .slater_combined_jastrow_backflow import SlaterCombinedJastrowBackflow
+from .slater_orbital_dependent_jastrow import SlaterOrbitalDependentJastrow

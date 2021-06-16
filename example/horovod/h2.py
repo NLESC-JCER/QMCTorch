@@ -3,8 +3,8 @@ from torch import optim
 import horovod.torch as hvd
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import Orbital
-from qmctorch.solver import SolverOrbitalHorovod
+from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.solver import SolverSlaterJastrowHorovod
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
@@ -27,10 +27,9 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 
 
 # define the wave function
-wf = Orbital(mol, kinetic='jacobi',
-             configs='cas(2,2)',
-             use_jastrow=True, cuda=False)
-wf.jastrow.weight.data[0] = 1.
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   configs='cas(2,2)',
+                   cuda=False)
 
 # sampler
 sampler = Metropolis(nwalkers=200,
@@ -51,9 +50,9 @@ opt = optim.Adam(lr_dict, lr=1E-3)
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # QMC solver
-solver = SolverOrbitalHorovod(wf=wf, sampler=sampler,
-                              optimizer=opt, scheduler=scheduler,
-                              rank=hvd.rank())
+solver = SolverSlaterJastrowHorovod(wf=wf, sampler=sampler,
+                                    optimizer=opt, scheduler=scheduler,
+                                    rank=hvd.rank())
 
 # configure the solver
 solver.configure(track=['local_energy'], freeze=['ao', 'mo'],

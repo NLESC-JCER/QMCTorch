@@ -56,6 +56,7 @@ class Molecule:
         self.calculator_name = calculator
         self.basis_name = basis
         self.save_scf_file = save_scf_file
+        self.scf_level = scf
 
         if rank == 0:
             log.info('')
@@ -104,7 +105,7 @@ class Molecule:
                     self.calculator = calc(self.atoms,
                                            self.atom_coords,
                                            basis,
-                                           scf,
+                                           self.scf_level,
                                            self.unit,
                                            self.name,
                                            self.save_scf_file)
@@ -131,6 +132,8 @@ class Molecule:
         log.info(
             '  SCF calculator      : {0}', self.calculator_name)
         log.info('  Basis set           : {0}', self.basis_name)
+        log.info(
+            '  SCF                 : {0}', self.scf_level.upper())
         log.info('  Number of AOs       : {0}', self.basis.nao)
         log.info('  Number of MOs       : {0}', self.basis.nmo)
         log.info(
@@ -275,6 +278,7 @@ class Molecule:
         self.basis.nshells = basis_grp['nshells'][()]
         self.basis.nao_per_atom = basis_grp['nao_per_atom'][()]
         self.basis.index_ctr = basis_grp['index_ctr'][()]
+        self.basis.nctr_per_ao = basis_grp['nctr_per_ao'][()]
 
         self.basis.bas_exp = basis_grp['bas_exp'][()]
         self.basis.bas_coeffs = basis_grp['bas_coeffs'][()]

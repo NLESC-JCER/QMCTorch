@@ -134,7 +134,7 @@ class Loss(nn.Module):
     def __init__(
             self,
             wf,
-            method='variance',
+            method='energy',
             clip=False,
             no_weight=False):
         """Defines the loss to use during the optimization
