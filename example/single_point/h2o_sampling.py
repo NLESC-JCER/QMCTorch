@@ -4,6 +4,7 @@ from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import plot_walkers_traj
 
+
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
                calculator='pyscf', basis='sto-3g', name='water')

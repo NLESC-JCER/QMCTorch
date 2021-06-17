@@ -1,0 +1,4 @@
+#!/bin/sh
+
+$AMSBIN/adf <"HH_dzp.in"
+
