@@ -3,7 +3,6 @@ import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
-from mpi4py import MPI
 import h5py
 
 from .calculator.adf import CalculatorADF
