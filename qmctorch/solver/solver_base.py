@@ -270,7 +270,7 @@ class SolverBase:
 
         return pos
 
-    def single_point(self, with_tqdm=True, logspace=False, hdf5_group='single_point'):
+    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
         """Performs a single point calculatin
 
         Args:
@@ -295,7 +295,7 @@ class SolverBase:
 
             #  get the position and put to gpu if necessary
             pos = self.sampler(
-                self.wf.pdf, with_tqdm=with_tqdm, logspace=logspace)
+                self.wf.pdf, with_tqdm=with_tqdm)
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 
