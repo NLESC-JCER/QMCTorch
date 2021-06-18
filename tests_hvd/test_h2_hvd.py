@@ -33,7 +33,8 @@ class TestH2Hvd(unittest.TestCase):
             unit='bohr',
             calculator='pyscf',
             basis='sto-3g',
-            rank=hvd.local_rank())
+            rank=hvd.local_rank(),
+            mpi_size=hvd.local_size())
 
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',

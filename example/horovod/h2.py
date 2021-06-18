@@ -21,9 +21,9 @@ if torch.cuda.is_available():
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', unit='bohr',
                calculator='pyscf', basis='sto-3g',
-               unit='bohr', rank=hvd.local_rank())
+               rank=hvd.local_rank(), mpi_size=hvd.local_size())
 
 
 # define the wave function
