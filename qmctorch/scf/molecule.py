@@ -3,7 +3,6 @@ import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
-from mpi4py import MPI
 import h5py
 
 from .calculator.adf import CalculatorADF
@@ -12,13 +11,18 @@ from .calculator.pyscf import CalculatorPySCF
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
 from .. import log
 
+try:
+    from mpi4py import MPI
+except ModuleNotFoundError:
+    log.info('  MPI not found.')
+
 
 class Molecule:
 
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
                  name=None, load=None, save_scf_file=False,
-                 redo_scf=False, rank=0):
+                 redo_scf=False, rank=0, mpi_size=0):
         """Create a molecule in QMCTorch
 
         Args:
@@ -32,6 +36,7 @@ class Molecule:
             save_scf_file (bool, optional): save the scf file (when applicable) Defaults to False
             redo_scf (bool, optional): if true ignore existing hdf5 file and redo the scf calculation
             rank (int, optional): Rank of the process. Defaults to 0.
+            mpi_size (int, optional): size of the mpi world
 
         Examples:
             >>> from qmctorch.wavefunction import Molecule
@@ -119,11 +124,14 @@ class Molecule:
                     self._check_basis()
                     self.log_data()
 
-            MPI.COMM_WORLD.barrier()
-            if rank != 0:
-                log.info(
-                    '  Loading data from {file}', file=self.hdf5file)
-                self._load_hdf5(self.hdf5file)
+            if mpi_size != 0:
+
+                MPI.COMM_WORLD.barrier()
+
+                if rank != 0:
+                    log.info(
+                        '  Loading data from {file}', file=self.hdf5file)
+                    self._load_hdf5(self.hdf5file)
 
     def log_data(self):
 
