@@ -43,7 +43,7 @@ setup(
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch',
                       # 'plams@git+https://github.com/SCM-NV/PLAMS@master',
-                      'plams',
+                      'plams', 'h5py',
                       'pyscf', 'mendeleev', 'twiggy'],
 
     extras_require={
