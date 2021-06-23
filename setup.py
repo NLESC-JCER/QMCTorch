@@ -47,9 +47,11 @@ setup(
                       'pyscf', 'mendeleev', 'twiggy'],
 
     extras_require={
-        'hpc': ['horovod', 'mpi4py'],
+        'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
     }
 )
+
+
