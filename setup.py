@@ -43,11 +43,11 @@ setup(
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch',
                       # 'plams@git+https://github.com/SCM-NV/PLAMS@master',
-                      'plams', 'h5py',
+                      'plams',
                       'pyscf', 'mendeleev', 'twiggy'],
 
     extras_require={
-        'hpc': ['horovod', 'mpi4py'],
+        'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
