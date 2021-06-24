@@ -1,5 +1,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
+from torch.fft import fft, ifft
+from torch import conj
 
 
 def blocking(x, block_size, expand=False):
@@ -22,19 +24,17 @@ def blocking(x, block_size, expand=False):
 
 
 def correlation_coefficient(x, norm=True):
-    """Computes the correlation coefficient
+    """Computes the correlation coefficient using the FFT
 
     Args:
         x (np.ndarray): measurement of size [Nsample, Nexperiments]
         norm (bool, optional): [description]. Defaults to True.
     """
 
-    N = x.shape[0]
     xm = x-x.mean(0)
 
-    c = np.zeros_like(x)
-    for tau in range(0, N):
-        c[tau] = 1./(N-tau) * (xm[:N-tau] * xm[tau:]).sum(0)
+    ft = fft(xm)
+    c = ifft(ft * conj(ft)).real
 
     if norm:
         c /= c[0]
@@ -47,13 +47,13 @@ def integrated_autocorrelation_time(correlation_coeff, size_max):
 
     Args:
         correlation_coeff (np.ndarray): coeff size Nsample,Nexp
-        size_max (int): max size 
+        size_max (int): max size
     """
     return 1. + 2. * np.cumsum(correlation_coeff[1:size_max], 0)
 
 
 def fit_correlation_coefficient(coeff):
-    """Fit the correlation coefficient 
+    """Fit the correlation coefficient
        to get the correlation time.
 
     Args:
