@@ -41,6 +41,25 @@ def correlation_coefficient(x, norm=True):
 
     return c
 
+def correlation_coefficient_sum(x, norm=True):
+    """Computes the correlation coefficient using the FFT
+
+    Args:
+        x (np.ndarray): measurement of size [Nsample, Nexperiments]
+        norm (bool, optional): [description]. Defaults to True.
+    """
+
+    N = x.shape[0]
+    xm = x-x.mean(0)
+
+    c = np.zeros_like(x)
+    for tau in range(0, N):
+        c[tau] = 1. / (N - tau) * (xm[:N - tau] * xm[tau:]).sum(0)
+    if norm:
+        c /= c[0]
+
+    return c
+
 
 def integrated_autocorrelation_time(correlation_coeff, size_max):
     """Computes the integrated autocorrelation time
