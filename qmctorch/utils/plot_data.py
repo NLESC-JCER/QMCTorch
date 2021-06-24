@@ -124,12 +124,11 @@ def plot_correlation_coefficient(eloc, size_max=100):
         np.ndarray, float: correlation coefficients (size_max, Nwalkers), correlation time
     """
 
-
     rho = correlation_coefficient(eloc)
     tau_fit, fitted = fit_correlation_coefficient(
         rho.mean(1)[:size_max])
 
-    # plt.plot(rho, alpha=0.25)
+    plt.plot(rho, alpha=0.25)
     plt.plot(rho.mean(1), linewidth=3, c='black')
     plt.plot(fitted, '--', c='grey')
     plt.xlim([0, size_max])
