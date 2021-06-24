@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from torch.fft import fft, ifft
-from torch import conj
+from numpy.fft import fft, ifft
+from numpy import conj
 
 
 def blocking(x, block_size, expand=False):
