@@ -1,6 +1,6 @@
 import numpy as np
 from scipy.optimize import curve_fit
-from numpy.fft import fft, ifft
+from numpy.fft import rfftn, irfftn
 from numpy import conj
 
 
@@ -27,34 +27,17 @@ def correlation_coefficient(x, norm=True):
     """Computes the correlation coefficient using the FFT
 
     Args:
-        x (np.ndarray): measurement of size [Nsample, Nexperiments]
+        x (np.ndarray): measurement of size [MC steps, N walkers]
         norm (bool, optional): [description]. Defaults to True.
     """
 
-    xm = x-x.mean(0)
-
-    ft = fft(xm)
-    c = ifft(ft * conj(ft)).real
-
-    if norm:
-        c /= c[0]
-
-    return c
-
-def correlation_coefficient_sum(x, norm=True):
-    """Computes the correlation coefficient using the FFT
-
-    Args:
-        x (np.ndarray): measurement of size [Nsample, Nexperiments]
-        norm (bool, optional): [description]. Defaults to True.
-    """
-
+    xm = x - x.mean(0)
     N = x.shape[0]
-    xm = x-x.mean(0)
+    s = [2 * N - 1]
 
-    c = np.zeros_like(x)
-    for tau in range(0, N):
-        c[tau] = 1. / (N - tau) * (xm[:N - tau] * xm[tau:]).sum(0)
+    ft1 = rfftn(xm, s=s, axes=[0])
+    ft2 = rfftn(conj(xm[::-1]), s=s, axes=[0])
+    c = irfftn(ft1 * ft2, s=s, axes=[0])[N - 1:]
     if norm:
         c /= c[0]
 
@@ -84,8 +67,10 @@ def fit_correlation_coefficient(coeff):
 
     def fit_exp(x, y):
         """Fit an exponential to the data."""
+
         def func(x, tau):
-            return np.exp(-x/tau)
+            return np.exp(-x / tau)
+
         popt, pcov = curve_fit(func, x, y, p0=(1.))
         return popt[0], func(x, popt)
 

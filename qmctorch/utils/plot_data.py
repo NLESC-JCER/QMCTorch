@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-from .stat_utils import (blocking, correlation_coefficient, correlation_coefficient_sum,
+from .stat_utils import (blocking, correlation_coefficient,
                          fit_correlation_coefficient,
                          integrated_autocorrelation_time)
 
@@ -112,7 +112,7 @@ def plot_walkers_traj(eloc, walkers='mean'):
     plt.show()
 
 
-def plot_correlation_coefficient(eloc, size_max=100, method=None):
+def plot_correlation_coefficient(eloc, size_max=100):
     """Plot the correlation coefficient of the local energy
        and fit the curve to an exp to extract the correlation time.
 
@@ -124,47 +124,22 @@ def plot_correlation_coefficient(eloc, size_max=100, method=None):
         np.ndarray, float: correlation coefficients (size_max, Nwalkers), correlation time
     """
 
-    if method != 'both':
-        if method == 'sum':
-            rho = correlation_coefficient_sum(eloc)
-        else:
-            rho = correlation_coefficient(eloc)
-        tau_fit, fitted = fit_correlation_coefficient(
-            rho.mean(1)[:size_max])
 
-        # plt.plot(rho, alpha=0.25)
-        plt.plot(rho.mean(1), linewidth=3, c='black')
-        plt.plot(fitted, '--', c='grey')
-        plt.xlim([0, size_max])
-        plt.ylim([-0.25, 1.5])
-        plt.xlabel('MC steps')
-        plt.ylabel('Correlation coefficient')
-        plt.text(0.5 * size_max, 1.05, 'tau=%1.3f' %
-                 tau_fit, {'color': 'black', 'fontsize': 15})
-        plt.grid()
-        plt.show()
-    else:
-        rho = correlation_coefficient_sum(eloc)
-        rho2 = correlation_coefficient(eloc)
-        tau_fit, fitted = fit_correlation_coefficient(
-            rho.mean(1)[:size_max])
-        tau_fit2, fitted2 = fit_correlation_coefficient(
-            rho2.mean(1)[:size_max])
+    rho = correlation_coefficient(eloc)
+    tau_fit, fitted = fit_correlation_coefficient(
+        rho.mean(1)[:size_max])
 
-        # plt.plot(rho, alpha=0.25)
-        plt.plot(rho.mean(1), c='black', label='sum')
-        plt.plot(rho2.mean(1), c='blue', label='fft')
-        plt.plot(fitted, '--', c='grey', label='fitted to sum')
-        plt.plot(fitted2, '--', c='red', label='fitted to fft')
-        plt.xlim([0, size_max])
-        plt.ylim([-0.25, 1.5])
-        plt.xlabel('MC steps')
-        plt.ylabel('Correlation coefficient')
-        plt.text(0.5 * size_max, 1.05, 'tau=%1.3f' %
-                 tau_fit, {'color': 'black', 'fontsize': 15})
-        plt.grid()
-        plt.legend()
-        plt.show()
+    # plt.plot(rho, alpha=0.25)
+    plt.plot(rho.mean(1), linewidth=3, c='black')
+    plt.plot(fitted, '--', c='grey')
+    plt.xlim([0, size_max])
+    plt.ylim([-0.25, 1.5])
+    plt.xlabel('MC steps')
+    plt.ylabel('Correlation coefficient')
+    plt.text(0.5 * size_max, 1.05, 'tau=%1.3f' %
+             tau_fit, {'color': 'black', 'fontsize': 15})
+    plt.grid()
+    plt.show()
 
     return rho, tau_fit
 
@@ -211,6 +186,8 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5):
     plt.xlabel('MC step')
     plt.ylabel('IAC')
     plt.show()
+
+    return ii
 
 
 def plot_blocking_energy(eloc, block_size, walkers='mean'):

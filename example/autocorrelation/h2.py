@@ -4,8 +4,7 @@ from torch import optim
 from qmctorch.sampler import Metropolis
 from qmctorch.scf import Molecule
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import (plot_block, plot_blocking_energy,
-                            plot_correlation_coefficient, plot_walkers_traj)
+from qmctorch.utils import plot_correlation_coefficient, plot_integrated_autocorrelation_time
 from qmctorch.wavefunction import SlaterJastrow
 
 torch.manual_seed(0)
@@ -23,7 +22,7 @@ wf = SlaterJastrow(mol, kinetic='auto',
 
 # sampler
 sampler = Metropolis(
-    nwalkers=1000,
+    nwalkers=10,
     nstep=1000,
     ntherm=0,
     ndecor=1,
@@ -42,7 +41,7 @@ solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt)
 pos = solver.sampler(wf.pdf)
 obs = solver.sampling_traj(pos)
 
-plot_correlation_coefficient(obs.local_energy, method='both')
-plot_walkers_traj(obs.local_energy)
-plot_block(obs.local_energy)
-plot_blocking_energy(obs.local_energy, block_size=10)
+rho, tau = plot_correlation_coefficient(obs.local_energy)
+print(f'fit exp(-x/tau), tau={tau}')
+iat = plot_integrated_autocorrelation_time(obs.local_energy, rho=rho, C=5)
+print(f"integrated autocorrelation time: {iat}")
