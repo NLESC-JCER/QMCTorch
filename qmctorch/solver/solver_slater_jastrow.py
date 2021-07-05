@@ -321,6 +321,8 @@ class SolverSlaterJastrow(SolverBase):
 
             cumulative_loss = 0
 
+            self.opt.zero_grad()
+
             # loop over the batches
             for ibatch, data in enumerate(self.dataloader):
 
@@ -336,12 +338,12 @@ class SolverSlaterJastrow(SolverBase):
                     log.info('Error : Nan detected in local energy')
                     return cumulative_loss
 
-                # optimize the parameters
-                self.optimization_step(lpos)
-
                 # observable
                 self.store_observable(
                     lpos, local_energy=eloc, ibatch=ibatch)
+
+            # optimize the parameters
+            self.optimization_step(lpos)
 
             # save the model if necessary
             if n == 0 or cumulative_loss < min_loss:
@@ -385,7 +387,7 @@ class SolverSlaterJastrow(SolverBase):
             loss += self.ortho_loss(self.wf.mo.weight)
 
         # compute local gradients
-        self.opt.zero_grad()
+        # self.opt.zero_grad()
         loss.backward()
 
         return loss, eloc
@@ -430,7 +432,7 @@ class SolverSlaterJastrow(SolverBase):
             weight *= norm
 
             # compute the gradients
-            self.opt.zero_grad()
+            # self.opt.zero_grad()
             psi.backward(weight)
 
             return torch.mean(eloc), eloc
