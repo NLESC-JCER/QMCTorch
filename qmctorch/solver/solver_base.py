@@ -294,7 +294,8 @@ class SolverBase:
         with grad_mode:
 
             #  get the position and put to gpu if necessary
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
+            pos = self.sampler(
+                self.wf.pdf, with_tqdm=with_tqdm)
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 
