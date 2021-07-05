@@ -44,7 +44,7 @@ setup(
                       'scipy', 'tqdm', 'torch',
                       # 'plams@git+https://github.com/SCM-NV/PLAMS@master',
                       'plams',
-                      'pyscf', 'mendeleev', 'twiggy', 'mpi4py'],
+                      'pyscf', 'mendeleev', 'twiggy'],
 
     extras_require={
         'hpc': ['horovod'],
@@ -53,3 +53,5 @@ setup(
                  'coverage', 'coveralls', 'pycodestyle'],
     }
 )
+
+
