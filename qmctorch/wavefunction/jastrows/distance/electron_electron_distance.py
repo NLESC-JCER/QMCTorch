@@ -33,6 +33,7 @@ class ElectronElectronDistance(nn.Module):
         self.ndim = ndim
         self.scale = scale
         self.kappa = scale_factor
+        self.distance_method = ['quadratic', 'cdist'][0]
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
@@ -69,9 +70,7 @@ class ElectronElectronDistance(nn.Module):
 
         # get the distance matrices
         input_ = input.view(-1, self.nelec, self.ndim)
-        # dist = self.get_distance_quadratic(input_)
-        # dist = self.safe_sqrt(dist)
-        dist = self.get_distance_cdist(input_)
+        dist = self.get_distance(input_)
         
 
         if derivative == 0:
@@ -102,32 +101,7 @@ class ElectronElectronDistance(nn.Module):
             else:
                 return d2_dist
 
-    def safe_sqrt(self, dist):
-        """Compute the square root of the electron electron distance matrix.
 
-        Args:
-            dist (torch.tensor): ee distances squared
-                                 Nbatch x Nelec x Nelec
-
-        Returns:
-            torch.tensor: sqrt of dist Nbatch x Nelec x Nelec
-
-        """
-
-        # epsilon on the diag needed for back prop
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
-
-        # extact the diagonal as diag can be negative someties
-        # due to numerical noise
-        diag = torch.diag_embed(
-            torch.diagonal(
-                dist, dim1=-1, dim2=-2))
-
-        # remove diagonal and add eps for backprop
-        dist = torch.sqrt(dist - diag + eps_)
-
-        return dist
 
     def get_der_distance(self, pos, dist):
         """Get the derivative of the electron electron distance matrix.
@@ -181,8 +155,23 @@ class ElectronElectronDistance(nn.Module):
             [1, 2], [2, 0], [0, 1]], ...].sum(2)
         return (diff_axis * invr3)
 
-    @staticmethod
-    def get_distance_quadratic(pos):
+    def get_distance(self, pos):
+        """Compute the distance between eletrons
+
+        Arguments:
+            pos {torch.tensor} -- electron position [nbatch x nelec x ndim]
+
+        Returns:
+            torch.tensor -- distance matrices nbatch x nelec x ndim]
+        """
+        if self.distance_method == 'quadratic':
+            return self.get_distance_quadratic(pos)
+        elif self.distance_method == 'cdist':
+            return self.get_distance_cdist(pos)
+        else:
+            raise ValueError('Distance method %s not recognized' %self.distance_method)
+    
+    def get_distance_quadratic(self, pos):
         """Compute the distance following a quadratic expansion
 
         Arguments:
@@ -195,7 +184,7 @@ class ElectronElectronDistance(nn.Module):
         norm = (pos**2).sum(-1).unsqueeze(-1)
         dist = (norm + norm.transpose(1, 2) - 2.0 *
                 torch.bmm(pos, pos.transpose(1, 2)))
-        return dist
+        return self.safe_sqrt(dist)
 
     @staticmethod
     def get_distance_cdist(pos):
@@ -209,6 +198,33 @@ class ElectronElectronDistance(nn.Module):
         """
 
         return torch.cdist(pos,pos)
+
+    def safe_sqrt(self, dist):
+        """Compute the square root of the electron electron distance matrix.
+
+        Args:
+            dist (torch.tensor): ee distances squared
+                                 Nbatch x Nelec x Nelec
+
+        Returns:
+            torch.tensor: sqrt of dist Nbatch x Nelec x Nelec
+
+        """
+
+        # epsilon on the diag needed for back prop
+        eps_ = self.eps * \
+            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+
+        # extact the diagonal as diag can be negative someties
+        # due to numerical noise
+        diag = torch.diag_embed(
+            torch.diagonal(
+                dist, dim1=-1, dim2=-2))
+
+        # remove diagonal and add eps for backprop
+        dist = torch.sqrt(dist - diag + eps_)
+
+        return dist
 
     @staticmethod
     def get_difference(pos):
