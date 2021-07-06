@@ -49,6 +49,7 @@ class SlaterPooling(nn.Module):
         if cuda:
             self.device = torch.device('cuda')
 
+
     def forward(self, input):
         """Computes the values of the determinats
 
@@ -97,7 +98,7 @@ class SlaterPooling(nn.Module):
         Returns:
             torch.tensor: slater determinants
         """
-
+        
         # compute the determinant of the unique single excitation
         det_unique_up, det_unique_down = self.det_unique_single_double(
             input)
@@ -112,7 +113,7 @@ class SlaterPooling(nn.Module):
         Args:
             input (torch.tensor): MO matrices nbatch x nelec x nmo
         """
-
+        
         return (torch.det(input[:, :self.nup, :self.nup]),
                 torch.det(input[:, self.nup:, :self.ndown]))
 
@@ -153,7 +154,7 @@ class SlaterPooling(nn.Module):
 
         do_single = len(self.exc_mask.index_unique_single_up) != 0
         do_double = len(self.exc_mask.index_unique_double_up) != 0
-
+        
         # occupied orbital matrix + det and inv on spin up
         Aup = input[:, :self.nup, :self.nup]
         detAup = torch.det(Aup)
@@ -161,11 +162,11 @@ class SlaterPooling(nn.Module):
         # occupied orbital matrix + det and inv on spin down
         Adown = input[:, self.nup:, :self.ndown]
         detAdown = torch.det(Adown)
-
+        
         # store all the dets we need
         det_out_up = detAup.unsqueeze(-1).clone()
         det_out_down = detAdown.unsqueeze(-1).clone()
-
+        
         # return the ground state
         if self.config_method == 'ground_state':
             return det_out_up, det_out_down

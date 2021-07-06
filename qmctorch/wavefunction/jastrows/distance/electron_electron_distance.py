@@ -69,8 +69,10 @@ class ElectronElectronDistance(nn.Module):
 
         # get the distance matrices
         input_ = input.view(-1, self.nelec, self.ndim)
-        dist = self.get_distance_quadratic(input_)
-        dist = self.safe_sqrt(dist)
+        # dist = self.get_distance_quadratic(input_)
+        # dist = self.safe_sqrt(dist)
+        dist = self.get_distance_cdist(input_)
+        
 
         if derivative == 0:
             if self.scale:
@@ -194,6 +196,19 @@ class ElectronElectronDistance(nn.Module):
         dist = (norm + norm.transpose(1, 2) - 2.0 *
                 torch.bmm(pos, pos.transpose(1, 2)))
         return dist
+
+    @staticmethod
+    def get_distance_cdist(pos):
+        """Compute the distance following a quadratic expansion
+
+        Arguments:
+            pos {torch.tensor} -- electron position [nbatch x nelec x ndim]
+
+        Returns:
+            torch.tensor -- distance matrices nbatch x nelec x ndim]
+        """
+
+        return torch.cdist(pos,pos)
 
     @staticmethod
     def get_difference(pos):

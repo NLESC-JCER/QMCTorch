@@ -102,8 +102,8 @@ class ExcitationMask:
         self.index_unique_single_up = []
         self.index_unique_single_down = []
 
-        self.sign_unique_single_up = []
-        self.sign_unique_single_down = []
+        # self.sign_unique_single_up = []
+        # self.sign_unique_single_down = []
 
         for exc_up, exc_down in zip(self.unique_excitations[0],
                                     self.unique_excitations[1]):
@@ -115,8 +115,8 @@ class ExcitationMask:
                 self.index_unique_single_up.append(
                     ielec*ncol_up + icol)
 
-                npermut = self.nup-ielec-1
-                self.sign_unique_single_up.append((-1)**(npermut))
+                # npermut = self.nup-ielec-1
+                # self.sign_unique_single_up.append((-1)**(npermut))
 
             if len(exc_down[1]) == 1:
                 ielec, iorb = exc_down[0][0], exc_down[1][0]
@@ -125,13 +125,13 @@ class ExcitationMask:
                 self.index_unique_single_down.append(
                     ielec*ncol_down + icol)
 
-                npermut = self.ndown-ielec-1
-                self.sign_unique_single_down.append((-1)**(npermut))
+                # npermut = self.ndown-ielec-1
+                # self.sign_unique_single_down.append((-1)**(npermut))
 
-        self.sign_unique_single_up = torch.as_tensor(
-            self.sign_unique_single_up).to(self.device)
-        self.sign_unique_single_down = torch.as_tensor(
-            self.sign_unique_single_down).to(self.device)
+        self.index_unique_single_up = torch.as_tensor(
+            self.index_unique_single_up).to(self.device)
+        self.index_unique_single_down = torch.as_tensor(
+            self.index_unique_single_down).to(self.device)
 
     def get_index_unique_double(self):
         """Computes the 1D index of the double excitation matrices."""
@@ -158,3 +158,9 @@ class ExcitationMask:
                         icol = iorb-self.ndown
                         self.index_unique_double_down.append(
                             ielec*ncol_down + icol)
+
+
+        self.index_unique_double_up = torch.as_tensor(
+            self.index_unique_double_up).to(self.device)
+        self.index_unique_double_down = torch.as_tensor(
+            self.index_unique_double_down).to(self.device)

@@ -94,7 +94,7 @@ class Metropolis(SamplerBase):
             self.walkers.initialize(pos=pos)
             fx = pdf(self.walkers.pos)
 
-            fx[fx == 0] = eps
+            # fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
 
             rng = tqdm(range(self.nstep),
@@ -111,20 +111,23 @@ class Metropolis(SamplerBase):
 
                     # new function
                     fxn = pdf(Xn)
-                    fxn[fxn == 0.] = eps
+                    # fxn[fxn == 0.] = eps
                     df = fxn / fx
 
                     # accept the moves
                     index = self._accept(df)
 
                     # acceptance rate
-                    rate += index.byte().sum().float().to('cpu') / \
+                    # rate += index.byte().sum().float().to('cpu') / \
+                    #     (self.nwalkers * self._move_per_iter)
+                    rate += index.byte().sum().float() / \
                         (self.nwalkers * self._move_per_iter)
+
 
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
                     fx[index] = fxn[index]
-                    fx[fx == 0] = eps
+                    # fx[fx == 0] = eps
 
                 if (istep >= self.ntherm):
                     if (idecor % self.ndecor == 0):

@@ -7,6 +7,8 @@ from .slater_jastrow_base import SlaterJastrowBase
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
 from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 
+from torch.profiler import record_function
+
 
 class SlaterJastrow(SlaterJastrowBase):
 
