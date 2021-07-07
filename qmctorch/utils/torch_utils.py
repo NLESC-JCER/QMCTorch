@@ -131,7 +131,7 @@ class DataSet(Dataset):
 class DataLoader():
     
     def __init__(self, data, batch_size):
-        self.data = data
+        self.dataset = data
         self.len = len(data)
         self.nbatch = ceil(self.len/batch_size)
         self.count=0
@@ -143,11 +143,11 @@ class DataLoader():
     
     def __next__(self):
         if self.count < self.nbatch-1:
-            out = self.data[self.count*self.batch_size:(self.count+1)*self.batch_size]
+            out = self.dataset[self.count*self.batch_size:(self.count+1)*self.batch_size]
             self.count += 1
             return out
         elif self.count == self.nbatch-1:
-            out = self.data[self.count*self.batch_size:]
+            out = self.dataset[self.count*self.batch_size:]
             self.count += 1
             return out
         else:
