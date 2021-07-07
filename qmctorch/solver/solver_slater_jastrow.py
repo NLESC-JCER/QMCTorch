@@ -282,7 +282,7 @@ class SolverSlaterJastrow(SolverBase):
         # self.dataset = DataSet(pos)
         # self.dataloader = DataLoader(
         #     self.dataset, batch_size=batchsize)
-        self.dataloader = DataLoader(pos, batch_size=batchsize)
+        self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=self.cuda)
 
         for ibatch, data in enumerate(self.dataloader):
             self.store_observable(data, ibatch=ibatch)

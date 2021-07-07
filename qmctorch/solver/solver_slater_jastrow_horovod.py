@@ -130,13 +130,7 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
 
         # create the data loader
         # self.dataset = DataSet(pos)
-
-        # if self.cuda:
-        #     kwargs = {'num_workers': num_threads, 'pin_memory': True}
-        # else:
-        #     kwargs = {'num_workers': num_threads}
-
-        self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=True)
+        self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=self.cuda)
         min_loss = 1E3
 
         for n in range(nepoch):
