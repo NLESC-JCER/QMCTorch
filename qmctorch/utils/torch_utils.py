@@ -130,8 +130,13 @@ class DataSet(Dataset):
 
 class DataLoader():
     
-    def __init__(self, data, batch_size):
-        self.dataset = data
+    def __init__(self, data, batch_size, pin_memory=False):
+        
+        if pin_memory:
+            self.dataset = data.pin_memory()
+        else:
+            self.dataset = data
+
         self.len = len(data)
         self.nbatch = ceil(self.len/batch_size)
         self.count=0
