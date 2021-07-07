@@ -361,7 +361,7 @@ class SolverSlaterJastrow(SolverBase):
 
             # resample the data
             # self.dataset.data = self.resample(n, self.dataset.data)
-            self.dataloader.data = self.resample(n, self.dataloader.data)
+            self.dataloader.dataset = self.resample(n, self.dataloader.dataset)
 
             # scheduler step
             if self.scheduler is not None:
