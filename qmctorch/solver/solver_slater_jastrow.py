@@ -2,8 +2,7 @@ from copy import deepcopy
 from time import time
 
 import torch
-from torch.utils.data import DataLoader
-from qmctorch.utils import (DataSet, Loss,
+from qmctorch.utils import (DataLoader, Loss,
                             OrthoReg, add_group_attr,
                             dump_to_hdf5)
 
@@ -279,13 +278,10 @@ class SolverSlaterJastrow(SolverBase):
         self.save_sampling_parameters(pos)
 
         # create the data loader
-        # self.dataset = DataSet(pos)
-        self.dataset = pos.cpu()
-        self.dataloader = DataLoader(
-            self.dataset, batch_size=batchsize, pin_memory=True)
+        self.dataloader = DataLoader(pos, batch_size=batchsize)
 
-        # for ibatch, data in enumerate(self.dataloader):
-        #     self.store_observable(data, ibatch=ibatch)
+        for ibatch, data in enumerate(self.dataloader):
+            self.store_observable(data, ibatch=ibatch)
 
         # chkpt
         self.chkpt_every = chkpt_every
@@ -322,27 +318,30 @@ class SolverSlaterJastrow(SolverBase):
 
             cumulative_loss = 0
 
+            self.opt.zero_grad()
+
             # loop over the batches
-            # for ibatch, data in enumerate(self.dataloader):
+            for ibatch, data in enumerate(self.dataloader):
 
-            # port data to device
-            lpos = self.dataset[:].to(self.device)
+                # port data to device
+                lpos = data.to(self.device)
 
-            # get the gradient
-            loss, eloc = self.evaluate_gradient(lpos)
-            cumulative_loss += loss
+                # get the gradient
+                loss, eloc = self.evaluate_gradient(lpos)
+                cumulative_loss += loss
 
-            # check for nan
-            if torch.isnan(eloc).any():
-                log.info('Error : Nan detected in local energy')
-                return cumulative_loss
+                # check for nan
+                if torch.isnan(eloc).any():
+                    log.info('Error : Nan detected in local energy')
+                    return cumulative_loss
+
+
+                # observable
+                self.store_observable(
+                    lpos, local_energy=eloc, ibatch=ibatch)
 
             # optimize the parameters
             self.optimization_step(lpos)
-
-            # observable
-            self.store_observable(
-                lpos, local_energy=eloc, ibatch=0)
 
             # save the model if necessary
             if n == 0 or cumulative_loss < min_loss:
@@ -358,7 +357,8 @@ class SolverSlaterJastrow(SolverBase):
             self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
-            self.dataset.data = self.resample(n, self.dataset.data)
+            # self.dataset.data = self.resample(n, self.dataset.data)
+            self.dataloader.dataset = self.resample(n, self.dataloader.dataset)
 
             # scheduler step
             if self.scheduler is not None:
@@ -386,7 +386,7 @@ class SolverSlaterJastrow(SolverBase):
             loss += self.ortho_loss(self.wf.mo.weight)
 
         # compute local gradients
-        self.opt.zero_grad()
+        # self.opt.zero_grad()
         loss.backward()
 
         return loss, eloc
@@ -431,7 +431,7 @@ class SolverSlaterJastrow(SolverBase):
             weight *= norm
 
             # compute the gradients
-            self.opt.zero_grad()
+            # self.opt.zero_grad()
             psi.backward(weight)
 
             return torch.mean(eloc), eloc

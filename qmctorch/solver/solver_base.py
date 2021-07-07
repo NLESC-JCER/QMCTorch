@@ -262,7 +262,7 @@ class SolverBase:
                 # sample and update the dataset
                 pos = self.sampler(
                     self.wf.pdf, pos=pos, with_tqdm=False)
-                self.dataloader.dataset.data = pos
+                self.dataloader.dataset = pos
 
             # update the weight of the loss if needed
             if self.loss.use_weight:
@@ -294,7 +294,8 @@ class SolverBase:
         with grad_mode:
 
             #  get the position and put to gpu if necessary
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
+            pos = self.sampler(
+                self.wf.pdf, with_tqdm=with_tqdm)
             if self.wf.cuda and pos.device.type == 'cpu':
                 pos = pos.to(self.device)
 

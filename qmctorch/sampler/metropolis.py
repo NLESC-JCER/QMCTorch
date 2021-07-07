@@ -19,6 +19,7 @@ class Metropolis(SamplerBase):
                  ndim: int = 3,
                  init: Dict = {'min': -5, 'max': 5},
                  move: Dict = {'type': 'all-elec', 'proba': 'normal'},
+                 logspace: bool = False,
                  cuda: bool = False):
         """Metropolis Hasting generator
 
@@ -54,6 +55,7 @@ class Metropolis(SamplerBase):
                              step_size, ntherm, ndecor,
                              nelec, ndim, init, cuda)
 
+        self.logspace = logspace
         self.configure_move(move)
         self.log_data()
 
@@ -62,6 +64,18 @@ class Metropolis(SamplerBase):
         log.info('  Move type           : {0}', self.movedict['type'])
         log.info(
             '  Move proba          : {0}', self.movedict['proba'])
+
+    @staticmethod
+    def log_func(func):
+        """Compute the negative log of  a function
+
+        Args:
+            func (callable): input function
+
+        Returns:
+            callable: negative log of the function
+        """
+        return lambda x: torch.log(func(x))
 
     def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
                  with_tqdm: bool = True) -> torch.Tensor:
@@ -92,7 +106,10 @@ class Metropolis(SamplerBase):
                 self.ntherm = self.nstep + self.ntherm
 
             self.walkers.initialize(pos=pos)
-            fx = pdf(self.walkers.pos)
+            if self.logspace:
+                fx = self.log_func(pdf)(self.walkers.pos)
+            else:
+                fx = pdf(self.walkers.pos)
 
             # fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
@@ -109,10 +126,15 @@ class Metropolis(SamplerBase):
                     # new positions
                     Xn = self.move(pdf, id_elec)
 
-                    # new function
-                    fxn = pdf(Xn)
-                    # fxn[fxn == 0.] = eps
-                    df = fxn / fx
+                    if self.logspace:
+                        fxn = self.log_func(pdf)(Xn)
+                        df = fxn - fx
+
+                    else:
+                        # new function
+                        fxn = pdf(Xn)
+                        fxn[fxn == 0.] = eps
+                        df = fxn / fx
 
                     # accept the moves
                     index = self._accept(df)
@@ -253,8 +275,13 @@ class Metropolis(SamplerBase):
         Returns:
             t0rch.tensor: the indx of the accepted moves
         """
-
-        proba[proba > 1] = 1.0
-        tau = torch.rand_like(proba)
-        index = (proba - tau >= 0).reshape(-1)
-        return index.type(torch.bool)
+        if self.logspace:
+            proba[proba > 0] = 0.0
+            tau = torch.log(torch.rand_like(proba))
+            index = (proba - tau >= 0).reshape(-1)
+            return index.type(torch.bool)
+        else:
+            proba[proba > 1] = 1.0
+            tau = torch.rand_like(proba)
+            index = (proba - tau >= 0).reshape(-1)
+            return index.type(torch.bool)
