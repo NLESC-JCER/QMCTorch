@@ -33,7 +33,7 @@ class ElectronElectronDistance(nn.Module):
         self.ndim = ndim
         self.scale = scale
         self.kappa = scale_factor
-        self.distance_method = ['quadratic', 'cdist'][0]
+        self.distance_method = ['quadratic', 'cdist'][1]
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
