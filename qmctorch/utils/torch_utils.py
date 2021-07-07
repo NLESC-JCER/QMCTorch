@@ -1,8 +1,8 @@
 import torch
 from torch import nn
-from torch.autograd import grad
+from torch.autograd import grad, Variable
 from torch.utils.data import Dataset
-
+from math import ceil
 
 def set_torch_double_precision():
     """Set the default precision to double for all torch tensors."""
@@ -128,6 +128,30 @@ class DataSet(Dataset):
         """
         return self.data[index, :]
 
+class DataLoader():
+    
+    def __init__(self, data, batch_size):
+        self.data = data
+        self.len = len(data)
+        self.nbatch = ceil(self.len/batch_size)
+        self.count=0
+        self.batch_size = batch_size
+        
+    def __iter__(self):
+        self.count = 0
+        return self
+    
+    def __next__(self):
+        if self.count < self.nbatch-1:
+            out = self.data[self.count*self.batch_size:(self.count+1)*self.batch_size]
+            self.count += 1
+            return out
+        elif self.count == self.nbatch-1:
+            out = self.data[self.count*self.batch_size:]
+            self.count += 1
+            return out
+        else:
+            raise StopIteration
 
 class Loss(nn.Module):
 
