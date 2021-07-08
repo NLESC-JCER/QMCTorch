@@ -2,8 +2,7 @@ from copy import deepcopy
 from time import time
 
 import torch
-# from torch.utils.data import DataLoader
-from qmctorch.utils import (DataSet, Loss,
+from qmctorch.utils import (Loss,
                             OrthoReg, add_group_attr,
                             dump_to_hdf5, DataLoader)
 
@@ -279,10 +278,8 @@ class SolverSlaterJastrow(SolverBase):
         self.save_sampling_parameters(pos)
 
         # create the data loader
-        # self.dataset = DataSet(pos)
-        # self.dataloader = DataLoader(
-        #     self.dataset, batch_size=batchsize)
-        self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=self.cuda)
+        self.dataloader = DataLoader(
+            pos, batch_size=batchsize, pin_memory=self.cuda)
 
         for ibatch, data in enumerate(self.dataloader):
             self.store_observable(data, ibatch=ibatch)
@@ -360,8 +357,8 @@ class SolverSlaterJastrow(SolverBase):
             self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
-            # self.dataset.data = self.resample(n, self.dataset.data)
-            self.dataloader.dataset = self.resample(n, self.dataloader.dataset)
+            self.dataloader.dataset = self.resample(
+                n, self.dataloader.dataset)
 
             # scheduler step
             if self.scheduler is not None:
