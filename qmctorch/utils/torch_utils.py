@@ -1,7 +1,8 @@
 import torch
 from torch import nn
-from torch.autograd import grad
+from torch.autograd import grad, Variable
 from torch.utils.data import Dataset
+from math import ceil
 
 
 def set_torch_double_precision():
@@ -127,6 +128,45 @@ class DataSet(Dataset):
             torch.tensor -- data of that point
         """
         return self.data[index, :]
+
+
+class DataLoader():
+
+    def __init__(self, data, batch_size, pin_memory=False):
+        """Simple DataLoader to replace toch data loader
+
+        Args:
+            data (torch.tensor): data to load [Nbatch,Nelec*3]
+            batch_size (int): size of the minibatch
+            pin_memory (bool, optional): copy the data to pinned memory. Defaults to False.
+        """
+
+        if pin_memory:
+            self.dataset = data.pin_memory()
+        else:
+            self.dataset = data
+
+        self.len = len(data)
+        self.nbatch = ceil(self.len/batch_size)
+        self.count = 0
+        self.batch_size = batch_size
+
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self):
+        if self.count < self.nbatch-1:
+            out = self.dataset[self.count *
+                               self.batch_size:(self.count+1)*self.batch_size]
+            self.count += 1
+            return out
+        elif self.count == self.nbatch-1:
+            out = self.dataset[self.count*self.batch_size:]
+            self.count += 1
+            return out
+        else:
+            raise StopIteration
 
 
 class Loss(nn.Module):

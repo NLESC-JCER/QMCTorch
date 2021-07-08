@@ -12,7 +12,7 @@ from .plot_data import (plot_block, plot_blocking_energy,
                         plot_walkers_traj)
 from .stat_utils import (blocking, correlation_coefficient,
                          integrated_autocorrelation_time)
-from .torch_utils import (DataSet, Loss, OrthoReg, fast_power,
+from .torch_utils import (DataSet, DataLoader, Loss, OrthoReg, fast_power,
                           set_torch_double_precision,
                           set_torch_single_precision,
                           diagonal_hessian, gradients)
@@ -23,7 +23,7 @@ __all__ = ['plot_energy', 'plot_data', 'plot_block',
            'plot_autocorrelation',
            'set_torch_double_precision',
            'set_torch_single_precision',
-           'DataSet', 'Loss', 'OrthoReg',
+           'DataSet', 'Loss', 'OrthoReg', 'DataLoader',
            'dump_to_hdf5', 'load_from_hdf5',
            'bytes2str',
            'register_extra_attributes',
