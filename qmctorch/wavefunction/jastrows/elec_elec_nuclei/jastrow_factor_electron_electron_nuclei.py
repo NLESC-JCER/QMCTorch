@@ -21,6 +21,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         Args:
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
+            atomic_pos(torch.tensor): positions of the atoms
+            jastrow_kernel (kernel): class of a electron-electron Jastrow kernel
+            kernel_kwargs (dict, optional): keyword argument of the kernel. Defaults to {}.
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
 
