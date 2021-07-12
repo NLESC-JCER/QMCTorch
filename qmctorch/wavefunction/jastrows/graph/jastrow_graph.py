@@ -1,15 +1,21 @@
 import torch
 from torch import nn
+import dgl
+
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
+from .elec_elec_graph import ElecElecGraph
+from .elec_nuc_graph import ElecNucGraph
 
 
 class JastrowFactorGraph(nn.Module):
 
     def __init__(self, nup, ndown,
                  atomic_pos,
+                 atom_types,
                  network,
                  network_kwargs={},
+                 atomic_features=["atomic_number"],
                  cuda=False):
         """Graph Neural Network Jastrow Factor
 
@@ -17,6 +23,7 @@ class JastrowFactorGraph(nn.Module):
             nup (int): number of spin up electons
             ndow (int): number of spin down electons
             atomic_pos(torch.tensor): positions of the atoms
+            atoms (list): atom type in the molecule
             network (dgl model): graph network of the factor
             network_kwargs (dict, optional): Argument of the graph network. Defaults to {}.
             cuda (bool, optional): use cuda. Defaults to False.
@@ -34,6 +41,8 @@ class JastrowFactorGraph(nn.Module):
         if self.cuda:
             self.device = torch.device('cuda')
 
+        self.atom_types = atom_types
+        self.atomic_features = atomic_features
         self.atoms = atomic_pos.to(self.device)
         self.natoms = atomic_pos.shape[0]
 
@@ -48,7 +57,15 @@ class JastrowFactorGraph(nn.Module):
         self.elnu_dist = ElectronNucleiDistance(self.nelec,
                                                 self.atoms, self.ndim)
 
+        # instantiate the model to use
         self.model = network(**network_kwargs)
+
+        # compute the elec-elec graph
+        self.ee_graph = ElecElecGraph(self.nelec, self.nup)
+
+        # compute the elec-nuc graph
+        self.en_graph = ElecNucGraph(self.natoms, self.atom_types,
+                                     self.atomic_features, self.nelec, self.nup)
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
