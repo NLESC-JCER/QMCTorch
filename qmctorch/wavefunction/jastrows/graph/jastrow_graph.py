@@ -1,6 +1,8 @@
 import torch
 from torch import nn
+from torch.autograd import grad
 import dgl
+from dgllife.model import MGCNPredictor
 
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
@@ -13,8 +15,10 @@ class JastrowFactorGraph(nn.Module):
     def __init__(self, nup, ndown,
                  atomic_pos,
                  atom_types,
-                 network,
-                 network_kwargs={},
+                 ee_model=MGCNPredictor,
+                 ee_model_kwargs={},
+                 en_model=MGCNPredictor,
+                 en_model_kwargs={},
                  atomic_features=["atomic_number"],
                  cuda=False):
         """Graph Neural Network Jastrow Factor
@@ -24,8 +28,10 @@ class JastrowFactorGraph(nn.Module):
             ndow (int): number of spin down electons
             atomic_pos(torch.tensor): positions of the atoms
             atoms (list): atom type in the molecule
-            network (dgl model): graph network of the factor
-            network_kwargs (dict, optional): Argument of the graph network. Defaults to {}.
+            ee_network (dgl model): graph network of the elec-elec factor
+            ee_network_kwargs (dict, optional): Argument of the elec-elec graph network. Defaults to {}.
+            en_network (dgl model): graph network of the elec-nuc factor
+            en_network_kwargs (dict, optional): Argument of the elec-nuc graph network. Defaults to {}.
             cuda (bool, optional): use cuda. Defaults to False.
         """
 
@@ -57,8 +63,15 @@ class JastrowFactorGraph(nn.Module):
         self.elnu_dist = ElectronNucleiDistance(self.nelec,
                                                 self.atoms, self.ndim)
 
-        # instantiate the model to use
-        self.model = network(**network_kwargs)
+        # instantiate the ee mode; to use
+        ee_model_kwargs["num_node_types"] = 2
+        ee_model_kwargs["num_edge_types"] = 3
+        self.ee_model = ee_model(**ee_model_kwargs)
+
+        # instantiate the en model
+        en_model_kwargs["num_node_types"] = 2 + self.natoms
+        en_model_kwargs["num_edge_types"] = 2*self.natoms
+        self.en_model = en_model(**en_model_kwargs)
 
         # compute the elec-elec graph
         self.ee_graph = ElecElecGraph(self.nelec, self.nup)
@@ -92,6 +105,67 @@ class JastrowFactorGraph(nn.Module):
         assert size[1] == self.nelec * self.ndim
         nbatch = size[0]
 
+        batch_ee_graph = dgl.batch([self.ee_graph]*nbatch)
+        batch_en_graph = dgl.batch([self.en_graph]*nbatch)
+
+        # get the elec-elec distance matrix
+        ree = self.extract_tri_up(self.elel_dist(pos))
+
+        # get the elec-nuc distance matrix
+        ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
+
+        # put the data in the graph
+        batch_ee_graph.edata['distance'] = ree.reshape(-1, 1)
+        batch_en_graph.edata['distance'] = ren
+
+        ee_node_types = batch_ee_graph.ndata.pop('node_types')
+        ee_edge_distance = batch_ee_graph.edata.pop('distance')
+        ee_kernel = self.ee_model(batch_ee_graph,
+                                  ee_node_types,
+                                  ee_edge_distance)
+
+        en_node_types = batch_en_graph.ndata.pop('node_types')
+        en_edge_distance = batch_en_graph.edata.pop('distance')
+        en_kernel = self.en_model(batch_en_graph,
+                                  en_node_types,
+                                  en_edge_distance)
+
+        if derivative == 0:
+            return torch.exp(ee_kernel + en_kernel)
+
+        elif derivative == 1:
+            jval = torch.exp(ee_kernel + en_kernel)
+            grad_val = grad(jval, pos,
+                            grad_outputs=torch.ones_like(jval),
+                            only_inputs=True)[0]
+            grad_val = grad_val.reshape(
+                nbatch, self.nelec, 3).transpose(1, 2)
+            if sum_grad:
+                grad_val = grad_val.sum(1)
+            return grad_val
+
+        elif derivative == 2:
+            jval = torch.exp(ee_kernel + en_kernel)
+            grad_val = grad(jval, pos,
+                            grad_outputs=torch.ones_like(jval),
+                            only_inputs=True,
+                            create_graph=True)[0]
+
+            ndim = grad_val.shape[1]
+            hval = torch.zeros(nbatch, ndim).to(self.device)
+            z = torch.ones(grad_val.shape[0]).to(self.device)
+            z.requires_grad = True
+
+            for idim in range(ndim):
+                tmp = grad(grad_val[:, idim], pos,
+                           grad_outputs=z,
+                           only_inputs=True,
+                           retain_graph=True)[0]
+                hval[:, idim] = tmp[:, idim]
+
+            return hval.reshape(
+                nbatch, self.nelec, 3).transpose(1, 2).sum(1)
+
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix
 
@@ -124,73 +198,10 @@ class JastrowFactorGraph(nn.Module):
         out = inp.masked_select(self.mask_tri_up)
         return out.view(*(shape[:-2] + [-1]))
 
-    def extract_elec_nuc_dist(self, en_dist):
-        r"""Organize the elec nuc distances
+    def extract_elec_nuc_dist(self, ren):
+        """reorganizre the elec-nuc distance to load them in the graph
 
         Args:
-            en_dist (torch.tensor): electron-nuclei distances
-                                    nbatch x nelec x natom or
-                                    nbatch x 3 x nelec x natom (dr)
-
-        Returns:
-            torch.tensor: nbatch x natom x nelec_pair x 2 or
-            torch.tensor: nbatch x 3 x natom x nelec_pair x 2 (dr)
+            ren (torch.tensor): distance elec-nuc [nbatch, nelec, natom]
         """
-        out = en_dist[..., self.index_elec, :]
-        if en_dist.ndim == 3:
-            return out.permute(0, 3, 2, 1)
-        elif en_dist.ndim == 4:
-            return out.permute(0, 1, 4, 3, 2)
-        else:
-            raise ValueError(
-                'elec-nuc distance matrix should have 3 or 4 dim')
-
-    def assemble_dist(self, pos):
-        """Assemle the different distances for easy calculations
-
-        Args:
-            pos (torch.tensor): Positions of the electrons
-                                  Size : Nbatch, Nelec x Ndim
-
-        Returns:
-            torch.tensor : nbatch, natom, nelec_pair, 3
-
-        """
-
-        # get the elec-elec distance matrix
-        ree = self.extract_tri_up(self.elel_dist(pos))
-        ree = ree.unsqueeze(1).unsqueeze(-1)
-        ree = ree.repeat(1, self.natoms, 1, 1)
-
-        # get the elec-nuc distance matrix
-        ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
-
-        # cat both
-        return torch.cat((ren, ree), -1)
-
-    def assemble_dist_deriv(self, pos, derivative=1):
-        """Assemle the different distances for easy calculations
-           the output has dimension  nbatch, 3 x natom, nelec_pair, 3
-           the last dimension is composed of [r_{e_1n}, r_{e_2n}, r_{ee}]
-
-        Args:
-            pos (torch.tensor): Positions of the electrons
-                                  Size : Nbatch, Nelec x Ndim
-
-        Returns:
-            torch.tensor : nbatch, 3 x natom, nelec_pair, 3
-
-        """
-
-        # get the elec-elec distance derivative
-        dree = self.elel_dist(pos, derivative)
-        dree = self.extract_tri_up(dree)
-        dree = dree.unsqueeze(2).unsqueeze(-1)
-        dree = dree.repeat(1, 1, self.natoms, 1, 1)
-
-        # get the elec-nuc distance derivative
-        dren = self.elnu_dist(pos, derivative)
-        dren = self.extract_elec_nuc_dist(dren)
-
-        # assemble
-        return torch.cat((dren, dree), -1)
+        return ren.transpose(1, 2).reshape(-1, 1)

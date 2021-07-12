@@ -14,7 +14,7 @@ def ElecElecGraph(nelec, nup):
     """
     edges = get_elec_elec_edges(nelec)
     graph = dgl.graph(edges)
-    graph.ndata["features"] = get_elec_elec_ndata(nelec, nup)
+    graph.ndata["node_types"] = get_elec_elec_ndata(nelec, nup)
     return graph
 
 
@@ -36,8 +36,8 @@ def get_elec_elec_ndata(nelec, nup):
     ee_ndata = []
     for i in range(nelec):
         if i < nup:
-            ee_ndata.append([1])
+            ee_ndata.append(0)
         else:
-            ee_ndata.append([-1])
+            ee_ndata.append(1)
 
     return torch.tensor(ee_ndata)

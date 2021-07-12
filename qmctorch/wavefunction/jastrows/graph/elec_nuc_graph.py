@@ -15,7 +15,7 @@ def ElecNucGraph(natoms, atom_types, atomic_features, nelec, nup):
     """
     edges = get_elec_nuc_edges(natoms, nelec)
     graph = dgl.graph(edges)
-    graph.ndata["features"] = get_elec_nuc_ndata(
+    graph.ndata["node_types"] = get_elec_nuc_ndata(
         natoms, atom_types, atomic_features, nelec, nup)
     return graph
 
@@ -29,10 +29,10 @@ def get_elec_nuc_edges(natoms, nelec):
             en_edges[0].append(i)
             en_edges[1].append(natoms+j)
 
-    for i in range(natoms-1):
-        for j in range(i+1, natoms):
-            en_edges[0].append(i)
-            en_edges[1].append(j)
+    # for i in range(natoms-1):
+    #     for j in range(i+1, natoms):
+    #         en_edges[0].append(i)
+    #         en_edges[1].append(j)
     return en_edges
 
 
@@ -41,20 +41,29 @@ def get_elec_nuc_ndata(natoms, atom_types, atomic_features,  nelec, nup):
     """
 
     en_ndata = []
+    embed_number = 0
+    atom_dict = {}
+
     for i in range(natoms):
-        feat = get_atomic_features(atom_types[i], atomic_features)
-        feat.append([0])  # spin
-        en_ndata.append(feat)
+        if atom_types[i] not in atom_dict:
+            atom_dict[atom_types[i]] = embed_number
+            en_ndata.append(embed_number)
+            embed_number += 1
+        else:
+            en_ndata.append(atom_dict[atom_types[i]])
+
+        # feat = get_atomic_features(atom_types[i], atomic_features)
+        # feat.append(0)  # spin
+        # en_ndata.append(feat)
 
     for i in range(nelec):
-        feat = get_atomic_features(None, atomic_features)
+        # feat = get_atomic_features(None, atomic_features)
         if i < nup:
-            feat.append(1)
+            en_ndata.append(embed_number)
         else:
-            feat.append(-1)
-        en_ndata.append(feat)
+            en_ndata.append(embed_number+1)
 
-    return en_ndata
+    return torch.as_tensor(en_ndata)
 
 
 def get_atomic_features(atom_type, atomic_features):
