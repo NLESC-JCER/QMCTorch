@@ -137,37 +137,93 @@ class JastrowFactorGraph(nn.Module):
             return torch.exp(ee_kernel + en_kernel)
 
         elif derivative == 1:
-            jval = torch.exp(ee_kernel + en_kernel)
-            grad_val = grad(jval, pos,
-                            grad_outputs=torch.ones_like(jval),
-                            only_inputs=True)[0]
-            grad_val = grad_val.reshape(
-                nbatch, self.nelec, 3).transpose(1, 2)
-            if sum_grad:
-                grad_val = grad_val.sum(1)
-            return grad_val
+            return self._get_grad_vals(pos, ee_kernel, en_kernel, sum_grad)
 
         elif derivative == 2:
-            jval = torch.exp(ee_kernel + en_kernel)
-            grad_val = grad(jval, pos,
-                            grad_outputs=torch.ones_like(jval),
-                            only_inputs=True,
-                            create_graph=True)[0]
+            return self._get_hess_vals(pos, ee_kernel, en_kernel, return_all=False)
 
-            ndim = grad_val.shape[1]
-            hval = torch.zeros(nbatch, ndim).to(self.device)
-            z = torch.ones(grad_val.shape[0]).to(self.device)
-            z.requires_grad = True
+        elif derivative == [0, 1, 2]:
+            return self._get_hess_vals(pos, ee_kernel, en_kernel, sum_grad=sum_grad, return_all=True)
 
-            for idim in range(ndim):
-                tmp = grad(grad_val[:, idim], pos,
-                           grad_outputs=z,
-                           only_inputs=True,
-                           retain_graph=True)[0]
-                hval[:, idim] = tmp[:, idim]
+    def _get_val(self, ee_kernel, en_kernel):
+        """Get the jastrow values.
 
-            return hval.reshape(
-                nbatch, self.nelec, 3).transpose(1, 2).sum(1)
+        Args:
+            ee_kernel ([type]): [description]
+            en_kernel ([type]): [description]
+        """
+        return torch.exp(ee_kernel + en_kernel)
+
+    def _get_grad_vals(self, pos, ee_kernel, en_kernel, sum_grad):
+        """Get the values of the gradients
+
+
+        Args:
+            pos ([type]): [description]
+            ee_kernel ([type]): [description]
+            en_kernel ([type]): [description]
+            sum_grad ([type]): [description]
+        """
+
+        nbatch = len(pos)
+        jval = torch.exp(ee_kernel + en_kernel)
+        grad_val = grad(jval, pos,
+                        grad_outputs=torch.ones_like(jval),
+                        only_inputs=True)[0]
+        grad_val = grad_val.reshape(
+            nbatch, self.nelec, 3).transpose(1, 2)
+
+        if sum_grad:
+            grad_val = grad_val.sum(1)
+
+        return grad_val
+
+    def _get_hess_vals(self, pos, ee_kernel, en_kernel, sum_grad=False, return_all=False):
+        """Get the hessian values
+
+        Args:
+            pos ([type]): [description]
+            ee_kernel ([type]): [description]
+            en_kernel ([type]): [description]
+            sum_grad ([type]): [description]
+            return_all (bool, )
+        """
+
+        nbatch = len(pos)
+
+        jval = torch.exp(ee_kernel + en_kernel)
+
+        grad_val = grad(jval, pos,
+                        grad_outputs=torch.ones_like(jval),
+                        only_inputs=True,
+                        create_graph=True)[0]
+
+        ndim = grad_val.shape[1]
+        hval = torch.zeros(nbatch, ndim).to(self.device)
+        z = torch.ones(grad_val.shape[0]).to(self.device)
+        z.requires_grad = True
+
+        for idim in range(ndim):
+            tmp = grad(grad_val[:, idim], pos,
+                       grad_outputs=z,
+                       only_inputs=True,
+                       retain_graph=True)[0]
+            hval[:, idim] = tmp[:, idim]
+
+        hval = hval.reshape(
+            nbatch, self.nelec, 3).transpose(1, 2).sum(1)
+
+        if return_all:
+            grad_val = grad_val.detach().reshape(
+                nbatch, self.nelec, 3).transpose(1, 2)
+
+            if sum_grad:
+                grad_val = grad_val.sum(1)
+
+            return (jval, grad_val, hval)
+
+        else:
+            return hval
 
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix

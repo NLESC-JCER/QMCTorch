@@ -47,7 +47,9 @@ class SlaterJastrowGraph(SlaterJastrow):
             ee_model.__name__, en_model.__name__)
         self.use_jastrow = True
         self.jastrow = JastrowFactorGraph(mol.nup, mol.ndown,
-                                          mol.atom_coords, mol.atoms,
+                                          torch.as_tensor(
+                                              mol.atom_coords),
+                                          mol.atoms,
                                           ee_model=ee_model,
                                           ee_model_kwargs=ee_model_kwargs,
                                           en_model=en_model,
