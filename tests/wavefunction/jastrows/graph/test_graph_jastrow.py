@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 import torch
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 
 from qmctorch.wavefunction.jastrows.graph.jastrow_graph import JastrowFactorGraph
 from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
@@ -49,15 +49,15 @@ class TestGraphJastrow(unittest.TestCase):
                                           self.atomic_pos,
                                           self.atom_types,
                                           ee_model=MGCNPredictor,
-                                          ee_model_kwargs={'n_layers': 2,
+                                          ee_model_kwargs={'n_layers': 3,
                                                            'feats': 32,
                                                            'cutoff': 5.0,
-                                                           'gap': 1.5},
+                                                           'gap': 1.},
                                           en_model=MGCNPredictor,
-                                          en_model_kwargs={'n_layers': 2,
+                                          en_model_kwargs={'n_layers': 3,
                                                            'feats': 32,
                                                            'cutoff': 5.0,
-                                                           'gap': 1.5})
+                                                           'gap': 1.0})
 
         self.nbatch = 5
 
@@ -78,8 +78,7 @@ class TestGraphJastrow(unittest.TestCase):
             self.nbatch, self.nelec*3)
 
         jval_xup = self.jastrow(pos_xup)
-        print(jval, jval_xup)
-        # assert(torch.allclose(jval, jval_xup))
+        assert(torch.allclose(jval, jval_xup))
 
     def test_sum_grad_jastrow(self):
 

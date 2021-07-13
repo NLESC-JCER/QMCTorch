@@ -26,6 +26,10 @@ def get_elec_elec_edges(nelec):
         for j in range(i+1, nelec):
             ee_edges[0].append(i)
             ee_edges[1].append(j)
+
+            ee_edges[0].append(j)
+            ee_edges[1].append(i)
+
     return ee_edges
 
 

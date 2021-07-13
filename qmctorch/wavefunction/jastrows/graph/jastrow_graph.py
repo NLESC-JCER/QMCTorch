@@ -109,14 +109,16 @@ class JastrowFactorGraph(nn.Module):
         batch_en_graph = dgl.batch([self.en_graph]*nbatch)
 
         # get the elec-elec distance matrix
-        ree = self.extract_tri_up(self.elel_dist(pos))
+        ree = self.extract_tri_up(self.elel_dist(pos)).reshape(-1, 1)
 
         # get the elec-nuc distance matrix
         ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
 
         # put the data in the graph
-        batch_ee_graph.edata['distance'] = ree.reshape(-1, 1)
-        batch_en_graph.edata['distance'] = ren
+        batch_ee_graph.edata['distance'] = ree.repeat_interleave(
+            2, dim=0)
+        batch_en_graph.edata['distance'] = ren.repeat_interleave(
+            2, dim=0)
 
         ee_node_types = batch_ee_graph.ndata.pop('node_types')
         ee_edge_distance = batch_ee_graph.edata.pop('distance')

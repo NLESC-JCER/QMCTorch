@@ -26,8 +26,12 @@ def get_elec_nuc_edges(natoms, nelec):
     en_edges = ([], [])
     for i in range(natoms):
         for j in range(nelec):
+
             en_edges[0].append(i)
             en_edges[1].append(natoms+j)
+
+            en_edges[0].append(natoms+j)
+            en_edges[1].append(i)
 
     # for i in range(natoms-1):
     #     for j in range(i+1, natoms):
