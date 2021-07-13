@@ -4,8 +4,9 @@ import torch
 from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.wavefunction.jastrows.graph.jastrow_graph import JastrowFactorGraph
+from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+torch.set_default_tensor_type(torch.FloatTensor)
 
 
 def hess(out, pos):
@@ -46,11 +47,21 @@ class TestGraphJastrow(unittest.TestCase):
         self.atom_types = ["Li", "H"]
         self.jastrow = JastrowFactorGraph(self.nup, self.ndown,
                                           self.atomic_pos,
-                                          self.atom_types)
+                                          self.atom_types,
+                                          ee_model=MGCNPredictor,
+                                          ee_model_kwargs={'n_layers': 2,
+                                                           'feats': 32,
+                                                           'cutoff': 5.0,
+                                                           'gap': 1.5},
+                                          en_model=MGCNPredictor,
+                                          en_model_kwargs={'n_layers': 2,
+                                                           'feats': 32,
+                                                           'cutoff': 5.0,
+                                                           'gap': 1.5})
 
         self.nbatch = 5
 
-        self.pos = torch.rand(self.nbatch, self.nelec * 3)
+        self.pos = -1. + 2*torch.rand(self.nbatch, self.nelec * 3)
         self.pos.requires_grad = True
 
     def test_permutation(self):
@@ -67,7 +78,7 @@ class TestGraphJastrow(unittest.TestCase):
             self.nbatch, self.nelec*3)
 
         jval_xup = self.jastrow(pos_xup)
-        # print(jval, jval_xup)
+        print(jval, jval_xup)
         # assert(torch.allclose(jval, jval_xup))
 
     def test_sum_grad_jastrow(self):
@@ -119,6 +130,6 @@ if __name__ == "__main__":
     t = TestGraphJastrow()
     t.setUp()
     t.test_permutation()
-    t.test_grad_jastrow()
-    t.test_sum_grad_jastrow()
-    t.test_hess_jastrow()
+    # t.test_grad_jastrow()
+    # t.test_sum_grad_jastrow()
+    # t.test_hess_jastrow()

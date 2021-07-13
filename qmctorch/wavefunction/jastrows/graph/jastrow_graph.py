@@ -2,8 +2,8 @@ import torch
 from torch import nn
 from torch.autograd import grad
 import dgl
-from dgllife.model import MGCNPredictor
 
+from .mgcn.mgcn_predictor import MGCNPredictor
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from .elec_elec_graph import ElecElecGraph
