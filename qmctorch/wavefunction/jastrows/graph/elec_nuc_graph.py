@@ -63,7 +63,7 @@ def get_elec_nuc_ndata(natoms, atom_types, atomic_features,  nelec, nup):
         else:
             en_ndata.append(embed_number+1)
 
-    return torch.as_tensor(en_ndata)
+    return torch.LongTensor(en_ndata)
 
 
 def get_atomic_features(atom_type, atomic_features):

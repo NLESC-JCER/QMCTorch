@@ -74,7 +74,7 @@ class TestGraphJastrow(unittest.TestCase):
 
         val = self.jastrow(self.pos)
         dval = self.jastrow(self.pos, derivative=1)
-        print(dval.shape)
+
         dval_grad = grad(
             val,
             self.pos,
@@ -90,7 +90,7 @@ class TestGraphJastrow(unittest.TestCase):
 
         val = self.jastrow(self.pos)
         dval = self.jastrow(self.pos, derivative=1, sum_grad=False)
-        print(dval.shape)
+
         dval_grad = grad(
             val,
             self.pos,

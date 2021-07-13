@@ -40,4 +40,4 @@ def get_elec_elec_ndata(nelec, nup):
         else:
             ee_ndata.append(1)
 
-    return torch.tensor(ee_ndata)
+    return torch.LongTensor(ee_ndata)
