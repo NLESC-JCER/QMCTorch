@@ -32,6 +32,7 @@ class JastrowFactorGraph(nn.Module):
             ee_network_kwargs (dict, optional): Argument of the elec-elec graph network. Defaults to {}.
             en_network (dgl model): graph network of the elec-nuc factor
             en_network_kwargs (dict, optional): Argument of the elec-nuc graph network. Defaults to {}.
+            atomic_featires (list, optional): list of atomic properties from medeleev
             cuda (bool, optional): use cuda. Defaults to False.
         """
 
