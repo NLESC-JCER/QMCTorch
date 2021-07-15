@@ -5,8 +5,6 @@ from mendeleev import element
 from types import SimpleNamespace
 import h5py
 
-from .calculator.adf import CalculatorADF
-from .calculator.pyscf import CalculatorPySCF
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
 from .. import log
@@ -15,6 +13,16 @@ try:
     from mpi4py import MPI
 except ModuleNotFoundError:
     log.info('  MPI not found.')
+
+try:
+    from .calculator.adf import CalculatorADF
+except:
+    log.info(' ADF calculator not found')
+
+try:
+    from .calculator.pyscf import CalculatorPySCF
+except:
+    log.info(' PySCF calculator not found')
 
 
 class Molecule:
