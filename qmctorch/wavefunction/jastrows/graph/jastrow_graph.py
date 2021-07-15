@@ -69,17 +69,25 @@ class JastrowFactorGraph(nn.Module):
         ee_model_kwargs["num_edge_types"] = 3
         self.ee_model = ee_model(**ee_model_kwargs)
 
-        # instantiate the en model
-        en_model_kwargs["num_node_types"] = 2 + self.natoms
-        en_model_kwargs["num_edge_types"] = 2*self.natoms
-        self.en_model = en_model(**en_model_kwargs)
-
         # compute the elec-elec graph
-        self.ee_graph = ElecElecGraph(self.nelec, self.nup)
+        self.ee_graph = ElecElecGraph(self.nelec, self.nup).to(self.device)
 
-        # compute the elec-nuc graph
-        self.en_graph = ElecNucGraph(self.natoms, self.atom_types,
-                                     self.atomic_features, self.nelec, self.nup)
+        
+        if en_model is not None:
+            self.use_en_graph = True
+            # instantiate the en model
+            en_model_kwargs["num_node_types"] = 2 + self.natoms
+            en_model_kwargs["num_edge_types"] = 2*self.natoms
+            self.en_model = en_model(**en_model_kwargs)
+
+            # compute the elec-nuc graph
+            self.en_graph = ElecNucGraph(self.natoms, self.atom_types,
+                                        self.atomic_features, self.nelec, self.nup).to(self.device)
+
+        else:
+            self.use_en_graph = False
+            self.en_model = None
+            self.en_graph = None
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
@@ -106,55 +114,66 @@ class JastrowFactorGraph(nn.Module):
         assert size[1] == self.nelec * self.ndim
         nbatch = size[0]
 
+        #create batch graph
         batch_ee_graph = dgl.batch([self.ee_graph]*nbatch)
-        batch_en_graph = dgl.batch([self.en_graph]*nbatch)
-
+        
         # get the elec-elec distance matrix
         ree = self.extract_tri_up(self.elel_dist(pos)).reshape(-1, 1)
-
-        # get the elec-nuc distance matrix
-        ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
-
+        
         # put the data in the graph
         batch_ee_graph.edata['distance'] = ree.repeat_interleave(
-            2, dim=0)
-        batch_en_graph.edata['distance'] = ren.repeat_interleave(
             2, dim=0)
 
         ee_node_types = batch_ee_graph.ndata.pop('node_types')
         ee_edge_distance = batch_ee_graph.edata.pop('distance')
-        ee_kernel = self.ee_model(batch_ee_graph,
+
+        # compute the ee contribution of ee kernel
+        kernel_values = self.ee_model(batch_ee_graph,
                                   ee_node_types,
                                   ee_edge_distance)
 
-        en_node_types = batch_en_graph.ndata.pop('node_types')
-        en_edge_distance = batch_en_graph.edata.pop('distance')
-        en_kernel = self.en_model(batch_en_graph,
-                                  en_node_types,
-                                  en_edge_distance)
+        if self.use_en_graph:
+            
+            #create batch graph
+            batch_en_graph = dgl.batch([self.en_graph]*nbatch)
+
+            # get the elec-nuc distance matrix
+            ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
+
+            # put the data in the graph
+            batch_en_graph.edata['distance'] = ren.repeat_interleave(
+                2, dim=0)
+
+            en_node_types = batch_en_graph.ndata.pop('node_types')
+            en_edge_distance = batch_en_graph.edata.pop('distance')
+
+            # compute the en contribution of ee kernel
+            kernel_values = kernel_values + self.en_model(batch_en_graph,
+                                    en_node_types,
+                                    en_edge_distance)
 
         if derivative == 0:
-            return torch.exp(ee_kernel + en_kernel)
+            return self._get_val(kernel_values)
 
         elif derivative == 1:
-            return self._get_grad_vals(pos, ee_kernel, en_kernel, sum_grad)
+            return self._get_grad_vals(pos, kernel_values, sum_grad)
 
         elif derivative == 2:
-            return self._get_hess_vals(pos, ee_kernel, en_kernel, return_all=False)
+            return self._get_hess_vals(pos, kernel_values, return_all=False)
 
         elif derivative == [0, 1, 2]:
-            return self._get_hess_vals(pos, ee_kernel, en_kernel, sum_grad=sum_grad, return_all=True)
+            return self._get_hess_vals(pos, kernel_values, sum_grad=sum_grad, return_all=True)
 
-    def _get_val(self, ee_kernel, en_kernel):
+    def _get_val(self, kernel_values):
         """Get the jastrow values.
 
         Args:
             ee_kernel ([type]): [description]
             en_kernel ([type]): [description]
         """
-        return torch.exp(ee_kernel + en_kernel)
+        return torch.exp(kernel_values)
 
-    def _get_grad_vals(self, pos, ee_kernel, en_kernel, sum_grad):
+    def _get_grad_vals(self, pos, kernel_values, sum_grad):
         """Get the values of the gradients
 
 
@@ -166,7 +185,7 @@ class JastrowFactorGraph(nn.Module):
         """
 
         nbatch = len(pos)
-        jval = torch.exp(ee_kernel + en_kernel)
+        jval = torch.exp(kernel_values)
         grad_val = grad(jval, pos,
                         grad_outputs=torch.ones_like(jval),
                         only_inputs=True)[0]
@@ -178,7 +197,7 @@ class JastrowFactorGraph(nn.Module):
 
         return grad_val
 
-    def _get_hess_vals(self, pos, ee_kernel, en_kernel, sum_grad=False, return_all=False):
+    def _get_hess_vals(self, pos, kernel_values, sum_grad=False, return_all=False):
         """Get the hessian values
 
         Args:
@@ -191,7 +210,7 @@ class JastrowFactorGraph(nn.Module):
 
         nbatch = len(pos)
 
-        jval = torch.exp(ee_kernel + en_kernel)
+        jval = torch.exp(kernel_values)
 
         grad_val = grad(jval, pos,
                         grad_outputs=torch.ones_like(jval),

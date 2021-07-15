@@ -14,7 +14,7 @@ from .jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
 class SlaterJastrowGraph(SlaterJastrow):
 
     def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi',
+                 kinetic='auto',
                  ee_model=MGCNPredictor,
                  ee_model_kwargs={},
                  en_model=MGCNPredictor,
@@ -40,11 +40,16 @@ class SlaterJastrowGraph(SlaterJastrow):
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
+        if kinetic != "auto":
+            raise ValueError("Kinetic energy must be set to auto")
 
         super().__init__(mol, configs, kinetic, None, None, cuda, include_all_mo)
 
+        ee_name = ee_model.__name__
+        en_name =  en_model.__name__ if en_model is not None else 'None'
+
         self.jastrow_type = 'Graph(ee:%s, en:%s)' % (
-            ee_model.__name__, en_model.__name__)
+           ee_name , en_name)
         self.use_jastrow = True
         self.jastrow = JastrowFactorGraph(mol.nup, mol.ndown,
                                           torch.as_tensor(
