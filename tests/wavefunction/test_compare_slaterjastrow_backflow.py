@@ -1,39 +1,19 @@
-from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
-from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
-
-from torch.autograd import grad, Variable
-
 import numpy as np
 import torch
 import unittest
 
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
+from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import BackFlowKernelInverse
+
+from qmctorch.utils import set_torch_double_precision
+
 torch.set_default_tensor_type(torch.DoubleTensor)
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos,
-                 grad_outputs=z,
-                 only_inputs=True,
-                 create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-
-        tmp = grad(jacob[:, idim], pos,
-                   grad_outputs=z,
-                   only_inputs=True,
-                   create_graph=True)[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
 
 
 class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
@@ -53,19 +33,29 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterJastrowBackFlow(mol,
-                                        kinetic='jacobi',
-                                        include_all_mo=True,
-                                        configs='single_double(2,2)',
-                                        backflow_kernel=BackFlowKernelInverse,
-                                        orbital_dependent_backflow=False)
+        # define jastrow factor
+        jastrow = JastrowFactorElectronElectron(
+            mol, PadeJastrowKernel,)
+
+        # define backflow trans
+        backflow = BackFlowTransformation(
+            mol, BackFlowKernelInverse, orbital_dependent=False)
+
+        self.wf = SlaterJastrow(mol,
+                                kinetic='jacobi',
+                                include_all_mo=True,
+                                configs='single_double(2,2)',
+                                jastrow=jastrow,
+                                backflow=backflow)
 
         self.wf.ao.backflow_trans.backflow_kernel.weight.data *= 0.
 
         self.wf_ref = SlaterJastrow(mol,
                                     kinetic='jacobi',
                                     include_all_mo=True,
-                                    configs='single_double(2,2)')
+                                    configs='single_double(2,2)',
+                                    jastrow=jastrow,
+                                    backflow=None)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -100,9 +90,6 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
         d2val_ref = self.wf_ref.ao2mo(d2ao_ref)
         assert(torch.allclose(d2val_ref, d2val.sum(0)))
 
-    def test_grad_wf(self):
-        pass
-
     def test_local_energy(self):
 
         self.wf.kinetic_energy = self.wf.kinetic_energy_jacobi
@@ -124,10 +111,10 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    t = TestCompareSlaterJastrowBackFlow()
-    t.setUp()
-    t.test_jacobian_mo()
-    t.test_hess_mo()
-    t.test_kinetic_energy()
-    t.test_local_energy()
-    # unittest.main()
+    # t = TestCompareSlaterJastrowBackFlow()
+    # t.setUp()
+    # t.test_jacobian_mo()
+    # t.test_hess_mo()
+    # t.test_kinetic_energy()
+    # t.test_local_energy()
+    unittest.main()

@@ -40,7 +40,7 @@ class TestSlaterJastrowOrbitalDependentBackFlow(BaseTestCases.BackFlowWaveFuncti
 
         # define jastrow factor
         jastrow = JastrowFactorElectronElectron(
-            mol, PadeJastrowKernel,)
+            mol, PadeJastrowKernel)
 
         # define backflow trans
         backflow = BackFlowTransformation(
