@@ -1,45 +1,25 @@
-
-from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowBackFlow
-from qmctorch.utils import set_torch_double_precision
-
-from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
-
-from torch.autograd import grad, Variable
-
 import numpy as np
 import torch
 import unittest
 
+from base_test_cases import BaseTestCases
+
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
+from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import BackFlowKernelInverse
+
+from qmctorch.utils import set_torch_double_precision
+
+
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos,
-                 grad_outputs=z,
-                 only_inputs=True,
-                 create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-
-        tmp = grad(jacob[:, idim], pos,
-                   grad_outputs=z,
-                   only_inputs=True,
-                   create_graph=True)[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
-
-
-class TestSlaterJastrowBackFlow(unittest.TestCase):
+class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
 
     def setUp(self):
 
@@ -56,13 +36,20 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterJastrowBackFlow(mol,
-                                        kinetic='jacobi',
-                                        jastrow_kernel=PadeJastrowKernel,
-                                        include_all_mo=True,
-                                        configs='single_double(2,2)',
-                                        backflow_kernel=BackFlowKernelInverse,
-                                        orbital_dependent_backflow=False)
+        # define jastrow factor
+        jastrow = JastrowFactorElectronElectron(
+            mol, PadeJastrowKernel)
+
+        # define backflow trans
+        backflow = BackFlowTransformation(
+            mol, BackFlowKernelInverse)
+
+        self.wf = SlaterJastrow(mol,
+                                kinetic='jacobi',
+                                include_all_mo=True,
+                                configs='single_double(2,2)',
+                                jastrow=jastrow,
+                                backflow=backflow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
@@ -72,119 +59,12 @@ class TestSlaterJastrowBackFlow(unittest.TestCase):
             self.nbatch,  self.wf.nelec*3))
         self.pos.requires_grad = True
 
-    def test_forward(self):
-        wfvals = self.wf(self.pos)
-
-    def test_antisymmetry(self):
-        """Test that the wf values are antisymmetric
-        wrt exchange of 2 electrons of same spin."""
-        wfvals_ref = self.wf(self.pos)
-
-        if self.wf.nelec < 4:
-            print(
-                'Warning : antisymmetry cannot be tested with \
-                    only %d electrons' % self.wf.nelec)
-            return
-
-        # test spin up
-        pos_xup = self.pos.clone()
-        perm_up = list(range(self.wf.nelec))
-        perm_up[0] = 1
-        perm_up[1] = 0
-        pos_xup = pos_xup.reshape(self.nbatch, self.wf.nelec, 3)
-        pos_xup = pos_xup[:, perm_up, :].reshape(
-            self.nbatch, self.wf.nelec*3)
-
-        wfvals_xup = self.wf(pos_xup)
-        assert(torch.allclose(wfvals_ref, -1.*wfvals_xup))
-
-    def test_jacobian_mo(self):
-        """Jacobian of the BF MOs."""
-
-        mo = self.wf.pos2mo(self.pos)
-        dmo = self.wf.pos2mo(self.pos, derivative=1)
-
-        dmo_grad = grad(
-            mo, self.pos, grad_outputs=torch.ones_like(mo))[0]
-        assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
-
-        psum_mo = dmo.sum(-1).sum(-1)
-        psum_mo_grad = dmo_grad.view(
-            self.nbatch, self.wf.nelec, 3).sum(-1)
-        psum_mo_grad = psum_mo_grad.T
-        assert(torch.allclose(psum_mo, psum_mo_grad))
-
-    def test_grad_mo(self):
-        """Gradients of the BF MOs."""
-
-        mo = self.wf.pos2mo(self.pos)
-
-        dao = self.wf.ao(self.pos, derivative=1, sum_grad=False)
-        dmo = self.wf.ao2mo(dao)
-
-        dmo_grad = grad(
-            mo, self.pos,
-            grad_outputs=torch.ones_like(mo))[0]
-        assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
-
-        dmo = dmo.sum(-1).sum(-1)
-        dmo_grad = dmo_grad.T
-
-        assert(torch.allclose(dmo, dmo_grad))
-
-    def test_hess_mo(self):
-        """Hessian of the MOs."""
-        val = self.wf.pos2mo(self.pos)
-
-        d2val_grad = hess(val, self.pos)
-        d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
-        d2val = self.wf.ao2mo(d2ao)
-
-        assert(torch.allclose(d2val.sum(), d2val_grad.sum()))
-
-        d2val = d2val.reshape(4, 3, 5, 4, 6).sum(1).sum(-1).sum(-1)
-        d2val_grad = d2val_grad.view(
-            self.nbatch, self.wf.nelec, 3).sum(-1)
-        d2val_grad = d2val_grad.T
-        assert(torch.allclose(d2val, d2val_grad))
-
-    def test_grad_wf(self):
-        pass
-
-        # grad_auto = self.wf.gradients_autograd(self.pos)
-        # grad_jac = self.wf.gradients_jacobi(self.pos)
-
-        # assert torch.allclose(
-        #     grad_auto.data, grad_jac.data, rtol=1E-4, atol=1E-4)
-
-    def test_local_energy(self):
-
-        self.wf.kinetic_energy = self.wf.kinetic_energy_autograd
-        eloc_auto = self.wf.local_energy(self.pos)
-
-        self.wf.kinetic_energy = self.wf.kinetic_energy_jacobi
-        eloc_jac = self.wf.local_energy(self.pos)
-
-        assert torch.allclose(
-            eloc_auto.data, eloc_jac.data, rtol=1E-4, atol=1E-4)
-
-    def test_kinetic_energy(self):
-
-        eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos)
-
-        print(ejac)
-        print(eauto)
-
-        assert torch.allclose(
-            eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
-
 
 if __name__ == "__main__":
-    unittest.main()
-    # t = TestSlaterJastrowBackFlow()
-    # t.setUp()
+    # unittest.main()
+    t = TestSlaterJastrowBackFlow()
+    t.setUp()
     # t.test_antisymmetry()
     # t.test_hess_mo()
     # t.test_grad_mo()
-    # t.test_kinetic_energy()
+    t.test_kinetic_energy()

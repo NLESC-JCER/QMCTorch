@@ -214,11 +214,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
-        dbf = self.backflow_trans(pos, derivative=1).unsqueeze(-1)
+        dbf = self.backflow_trans(pos, derivative=1)
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
-        d2bf = self.backflow_trans(pos, derivative=2).unsqueeze(-1)
+        d2bf = self.backflow_trans(pos, derivative=2)
 
         # compute the back flow second der
         hess_ao = (hess_ao * (dbf*dbf)).sum(1)
@@ -304,6 +304,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                 # electrons and orbitals
                 xyz = xyz.repeat_interleave(self.nctr_per_ao, dim=2)
                 r = r.repeat_interleave(self.nctr_per_ao, dim=2)
+
+            return (xyz, r)
         else:
 
             # get the elec-atom vectrors/distances
