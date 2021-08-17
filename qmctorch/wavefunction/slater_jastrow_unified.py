@@ -189,7 +189,10 @@ class SlaterJastrowUnified(WaveFunction):
         if kinetic == 'jacobi':
             if backflow is None:
                 self.kinetic_energy = self.kinetic_energy_jacobi
+
             else:
+                self.gradients_jacobi = self.gradients_jacobi_backflow
+                self.kinetic_energy_jacobi = self.kinetic_energy_jacobi_backflow
                 self.kinetic_energy = self.kinetic_energy_jacobi_backflow
 
     def forward(self, x, ao=None):
@@ -240,7 +243,7 @@ class SlaterJastrowUnified(WaveFunction):
 
     def ao2mo(self, ao):
         """transforms AO values in to MO values."""
-        print('2', ao.shape)
+
         return self.mo(self.mo_scf(ao))
 
     def pos2mo(self, x, derivative=0, sum_grad=True):
@@ -282,7 +285,7 @@ class SlaterJastrowUnified(WaveFunction):
         """
 
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
-        print('1', ao.shape)
+
         mo = self.ao2mo(ao)
         bkin = self.get_kinetic_operator(x, ao, dao, d2ao, mo)
 
@@ -333,7 +336,6 @@ class SlaterJastrowUnified(WaveFunction):
 
         # compute the gradient operator matrix
         grad_ao = self.ao(x, derivative=1, sum_grad=False)
-        print(grad_ao.shape)
 
         # compute the derivatives of the MOs
         dmo = self.ao2mo(grad_ao.transpose(2, 3)).transpose(2, 3)

@@ -61,10 +61,10 @@ class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestSlaterJastrowBackFlow()
-    t.setUp()
+    unittest.main()
+    # t = TestSlaterJastrowBackFlow()
+    # t.setUp()
     # t.test_antisymmetry()
     # t.test_hess_mo()
     # t.test_grad_mo()
-    t.test_kinetic_energy()
+    # t.test_kinetic_energy()

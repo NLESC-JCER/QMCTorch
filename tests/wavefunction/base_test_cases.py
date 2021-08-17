@@ -203,5 +203,8 @@ class BaseTestCases:
             d2val_grad = d2val_grad.T
             assert(torch.allclose(d2val, d2val_grad))
 
-        def test_grad_wf(self):
+        def test_gradients_wf(self):
+            pass
+
+        def test_gradients_pdf(self):
             pass
