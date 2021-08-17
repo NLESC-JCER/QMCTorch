@@ -1,12 +1,10 @@
 import torch
-
 from .atomic_orbitals import AtomicOrbitals
-from .backflow.backflow_transformation import BackFlowTransformation
 
 
 class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
-    def __init__(self, mol, backflow_kernel, backflow_kernel_kwargs={}, cuda=False):
+    def __init__(self, mol, backflow, cuda=False):
         """Computes the value of atomic orbitals
 
         Args:
@@ -16,10 +14,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         super().__init__(mol, cuda)
         dtype = torch.get_default_dtype()
-        self.backflow_trans = BackFlowTransformation(mol,
-                                                     backflow_kernel=backflow_kernel,
-                                                     backflow_kernel_kwargs=backflow_kernel_kwargs,
-                                                     cuda=cuda)
+        self.backflow_trans = backflow
 
     def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
         """Computes the values of the atomic orbitals.
@@ -151,7 +146,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x 1
-        dbf = self.backflow_trans(pos, derivative=1).unsqueeze(-1)
+        dbf = self.backflow_trans(pos, derivative=1)
 
         # compute backflow : Nbatch x Ndim x Nelec x Nelec x Norb
         grad_ao = (grad_ao * dbf).sum(1)
@@ -299,13 +294,25 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                                         distance between elec and bas
                                         (Nbatch, Nelec, Norb)
         """
-        # get the elec-atom vectrors/distances
-        xyz, r = self._elec_atom_dist(pos)
+        if self.backflow_trans.orbital_dependent:
 
-        # repeat/interleave to get vector and distance between
-        # electrons and orbitals
-        return (xyz.repeat_interleave(self.nshells, dim=2),
-                r.repeat_interleave(self.nshells, dim=2))
+            # get the elec-atom vectrors/distances
+            xyz, r = self._elec_ao_dist(pos)
+
+            if self.contract:
+                # repeat/interleave to get vector and distance between
+                # electrons and orbitals
+                xyz = xyz.repeat_interleave(self.nctr_per_ao, dim=2)
+                r = r.repeat_interleave(self.nctr_per_ao, dim=2)
+        else:
+
+            # get the elec-atom vectrors/distances
+            xyz, r = self._elec_atom_dist(pos)
+
+            # repeat/interleave to get vector and distance between
+            # electrons and orbitals
+            return (xyz.repeat_interleave(self.nshells, dim=2),
+                    r.repeat_interleave(self.nshells, dim=2))
 
     def _elec_atom_dist(self, pos):
         """Computes the positions/distance bewteen elec/atoms
@@ -328,6 +335,45 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                self.atom_coords[None, ...])
 
         # distance between electrons and atoms
+        r = torch.sqrt((xyz*xyz).sum(3))
+
+        return xyz, r
+
+    def _elec_ao_dist(self, pos):
+        """Computes the positions/distance bewteen elec/atoms
+
+        Args:
+            pos (torch.tensor): positions of the walkers Nbat, NelecxNdim
+
+        Returns:
+            torch.tensor, torch.tensor: positions of the elec wrt the bas
+                                        (Nbatch, Nelec, Natom, Ndim)
+                                        distance between elec and bas
+                                        (Nbatch, Nelec, Natom)
+        """
+
+        # compute the back flow positions
+        # Nbatch x Nao x Nelec*Ndim
+        bf_pos = self.backflow_trans(pos)
+        nbatch, nao, _ = bf_pos.shape
+
+        # reshape
+        bf_pos = bf_pos.view(nbatch, nao, self.nelec, self.ndim)
+
+        # permute to nbatch x nelec x nao x ndim
+        bf_pos = bf_pos.permute(0, 2, 1, 3)
+
+        # interleave the atomic positions
+        # nao x ndim
+        atom_coords = self.atom_coords.repeat_interleave(
+            self.nao_per_atom, dim=0)
+
+        # compute the vectors between electrons and atoms
+        # nbatch x nelec x nao x ndim
+        xyz = (bf_pos-atom_coords)
+
+        # distance between electrons and atoms
+        # nbatch x nelec x nao
         r = torch.sqrt((xyz*xyz).sum(3))
 
         return xyz, r

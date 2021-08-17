@@ -142,8 +142,7 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x Norb
-        dbf = self.backflow_trans(
-            pos, derivative=1).permute(0, 2, 3, 4, 5, 1)
+        dbf = self.backflow_trans(pos, derivative=1)
 
         # compute backflow : Nbatch x Ndim x Nelec x Nelec x Norb
         grad_ao = (grad_ao * dbf).sum(1)
@@ -213,13 +212,11 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x Norb
-        dbf = self.backflow_trans(
-            pos, derivative=1).permute(0, 2, 3, 4, 5, 1)
+        dbf = self.backflow_trans(pos, derivative=1)
 
         # compute the derivative of the bf positions wrt to the original pos
         # Nbatch x Ndim x Ndim x Nelec x Nelec x Norb
-        d2bf = self.backflow_trans(
-            pos, derivative=2).permute(0, 2, 3, 4, 5, 1)
+        d2bf = self.backflow_trans(pos, derivative=2)
 
         # compute the back flow second der
         hess_ao = (hess_ao * (dbf*dbf)).sum(1)
