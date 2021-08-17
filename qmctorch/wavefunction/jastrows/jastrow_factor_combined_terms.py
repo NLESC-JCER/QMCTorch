@@ -14,7 +14,7 @@ from .elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJa
 
 class JastrowFactorCombinedTerms(nn.Module):
 
-    def __init__(self, nup, ndown, atomic_pos,
+    def __init__(self, mol,
                  jastrow_kernel={
                      'ee': PadeJastrowKernelElecElec,
                      'en': PadeJastrowKernelElecNuc,
@@ -36,10 +36,10 @@ class JastrowFactorCombinedTerms(nn.Module):
         """
 
         super().__init__()
-        self.nup = nup
-        self.ndown = ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
         self.cuda = cuda
-
+        self.jastrow_kernel_dict = jastrow_kernel
         self.jastrow_terms = []
 
         # sanitize the dict
@@ -53,27 +53,35 @@ class JastrowFactorCombinedTerms(nn.Module):
 
         if jastrow_kernel['ee'] is not None:
 
-            self.jastrow_terms.append(JastrowFactorElectronElectron(nup, ndown,
+            self.jastrow_terms.append(JastrowFactorElectronElectron(mol,
                                                                     jastrow_kernel['ee'],
                                                                     jastrow_kernel_kwargs['ee'],
                                                                     cuda=cuda))
 
         if jastrow_kernel['en'] is not None:
 
-            self.jastrow_terms.append(JastrowFactorElectronNuclei(nup, ndown,
-                                                                  atomic_pos,
+            self.jastrow_terms.append(JastrowFactorElectronNuclei(mol,
                                                                   jastrow_kernel['en'],
                                                                   jastrow_kernel_kwargs['en'],
                                                                   cuda=cuda))
 
         if jastrow_kernel['een'] is not None:
 
-            self.jastrow_terms.append(JastrowFactorElectronElectronNuclei(nup, ndown,
-                                                                          atomic_pos,
+            self.jastrow_terms.append(JastrowFactorElectronElectronNuclei(mol,
                                                                           jastrow_kernel['een'],
                                                                           jastrow_kernel_kwargs['een'],
                                                                           cuda=cuda))
         self.nterms = len(self.jastrow_terms)
+
+    def __repr__(self):
+        """representation of the jastrow factor"""
+        out = []
+        for k in ['ee', 'en', 'een']:
+            if self.jastrow_kernel_dict[k] is not None:
+                out.append(k + " -> " +
+                           self.jastrow_kernel_dict[k].__name__)
+
+        return " + ".join(out)
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.

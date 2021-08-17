@@ -6,7 +6,7 @@ from .orbital_dependent_jastrow_kernel import OrbitalDependentJastrowKernel
 
 class JastrowFactorElectronElectron(nn.Module):
 
-    def __init__(self, nup, ndown,
+    def __init__(self, mol,
                  jastrow_kernel,
                  kernel_kwargs={},
                  orbital_dependent_kernel=False,
@@ -32,9 +32,9 @@ class JastrowFactorElectronElectron(nn.Module):
 
         super().__init__()
 
-        self.nup = nup
-        self.ndown = ndown
-        self.nelec = nup + ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelec = mol.nup + mol.ndown
         self.ndim = 3
 
         self.cuda = cuda
@@ -47,10 +47,10 @@ class JastrowFactorElectronElectron(nn.Module):
         # kernel function
         if orbital_dependent_kernel:
             self.jastrow_kernel = OrbitalDependentJastrowKernel(
-                nup, ndown, number_of_orbitals, cuda, jastrow_kernel, kernel_kwargs)
+                mol.nup, mol.ndown, number_of_orbitals, cuda, jastrow_kernel, kernel_kwargs)
         else:
             self.jastrow_kernel = jastrow_kernel(
-                nup, ndown, cuda, **kernel_kwargs)
+                mol.nup, mol.ndown, cuda, **kernel_kwargs)
             self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # mask to extract the upper diag of the matrices
@@ -60,6 +60,10 @@ class JastrowFactorElectronElectron(nn.Module):
         self.edist = ElectronElectronDistance(self.nelec, self.ndim,
                                               scale=scale,
                                               scale_factor=scale_factor)
+
+    def __repr__(self):
+        """representation of the jastrow factor"""
+        return "ee -> " + self.jastrow_kernel.__class__.__name__
 
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix

@@ -5,7 +5,7 @@ from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 
 class JastrowFactorElectronNuclei(nn.Module):
 
-    def __init__(self, nup, ndown, atomic_pos,
+    def __init__(self, mol,
                  jastrow_kernel,
                  kernel_kwargs={},
                  cuda=False):
@@ -23,21 +23,22 @@ class JastrowFactorElectronNuclei(nn.Module):
 
         super().__init__()
 
-        self.nup = nup
-        self.ndown = ndown
-        self.nelec = nup + ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelec = mol.nup + mol.ndown
 
         self.cuda = cuda
         self.device = torch.device('cpu')
         if self.cuda:
             self.device = torch.device('cuda')
 
+        atomic_pos = torch.as_tensor(mol.atom_coords)
         self.atoms = atomic_pos.to(self.device)
-        self.natoms = atomic_pos.shape[0]
+        self.natoms = self.atoms.shape[0]
         self.ndim = 3
 
         # kernel function
-        self.jastrow_kernel = jastrow_kernel(nup, ndown,
+        self.jastrow_kernel = jastrow_kernel(mol.nup,  mol.ndown,
                                              atomic_pos, cuda,
                                              **kernel_kwargs)
 
@@ -47,6 +48,10 @@ class JastrowFactorElectronNuclei(nn.Module):
         # elec-nuc distances
         self.edist = ElectronNucleiDistance(
             self.nelec, self.atoms, self.ndim)
+
+    def __repr__(self):
+        """representation of the jastrow factor"""
+        return "en -> " + self.jastrow_kernel.__class__.__name__
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.

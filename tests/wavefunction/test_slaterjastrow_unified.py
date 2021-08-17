@@ -4,12 +4,11 @@ import torch
 
 from base_test_cases import BaseTestCases
 
-
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
 
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import BackFlowKernelInverse
@@ -39,7 +38,7 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
 
         # define jastrow factor
         jastrow = JastrowFactorElectronElectron(
-            mol, FullyConnectedJastrowKernel)
+            mol, PadeJastrowKernel)
 
         # define backflow trans
         backflow = BackFlowTransformation(

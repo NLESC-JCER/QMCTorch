@@ -177,12 +177,12 @@ class SlaterJastrowUnified(WaveFunction):
 
         else:
             self.use_jastrow = True
-            self.jastrow_type = self.jastrow.jastrow_kernel.__name__
+            self.jastrow_type = self.jastrow.__repr__()
 
             if self.cuda:
                 self.jastrow = self.jastrow.to(self.device)
 
-    def init_kinetic_calc(self, kinetic, backflow):
+    def init_kinetic(self, kinetic, backflow):
         """"Init the calculator of the kinetic energies"""
 
         self.kinetic_method = kinetic
