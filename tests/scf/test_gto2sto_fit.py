@@ -5,7 +5,10 @@ import torch
 
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 
 class TestGTO2STOFit(unittest.TestCase):
@@ -25,8 +28,11 @@ class TestGTO2STOFit(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
+        jastrow = JastrowFactorElectronElectron(
+            mol, PadeJastrowKernel)
+
         self.wf = SlaterJastrow(mol, kinetic='auto',
-                                configs='ground_state').gto2sto()
+                                configs='ground_state', jastrow=jastrow).gto2sto()
 
         self.pos = -0.25 + 0.5 * \
             torch.as_tensor(np.random.rand(10, 18))

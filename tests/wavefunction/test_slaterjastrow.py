@@ -12,8 +12,6 @@ from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
-from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
-from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import BackFlowKernelInverse
 
 from qmctorch.utils import set_torch_double_precision
 
@@ -41,10 +39,6 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
         # define jastrow factor
         jastrow = JastrowFactorElectronElectron(
             mol, PadeJastrowKernel)
-
-        # define backflow trans
-        backflow = BackFlowTransformation(
-            mol, BackFlowKernelInverse)
 
         self.wf = SlaterJastrow(mol,
                                 kinetic='auto',
