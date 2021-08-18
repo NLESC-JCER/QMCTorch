@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 
-from base_elec_elec_jastrow_test import BaseTestJastrow
+from .base_elec_elec_jastrow_test import BaseTestJastrow
 
 from types import SimpleNamespace
 

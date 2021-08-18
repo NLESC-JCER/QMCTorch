@@ -1,5 +1,5 @@
 import unittest
-
+from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
@@ -44,8 +44,10 @@ class TestElectronNucleiPadeJastrow(unittest.TestCase):
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         self.atoms = torch.rand(4, 3)
+        self.mol = SimpleNamespace(
+            nup=self.nup, ndown=self.ndown, atom_coords=self.atoms)
         self.jastrow = JastrowFactorElectronNuclei(
-            self.nup, self.ndown, self.atoms, PadeJastrowKernel)
+            self.mol, PadeJastrowKernel)
         self.nbatch = 5
 
         self.pos = torch.rand(self.nbatch, self.nelec * 3)
