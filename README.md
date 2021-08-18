@@ -17,6 +17,5 @@ Clone the repository and install the code from source or use the Python package 
 ## Documentation 
 https://qmctorch.readthedocs.io/en/latest/intro.html
 
-
 ## Disclaimer
 QMCTorch is currently under developmement and most likely won't behave as expected 
