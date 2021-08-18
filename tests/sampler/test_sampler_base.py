@@ -5,7 +5,10 @@ import torch
 
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 
 class TestSamplerBase(unittest.TestCase):
@@ -24,5 +27,8 @@ class TestSamplerBase(unittest.TestCase):
             calculator='pyscf',
             basis='sto-3g')
 
+        jastrow = JastrowFactorElectronElectron(
+            self.mol, PadeJastrowKernel)
+
         # orbital
-        self.wf = SlaterJastrow(self.mol)
+        self.wf = SlaterJastrow(self.mol, jastrow=jastrow)
