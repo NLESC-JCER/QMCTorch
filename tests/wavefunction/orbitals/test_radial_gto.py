@@ -5,7 +5,7 @@ import torch
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
-
+from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
 from .second_derivative import second_derivative
 
 
@@ -22,9 +22,7 @@ class TestRadialSlater(unittest.TestCase):
                             unit='bohr')
 
         # wave function
-        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='ground_state',
-                                include_all_mo=False)
+        self.ao = AtomicOrbitals(self.mol)
 
     def test_first_derivative_x(self):
 
@@ -33,12 +31,12 @@ class TestRadialSlater(unittest.TestCase):
         self.pos[:, 0] = torch.linspace(-4, 4, npts)
         self.dx = self.pos[1, 0] - self.pos[0, 0]
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                  self.wf.ao.bas_exp,
-                                  xyz=xyz,
-                                  derivative=[0, 1],
-                                  sum_grad=False)
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR = self.ao.radial(r, self.ao.bas_n,
+                               self.ao.bas_exp,
+                               xyz=xyz,
+                               derivative=[0, 1],
+                               sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -64,12 +62,12 @@ class TestRadialSlater(unittest.TestCase):
         self.pos[:, 1] = torch.linspace(-4, 4, npts)
         self.dy = self.pos[1, 1] - self.pos[0, 1]
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                  self.wf.ao.bas_exp,
-                                  xyz=xyz,
-                                  derivative=[0, 1],
-                                  sum_grad=False)
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR = self.ao.radial(r, self.ao.bas_n,
+                               self.ao.bas_exp,
+                               xyz=xyz,
+                               derivative=[0, 1],
+                               sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -95,12 +93,12 @@ class TestRadialSlater(unittest.TestCase):
         self.pos[:, 2] = torch.linspace(-4, 4, npts)
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                  self.wf.ao.bas_exp,
-                                  xyz=xyz,
-                                  derivative=[0, 1],
-                                  sum_grad=False)
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR = self.ao.radial(r, self.ao.bas_n,
+                               self.ao.bas_exp,
+                               xyz=xyz,
+                               derivative=[0, 1],
+                               sum_grad=False)
         R = R.detach().numpy()
         dR = dR.detach().numpy()
         ielec = 0
@@ -140,12 +138,12 @@ class TestRadialSlater(unittest.TestCase):
         self.pos[:, 13] = -eps
         self.pos[:, 14] = z
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR, d2R = self.wf.ao.radial(r, self.wf.ao.bas_n,
-                                       self.wf.ao.bas_exp,
-                                       xyz=xyz,
-                                       derivative=[0, 1, 2],
-                                       sum_grad=False)
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR, d2R = self.ao.radial(r, self.ao.bas_n,
+                                    self.ao.bas_exp,
+                                    xyz=xyz,
+                                    derivative=[0, 1, 2],
+                                    sum_grad=False)
 
         for iorb in range(7):
 

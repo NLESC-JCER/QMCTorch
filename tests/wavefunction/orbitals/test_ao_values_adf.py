@@ -1,4 +1,5 @@
 import os
+from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
 import unittest
 
 import matplotlib.pyplot as plt
@@ -7,7 +8,7 @@ import torch
 from torch.autograd import Variable
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+
 
 from ...path_utils import PATH_TEST
 
@@ -81,7 +82,7 @@ class TestAOvaluesADF(unittest.TestCase):
         self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
-        self.wf = SlaterJastrow(self.mol, include_all_mo=True)
+        self.ao = AtomicOrbitals(self.mol)
 
         # define the grid points
         self.npts = 21
@@ -94,7 +95,7 @@ class TestAOvaluesADF(unittest.TestCase):
 
     def test_ao(self):
 
-        aovals = self.wf.ao(self.pos).detach().numpy()
+        aovals = self.ao(self.pos).detach().numpy()
 
         for iorb in range(self.mol.basis.nao):
 

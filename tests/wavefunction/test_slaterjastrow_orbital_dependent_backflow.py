@@ -4,7 +4,7 @@ import numpy as np
 import torch
 import unittest
 
-from base_test_cases import BaseTestCases
+from .base_test_cases import BaseTestCases
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
