@@ -4,7 +4,8 @@ import torch
 
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 
 class TestSlater(unittest.TestCase):
@@ -18,12 +19,16 @@ class TestSlater(unittest.TestCase):
                             basis='dzp',
                             unit='bohr')
 
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='single_double(6,6)',
+                                jastrow=jastrow,
                                 include_all_mo=False)
 
         self.wf_allmo = SlaterJastrow(self.mol, kinetic='jacobi',
                                       configs='single_double(6,6)',
+                                      jastrow=jastrow,
                                       include_all_mo=True)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)

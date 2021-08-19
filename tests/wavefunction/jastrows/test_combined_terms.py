@@ -1,5 +1,5 @@
 import unittest
-
+from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
@@ -45,9 +45,13 @@ class TestJastrowCombinedTerms(unittest.TestCase):
 
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
-        self.atoms = torch.rand(4, 3)
+        self.atoms = np.random.rand(4, 3)
+
+        self.mol = SimpleNamespace(
+            nup=self.nup, ndown=self.ndown, atom_coords=self.atoms)
+
         self.jastrow = JastrowFactorCombinedTerms(
-            self.nup, self.ndown, self.atoms,
+            self.mol,
             jastrow_kernel={
                 'ee': PadeJastrowKernelElecElec,
                 'en': PadeJastrowKernelElecNuc,
