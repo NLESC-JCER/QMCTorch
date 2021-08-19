@@ -7,11 +7,12 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, FullyConnectedJastrowKernel
 
 from qmctorch.utils import set_torch_double_precision
 from .test_base_solver import BaseTestSolvers
+
 
 class TestLiH(BaseTestSolvers.BaseTestSolverMolecule):
 

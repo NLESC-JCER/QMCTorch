@@ -5,7 +5,7 @@ import torch
 from qmctorch.utils import (InterpolateAtomicOrbitals,
                             InterpolateMolecularOrbitals)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel

@@ -7,7 +7,7 @@ from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 # bond distance : 0.74 A -> 1.38 a

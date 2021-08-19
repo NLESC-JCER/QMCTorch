@@ -8,7 +8,7 @@ from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from ..path_utils import PATH_TEST
 from .test_base_solver import BaseTestSolvers
 

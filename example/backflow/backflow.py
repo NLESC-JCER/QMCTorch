@@ -8,7 +8,7 @@ from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelBase
 
 
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 

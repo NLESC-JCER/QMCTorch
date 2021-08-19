@@ -1,7 +1,7 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowGraph
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
+from qmctorch.wavefunction.jastrows.graph import JastrowFactor, MGCNPredictor
 
 from torch.autograd import grad, gradcheck, Variable
 
@@ -53,20 +53,23 @@ class TestSlaterJastrowGraph(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterJastrowGraph(mol,
-                                     kinetic='auto',
-                                     include_all_mo=False,
-                                     configs='single_double(2,2)',
-                                     ee_model=MGCNPredictor,
-                                     ee_model_kwargs={'n_layers': 3,
-                                                      'feats': 32,
-                                                      'cutoff': 5.0,
-                                                      'gap': 1.},
-                                     en_model=MGCNPredictor,
-                                     en_model_kwargs={'n_layers': 3,
-                                                      'feats': 32,
-                                                      'cutoff': 5.0,
-                                                      'gap': 1.0})
+        # jastrow
+        jastrow = JastrowFactor(mol,
+                                ee_model=MGCNPredictor,
+                                ee_model_kwargs={'n_layers': 3,
+                                                 'feats': 32,
+                                                 'cutoff': 5.0,
+                                                 'gap': 1.},
+                                en_model=MGCNPredictor,
+                                en_model_kwargs={'n_layers': 3,
+                                                 'feats': 32,
+                                                 'cutoff': 5.0,
+                                                 'gap': 1.0})
+        self.wf = SlaterJastrow(mol,
+                                kinetic='auto',
+                                include_all_mo=False,
+                                configs='single_double(2,2)',
+                                jastrow=jastrow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight

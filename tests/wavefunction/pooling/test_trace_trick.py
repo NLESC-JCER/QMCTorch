@@ -5,7 +5,7 @@ from pyscf import gto
 from torch.autograd import Variable, grad
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 

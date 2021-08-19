@@ -14,7 +14,7 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_integrated_autocorrelation_time,
                             plot_walkers_traj)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 __PLOT__ = True

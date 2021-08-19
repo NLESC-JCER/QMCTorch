@@ -9,7 +9,7 @@ from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
-from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 
 from ..path_utils import PATH_TEST
