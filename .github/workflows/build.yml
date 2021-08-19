@@ -33,10 +33,10 @@ jobs:
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
-    - name: Test with multithreading
-      env:
-        CONDA_PREFIX: /usr/share/miniconda
-      run: mpirun -np 2 coverage run -m pytest tests_hvd
+    # - name: Test with multithreading
+    #   env:
+    #     CONDA_PREFIX: /usr/share/miniconda
+    #   run: mpirun -np 2 coverage run -m pytest tests_hvd
 
     - name: Test with single thread
       env:
