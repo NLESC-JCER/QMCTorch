@@ -2,11 +2,11 @@ import unittest
 import numpy as np
 import torch
 from torch.autograd import Variable, grad
-
+from types import SimpleNamespace
 from qmctorch.wavefunction.jastrows.graph.jastrow_graph import JastrowFactorGraph
 from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
 
-torch.set_default_tensor_type(torch.FloatTensor)
+torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 def hess(out, pos):
@@ -42,12 +42,14 @@ class TestGraphJastrow(unittest.TestCase):
 
         self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
-        self.atomic_pos = torch.rand(2, 3)
-
+        self.atomic_pos = np.random.rand(2, 3)
         self.atom_types = ["Li", "H"]
-        self.jastrow = JastrowFactorGraph(self.nup, self.ndown,
-                                          self.atomic_pos,
-                                          self.atom_types,
+
+        self.mol = SimpleNamespace(nup=self.nup, ndown=self.ndown,
+                                   atom_coords=self.atomic_pos,
+                                   atoms=self.atom_types)
+
+        self.jastrow = JastrowFactorGraph(self.mol,
                                           ee_model=MGCNPredictor,
                                           ee_model_kwargs={'n_layers': 3,
                                                            'feats': 32,
@@ -125,10 +127,10 @@ class TestGraphJastrow(unittest.TestCase):
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestGraphJastrow()
-    t.setUp()
-    t.test_permutation()
+    unittest.main()
+    # t = TestGraphJastrow()
+    # t.setUp()
+    # t.test_permutation()
     # t.test_grad_jastrow()
     # t.test_sum_grad_jastrow()
     # t.test_hess_jastrow()

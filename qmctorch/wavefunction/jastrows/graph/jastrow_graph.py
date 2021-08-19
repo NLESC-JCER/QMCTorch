@@ -12,9 +12,7 @@ from .elec_nuc_graph import ElecNucGraph
 
 class JastrowFactorGraph(nn.Module):
 
-    def __init__(self, nup, ndown,
-                 atomic_pos,
-                 atom_types,
+    def __init__(self, mol,
                  ee_model=MGCNPredictor,
                  ee_model_kwargs={},
                  en_model=MGCNPredictor,
@@ -38,9 +36,9 @@ class JastrowFactorGraph(nn.Module):
 
         super().__init__()
 
-        self.nup = nup
-        self.ndown = ndown
-        self.nelec = nup + ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelec = mol.nup + mol.ndown
         self.ndim = 3
 
         self.cuda = cuda
@@ -48,10 +46,11 @@ class JastrowFactorGraph(nn.Module):
         if self.cuda:
             self.device = torch.device('cuda')
 
-        self.atom_types = atom_types
+        self.atom_types = mol.atoms
         self.atomic_features = atomic_features
-        self.atoms = atomic_pos.to(self.device)
-        self.natoms = atomic_pos.shape[0]
+        self.atoms = torch.as_tensor(
+            mol.atom_coords).to(self.device)
+        self.natoms = self.atoms.shape[0]
 
         self.requires_autograd = True
 
