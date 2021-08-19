@@ -1,7 +1,5 @@
 import unittest
-from mendeleev.tables import Base
 import numpy as np
-from numpy.lib.stride_tricks import _broadcast_arrays_dispatcher
 import torch
 
 from .base_test_cases import BaseTestCases
