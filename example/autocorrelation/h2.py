@@ -5,8 +5,8 @@ from qmctorch.sampler import Metropolis
 from qmctorch.scf import Molecule
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import plot_correlation_coefficient, plot_integrated_autocorrelation_time
-from qmctorch.wavefunction import SlaterJastrow
-
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 torch.manual_seed(0)
 
 # molecule
@@ -16,8 +16,13 @@ mol = Molecule(
     calculator='pyscf',
     basis='sto-3g')
 
-# wave function
+
+# jastrow
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
+# wave funtion
 wf = SlaterJastrow(mol, kinetic='auto',
+                   jastrow=jastrow,
                    configs='single(2,2)')
 
 # sampler
@@ -43,5 +48,6 @@ obs = solver.sampling_traj(pos)
 
 rho, tau = plot_correlation_coefficient(obs.local_energy)
 print(f'fit exp(-x/tau), tau={tau}')
-iat = plot_integrated_autocorrelation_time(obs.local_energy, rho=rho, C=5)
+iat = plot_integrated_autocorrelation_time(
+    obs.local_energy, rho=rho, C=5)
 print(f"integrated autocorrelation time: {iat}")

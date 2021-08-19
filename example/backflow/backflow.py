@@ -3,8 +3,13 @@ import torch
 from torch import nn
 
 from qmctorch.scf import Molecule
+
+from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelBase
-from qmctorch.wavefunction import SlaterJastrowBackFlow
+
+
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 
 class MyBackflow(BackFlowKernelBase):
@@ -25,11 +30,17 @@ class MyBackflow(BackFlowKernelBase):
 mol = Molecule(atom='Li 0. 0. 0.; H 3.14 0. 0.', unit='angs',
                calculator='pyscf', basis='sto-3g', name='LiH')
 
+# jastrow
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
+# backflow
+backflow = BackFlowTransformation(mol, MyBackflow, {'size': 64})
+
 # define the wave function
-wf = SlaterJastrowBackFlow(mol, kinetic='jacobi',
-                           backflow_kernel=MyBackflow,
-                           backflow_kernel_kwargs={'size': 64},
-                           configs='single_double(2,2)')
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   jastrow=jastrow,
+                   backflow=backflow,
+                   configs='single_double(2,2)')
 
 pos = torch.rand(10, wf.nelec*3)
 print(wf(pos))

@@ -2,13 +2,13 @@
 from torch import optim
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
-
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -23,10 +23,13 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                basis='sto-3g',
                unit='bohr')
 
+# jastrow
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='single_double(2,2)',
-                   jastrow_kernel=PadeJastrowKernel)
+                   jastrow=jastrow)
 
 # sampler
 sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
