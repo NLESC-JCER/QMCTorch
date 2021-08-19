@@ -67,12 +67,12 @@ class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
                                           optimizer=self.opt)
 
         # values on different arch
-        # self.expected_energy = [-1.1464850902557373,
-        #                         -1.14937478612449]
+        self.expected_energy = [-1.1464850902557373,
+                                -1.14937478612449]
 
-        # # values on different arch
-        # self.expected_variance = [0.9279592633247375,
-        #                           0.7445300449383236]
+        # values on different arch
+        self.expected_variance = [0.9279592633247375,
+                                  0.7445300449383236]
 
     def test4_geo_opt(self):
 

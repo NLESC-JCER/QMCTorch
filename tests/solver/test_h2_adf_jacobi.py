@@ -50,11 +50,11 @@ class TestH2ADFJacobi(BaseTestSolvers.BaseTestSolverMolecule):
                                           optimizer=self.opt)
 
         # vals on different archs
-        # self.expected_energy = [-1.1571345329284668,
-        #                         -1.1501641653648578]
+        self.expected_energy = [-1.1571345329284668,
+                                -1.1501641653648578]
 
-        # self.expected_variance = [0.05087674409151077,
-        #                           0.05094174843043177]
+        self.expected_variance = [0.05087674409151077,
+                                  0.05094174843043177]
 
 
 if __name__ == "__main__":

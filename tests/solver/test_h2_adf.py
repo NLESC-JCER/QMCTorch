@@ -52,11 +52,11 @@ class TestH2ADF(BaseTestSolvers.BaseTestSolverMolecule):
                                           optimizer=self.opt)
 
         # vals on different archs
-        # self.expected_energy = [-1.1572532653808594,
-        #                         -1.1501641653648578]
+        self.expected_energy = [-1.1572532653808594,
+                                -1.1501641653648578]
 
-        # self.expected_variance = [0.05085879936814308,
-        #                           0.05094174843043177]
+        self.expected_variance = [0.05085879936814308,
+                                  0.05094174843043177]
 
 
 if __name__ == "__main__":

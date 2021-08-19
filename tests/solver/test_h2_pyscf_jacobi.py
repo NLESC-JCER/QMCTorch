@@ -58,12 +58,12 @@ class TestH2SamplerHMC(BaseTestSolvers.BaseTestSolverMolecule):
                                           optimizer=self.opt)
 
         # values on different arch
-        # self.expected_energy = [-1.0877732038497925,
-        #                         -1.088576]
+        self.expected_energy = [-1.0877732038497925,
+                                -1.088576]
 
-        # # values on different arch
-        # self.expected_variance = [0.14341972768306732,
-        #                           0.163771]
+        # values on different arch
+        self.expected_variance = [0.14341972768306732,
+                                  0.163771]
 
 
 if __name__ == "__main__":
