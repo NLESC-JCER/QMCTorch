@@ -11,10 +11,8 @@ from qmctorch.utils import (plot_block, plot_blocking_energy,
                             plot_integrated_autocorrelation_time,
                             plot_walkers_traj)
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
-
-
-__PLOT__ = False
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
 
 
 class TestH2Stat(unittest.TestCase):
@@ -35,9 +33,12 @@ class TestH2Stat(unittest.TestCase):
             calculator='pyscf',
             basis='sto-3g')
 
+        # jastrow
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='single(2,2)')
+                                configs='single(2,2)', jastrow=jastrow)
 
         # sampler
         self.sampler = Metropolis(
@@ -73,10 +74,9 @@ class TestH2Stat(unittest.TestCase):
         pos = self.solver.sampler(self.solver.wf.pdf)
         obs = self.solver.sampling_traj(pos)
 
-        if __PLOT__:
-            plot_blocking_energy(obs.local_energy, block_size=10)
-            plot_correlation_coefficient(obs.local_energy)
-            plot_integrated_autocorrelation_time(obs.local_energy)
+        plot_blocking_energy(obs.local_energy, block_size=10)
+        plot_correlation_coefficient(obs.local_energy)
+        plot_integrated_autocorrelation_time(obs.local_energy)
 
 
 if __name__ == "__main__":

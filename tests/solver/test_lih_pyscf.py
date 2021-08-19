@@ -1,4 +1,3 @@
-from tests.wavefunction.test_slaterjastrow import TestSlaterJastrow
 import unittest
 
 import numpy as np
@@ -8,21 +7,18 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
-from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
 from qmctorch.wavefunction.slater_jastrow_unified import SlaterJastrowUnified as SlaterJastrow
-from qmctorch.utils import set_torch_double_precision
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 from .test_base_solver import BaseTestSolvers
 
 
-class TestLiHBackFlowPySCF(BaseTestSolvers.BaseTestSolverMolecule):
+class TestLiH(BaseTestSolvers.BaseTestSolverMolecule):
 
     def setUp(self):
 
         torch.manual_seed(0)
         np.random.seed(0)
-        set_torch_double_precision()
 
         # molecule
         self.mol = Molecule(
@@ -34,23 +30,10 @@ class TestLiHBackFlowPySCF(BaseTestSolvers.BaseTestSolverMolecule):
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
-        # backflow
-        backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse, orbital_dependent=False)
-
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                jastrow=jastrow,
-                                backflow=backflow,
-                                configs='single_double(2,2)',
-                                include_all_mo=True)
-
-        # fc weights
-        self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
-
-        # jastrow weights
-        self.wf.jastrow.jastrow_kernel.weight.data = torch.rand(
-            self.wf.jastrow.jastrow_kernel.weight.shape)
+                                configs='single(2,2)',
+                                include_all_mo=False, jastrow=jastrow)
 
         # sampler
         self.sampler = Metropolis(
@@ -71,15 +54,11 @@ class TestLiHBackFlowPySCF(BaseTestSolvers.BaseTestSolverMolecule):
         self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
-        # artificial pos
-        self.nbatch = 10
-        self.pos = torch.as_tensor(np.random.rand(
-            self.nbatch, self.wf.nelec*3))
-        self.pos.requires_grad = True
-
 
 if __name__ == "__main__":
     unittest.main()
-    # t = TestLiHBackFlowPySCF()
+    # t = TestLiH()
     # t.setUp()
+    # t.test1_single_point()
+    # t.test2_wf_opt_grad_auto()
     # t.test3_wf_opt_grad_manual()
