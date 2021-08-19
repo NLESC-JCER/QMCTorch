@@ -15,6 +15,9 @@ from .orbitals.atomic_orbitals import AtomicOrbitals
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .pooling.slater_pooling import SlaterPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
+
+from .jastrows.distance.electron_electron_distance import ElectronElectronDistance
+
 from ..utils import register_extra_attributes
 
 
@@ -84,6 +87,9 @@ class SlaterJastrow(WaveFunction):
 
         # init the knientic calc methods
         self.init_kinetic(kinetic, backflow)
+
+        # init common distance calculator
+        self.init_common_dist_calculator(mol.nelec)
 
         # register the callable for hdf5 dump
         register_extra_attributes(self,
@@ -195,6 +201,17 @@ class SlaterJastrow(WaveFunction):
                 self.kinetic_energy_jacobi = self.kinetic_energy_jacobi_backflow
                 self.kinetic_energy = self.kinetic_energy_jacobi_backflow
 
+    def init_common_dist_calculator(self, nelec):
+        """Create a common distance calculators shared between the different layers."""
+
+        self.common_edist = ElectronElectronDistance(nelec)
+
+        if self.jastrow is not None:
+            self.jastrow.edist = self.common_edist
+
+        if self.backflow is not None:
+            self.backflow.edist = self.common_edist
+
     def forward(self, x, ao=None):
         """computes the value of the wave function for the sampling points
 
@@ -214,6 +231,9 @@ class SlaterJastrow(WaveFunction):
             >>> pos = torch.rand(500,6)
             >>> vals = wf(pos)
         """
+
+        # precompute the ee dist matrix
+        self.common_edist(x, derivative=0, clean_first=True)
 
         # compute the jastrow from the pos
         if self.use_jastrow:
@@ -284,6 +304,9 @@ class SlaterJastrow(WaveFunction):
             torch.tensor: values of the kinetic energy at each sampling points
         """
 
+        # precompute the ee dist matrix
+        self.common_edist.clean_values()
+
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
 
         mo = self.ao2mo(ao)
@@ -293,6 +316,37 @@ class SlaterJastrow(WaveFunction):
         psi = self.pool(mo)
         out = self.fc(kin * psi) / self.fc(psi)
         return out
+
+    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
+        """Compute the Bkin matrix
+
+        Args:
+            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
+            mo (torch.tensor, optional): precomputed values of the MOs
+
+        Returns:
+            torch.tensor: matrix of the kinetic operator
+        """
+
+        bkin = self.ao2mo(d2ao)
+
+        if self.use_jastrow:
+
+            jast, djast, d2jast = self.jastrow(x,
+                                               derivative=[0, 1, 2],
+                                               sum_grad=False)
+
+            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
+            d2jast = d2jast / jast
+
+            dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
+
+            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
+            d2jast_mo = d2jast.unsqueeze(-1) * mo
+
+            bkin = bkin + 2 * djast_dmo + d2jast_mo
+
+        return -0.5 * bkin
 
     def gradients_jacobi(self, x, sum_grad=False, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
@@ -394,37 +448,6 @@ class SlaterJastrow(WaveFunction):
 
         return out
 
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
-        """Compute the Bkin matrix
-
-        Args:
-            x (torch.tensor): sampling points (Nbatch, 3*Nelec)
-            mo (torch.tensor, optional): precomputed values of the MOs
-
-        Returns:
-            torch.tensor: matrix of the kinetic operator
-        """
-
-        bkin = self.ao2mo(d2ao)
-
-        if self.use_jastrow:
-
-            jast, djast, d2jast = self.jastrow(x,
-                                               derivative=[0, 1, 2],
-                                               sum_grad=False)
-
-            djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
-            d2jast = d2jast / jast
-
-            dmo = self.ao2mo(dao.transpose(2, 3)).transpose(2, 3)
-
-            djast_dmo = (djast.unsqueeze(2) * dmo).sum(-1)
-            d2jast_mo = d2jast.unsqueeze(-1) * mo
-
-            bkin = bkin + 2 * djast_dmo + d2jast_mo
-
-        return -0.5 * bkin
-
     def kinetic_energy_jacobi_backflow(self, x,  **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
 
@@ -457,6 +480,9 @@ class SlaterJastrow(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
+
+        # precompute the ee dist matrix
+        self.common_edist.clean_values()
 
         # get ao values
         ao, dao, d2ao = self.ao(

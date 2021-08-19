@@ -40,7 +40,38 @@ class ElectronElectronDistance(nn.Module):
         elif _type_ == torch.float64:
             self.eps = 1E-16
 
-    def forward(self, input, derivative=0):
+        # place holder to save data
+        self.saved_vals = None
+        self.saved_der_vals = None
+        self.saved_sec_der_vals = None
+
+    def forward(self, input, derivative=0, clean_first=False):
+        """Compute or retrieve the values of the ee dist
+
+        Args:
+            input (torch.tesnor): position of the electron \n
+                                  size : Nbatch x [Nelec x Ndim]
+            derivative (int, optional): degre of the derivative. \n
+                                        Defaults to 0.
+
+        Returns:
+            torch.tensor: distance (or derivative) matrix \n
+                          Nbatch x Nelec x Nelec if derivative = 0 \n
+                          Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
+        """
+        if clean_first:
+            self.clean_values()
+
+        # retrieve the value
+        vals = self.retrieve_saved_values(derivative)
+
+        # compute and save if not found
+        if vals is None:
+            vals = self.compute_values(input, derivative)
+            self.save_values(vals, derivative)
+        return vals
+
+    def compute_values(self, input, derivative=0):
         """Compute the pairwise distance between the electrons
         or its derivative. \n
 
@@ -207,3 +238,42 @@ class ElectronElectronDistance(nn.Module):
         """
         out = pos[:, :, None, :] - pos[:, None, :, :]
         return out
+
+    def save_values(self, vals, der):
+        """Save the value of the tensor for reuse
+
+        Args:
+            vals ([type]): [description]
+            der ([type]): [description]
+        """
+        if der == 0:
+            self.saved_vals = vals
+        elif der == 1:
+            self.saved_der_vals = vals
+        elif der == 2:
+            self.saved_sec_der_vals = vals
+
+    def clean_values(self):
+        """Delete the value of the tensor for reuse
+
+        Args:
+            vals ([type]): [description]
+            der ([type]): [description]
+        """
+
+        self.saved_vals = None
+        self.saved_der_vals = None
+        self.saved_sec_der_vals = None
+
+    def retrieve_saved_values(self, der):
+        """Retrieve previously computed values
+
+        Args:
+            der ([type]): [description]
+        """
+        if der == 0:
+            return self.saved_vals
+        elif der == 1:
+            return self.saved_der_vals
+        elif der == 2:
+            return self.saved_sec_der_vals
