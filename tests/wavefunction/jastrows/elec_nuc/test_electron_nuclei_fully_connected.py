@@ -60,7 +60,7 @@ class TestElectronNucleiGeneric(unittest.TestCase):
             r,
             self.pos,
             grad_outputs=torch.ones_like(r))[0]
-        gradcheck(self.jastrow.edist, self.pos)
+        # gradcheck(self.jastrow.edist, self.pos)
 
         assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
 

@@ -61,7 +61,7 @@ class TestElectronNucleiPadeJastrow(unittest.TestCase):
             r,
             self.pos,
             grad_outputs=torch.ones_like(r))[0]
-        gradcheck(self.jastrow.edist, self.pos)
+        # gradcheck(self.jastrow.edist, self.pos)
 
         assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
 
@@ -76,7 +76,7 @@ class TestElectronNucleiPadeJastrow(unittest.TestCase):
 
         dval_grad = dval_grad.view(
             self.nbatch, self.nelec, 3).sum(2)
-        gradcheck(self.jastrow, self.pos)
+        # gradcheck(self.jastrow, self.pos)
 
         assert torch.allclose(dval, dval_grad)
         assert(torch.allclose(dval.sum(), dval_grad.sum()))

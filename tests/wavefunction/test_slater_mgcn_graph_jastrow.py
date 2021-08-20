@@ -127,7 +127,7 @@ class TestSlaterJastrowGraph(unittest.TestCase):
             self.pos,
             grad_outputs=torch.ones_like(mo))[0]
 
-        gradcheck(self.wf.pos2mo, self.pos)
+        # gradcheck(self.wf.pos2mo, self.pos)
 
         assert(torch.allclose(dmo.sum(), dmo_grad.sum()))
         assert(torch.allclose(dmo.sum(-1),
