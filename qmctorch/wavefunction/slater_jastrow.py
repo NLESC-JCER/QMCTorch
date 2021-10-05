@@ -3,7 +3,6 @@
 import torch
 from scipy.optimize import curve_fit
 from copy import deepcopy
-import matplotlib.pyplot as plt
 import numpy as np
 from torch import nn
 import operator
@@ -656,6 +655,7 @@ class SlaterJastrow(WaveFunction):
 
             # plot if necessary
             if plot:
+                import matplotlib.pyplot as plt
                 plt.plot(xdata, ydata)
                 plt.plot(xdata, sto(xdata, *popt))
                 plt.show()
