@@ -7,10 +7,10 @@ import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import (plot_block, plot_blocking_energy,
-                            plot_correlation_coefficient,
-                            plot_integrated_autocorrelation_time,
-                            plot_walkers_traj)
+from qmctorch.utils.plot_data import (plot_block, plot_blocking_energy,
+                                      plot_correlation_coefficient,
+                                      plot_integrated_autocorrelation_time,
+                                      plot_walkers_traj)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
