@@ -66,12 +66,12 @@ solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
                  ortho_mo=False, clip_loss=False,
                  resampling={'mode': 'update',
                              'resample_every': 1,
-                             'nstep_update': 200,
+                             'nstep_update': 150,
                              'ntherm_update': 50}
                  )
 
 # optimize the wave function
-obs = solver.run(5, batchsize=10)
+obs = solver.run(5)  # , batchsize=10)
 
 # plot
 # plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)

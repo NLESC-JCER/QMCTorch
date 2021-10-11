@@ -257,7 +257,7 @@ class SolverSlaterJastrow(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every, tqdm=True):
+    def prepare_optimization(self, batchsize, chkpt_every, tqdm=False):
         """Prepare the optimization process
 
         Args:
@@ -313,7 +313,8 @@ class SolverSlaterJastrow(SolverBase):
 
             tstart = time()
             log.info('')
-            log.info('  epoch %d' % n)
+            log.info('  epoch %d | %d sampling points' %
+                     (n, len(self.dataloader.dataset)))
 
             cumulative_loss = 0
 
