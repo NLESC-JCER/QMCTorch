@@ -1,3 +1,4 @@
+from threading import local
 from types import SimpleNamespace
 import os
 import numpy as np
@@ -161,14 +162,20 @@ class SolverBase:
         for obs in self.observable.__dict__.keys():
 
             # store the energy
-            if obs == 'energy' and local_energy is not None:
+            if obs == 'energy':
+
+                if local_energy is None:
+                    local_energy = self.wf.local_energy(pos)
+
                 data = local_energy.cpu().detach().numpy()
+
                 if (ibatch is None) or (ibatch == 0):
-                    self.observable.energy.append(np.mean(data))
+                    self.observable.energy.append(
+                        np.mean(data).item())
                 else:
                     self.observable.energy[-1] *= ibatch/(ibatch+1)
                     self.observable.energy[-1] += np.mean(
-                        data)/(ibatch+1)
+                        data).item()/(ibatch+1)
 
             # store local energy
             elif obs == 'local_energy' and local_energy is not None:
