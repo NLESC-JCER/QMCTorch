@@ -66,7 +66,9 @@ solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
                  ortho_mo=False, clip_loss=False,
                  resampling={'mode': 'update',
                              'resample_every': 1,
-                             'nstep_update': 50})
+                             'nstep_update': 200,
+                             'ntherm_update': 50}
+                 )
 
 # optimize the wave function
 obs = solver.run(5, batchsize=10)

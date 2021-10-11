@@ -140,20 +140,18 @@ class SolverSlaterJastrow(SolverBase):
         """ save the sampling params."""
         self.sampler._nstep_save = self.sampler.nstep
         self.sampler._ntherm_save = self.sampler.ntherm
-        self.sampler._nwalker_save = self.sampler.walkers.nwalkers
+        # self.sampler._nwalker_save = self.sampler.walkers.nwalkers
 
         if self.resampling_options.mode == 'update':
-            self.sampler.ntherm = -1
+            self.sampler.ntherm = self.resampling_options.ntherm_update
             self.sampler.nstep = self.resampling_options.nstep_update
-            self.sampler.walkers.nwalkers = pos.shape[0]
-            self.sampler.nwalkers = pos.shape[0]
+            # self.sampler.walkers.nwalkers = pos.shape[0]
 
     def restore_sampling_parameters(self):
         """restore sampling params to their original values."""
         self.sampler.nstep = self.sampler._nstep_save
         self.sampler.ntherm = self.sampler._ntherm_save
-        self.sampler.walkers.nwalkers = self.sampler._nwalker_save
-        self.sampler.nwalkers = self.sampler._nwalker_save
+        # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
     def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
                 nepoch_wf_init=100, nepoch_wf_update=50,
@@ -386,7 +384,7 @@ class SolverSlaterJastrow(SolverBase):
             loss += self.ortho_loss(self.wf.mo.weight)
 
         # compute local gradients
-        # self.opt.zero_grad()
+        # self.opt.zero_grad() ???
         loss.backward()
 
         return loss, eloc
