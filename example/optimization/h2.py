@@ -40,7 +40,7 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
 #                       ntherm=-1, ndecor=10,
 #                       init=mol.domain('atomic'))
 
-sampler = Metropolis(nwalkers=100, nstep=100, nelec=wf.nelec,
+sampler = Metropolis(nwalkers=10, nstep=200, nelec=wf.nelec, ntherm=100, ndecor=10,
                      step_size=0.05, init=mol.domain('atomic'))
 
 # optimizer

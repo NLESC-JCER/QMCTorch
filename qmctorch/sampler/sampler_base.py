@@ -23,7 +23,7 @@ class SamplerBase:
             cuda ([type]): [description]
         """
 
-        self.nwalkers = nwalkers
+        # self.nwalkers = nwalkers
         self.nelec = nelec
         self.ndim = ndim
         self.nstep = nstep
@@ -41,7 +41,7 @@ class SamplerBase:
 
         log.info('')
         log.info(' Monte-Carlo Sampler')
-        log.info('  Number of walkers   : {0}', self.nwalkers)
+        log.info('  Number of walkers   : {0}', self.walkers.nwalkers)
         log.info('  Number of steps     : {0}', self.nstep)
         log.info('  Step size           : {0}', self.step_size)
         log.info('  Thermalization steps: {0}', self.ntherm)
@@ -53,11 +53,11 @@ class SamplerBase:
             "Sampler must have a __call__ method")
 
     def __repr__(self):
-        return self.__class__.__name__ + ' sampler with  %d walkers' % self.nwalkers
+        return self.__class__.__name__ + ' sampler with  %d walkers' % self.walkers.nwalkers
 
     def get_sampling_size(self):
         """evaluate the number of sampling point we'll have."""
         if self.ntherm == -1:
-            return self.nwalkers
+            return self.walkers.nwalkers
         else:
             return self.walkers.nwalkers * int((self.nstep-self.ntherm)/self.ndecor)

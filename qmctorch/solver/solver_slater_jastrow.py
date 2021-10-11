@@ -259,7 +259,7 @@ class SolverSlaterJastrow(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every, tqdm=False):
+    def prepare_optimization(self, batchsize, chkpt_every, tqdm=True):
         """Prepare the optimization process
 
         Args:

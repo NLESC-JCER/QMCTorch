@@ -141,7 +141,7 @@ class Metropolis(SamplerBase):
 
                     # acceptance rate
                     rate += index.byte().sum().float().to('cpu') / \
-                        (self.nwalkers * self._move_per_iter)
+                        (self.walkers.nwalkers * self._move_per_iter)
 
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
@@ -226,21 +226,22 @@ class Metropolis(SamplerBase):
 
             # clone and reshape data : Nwlaker, Nelec, Ndim
             new_pos = self.walkers.pos.clone()
-            new_pos = new_pos.view(self.nwalkers,
+            new_pos = new_pos.view(self.walkers.nwalkers,
                                    self.nelec, self.ndim)
 
             # get indexes
             if id_elec is None:
-                index = torch.LongTensor(self.nwalkers).random_(
+                index = torch.LongTensor(self.walkers.nwalkers).random_(
                     0, self.nelec)
             else:
-                index = torch.LongTensor(self.nwalkers).fill_(id_elec)
+                index = torch.LongTensor(
+                    self.walkers.nwalkers).fill_(id_elec)
 
             # change selected data
-            new_pos[range(self.nwalkers), index,
+            new_pos[range(self.walkers.nwalkers), index,
                     :] += self._move(1)
 
-            return new_pos.view(self.nwalkers, self.nelec * self.ndim)
+            return new_pos.view(self.walkers.nwalkers, self.nelec * self.ndim)
 
     def _move(self, num_elec: int) -> torch.Tensor:
         """propose a move for the electrons
@@ -253,15 +254,15 @@ class Metropolis(SamplerBase):
         """
         if self.movedict['proba'] == 'uniform':
             d = torch.rand(
-                (self.nwalkers, num_elec, self.ndim), device=self.device).view(
-                self.nwalkers, num_elec * self.ndim)
+                (self.walkers.nwalkers, num_elec, self.ndim), device=self.device).view(
+                self.walkers.nwalkers, num_elec * self.ndim)
             return self.step_size * (2. * d - 1.)
 
         elif self.movedict['proba'] == 'normal':
             displacement = self.multiVariate.sample(
-                (self.nwalkers, num_elec)).to(self.device)
+                (self.walkers.nwalkers, num_elec)).to(self.device)
             return displacement.view(
-                self.nwalkers, num_elec * self.ndim)
+                self.walkers.nwalkers, num_elec * self.ndim)
 
     def _accept(self, proba: torch.Tensor) -> torch.Tensor:
         """accept the move or not
