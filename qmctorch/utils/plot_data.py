@@ -92,7 +92,8 @@ def plot_walkers_traj(eloc, walkers='mean'):
         # plt.subplot(1, 2, 1)
 
         if walkers == 'all':
-            plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
+            plt.plot(eloc, 'o', alpha=max(
+                1 / nwalkers, 1E-2), c='grey')
             cmap = cm.hot(np.linspace(0, 1, nwalkers))
             for i in range(nwalkers):
                 plt.plot(celoc.T[:, i], color=cmap[i])
@@ -103,7 +104,7 @@ def plot_walkers_traj(eloc, walkers='mean'):
 
         else:
             plt.plot(eloc[walkers, :], 'o',
-                     alpha=1 / nwalkers, c='grey')
+                     alpha=max(1 / nwalkers, 1E-2), c='grey')
             plt.plot(celoc.T[traj_index, :])
         plt.grid()
         plt.xlabel('Monte Carlo Steps')
