@@ -295,7 +295,7 @@ class SolverBase:
 
         return pos
 
-    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
+    def single_point(self, with_tqdm=True, batchsize=None, hdf5_group='single_point'):
         """Performs a single point calculatin
 
         Args:
@@ -325,9 +325,24 @@ class SolverBase:
                 pos = pos.to(self.device)
 
             # compute energy/variance/error
-            el = self.wf.local_energy(pos)
-            e, s, err = torch.mean(el), torch.var(
-                el), self.wf.sampling_error(el)
+            if batchsize is None:
+                eloc = self.wf.local_energy(pos)
+
+            else:
+                nbatch = int(np.ceil(len(pos)/batchsize))
+
+                for ibatch in range(nbatch):
+                    istart = ibatch * batchsize
+                    iend = min((ibatch+1) * batchsize, len(pos))
+                    if ibatch == 0:
+                        eloc = self.wf.local_energy(
+                            pos[istart:iend, :])
+                    else:
+                        eloc = torch.cat((eloc, self.wf.local_energy(
+                            pos[istart:iend, :])))
+
+            e, s, err = torch.mean(eloc), torch.var(
+                eloc), self.wf.sampling_error(eloc)
 
             # print data
             log.options(style='percent').info(
@@ -338,7 +353,7 @@ class SolverBase:
             # dump data to hdf5
             obs = SimpleNamespace(
                 pos=pos,
-                local_energy=el,
+                local_energy=eloc,
                 energy=e,
                 variance=s,
                 error=err
