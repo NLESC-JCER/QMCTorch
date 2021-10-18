@@ -40,7 +40,7 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
 #                       ntherm=-1, ndecor=10,
 #                       init=mol.domain('atomic'))
 
-sampler = Metropolis(nwalkers=100, nstep=100, nelec=wf.nelec,
+sampler = Metropolis(nwalkers=10, nstep=200, nelec=wf.nelec, ntherm=100, ndecor=10,
                      step_size=0.05, init=mol.domain('atomic'))
 
 # optimizer
@@ -66,10 +66,12 @@ solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
                  ortho_mo=False, clip_loss=False,
                  resampling={'mode': 'update',
                              'resample_every': 1,
-                             'nstep_update': 50})
+                             'nstep_update': 150,
+                             'ntherm_update': 50}
+                 )
 
 # optimize the wave function
-obs = solver.run(5, batchsize=10)
+obs = solver.run(5)  # , batchsize=10)
 
 # plot
 # plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)

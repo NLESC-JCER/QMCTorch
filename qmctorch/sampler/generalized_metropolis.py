@@ -84,7 +84,7 @@ class GeneralizedMetropolis(SamplerBase):
                 index = self._accept(pmat)
 
                 # acceptance rate
-                rate += index.byte().sum().float() / self.nwalkers
+                rate += index.byte().sum().float() / self.walkers.nwalkers
 
                 # update position/function value
                 xi[index, :] = xf[index, :]
@@ -117,17 +117,17 @@ class GeneralizedMetropolis(SamplerBase):
 
         # clone and reshape data : Nwlaker, Nelec, Ndim
         new_pos = self.walkers.pos.clone()
-        new_pos = new_pos.view(self.nwalkers,
+        new_pos = new_pos.view(self.walkers.nwalkers,
                                self.nelec, self.ndim)
 
         # get indexes
-        index = torch.LongTensor(self.nwalkers).random_(
+        index = torch.LongTensor(self.walkers.nwalkers).random_(
             0, self.nelec)
 
-        new_pos[range(self.nwalkers), index,
+        new_pos[range(self.walkers.nwalkers), index,
                 :] += self._move(drift, index)
 
-        return new_pos.view(self.nwalkers, self.nelec * self.ndim)
+        return new_pos.view(self.walkers.nwalkers, self.nelec * self.ndim)
 
     def _move(self, drift, index):
         """Move a walker.
@@ -140,14 +140,14 @@ class GeneralizedMetropolis(SamplerBase):
             torch.tensor: position of the walkers
         """
 
-        d = drift.view(self.nwalkers,
+        d = drift.view(self.walkers.nwalkers,
                        self.nelec, self.ndim)
 
         mv = MultivariateNormal(torch.zeros(self.ndim), np.sqrt(
             self.step_size) * torch.eye(self.ndim))
 
-        return self.step_size * d[range(self.nwalkers), index, :] \
-            + mv.sample((self.nwalkers, 1)).squeeze()
+        return self.step_size * d[range(self.walkers.nwalkers), index, :] \
+            + mv.sample((self.walkers.nwalkers, 1)).squeeze()
 
     def trans(self, xf, xi, drifti):
         """transform the positions
