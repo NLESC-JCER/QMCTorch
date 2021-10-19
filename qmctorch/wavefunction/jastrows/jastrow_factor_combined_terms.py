@@ -40,7 +40,7 @@ class JastrowFactorCombinedTerms(nn.Module):
         self.ndown = mol.ndown
         self.cuda = cuda
         self.jastrow_kernel_dict = jastrow_kernel
-        self.jastrow_terms = []
+        self.jastrow_terms = nn.ModuleList()
 
         # sanitize the dict
         for k in ['ee', 'en', 'een']:
