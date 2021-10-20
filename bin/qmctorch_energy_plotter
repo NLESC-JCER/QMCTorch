@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+import h5py
+import matplotlib.pyplot as plt
+import argparse
+
+
+def get_energy(mol):
+    with h5py.File(mol, 'r') as f5:
+        data = f5['wf_opt']['energy'][()]
+    return data
+
+
+def get_correlation_energy(e, e0, ehf):
+    return 1 - (e-e0)/(ehf-e0)
+
+
+def plot_percent_correlation_energy(args):
+
+    nepoch = args.num_epoch
+    energy = []
+    percent_correlation_energy = []
+    for mol in args.filename:
+        e = get_energy(mol)[:nepoch]
+        energy.append(e)
+        percent_correlation_energy.append(
+            get_correlation_energy(e, args.exact_energy, args.hf_energy))
+
+    plt_fn = plt.plot
+    if args.semi_logy:
+        plt_fn = plt.semilogy
+
+    for ec in percent_correlation_energy:
+        plt_fn(ec)
+    plt.show()
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('filename', nargs='+',
+                        help='name of the files')
+    parser.add_argument('-l', '--labels', nargs='+',
+                        help='label of the data')
+    parser.add_argument('-ne', '--num_epoch', type=int,
+                        default=-1, help='Number of epcoh to plot')
+    parser.add_argument('-e0', '--exact_energy', type=float,
+                        default=None, help='True exact energy of thre system')
+    parser.add_argument('-ehf', '--hf_energy', type=float,
+                        default=None, help='Hartree Fock energy of thre system')
+    parser.add_argument('-log', '--semi_logy', action='store_true',
+                        help='plot on semilog y axis')
+    args = parser.parse_args()
+
+    plot_percent_correlation_energy(args)
