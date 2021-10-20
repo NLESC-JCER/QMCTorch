@@ -4,11 +4,13 @@ import numpy as np
 
 
 class CalculatorBase:
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname, calcname, savefile):
+    def __init__(self, atoms, atom_coords, basis, charge, spin, scf, units, molname, calcname, savefile):
 
         self.atoms = atoms
         self.atom_coords = atom_coords
         self.basis_name = basis
+        self.charge = charge
+        self.spin = spin
         self.scf = scf
         self.units = units
         self.molname = molname

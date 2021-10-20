@@ -16,10 +16,10 @@ except ModuleNotFoundError:
 
 class CalculatorADF(CalculatorBase):
 
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
+    def __init__(self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile):
 
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'adf', savefile)
+            self, atoms, atom_coords, basis, charge, spin, scf, units, molname, 'adf', savefile)
 
         # basis from the emma paper
         self.additional_basis_type = ['VB1', 'VB2', 'VB3',
@@ -92,6 +92,13 @@ class CalculatorADF(CalculatorBase):
 
         # total energy
         sett.input.totalenergy = True
+
+        # charge info
+        sett.input.charge = self.charge
+
+        # spin info
+        sett.input.unrestricted = False
+        sett.input.spinpolarization = self.spin
 
         return sett
 

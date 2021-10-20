@@ -144,7 +144,8 @@ class SlaterJastrow(WaveFunction):
         self.configs_method = configs
         self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
-        self.highest_occ_mo = torch.stack(self.configs).max()+1
+        self.highest_occ_mo = max(
+            self.configs[0].max(), self.configs[1].max())+1
 
     def init_slater_det_calculator(self):
         """Initialize the calculator of the slater dets"""
