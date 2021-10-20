@@ -10,6 +10,7 @@ import operator
 from .. import log
 
 from .wf_base import WaveFunction
+from .jastrows.combine_jastrow import CombineJastrow
 from .orbitals.atomic_orbitals import AtomicOrbitals
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .pooling.slater_pooling import SlaterPooling
@@ -169,17 +170,25 @@ class SlaterJastrow(WaveFunction):
     def init_jastrow(self, jastrow):
         """Init the jastrow factor calculator"""
 
-        self.jastrow = jastrow
-
-        if self.jastrow is None:
+        if jastrow is None:
+            self.jastrow = jastrow
             self.use_jastrow = False
 
         else:
             self.use_jastrow = True
-            self.jastrow_type = self.jastrow.__repr__()
 
+            if isinstance(jastrow, list):
+                self.jastrow = CombineJastrow(jastrow)
+            else:
+                self.jastrow = jastrow
+
+            self.jastrow_type = self.jastrow.__repr__()
             if self.cuda:
                 self.jastrow = self.jastrow.to(self.device)
+
+    def set_combined_jastrow(self, jastrow):
+        """Initialize the jastrow factor as a sum of jastrows"""
+        self.jastrow = CombineJastrow(jastrow)
 
     def init_kinetic(self, kinetic, backflow):
         """"Init the calculator of the kinetic energies"""

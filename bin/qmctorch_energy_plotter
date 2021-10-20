@@ -21,6 +21,7 @@ def plot_percent_correlation_energy(args):
     percent_correlation_energy = []
     for mol in args.filename:
         e = get_energy(mol)[:nepoch]
+        print(e[-1])
         energy.append(e)
         percent_correlation_energy.append(
             get_correlation_energy(e, args.exact_energy, args.hf_energy))
