@@ -200,13 +200,14 @@ class OrbitalConfigurations:
             raise ValueError(
                 'CAS active space not possible with spin polarized calculation')
 
-        idx_low, idx_high = self.nup - nocc, self.nup + nvirt
+        idx_low, idx_high = self.nup - nocc[0], self.nup + nvirt[0]
         orb_index_up = range(idx_low, idx_high)
         idx_frz = list(range(idx_low))
         _cup = [idx_frz + list(l)
                 for l in list(combinations(orb_index_up, nelec // 2))]
 
-        idx_low, idx_high = self.nup - nocc - 1, self.nup + nvirt - 1
+        idx_low, idx_high = self.nup - \
+            nocc[0] - 1, self.nup + nvirt[0] - 1
 
         _cdown = [
             idx_frz +
