@@ -51,7 +51,7 @@ class CalculatorADF(CalculatorBase):
         if self.savefile:
             shutil.copyfile(t21_path, t21_name)
             self.savefile = t21_name
-        shutil.rmtree(plams_wd)
+        # shutil.rmtree(plams_wd)
 
         return basis
 
@@ -94,11 +94,11 @@ class CalculatorADF(CalculatorBase):
         sett.input.totalenergy = True
 
         # charge info
-        sett.input.charge = self.charge
+        sett.input.charge = "%d %d" % (self.charge, self.spin)
 
         # spin info
         sett.input.unrestricted = False
-        sett.input.spinpolarization = self.spin
+        # sett.input.spinpolarization = self.spin
 
         return sett
 
