@@ -191,8 +191,7 @@ class Metropolis(SamplerBase):
         """
         if self.movedict['proba'] == 'uniform':
             d = torch.rand(
-                (self.walkers.nwalkers, num_elec, self.ndim), device=self.device).view(
-                self.walkers.nwalkers, num_elec * self.ndim)
+                (self.walkers.nwalkers, num_elec*self.ndim), device=self.device)
             return self.step_size * (2. * d - 1.)
 
         elif self.movedict['proba'] == 'normal':

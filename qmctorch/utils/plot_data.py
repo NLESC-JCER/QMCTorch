@@ -99,7 +99,7 @@ def plot_walkers_traj(eloc, walkers='mean'):
                 plt.plot(celoc.T[:, i], color=cmap[i])
 
         elif walkers == 'mean':
-            plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
+            # plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
             plt.plot(np.mean(celoc.T, axis=1), linewidth=5)
 
         else:
