@@ -8,10 +8,10 @@ from .calculator_base import CalculatorBase
 
 class CalculatorPySCF(CalculatorBase):
 
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
+    def __init__(self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile):
 
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'pyscf', savefile)
+            self, atoms, atom_coords, basis, charge, spin, scf, units, molname, 'pyscf', savefile)
 
     def run(self):
         """Run the scf calculation using PySCF."""
@@ -22,6 +22,8 @@ class CalculatorPySCF(CalculatorBase):
         # pyscf calculation
         mol = gto.M(
             atom=atom_str,
+            spin=self.spin,
+            charge=self.charge,
             basis=self.basis_name,
             unit=self.units,
             cart=False)

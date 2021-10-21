@@ -21,14 +21,18 @@ class Molecule:
 
     def __init__(self, atom=None, calculator='adf',
                  scf='hf', basis='dzp', unit='bohr',
+                 charge=0, spin=0,
                  name=None, load=None, save_scf_file=False,
                  redo_scf=False, rank=0, mpi_size=0):
         """Create a molecule in QMCTorch
 
         Args:
             atom (str or None, optional): defines the atoms and their positions. Defaults to None.
+            spin (int): Nup-Ndown electrons
             calculator (str, optional): selet scf calculator. Defaults to 'adf'.
             scf (str, optional): select scf level of theory. Defaults to 'hf'.
+            charge (int, optional): extra charge on the molecule, Default to 0
+            spin (int, optional): exess of spin up electrons on the molecule, Default to 0
             basis (str, optional): select the basis set. Defaults to 'dzp'.
             unit (str, optional): units of the coordinates. Defaults to 'bohr'.
             name (str or None, optional): name of the molecule. Defaults to None.
@@ -56,6 +60,8 @@ class Molecule:
         self.ndown = 0
         self.nelec = 0
         self.nup = 0
+        self.charge = charge
+        self.spin = spin
         self.unit = unit
         self.basis = SimpleNamespace()
         self.calculator_name = calculator
@@ -110,6 +116,8 @@ class Molecule:
                     self.calculator = calc(self.atoms,
                                            self.atom_coords,
                                            basis,
+                                           self.charge,
+                                           self.spin,
                                            self.scf_level,
                                            self.unit,
                                            self.name,
@@ -228,12 +236,16 @@ class Molecule:
             self.atomic_nelec.append(element(atom_data[0]).electrons)
             self.nelec += element(atom_data[0]).electrons
 
+        # add extra charge on the molecule
+        self.nelec += self.charge
+
         # size of the system
         self.natom = len(self.atoms)
-        if self.nelec % 2 != 0:
-            raise ValueError("Only equal spin up/down supported.")
-        self.nup = math.ceil(self.nelec / 2)
-        self.ndown = math.floor(self.nelec / 2)
+        if (self.nelec-self.spin) % 2 != 0:
+            raise ValueError("%d electrons and spin %d doesn't make sense" % (
+                self.nelec, self.spin))
+        self.nup = int((self.nelec-self.spin) / 2) + self.spin
+        self.ndown = int((self.nelec-self.spin) / 2)
 
         # name of the system
         if self.name is None:
