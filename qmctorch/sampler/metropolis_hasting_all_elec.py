@@ -1,100 +1,12 @@
 from tqdm import tqdm
 import torch
-from torch.distributions import MultivariateNormal
 from time import time
 from typing import Callable, Union, Dict
 from .sampler_base import SamplerBase
 from .. import log
 
-
-class DensityVarianceKernel(object):
-
-    def __init__(self, atomic_pos, sigma=1., scale_factor=1.):
-        self.atomic_pos = atomic_pos.unsqueeze(0).unsqueeze(1)
-        self.sigma = sigma
-        self.scale_factor = scale_factor
-        self.nelec = None
-        self.ndim = None
-
-    def __call__(self, x):
-        d = self.get_estimate_density(x)
-        out = self.sigma * (1. - d).sum(-1)
-        return out.unsqueeze(-1)
-
-    def get_atomic_distance(self, pos):
-        nwalkers = pos.shape[0]
-        pos = pos.view(nwalkers, self.nelec, self.ndim)
-        dist = pos.unsqueeze(-2) - self.atomic_pos
-        return dist.norm(dim=-1)
-
-    def get_estimate_density(self, pos):
-        d = self.get_atomic_distance(pos)
-        d = torch.exp(-self.scale_factor*d**2)
-        return d
-
-
-class CenterVarianceKernel(object):
-
-    def __init__(self, sigma=1., scale_factor=1.):
-
-        self.sigma = sigma
-        self.scale_factor = scale_factor
-        self.nelec = None
-        self.ndim = None
-
-    def __call__(self, x):
-        d = self.get_estimate_density(x)
-        out = self.sigma * (1. - d)
-        return out.unsqueeze(-1)
-
-    def get_estimate_density(self, pos):
-        nwalkers = pos.shape[0]
-        pos = pos.view(nwalkers, self.nelec, self.ndim)
-        d = pos.norm(dim=-1)
-        d = torch.exp(-self.scale_factor*d**2)
-        return d
-
-
-class ConstantVarianceKernel(object):
-    def __init__(self, sigma=0.2):
-        self.sigma = sigma
-
-    def __call__(self, x):
-        return self.sigma
-
-
-class StateDependentNormalProposal(object):
-
-    def __init__(self, kernel, nelec, ndim, device):
-
-        self.ndim = ndim
-        self.nelec = nelec
-        self.kernel = kernel
-        self.device = device
-        self.multiVariate = MultivariateNormal(
-            torch.zeros(self.ndim), 1. * torch.eye(self.ndim))
-
-    def __call__(self, x):
-        nwalkers = x.shape[0]
-        scale = self.kernel(x)
-        displacement = self.multiVariate.sample(
-            (nwalkers, self.nelec)).to(self.device)
-        displacement *= scale
-        return displacement.view(nwalkers, self.nelec*self.ndim)
-
-    def get_transition_ratio(self, x, y):
-        sigmax = self.kernel(x)
-        sigmay = self.kernel(y)
-
-        rdist = (x-y).view(-1, self.nelec,
-                           self.ndim).norm(dim=-1).unsqueeze(-1)
-
-        prefac = (sigmax/sigmay)**(self.ndim/2)
-        tratio = torch.exp(-0.5*rdist**2 *
-                           (1./sigmay-1./sigmax))
-        tratio *= prefac
-
-        return tratio.squeeze().prod(-1)
+from .proposal_kernels import ConstantVarianceKernel
+from .state_dependent_normal_proposal import StateDependentNormalProposal
 
 
 class MetropolisHasting(SamplerBase):
