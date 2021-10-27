@@ -1,37 +1,34 @@
 import unittest
-
-
-import pints
-from qmctorch.sampler import PintsSampler
+from qmctorch.sampler import MetropolisHasting
+from qmctorch.sampler.proposal_kernels import ConstantVarianceKernel, CenterVarianceKernel
 from .test_sampler_base import TestSamplerBase
 
 
-class TestPints(TestSamplerBase):
+class TestMetropolisHasting(TestSamplerBase):
 
-    def test_Haario(self):
+    def test_ConstantKernel(self):
         """Test Metropolis sampling."""
 
-        sampler = PintsSampler(
+        sampler = MetropolisHasting(
             nwalkers=10,
             nstep=20,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
             init=self.mol.domain('normal'),
-            method=pints.HaarioBardenetACMC)
+            kernel=ConstantVarianceKernel())
 
         _ = sampler(self.wf.pdf)
 
-    def test_Langevin(self):
+    def test_CenterVarianceKernel(self):
         """Test Metropolis sampling."""
 
-        sampler = PintsSampler(
+        sampler = MetropolisHasting(
             nwalkers=10,
             nstep=20,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
             init=self.mol.domain('normal'),
-            method=pints.MALAMCMC,
-            method_requires_grad=True)
+            kernel=CenterVarianceKernel())
 
         _ = sampler(self.wf.pdf)
 

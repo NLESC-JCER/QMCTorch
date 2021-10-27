@@ -9,16 +9,38 @@ from .. import log
 class torch_model(pints.LogPDF):
 
     def __init__(self, pdf, ndim):
+        """Ancillary class tha wrap the wave function in a PINTS class
+
+        Args:
+            pdf (callable): wf.pdf function
+            ndim (int): number of dimensions
+        """
         self.pdf = pdf
         self.ndim = ndim
 
     def __call__(self, x):
+        """Evalaute the log pdf of the wave function at points x
+
+        Args:
+            x (numpy array): positions of the walkers
+
+        Returns:
+            numpy.array: values of the log pdfat those points
+        """
         x = torch.as_tensor(x).view(1, -1)
         return torch.log(self.pdf(x)).cpu().detach().numpy()
 
     def evaluateS1(self, x):
-        x = torch.as_tensor(x).view(1, -1)
+        """Evalaute the log pdf and the gradients of the log pdf at points x
 
+        Args:
+            x (numpy.array): positions of the walkers
+
+        Returns:
+            tuple: values of the log pdf and gradients
+        """
+
+        x = torch.as_tensor(x).view(1, -1)
         pdf = self.pdf(x)
         log_pdf = torch.log(pdf)
         x.requires_grad = True
@@ -26,6 +48,7 @@ class torch_model(pints.LogPDF):
         return (log_pdf.cpu().detach().numpy(), grad_log_pdf.cpu().detach().numpy())
 
     def n_parameters(self):
+        """Returns the number of dimensions."""
         return self.ndim
 
 
@@ -36,14 +59,15 @@ class PintsSampler(SamplerBase):
                  method=pints.MetropolisRandomWalkMCMC,
                  method_requires_grad=False,
                  nstep: int = 1000,
-                 step_size: float = 0.2,
                  ntherm: int = -1,
                  ndecor: int = 1,
                  nelec: int = 1,
                  ndim: int = 3,
                  init: Dict = {'min': -5, 'max': 5},
-                 cuda: bool = False):
-        """Metropolis Hasting generator
+                 cuda: bool = False,
+                 log_to_screen=False,
+                 message_interval=20):
+        """Interface to the PINTS Sampler generator
 
         Args:
             nwalkers (int, optional): Number of walkers. Defaults to 100.
@@ -73,18 +97,20 @@ class PintsSampler(SamplerBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor,
+        SamplerBase.__init__(self, nwalkers, nstep, None,
+                             ntherm, ndecor,
                              nelec, ndim, init, cuda)
 
         self.method = method
         self.method_requires_grad = method_requires_grad
+        self.log_to_screen = log_to_screen
+        self.message_interval = message_interval
         self.log_data()
 
     def log_data(self):
         """log data about the sampler."""
-        log.info(
-            '  Sampler             : {0}', self.method.name(None))
+        # log.info(
+        #     '  Sampler             : {0}', self.method.name(None))
 
     @staticmethod
     def log_func(func):
@@ -129,10 +155,10 @@ class PintsSampler(SamplerBase):
             log_pdf = torch_model(pdf, self.walkers.pos.shape[1])
 
             mcmc = pints.MCMCController(
-                log_pdf, self.walkers.nwalkers, self.walkers.pos, method=self.method)
+                log_pdf, self.walkers.nwalkers, self.walkers.pos.cpu(), method=self.method)
             mcmc.set_max_iterations(self.nstep)
-            mcmc._log_to_screen = True
-            # mcmc._message_interval = 1000
+            mcmc._log_to_screen = self.log_to_screen
+            mcmc._message_interval = self.message_interval
             chains = mcmc.run()
 
         chains = chains[:, self.ntherm::self.ndecor, :]
