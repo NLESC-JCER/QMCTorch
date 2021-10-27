@@ -42,7 +42,7 @@ setup(
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch', 'dgl', 'dgllife',
-                      'plams',
+                      'plams', 'pints',
                       'pyscf', 'mendeleev', 'twiggy'],
 
     extras_require={
