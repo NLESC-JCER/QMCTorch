@@ -385,7 +385,6 @@ class SolverSlaterJastrow(SolverBase):
             loss += self.ortho_loss(self.wf.mo.weight)
 
         # compute local gradients
-        # self.opt.zero_grad() ???
         loss.backward()
 
         return loss, eloc
@@ -430,7 +429,6 @@ class SolverSlaterJastrow(SolverBase):
             weight *= norm
 
             # compute the gradients
-            # self.opt.zero_grad()
             psi.backward(weight)
 
             return torch.mean(eloc), eloc
