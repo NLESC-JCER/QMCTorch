@@ -2,9 +2,7 @@ from time import time
 from types import SimpleNamespace
 
 import torch
-from torch.utils.data import DataLoader
-
-from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
+from qmctorch.utils import (DataLoader, Loss, OrthoReg, add_group_attr,
                             dump_to_hdf5)
 
 from .. import log
@@ -129,16 +127,9 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
             self.sampler.nwalkers = pos.shape[0]
 
         # create the data loader
-        self.dataset = DataSet(pos)
-
-        if self.cuda:
-            kwargs = {'num_workers': num_threads, 'pin_memory': True}
-        else:
-            kwargs = {'num_workers': num_threads}
-
-        self.dataloader = DataLoader(self.dataset,
-                                     batch_size=batchsize,
-                                     **kwargs)
+        # self.dataset = DataSet(pos)
+        self.dataloader = DataLoader(
+            pos, batch_size=batchsize, pin_memory=self.cuda)
         min_loss = 1E3
 
         for n in range(nepoch):

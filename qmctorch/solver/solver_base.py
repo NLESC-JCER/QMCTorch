@@ -262,7 +262,7 @@ class SolverBase:
                 # sample and update the dataset
                 pos = self.sampler(
                     self.wf.pdf, pos=pos, with_tqdm=False)
-                self.dataloader.dataset.data = pos
+                self.dataloader.dataset = pos
 
             # update the weight of the loss if needed
             if self.loss.use_weight:
