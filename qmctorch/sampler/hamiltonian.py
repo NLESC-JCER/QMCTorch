@@ -39,6 +39,7 @@ class Hamiltonian(SamplerBase):
                              step_size, ntherm, ndecor,
                              nelec, ndim, init, cuda)
         self.traj_length = L
+        self.pdf = None
 
     @staticmethod
     def get_grad(func, inp):
@@ -60,7 +61,32 @@ class Hamiltonian(SamplerBase):
             val.backward(torch.ones(val.shape))
 
             inp.requires_grad = False
+
+            # if torch.any(torch.isnan(inp.grad)):
+            #     raise ValueError('Nans in the grad')
+
         return inp.grad
+
+    def get_grad_jacobi(self, U, inp):
+
+        # if torch.any(torch.isnan(inp)):
+        #     raise ValueError('Nans in the position')
+
+        val = self.pdf(inp).unsqueeze(-1)
+        grad_val = self.pdf(inp, return_grad=True)
+
+        out = -grad_val/val
+
+        # if torch.any(torch.isnan(val)):
+        #     raise ValueError('Nans in the pdf')
+
+        # if torch.any(torch.isnan(grad_val)):
+        #     raise ValueError('Nans in the raw grad')
+
+        # if torch.any(torch.isnan(out)):
+        #     raise ValueError('Nans in the log grad')
+
+        return out.detach()
 
     @staticmethod
     def log_func(func):
@@ -93,6 +119,7 @@ class Hamiltonian(SamplerBase):
         self.walkers.pos = self.walkers.pos.clone()
 
         # get the logpdf function
+        self.pdf = pdf
         logpdf = self.log_func(pdf)
 
         pos = []
@@ -167,7 +194,8 @@ class Hamiltonian(SamplerBase):
 
         # metropolis accept/reject
         eps = torch.rand(E_new.shape)
-        rejected = (torch.exp(E_init - E_new) < eps)
+        rejected = (torch.exp(E_init - E_new)
+                    < eps) | torch.isnan(E_new) | torch.isinf(E_new)
         q[rejected] = q_init[rejected]
 
         # compute the accept rate
