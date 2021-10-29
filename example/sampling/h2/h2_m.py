@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.scf import Molecule
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import plot_energy, plot_walkers_traj
+from qmctorch.utils import plot_energy, plot_walkers_traj, set_torch_double_precision
 from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
 
 torch.manual_seed(0)
+set_torch_double_precision()
 
 import sys
 import os
@@ -42,11 +43,13 @@ def correlation_coefficient(x, norm=True):
 mol = Molecule(atom='h2.xyz',
                unit='angs',
                calculator=config.calculator,
-               basis='sto-3g',
+               basis=config.basis_set,
                name='H2')
 
-wf = SlaterJastrow(mol, configs='ground_state')
-# wf = SlaterJastrowBackFlow(mol, configs='single(2,2)')
+if config.calculator == 'adf':
+    wf = SlaterJastrow(mol, configs='single_double(2, 2)')
+else:
+    wf = SlaterJastrow(mol, configs='single_double(2, 2)').gto2sto()
 
 opt = optim.Adam(wf.parameters(), lr=config.lr)
 
@@ -84,7 +87,7 @@ solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt)
 solver.configure(grad='manual', resampling={'mode': 'update',
                                             'resample_every': 1,
                                             'nstep_update': config.nstep_update_m})
-obs = solver.run(config.nepoch, batchsize=sampler.nwalkers)
+obs = solver.run(config.nepoch)
 
 plot_energy(obs.local_energy)
 # plot_energy(obs.energy)
