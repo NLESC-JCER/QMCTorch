@@ -46,8 +46,10 @@ mol = Molecule(atom='h2.xyz',
                basis=config.basis_set,
                name='H2')
 
-wf = SlaterJastrow(mol, configs='ground_state').gto2sto()
-# wf = SlaterJastrowBackFlow(mol, configs='single(2,2)')
+if config.calculator == 'adf':
+    wf = SlaterJastrow(mol, configs='single_double(2, 2)')
+else:
+    wf = SlaterJastrow(mol, configs='single_double(2, 2)').gto2sto()
 
 opt = optim.Adam(wf.parameters(), lr=config.lr)
 
