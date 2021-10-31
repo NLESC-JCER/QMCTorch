@@ -7,10 +7,11 @@ import matplotlib.pyplot as plt
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.scf import Molecule
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import plot_energy, plot_walkers_traj
+from qmctorch.utils import plot_energy, plot_walkers_traj, set_torch_double_precision
 from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
 
 torch.manual_seed(0)
+set_torch_double_precision()
 
 import sys
 import os
@@ -38,15 +39,16 @@ def correlation_coefficient(x, norm=True):
     return c
 
 
-# molecule
-mol = Molecule(atom='lih.xyz',
-               unit='angs',
-               calculator=config.calculator,
-               basis='sto-3g',
-               name='LiH')
-
-wf = SlaterJastrow(mol, configs='ground_state')
-# wf = SlaterJastrowBackFlow(mol, configs='single(2,2)')
+if config.calculator == 'adf':
+    mol = Molecule(load='LiH_adf_CVB3.hdf5')
+    wf = SlaterJastrow(mol, configs='ground_state')
+else:
+    mol = Molecule(atom='lih.xyz',
+                   unit='angs',
+                   calculator=config.calculator,
+                   basis=config.basis_set,
+                   name='LiH')
+    wf = SlaterJastrow(mol, configs='ground_state').gto2sto()
 
 opt = optim.Adam(wf.parameters(), lr=config.lr)
 

@@ -1,12 +1,13 @@
 nwalkers = 100000
 nstep_m = 300
 nstep_hmc = 100
-nstep_update_m = 60
-nstep_update_hmc = 20
+nstep_update_m = 30
+nstep_update_hmc = 10
 step_size_m = 0.8
 step_size_hmc = 0.1
 L_hmc = 10
+# calculator = 'pyscf'
+# basis_set = 'sto-3g'
 calculator = 'adf'
-basis_set = 'dzp'
 nepoch = 100
-lr = 0.01
+lr = 0.001

@@ -39,17 +39,16 @@ def correlation_coefficient(x, norm=True):
     return c
 
 
-# molecule
-mol = Molecule(atom='h2.xyz',
-               unit='angs',
-               calculator=config.calculator,
-               basis=config.basis_set,
-               name='H2')
-
 if config.calculator == 'adf':
-    wf = SlaterJastrow(mol, configs='single_double(2, 2)')
+    mol = Molecule(load='H2_adf_CVB3.hdf5')
+    wf = SlaterJastrow(mol, configs='ground_state')
 else:
-    wf = SlaterJastrow(mol, configs='single_double(2, 2)').gto2sto()
+    mol = Molecule(atom='h2.xyz',
+                   unit='angs',
+                   calculator=config.calculator,
+                   basis=config.basis_set,
+                   name='H2')
+    wf = SlaterJastrow(mol, configs='ground_state').gto2sto()
 
 opt = optim.Adam(wf.parameters(), lr=config.lr)
 
@@ -84,7 +83,7 @@ solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt)
 solver.configure(grad='manual', resampling={'mode': 'update',
                                             'resample_every': 1,
                                             'nstep_update': config.nstep_update_hmc})
-obs = solver.run(config.nepoch)
+obs = solver.run(config.nepoch, batchsize=sampler.nwalkers)
 
 plot_energy(obs.local_energy)
 # plot_energy(obs.energy)

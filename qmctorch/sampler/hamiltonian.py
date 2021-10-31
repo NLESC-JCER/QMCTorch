@@ -62,29 +62,14 @@ class Hamiltonian(SamplerBase):
 
             inp.requires_grad = False
 
-            # if torch.any(torch.isnan(inp.grad)):
-            #     raise ValueError('Nans in the grad')
-
         return inp.grad
 
-    def get_grad_jacobi(self, U, inp):
-
-        # if torch.any(torch.isnan(inp)):
-        #     raise ValueError('Nans in the position')
+    def get_grad_jacobi(self, inp):
 
         val = self.pdf(inp).unsqueeze(-1)
         grad_val = self.pdf(inp, return_grad=True)
 
         out = -grad_val/val
-
-        # if torch.any(torch.isnan(val)):
-        #     raise ValueError('Nans in the pdf')
-
-        # if torch.any(torch.isnan(grad_val)):
-        #     raise ValueError('Nans in the raw grad')
-
-        # if torch.any(torch.isnan(out)):
-        #     raise ValueError('Nans in the log grad')
 
         return out.detach()
 
@@ -170,7 +155,7 @@ class Hamiltonian(SamplerBase):
         p = torch.randn(q.shape)
 
         # initial energy terms
-        E_init = U(q) + 0.5 * (p*p).sum(1)
+        E_init = U(q).squeeze() + 0.5 * (p*p).sum(1)
 
         # half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)
@@ -187,10 +172,10 @@ class Hamiltonian(SamplerBase):
         p -= 0.5 * epsilon * get_grad(U, q)
 
         # negate momentum
-        p = -p
+        # p = -p
 
         # current energy term
-        E_new = U(q) + 0.5 * (p*p).sum(1)
+        E_new = U(q).squeeze() + 0.5 * (p*p).sum(1)
 
         # metropolis accept/reject
         eps = torch.rand(E_new.shape)
