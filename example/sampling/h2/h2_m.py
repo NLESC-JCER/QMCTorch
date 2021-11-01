@@ -10,6 +10,8 @@ from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils import plot_energy, plot_walkers_traj, set_torch_double_precision
 from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
 
+cuda = torch.cuda.is_available()
+
 torch.manual_seed(0)
 set_torch_double_precision()
 
@@ -41,22 +43,22 @@ def correlation_coefficient(x, norm=True):
 
 if config.calculator == 'adf':
     mol = Molecule(load='H2_adf_CVB3.hdf5')
-    wf = SlaterJastrow(mol, configs='ground_state')
+    wf = SlaterJastrow(mol, configs='single_double(2,2)', cuda=cuda)
 else:
     mol = Molecule(atom='h2.xyz',
                    unit='angs',
                    calculator=config.calculator,
                    basis=config.basis_set,
                    name='H2')
-    wf = SlaterJastrow(mol, configs='ground_state').gto2sto()
+    wf = SlaterJastrow(mol, configs='single_double(2,2)', cuda=cuda).gto2sto()
 
 opt = optim.Adam(wf.parameters(), lr=config.lr)
 
 sampler = Metropolis(
     nwalkers=config.nwalkers,
     nstep=config.nstep_m,
-    ntherm=-1,
-    ndecor=3,
+    ntherm=config.ntherm_m,
+    ndecor=config.ndecor_m,
     step_size=config.step_size_m,
     ndim=wf.ndim,
     nelec=wf.nelec,
@@ -64,7 +66,7 @@ sampler = Metropolis(
     move={
         'type': 'all-elec',
         'proba': 'normal'},
-    cuda=False)
+    cuda=cuda)
 
 # step_sizes = np.logspace(-1, 0.5, 30)
 #
@@ -88,7 +90,7 @@ solver.configure(grad='manual', resampling={'mode': 'update',
                                             'nstep_update': config.nstep_update_m})
 obs = solver.run(config.nepoch, batchsize=sampler.nwalkers)
 
-plot_energy(obs.local_energy)
+# plot_energy(obs.local_energy)
 # plot_energy(obs.energy)
 
 np.save('H2_M.npy', obs.local_energy)
