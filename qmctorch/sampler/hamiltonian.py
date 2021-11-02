@@ -41,8 +41,7 @@ class Hamiltonian(SamplerBase):
         self.traj_length = L
         self.pdf = None
 
-    @staticmethod
-    def get_grad(func, inp):
+    def get_grad(self, func, inp):
         """get the gradient of the pdf using autograd
 
         Args:
@@ -58,7 +57,7 @@ class Hamiltonian(SamplerBase):
             inp.requires_grad = True
 
             val = func(inp)
-            val.backward(torch.ones(val.shape))
+            val.backward(torch.ones(val.shape, device=self.device))
 
             inp.requires_grad = False
 
