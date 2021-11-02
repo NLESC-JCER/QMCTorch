@@ -1,9 +1,9 @@
-nwalkers = 10000
+nwalkers = 1000
 
-nstep_m = 1000
+nstep_m = 500
 nstep_hmc = 200
 
-ntherm_m = 500
+ntherm_m = 400
 ntherm_hmc = 100
 
 ndecor_m = 10
