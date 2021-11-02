@@ -134,8 +134,7 @@ class Hamiltonian(SamplerBase):
             "  Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
         return torch.cat(pos).requires_grad_()
 
-    @staticmethod
-    def _step(U, get_grad, epsilon, L, q_init):
+    def _step(self, U, get_grad, epsilon, L, q_init):
         """Take one step of the sampler
 
         Args:
@@ -152,7 +151,7 @@ class Hamiltonian(SamplerBase):
         q = q_init.clone()
 
         # init the momentum
-        p = torch.randn(q.shape)
+        p = torch.randn(q.shape, device=self.device)
 
         # initial energy terms
         E_init = U(q).squeeze() + 0.5 * (p*p).sum(1)
@@ -178,7 +177,7 @@ class Hamiltonian(SamplerBase):
         E_new = U(q).squeeze() + 0.5 * (p*p).sum(1)
 
         # metropolis accept/reject
-        eps = torch.rand(E_new.shape)
+        eps = torch.rand(E_new.shape, device=self.device)
         rejected = (torch.exp(E_init - E_new)
                     < eps) | torch.isnan(E_new) | torch.isinf(E_new)
         q[rejected] = q_init[rejected]
