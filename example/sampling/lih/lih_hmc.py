@@ -82,7 +82,7 @@ sampler = Hamiltonian(
 # plt.show()
 
 solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt)
-solver.configure(grad='manual', resampling={'mode': 'update',
+solver.configure(grad='manual', loss='energy', clip_loss=True, resampling={'mode': 'update',
                                             'resample_every': 1,
                                             'nstep_update': config.nstep_update_hmc})
 obs = solver.run(config.nepoch, batchsize=sampler.nwalkers)
