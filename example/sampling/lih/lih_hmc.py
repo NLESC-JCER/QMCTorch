@@ -90,4 +90,4 @@ obs = solver.run(config.nepoch, batchsize=sampler.nwalkers)
 # plot_energy(obs.local_energy)
 # plot_energy(obs.energy)
 
-np.save('LiH_HMC.npy', obs.local_energy)
+np.save(f'LiH_HMC_{"gpu" if cuda else "cpu"}.npy', obs.local_energy)
