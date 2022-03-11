@@ -5,7 +5,8 @@ from pyscf import gto
 from torch.autograd import Variable, grad
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 
 def btrace(M):
@@ -14,7 +15,8 @@ def btrace(M):
 
 class OrbitalTest(SlaterJastrow):
     def __init__(self, mol):
-        super(OrbitalTest, self).__init__(mol)
+        jastrow = JastrowFactor(mol, PadeJastrowKernel)
+        super(OrbitalTest, self).__init__(mol, jastrow)
 
     def first_der_autograd(self, x):
         """Compute the first derivative of the AO using autograd

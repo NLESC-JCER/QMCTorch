@@ -91,7 +91,7 @@ class TestBackFlowTransformation(unittest.TestCase):
 
         # compute der of the backflow pos wrt the
         # original pos
-        dq = self.backflow_trans(self.pos, derivative=1)
+        dq = self.backflow_trans(self.pos, derivative=1).squeeze()
 
         # compute der of the backflow pos wrt the
         # original pos using autograd
@@ -116,7 +116,7 @@ class TestBackFlowTransformation(unittest.TestCase):
 
         # compute der of the backflow pos wrt the
         # original pos
-        d2q = self.backflow_trans(self.pos, derivative=2)
+        d2q = self.backflow_trans(self.pos, derivative=2).squeeze()
 
         # compute der of the backflow pos wrt the
         # original pos using autograd

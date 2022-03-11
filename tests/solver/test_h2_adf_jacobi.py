@@ -7,11 +7,13 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from ..path_utils import PATH_TEST
+from .test_base_solver import BaseTestSolvers
 
 
-class TestH2ADFJacobi(unittest.TestCase):
+class TestH2ADFJacobi(BaseTestSolvers.BaseTestSolverMolecule):
 
     def setUp(self):
 
@@ -22,9 +24,11 @@ class TestH2ADFJacobi(unittest.TestCase):
             PATH_TEST / 'hdf5/H2_adf_dzp.hdf5').absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='single(2,2)')
+                                configs='single(2,2)', jastrow=jastrow)
 
         # sampler
         self.sampler = Metropolis(
@@ -45,44 +49,12 @@ class TestH2ADFJacobi(unittest.TestCase):
         self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
-        # ground state energy
-        self.ground_state_energy = -1.16
-
-        # ground state pos
-        self.ground_state_pos = 0.69
-
-    def test_single_point(self):
-
-        self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
-        self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
-        self.solver.sampler = self.sampler
-
-        # sample and compute observables
-        obs = self.solver.single_point()
-        e, v = obs.energy, obs.variance
-        print(e.data.item(), v.data.item())
-
         # vals on different archs
-        expected_energy = [-1.1571345329284668,
-                           -1.1501641653648578]
+        self.expected_energy = [-1.1571345329284668,
+                                -1.1501641653648578]
 
-        expected_variance = [0.05087674409151077,
-                             0.05094174843043177]
-
-        assert(np.any(np.isclose(e.data.item(), np.array(expected_energy))))
-        assert(np.any(np.isclose(v.data.item(), np.array(expected_variance))))
-
-    def test_wf_opt_auto_grad(self):
-
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
-        obs = self.solver.run(5)
-
-    def test_wf_opt_manual_grad(self):
-
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='manual')
-        obs = self.solver.run(5)
+        self.expected_variance = [0.05087674409151077,
+                                  0.05094174843043177]
 
 
 if __name__ == "__main__":

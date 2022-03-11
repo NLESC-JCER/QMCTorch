@@ -437,12 +437,12 @@ class SlaterPooling(nn.Module):
         mat_exc_up = (invAup @ Avirt_up)
         mat_exc_down = (invAdown @ Avirt_down)
 
-        bop_up = bop[..., :self.nup, :self.index_max_orb_up]
+        # bop_up = bop[..., :self.nup, :self.index_max_orb_up]
         bop_occ_up = bop[..., :self.nup, :self.nup]
         bop_virt_up = bop[..., :self.nup,
                           self.nup:self.index_max_orb_up]
 
-        bop_down = bop[:, self.nup:, :self.index_max_orb_down]
+        # bop_down = bop[:, self.nup:, :self.index_max_orb_down]
         bop_occ_down = bop[..., self.nup:, :self.ndown]
         bop_virt_down = bop[..., self.nup:,
                             self.ndown:self.index_max_orb_down]

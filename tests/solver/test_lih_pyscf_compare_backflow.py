@@ -8,7 +8,9 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowBackFlow, SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
 from qmctorch.utils import set_torch_double_precision
 
 
@@ -38,16 +40,26 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
             calculator='pyscf',
             basis='sto-3g')
 
+        # jastrow
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
+        # backflow
+        backflow = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse, orbital_dependent=False)
+
         # backflow wave function
-        self.wf = SlaterJastrowBackFlow(self.mol,
-                                        kinetic='jacobi',
-                                        configs='single_double(2,2)',
-                                        include_all_mo=True)
+        self.wf = SlaterJastrow(self.mol, jastrow=jastrow, backflow=backflow,
+                                kinetic='jacobi',
+                                configs='single_double(2,2)',
+                                include_all_mo=True)
         self.wf.ao.backflow_trans.backflow_kernel.weight.data *= 0.
         self.wf.ao.backflow_trans.backflow_kernel.weight.requires_grad = False
 
+        # jastrow
+        jastrow_ref = JastrowFactor(self.mol, PadeJastrowKernel)
+
         # normal wave function
-        self.wf_ref = SlaterJastrow(self.mol_ref,
+        self.wf_ref = SlaterJastrow(self.mol_ref, jastrow=jastrow_ref, backflow=None,
                                     kinetic='jacobi',
                                     include_all_mo=True,
                                     configs='single_double(2,2)')

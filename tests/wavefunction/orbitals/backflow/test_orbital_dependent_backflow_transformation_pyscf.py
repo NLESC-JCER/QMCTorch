@@ -2,10 +2,10 @@ import unittest
 
 import torch
 from pyscf import gto
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.orbitals.backflow.orbital_dependent_backflow_transformation import OrbitalDependentBackFlowTransformation
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -74,8 +74,8 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
                             unit='bohr')
 
         # define the backflow transformation
-        self.backflow_trans = OrbitalDependentBackFlowTransformation(
-            self.mol, BackFlowKernelInverse)
+        self.backflow_trans = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse, orbital_dependent=True)
 
         # set the weights to random
         for ker in self.backflow_trans.backflow_kernel.orbital_dependent_kernel:
@@ -93,6 +93,7 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
         # compute backflow pos
         q = self.backflow_trans(self.pos)
         nao = q.shape[1]
+
         # compute der of the backflow pos wrt the
         # original pos
         dq = self.backflow_trans(self.pos, derivative=1)
@@ -113,8 +114,8 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
         assert(torch.allclose(dq.sum(), dq_grad.sum()))
 
         # permute and check elements
-        dq = dq.sum([2, 4])
-        dq = dq.permute(0, 1, 3, 2)
+        dq = dq.sum([1, 3])
+        dq = dq.permute(0, 3, 2, 1)
         dq_grad = dq_grad.reshape(self.npts, nao, self.mol.nelec, 3)
 
         assert(torch.allclose(dq, dq_grad))
@@ -146,8 +147,8 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
         assert(torch.allclose(d2q.sum(), d2q_auto.sum()))
 
         # permute and check elements
-        d2q = d2q.sum([2, 4])
-        d2q = d2q.permute(0, 1, 3, 2)
+        d2q = d2q.sum([1, 3])
+        d2q = d2q.permute(0, 3, 2, 1)
         d2q_auto = d2q_auto.reshape(
             self.npts, nao,  self.mol.nelec, 3)
 

@@ -6,7 +6,8 @@ from torch.autograd import Variable, grad, gradcheck
 import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
-from qmctorch.wavefunction.orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
+from qmctorch.wavefunction.orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -75,8 +76,11 @@ class TestODBFAOderivativesPyscf(unittest.TestCase):
                             unit='bohr')
 
         # define the wave function
-        self.ao = AtomicOrbitalsOrbitalDependentBackFlow(
-            self.mol, BackFlowKernelInverse)
+        backflow = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse, orbital_dependent=True)
+
+        # define the wave function
+        self.ao = AtomicOrbitalsBackFlow(self.mol, backflow)
 
         # change the weights
         for ker in self.ao.backflow_trans.backflow_kernel.orbital_dependent_kernel:

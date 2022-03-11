@@ -7,6 +7,7 @@ import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.wavefunction.orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -74,9 +75,11 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
                             basis=basis,
                             unit='bohr')
 
+        backflow = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse, orbital_dependent=False)
+
         # define the wave function
-        self.ao = AtomicOrbitalsBackFlow(
-            self.mol, BackFlowKernelInverse)
+        self.ao = AtomicOrbitalsBackFlow(self.mol, backflow)
 
         # define the grid points
         self.npts = 11

@@ -8,11 +8,15 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowBackFlow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 
+from .test_base_solver import BaseTestSolvers
 
-class TestLiHBackFlowPySCF(unittest.TestCase):
+
+class TestLiHBackFlowPySCF(BaseTestSolvers.BaseTestSolverMolecule):
 
     def setUp(self):
 
@@ -27,11 +31,19 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
             calculator='pyscf',
             basis='sto-3g')
 
+        # jastrow
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
+        # backflow
+        backflow = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse, orbital_dependent=True)
+
         # wave function
-        self.wf = SlaterJastrowBackFlow(self.mol, kinetic='jacobi',
-                                        configs='single_double(2,2)',
-                                        orbital_dependent_backflow=True,
-                                        include_all_mo=True)
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                jastrow=jastrow,
+                                backflow=backflow,
+                                configs='single_double(2,2)',
+                                include_all_mo=True)
 
         # fc weights
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
@@ -65,37 +77,9 @@ class TestLiHBackFlowPySCF(unittest.TestCase):
             self.nbatch, self.wf.nelec*3))
         self.pos.requires_grad = True
 
-    def test_0_wavefunction(self):
-
-        eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos)
-        print(torch.stack([eauto, ejac], axis=1).squeeze())
-        assert torch.allclose(
-            eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
-
-    def test1_single_point(self):
-
-        # sample and compute observables
-        obs = self.solver.single_point()
-        e, v = obs.energy, obs.variance
-
-    def test2_wf_opt_grad_auto(self):
-        self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
-        obs = self.solver.run(5)
-
-    def test3_wf_opt_grad_manual(self):
-        self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy', 'parameters'],
-                              loss='energy', grad='manual')
-        obs = self.solver.run(5)
-
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestLiHBackFlowPySCF()
-    t.setUp()
-    t.test3_wf_opt_grad_manual()
+    unittest.main()
+    # t = TestLiHBackFlowPySCF()
+    # t.setUp()
+    # t.test3_wf_opt_grad_manual()

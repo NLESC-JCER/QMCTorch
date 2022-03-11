@@ -4,7 +4,7 @@ import numpy as np
 import torch
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
 
 from ...path_utils import PATH_TEST
 from .second_derivative import second_derivative
@@ -22,9 +22,7 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.mol = Molecule(load=path_hdf5)
 
         # wave function
-        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='ground_state',
-                                include_all_mo=False)
+        self.ao = AtomicOrbitals(self.mol)
 
     def test_first_derivative_x(self):
 
@@ -33,8 +31,8 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 0] = torch.linspace(-4, 4, npts)
         self.dx = self.pos[1, 0] - self.pos[0, 0]
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR = self.ao.harmonics(
             xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
@@ -60,8 +58,8 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 1] = torch.linspace(-4, 4, npts)
         self.dy = self.pos[1, 1] - self.pos[0, 1]
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR = self.ao.harmonics(
             xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
@@ -88,8 +86,8 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 2] = torch.linspace(-4, 4, npts)
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR = self.wf.ao.harmonics(
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR = self.ao.harmonics(
             xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
@@ -132,8 +130,8 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 13] = -eps
         self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
-        xyz, r = self.wf.ao._process_position(self.pos)
-        R, dR, d2R = self.wf.ao.harmonics(
+        xyz, r = self.ao._process_position(self.pos)
+        R, dR, d2R = self.ao.harmonics(
             xyz, derivative=[0, 1, 2], sum_grad=False)
 
         for iorb in range(7):
@@ -173,11 +171,11 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
     def test_lap_sum(self):
         npts = 100
         self.pos = torch.rand(npts, self.mol.nelec * 3)
-        xyz, r = self.wf.ao._process_position(self.pos)
-        d2R_sum = self.wf.ao.harmonics(
+        xyz, r = self.ao._process_position(self.pos)
+        d2R_sum = self.ao.harmonics(
             xyz, derivative=2, sum_hess=True)
 
-        d2R = self.wf.ao.harmonics(
+        d2R = self.ao.harmonics(
             xyz, derivative=2, sum_hess=False)
 
         assert(torch.allclose(d2R.sum(-1), d2R_sum))

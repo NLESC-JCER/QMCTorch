@@ -7,7 +7,7 @@ from pyscf import gto
 from torch.autograd import Variable
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
 
 __PLOT__ = False
 
@@ -27,7 +27,7 @@ class TestAOvaluesPyscf(unittest.TestCase):
         self.m = gto.M(atom=at, basis=basis, unit='bohr')
 
         # define the wave function
-        self.wf = SlaterJastrow(self.mol)
+        self.ao = AtomicOrbitals(self.mol)
 
         self.pos = torch.zeros(100, self.mol.nelec * 3)
 
@@ -44,7 +44,7 @@ class TestAOvaluesPyscf(unittest.TestCase):
 
         nzlm = np.linalg.norm(self.m.cart2sph_coeff(), axis=1)
 
-        aovals = self.wf.ao(self.pos).detach().numpy()/nzlm
+        aovals = self.ao(self.pos).detach().numpy()/nzlm
         aovals_ref = self.m.eval_ao('GTOval_cart',
                                     self.pos.detach().numpy()[:, :3])
 
@@ -63,7 +63,7 @@ class TestAOvaluesPyscf(unittest.TestCase):
 
         nzlm = np.linalg.norm(self.m.cart2sph_coeff(), axis=1)
 
-        daovals = self.wf.ao(
+        daovals = self.ao(
             self.pos, derivative=1).detach().numpy()/nzlm
 
         daovals_ref = self.m.eval_gto(

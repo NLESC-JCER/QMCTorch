@@ -1,5 +1,5 @@
 import unittest
-
+from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
@@ -43,9 +43,11 @@ class TestThreeBodyBoysHandy(unittest.TestCase):
         self.nup, self.ndown = 4, 4
         self.nelec = self.nup + self.ndown
         self.natom = 4
-        self.atoms = 0.1*torch.rand(self.natom, 3)
+        self.atoms = 0.1*np.random.rand(self.natom, 3)
+        self.mol = SimpleNamespace(
+            nup=self.nup, ndown=self.ndown, atom_coords=self.atoms)
         self.jastrow = JastrowFactorElectronElectronNuclei(
-            self.nup, self.ndown, self.atoms, BoysHandyJastrowKernel)
+            self.mol, BoysHandyJastrowKernel)
         self.nbatch = 5
 
         self.pos = 0.1*torch.rand(self.nbatch, self.nelec * 3)

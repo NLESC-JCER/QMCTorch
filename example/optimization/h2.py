@@ -1,14 +1,15 @@
-
+import torch
+import numpy as np
 from torch import optim
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+
 from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.utils import (plot_energy, plot_data)
-
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+from qmctorch.utils.plot_data import (plot_energy, plot_data)
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 # bond distance : 0.74 A -> 1.38 a
 # optimal H positions +0.69 and -0.69
@@ -16,6 +17,8 @@ from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 # bond dissociation energy 4.478 eV -> 0.16 hartree
 
 set_torch_double_precision()
+torch.random.manual_seed(0)
+np.random.seed(0)
 
 # define the molecule
 mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
@@ -23,17 +26,22 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                basis='sto-3g',
                unit='bohr')
 
+# jastrow
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='single_double(2,2)',
-                   jastrow_kernel=PadeJastrowKernel)
+                   jastrow=jastrow)
 
 # sampler
-sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
-                      step_size=0.1, L=30,
-                      ntherm=-1, ndecor=10,
-                      init=mol.domain('atomic'))
+# sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
+#                       step_size=0.1, L=30,
+#                       ntherm=-1, ndecor=10,
+#                       init=mol.domain('atomic'))
 
+sampler = Metropolis(nwalkers=10, nstep=200, nelec=wf.nelec, ntherm=100, ndecor=10,
+                     step_size=0.05, init=mol.domain('atomic'))
 
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 3E-3},
@@ -50,7 +58,7 @@ solver = SolverSlaterJastrow(wf=wf, sampler=sampler,
                              optimizer=opt, scheduler=None)
 
 # perform a single point calculation
-obs = solver.single_point()
+# obs = solver.single_point()
 
 # configure the solver
 solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
@@ -58,11 +66,13 @@ solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
                  ortho_mo=False, clip_loss=False,
                  resampling={'mode': 'update',
                              'resample_every': 1,
-                             'nstep_update': 50})
+                             'nstep_update': 150,
+                             'ntherm_update': 50}
+                 )
 
 # optimize the wave function
-obs = solver.run(250)
+obs = solver.run(5)  # , batchsize=10)
 
 # plot
-plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
-plot_data(solver.observable, obsname='jastrow.weight')
+# plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
+# plot_data(solver.observable, obsname='jastrow.weight')

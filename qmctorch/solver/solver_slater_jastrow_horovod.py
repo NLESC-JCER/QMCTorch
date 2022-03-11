@@ -41,7 +41,6 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
         self.opt = hvd.DistributedOptimizer(
             self.opt, named_parameters=self.wf.named_parameters())
 
-        self.sampler.nwalkers //= hvd.size()
         self.sampler.walkers.nwalkers //= hvd.size()
 
     def run(self, nepoch, batchsize=None, loss='energy',
@@ -68,7 +67,7 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
         logd(hvd.rank(),
              '  Distributed Optimization on {num} process'.format(num=hvd.size()))
         log.info('   - Process {id} using {nw} walkers'.format(
-                 id=hvd.rank(), nw=self.sampler.nwalkers))
+                 id=hvd.rank(), nw=self.sampler.walkers.nwalkers))
 
         # observable
         if not hasattr(self, 'observable'):
@@ -124,7 +123,6 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
             self.sampler.ntherm = -1
             self.sampler.nstep = self.resampling_options.nstep_update
             self.sampler.walkers.nwalkers = pos.shape[0]
-            self.sampler.nwalkers = pos.shape[0]
 
         # create the data loader
         # self.dataset = DataSet(pos)
@@ -188,7 +186,6 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
         self.sampler.nstep = _nstep_save
         self.sampler.ntherm = _ntherm_save
         self.sampler.walkers.nwalkers = _nwalker_save
-        self.sampler.nwalkers = _nwalker_save
 
         if hvd.rank() == 0:
             dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
@@ -210,7 +207,7 @@ class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
 
         logd(hvd.rank(), '')
         logd(hvd.rank(), '  Single Point Calculation : {nw} walkers | {ns} steps'.format(
-             nw=self.sampler.nwalkers, ns=self.sampler.nstep))
+             nw=self.sampler.walkers.nwalkers, ns=self.sampler.nstep))
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()

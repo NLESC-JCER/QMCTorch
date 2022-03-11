@@ -41,9 +41,8 @@ setup(
     ],
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
-                      'scipy', 'tqdm', 'torch',
-                      # 'plams@git+https://github.com/SCM-NV/PLAMS@master',
-                      'plams',
+                      'scipy', 'tqdm', 'torch', 'dgl', 'dgllife',
+                      'plams', 'pints',
                       'pyscf', 'mendeleev', 'twiggy'],
 
     extras_require={
@@ -53,5 +52,3 @@ setup(
                  'coverage', 'coveralls', 'pycodestyle'],
     }
 )
-
-

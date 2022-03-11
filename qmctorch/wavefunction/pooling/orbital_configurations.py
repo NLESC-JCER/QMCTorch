@@ -4,10 +4,11 @@ import torch
 class OrbitalConfigurations:
 
     def __init__(self, mol):
-        # self.mol = mol
+
         self.nup = mol.nup
         self.ndown = mol.ndown
         self.nelec = self.nup + self.ndown
+        self.spin = mol.spin
         self.norb = mol.basis.nmo
 
     def get_configs(self, configs):
@@ -103,15 +104,26 @@ class OrbitalConfigurations:
         cup, cdown = [_gs_up], [_gs_down]
 
         for iocc in range(
-                self.nup - 1, self.nup - 1 - nocc, -1):
-            for ivirt in range(self.nup, self.nup + nvirt, 1):
+                self.nup - 1, self.nup - 1 - nocc[0], -1):
+            for ivirt in range(self.nup, self.nup + nvirt[0], 1):
+
+                # create an excitation is spin pu
                 _xt = self._create_excitation(
                     _gs_up.copy(), iocc, ivirt)
+
+                # append that excitation
                 cup, cdown = self._append_excitations(
                     cup, cdown, _xt, _gs_down)
 
+        for iocc in range(
+                self.ndown - 1, self.ndown - 1 - nocc[1], -1):
+            for ivirt in range(self.ndown, self.ndown + nvirt[1], 1):
+
+                # create an excitation is spin down
                 _xt = self._create_excitation(
                     _gs_down.copy(), iocc, ivirt)
+
+                # append that excitation
                 cup, cdown = self._append_excitations(
                     cup, cdown, _gs_up, _xt)
 
@@ -132,12 +144,13 @@ class OrbitalConfigurations:
         cdown = cdown.tolist()
 
         idx_occ_up = list(
-            range(self.nup - 1, self.nup - 1 - nocc, -1))
-        idx_vrt_up = list(range(self.nup, self.nup + nvirt, 1))
+            range(self.nup - 1, self.nup - 1 - nocc[0], -1))
+        idx_vrt_up = list(range(self.nup, self.nup + nvirt[0], 1))
 
         idx_occ_down = list(range(
-            self.ndown - 1, self.ndown - 1 - nocc, -1))
-        idx_vrt_down = list(range(self.ndown, self.ndown + nvirt, 1))
+            self.ndown - 1, self.ndown - 1 - nocc[1], -1))
+        idx_vrt_down = list(
+            range(self.ndown, self.ndown + nvirt[1], 1))
 
         # ground, single and double with 1 elec excited per spin
         for iocc_up in idx_occ_up:
@@ -183,14 +196,18 @@ class OrbitalConfigurations:
             nvirt ([type]): number of virt orbitals in the CAS
         """
         from itertools import combinations, product
+        if self.spin != 0:
+            raise ValueError(
+                'CAS active space not possible with spin polarized calculation')
 
-        idx_low, idx_high = self.nup - nocc, self.nup + nvirt
+        idx_low, idx_high = self.nup - nocc[0], self.nup + nvirt[0]
         orb_index_up = range(idx_low, idx_high)
         idx_frz = list(range(idx_low))
         _cup = [idx_frz + list(l)
                 for l in list(combinations(orb_index_up, nelec // 2))]
 
-        idx_low, idx_high = self.nup - nocc - 1, self.nup + nvirt - 1
+        idx_low, idx_high = self.nup - \
+            nocc[0] - 1, self.nup + nvirt[0] - 1
 
         _cdown = [
             idx_frz +
@@ -215,11 +232,17 @@ class OrbitalConfigurations:
             norb (int): total number of orb in the CAS
 
         Returns:
-            [int,int]: number of occpuied/virtual orb per spi
+            [int,int]: number of occpuied/virtual orb per spin
         """
 
-        nocc = nelec // 2
-        nvirt = norb - nocc
+        # determine the number of occupied mo per spin in the active space
+        if nelec % 2 == 0:
+            nocc = (nelec // 2, nelec // 2)
+        else:
+            nocc = (nelec // 2 + 1, nelec // 2)
+
+        # determine the number of virt mo per spin in the active space
+        nvirt = (norb - nocc[0], norb-nocc[1])
         return nocc, nvirt
 
     def _create_excitation(self, conf, iocc, ivirt):

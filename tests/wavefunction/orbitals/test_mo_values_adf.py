@@ -7,7 +7,7 @@ import torch
 from torch.autograd import Variable
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
 from ...path_utils import PATH_TEST
 

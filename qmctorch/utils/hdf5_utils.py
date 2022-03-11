@@ -308,6 +308,9 @@ def insert_tuple(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
+    # fix for type torch.Tensor
+    obj = [o.numpy() if isinstance(
+        o, torch.Tensor) else o for o in obj]
     insert_list(list(obj), parent_grp, obj_name)
 
 

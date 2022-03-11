@@ -26,17 +26,17 @@ jobs:
         conda-channels: anaconda
     - run: conda --version
     - run: which python
-    - run: conda install mpi4py h5py==3.1.0 pytorch torchvision cpuonly -c pytorch -c conda-forge
+    - run: conda install rdkit mpi4py h5py==3.1.0 pytorch torchvision cpuonly -c pytorch -c conda-forge
 
     - name: Install the package
       run: pip install .[test,hpc]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
-    - name: Test with multithreading
-      env:
-        CONDA_PREFIX: /usr/share/miniconda
-      run: mpirun -np 2 coverage run -m pytest tests_hvd
+    # - name: Test with multithreading
+    #   env:
+    #     CONDA_PREFIX: /usr/share/miniconda
+    #   run: mpirun -np 2 coverage run -m pytest tests_hvd
 
     - name: Test with single thread
       env:

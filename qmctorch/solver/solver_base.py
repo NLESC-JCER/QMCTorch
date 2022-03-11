@@ -1,7 +1,9 @@
+from threading import local
 from types import SimpleNamespace
 import os
 import numpy as np
 import torch
+from torch._C import Value
 from tqdm import tqdm
 
 from .. import log
@@ -62,7 +64,8 @@ class SolverBase:
 
         self.log_data()
 
-    def configure_resampling(self, mode='update', resample_every=1, nstep_update=25):
+    def configure_resampling(self, mode='update', resample_every=1, nstep_update=25, ntherm_update=-1,
+                             increment={'every': None, 'factor': None}):
         """Configure the resampling
 
         Args:
@@ -72,6 +75,12 @@ class SolverBase:
                                  Defaults to 1.
             nstep_update (int, optional): Number of MC steps in update mode.
                                           Defaults to 25.
+            ntherm_update (int, optional): Number of MC steps to thermalize the new sampling.
+                                          Defaults to -1.
+            increment (dict, optional): dict containing the option to increase the sampling space
+                                        every (int) : increment the sampling space every n optimization step
+                                        factor (int) : increment with factor x nwalkers points
+
         """
 
         self.resampling_options = SimpleNamespace()
@@ -82,7 +91,9 @@ class SolverBase:
 
         self.resampling_options.mode = mode
         self.resampling_options.resample_every = resample_every
+        self.resampling_options.ntherm_update = ntherm_update
         self.resampling_options.nstep_update = nstep_update
+        self.resampling_options.increment = increment
 
     def track_observable(self, obs_name):
         """define the observalbe we want to track
@@ -161,14 +172,20 @@ class SolverBase:
         for obs in self.observable.__dict__.keys():
 
             # store the energy
-            if obs == 'energy' and local_energy is not None:
+            if obs == 'energy':
+
+                if local_energy is None:
+                    local_energy = self.wf.local_energy(pos)
+
                 data = local_energy.cpu().detach().numpy()
+
                 if (ibatch is None) or (ibatch == 0):
-                    self.observable.energy.append(np.mean(data))
+                    self.observable.energy.append(
+                        np.mean(data).item())
                 else:
                     self.observable.energy[-1] *= ibatch/(ibatch+1)
                     self.observable.energy[-1] += np.mean(
-                        data)/(ibatch+1)
+                        data).item()/(ibatch+1)
 
             # store local energy
             elif obs == 'local_energy' and local_energy is not None:
@@ -253,15 +270,23 @@ class SolverBase:
 
                 # make a copy of the pos if we update
                 if self.resampling_options.mode == 'update':
-                    pos = pos.clone().detach().to(self.device)
+                    pos = (pos.clone().detach()[
+                           :self.sampler.walkers.nwalkers]).to(self.device)
 
                 # start from scratch otherwise
                 else:
                     pos = None
 
+                # potentially increase the number of sampling point
+                if self.resampling_options.increment['every'] is not None:
+                    if n % self.resampling_options.increment['every'] == 0:
+                        self.sampler.nstep += self.resampling_options.increment['factor'] * \
+                            self.sampler.ndecor
+
                 # sample and update the dataset
                 pos = self.sampler(
                     self.wf.pdf, pos=pos, with_tqdm=False)
+
                 self.dataloader.dataset = pos
 
             # update the weight of the loss if needed
@@ -270,7 +295,7 @@ class SolverBase:
 
         return pos
 
-    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
+    def single_point(self, with_tqdm=True, batchsize=None, hdf5_group='single_point'):
         """Performs a single point calculatin
 
         Args:
@@ -284,7 +309,7 @@ class SolverBase:
 
         log.info('')
         log.info('  Single Point Calculation : {nw} walkers | {ns} steps',
-                 nw=self.sampler.nwalkers, ns=self.sampler.nstep)
+                 nw=self.sampler.walkers.nwalkers, ns=self.sampler.nstep)
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()
@@ -300,9 +325,24 @@ class SolverBase:
                 pos = pos.to(self.device)
 
             # compute energy/variance/error
-            el = self.wf.local_energy(pos)
-            e, s, err = torch.mean(el), torch.var(
-                el), self.wf.sampling_error(el)
+            if batchsize is None:
+                eloc = self.wf.local_energy(pos)
+
+            else:
+                nbatch = int(np.ceil(len(pos)/batchsize))
+
+                for ibatch in range(nbatch):
+                    istart = ibatch * batchsize
+                    iend = min((ibatch+1) * batchsize, len(pos))
+                    if ibatch == 0:
+                        eloc = self.wf.local_energy(
+                            pos[istart:iend, :])
+                    else:
+                        eloc = torch.cat((eloc, self.wf.local_energy(
+                            pos[istart:iend, :])))
+
+            e, s, err = torch.mean(eloc), torch.var(
+                eloc), self.wf.sampling_error(eloc)
 
             # print data
             log.options(style='percent').info(
@@ -313,7 +353,7 @@ class SolverBase:
             # dump data to hdf5
             obs = SimpleNamespace(
                 pos=pos,
-                local_energy=el,
+                local_energy=eloc,
                 energy=e,
                 variance=s,
                 error=err
@@ -387,7 +427,7 @@ class SolverBase:
             pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
 
         ndim = pos.shape[-1]
-        p = pos.view(-1, self.sampler.nwalkers, ndim)
+        p = pos.view(-1, self.sampler.walkers.nwalkers, ndim)
         el = []
         rng = tqdm(p, desc='INFO:QMCTorch|  Energy  ',
                    disable=not with_tqdm)

@@ -9,7 +9,10 @@ from mpi4py import MPI
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrowHorovod
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+
 from qmctorch.utils import set_torch_double_precision
 
 
@@ -36,9 +39,14 @@ class TestH2Hvd(unittest.TestCase):
             rank=hvd.local_rank(),
             mpi_size=hvd.local_size())
 
+        # define jastrow factor
+        jastrow = JastrowFactorElectronElectron(
+            self.mol, PadeJastrowKernel)
+
         # wave function
         self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
                                 configs='cas(2,2)',
+                                jastrow=jastrow,
                                 cuda=False)
 
         # sampler
