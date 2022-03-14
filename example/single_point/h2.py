@@ -3,7 +3,6 @@ from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverSlaterJastrow
-from qmctorch.utils import plot_walkers_traj
 from qmctorch.utils import set_torch_double_precision
 set_torch_double_precision()
 
@@ -26,19 +25,19 @@ sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.25,
                      logspace=False)
 
 
-pos = sampler(wf.pdf)
-e, s, err = wf._energy_variance_error(pos)
+# pos = sampler(wf.pdf)
+# e, s, err = wf._energy_variance_error(pos)
 
-# print data
-print('  Energy   : %f +/- %f' %
-      (e.detach().item(), err.detach().item()))
-print('  Variance : %f' % s.detach().item())
+# # print data
+# print('  Energy   : %f +/- %f' %
+#       (e.detach().item(), err.detach().item()))
+# print('  Variance : %f' % s.detach().item())
 
-# # solver
-# solver = SolverSlaterJastrow(wf=wf, sampler=sampler)
+# solver
+solver = SolverSlaterJastrow(wf=wf, sampler=sampler)
 
-# # single point
-# obs = solver.single_point(logspace=True)
+# single point
+obs = solver.single_point()
 
 # # reconfigure sampler
 # solver.sampler.ntherm = 0
