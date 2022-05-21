@@ -3,12 +3,13 @@ from time import time
 from typing import Callable, Union
 
 import torch
-from torch.distributions import Normal
+from torch.distributions import MultivariateNormal
 from torch.nn import Parameter
-from torch.optim import SGD
+from torch.optim import AdamW
 from tqdm import tqdm
 
 from .sampler_base import SamplerBase
+from .utils.multimodal import MultiModalDistribution
 from .. import log
 from ..scf import Molecule
 
@@ -26,6 +27,7 @@ class Rejection(SamplerBase, torch.nn.Module):
                  ndecor: int = 1,
                  nelec: int = 1,
                  ndim: int = 3,
+                 nstacked: int = 1,
                  logspace: bool = False,
                  cuda: bool = False):
         """Metropolis Hasting generator
@@ -44,16 +46,35 @@ class Rejection(SamplerBase, torch.nn.Module):
             >>> sampler = Rejection(nwalkers=100, nelec=wf.nelec)
             >>> pos = sampler(wf.pdf)
         """
-
-        init = mol.domain('normal')
+        self.mol = mol
+        init = mol.domain('atomic')
 
         torch.nn.Module.__init__(self)
         SamplerBase.__init__(self, nwalkers, nstep,
                              step_size, ntherm, ndecor,
                              nelec, ndim, init, cuda)
 
-        self.mean = Parameter(data=torch.tensor(init['mean'], dtype=torch.float), requires_grad=True)
-        self.sigma = Parameter(data=torch.tensor(init['sigma'].diagonal(), dtype=torch.float), requires_grad=True)
+        sigmas = []
+        for i in range(1, nstacked + 1):
+            for ne in init['atom_nelec']:
+                sigmas.append(torch.eye(self.ndim, dtype=torch.double) * (ne / i) + (
+                        torch.randn(self.ndim, self.ndim).abs() * 0.01))
+
+        sigma = torch.stack(sigmas) / sum(init['atom_nelec'])
+        weights = torch.tensor(init['atom_nelec'] * nstacked, dtype=torch.double) / (sum(init['atom_nelec']) * nstacked)
+
+        # print(init['atom_coords'])
+        self.mean = Parameter(data=torch.tensor(init['atom_coords'], dtype=torch.double), requires_grad=True)
+        # self.sigma = Parameter(data=sigma, requires_grad=True)
+        self.sigma = Parameter(data=torch.ones(self.nelec, self.ndim, dtype=torch.double), requires_grad=True)
+        self.weights = Parameter(data=weights, requires_grad=True)
+
+        # print([p for p in self.parameters()])
+
+        self.natom = mol.natom
+        self.nstacked = nstacked
+
+        self.k = int(self.nwalkers * 0.01)
 
         self.logspace = logspace
         self.log_data()
@@ -62,13 +83,34 @@ class Rejection(SamplerBase, torch.nn.Module):
         """log data about the sampler."""
         pass
 
-    @staticmethod
-    def norm_pdf(z, m=torch.tensor(0.), s=torch.tensor(1.)):
-        return torch.exp(-(z - m) ** 2 / (2 * s ** 2)) / (sqrt_2pi * s)
+    def proposal(self):
+        dists = []
+        for i in range(self.natom * self.nstacked):
+            # print(self.sigma[i].diag())
+            dists.append(MultivariateNormal(self.mean[i], self.sigma[i].diag()))
+        return MultiModalDistribution(dists, self.weights)
 
-    def _sample(self):
-        return Normal(self.mean, self.sigma).sample([self.nwalkers * self.nelec]).view(self.nwalkers,
-                                                                                       self.nelec * self.ndim)
+    def proposal_pdf(self, proposal, samples):
+        return proposal.pdf(samples.view(self.nwalkers * self.nelec, self.ndim)).view(self.nwalkers, -1).sum(1)
+
+    def sample(self, distribution):
+        return distribution.sample(self.nwalkers * self.nelec).view(self.nwalkers, self.nelec * self.ndim)
+
+    def accept(self, pdf, proposal, new_pos):
+        f = pdf(new_pos).squeeze()
+        g = self.proposal_pdf(proposal, new_pos)
+
+        m = -torch.kthvalue(-f / g, self.k).values  # get kth largest value
+        # m = (f / g).max()
+        # print("max:", m)
+
+        u = torch.rand_like(g)
+        gum = g * u * m
+
+        # accept the moves
+        accepted = gum.lt(f)
+
+        return accepted, f, g, m
 
     def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
                  with_tqdm: bool = True) -> torch.Tensor:
@@ -89,56 +131,50 @@ class Rejection(SamplerBase, torch.nn.Module):
             eps = 1E-7
         elif _type_ == torch.float64:
             eps = 1E-16
+        else:
+            eps = 1E-4
 
         if self.ntherm >= self.nstep:
             raise ValueError('Thermalisation longer than trajectory')
         elif self.ntherm < 0:
             self.ntherm = self.nstep + self.ntherm
 
-        opt = SGD(self.parameters(), lr=self.step_size)
+        opt = AdamW(self.parameters(), lr=self.step_size)
 
         pos, rate, idecor = [], 0, 0
-
-        self.walkers.pos = self._sample()
 
         rng = tqdm(range(self.nstep),
                    desc='INFO:QMCTorch|  Sampling',
                    disable=not with_tqdm)
         tstart = time()
+        self.walkers.initialize()
 
         for istep in rng:
-            with torch.enable_grad():
-                opt.zero_grad()  # zero the gradient buffers
+            opt.zero_grad()  # zero the gradient buffers
 
-                new_pos = self._sample()
+            proposal = self.proposal()
 
-                g = torch.ones(self.nwalkers)
-                for i in range(self.ndim):
-                    g *= self.norm_pdf(new_pos[:, i], m=self.mean[i], s=self.sigma[i])
-                f = pdf(new_pos)
+            new_pos = self.sample(proposal)
 
-                m = torch.max(f / g)
+            accepted, f, g, m = self.accept(pdf, proposal, new_pos)
 
-                u = torch.rand_like(g)
-                gum = g * u * m
+            self.walkers.pos[accepted] = new_pos[accepted]
 
-                # accept the moves
-                accepted = gum < f
+            # acceptance rate
+            rate += torch.sum(accepted) / self.nwalkers
 
-                self.walkers.pos[accepted] = new_pos[accepted]
-
-                # acceptance rate
-                rate += torch.sum(accepted) / self.nwalkers
-
-                loss = torch.mean((g - f) ** 2)
-                print("-------------")
-                print("mean:", self.mean.data)
-                print("sigma:", self.sigma.data)
-                print("acc rate:", torch.sum(accepted) / self.nwalkers)
-                print("loss:", loss)
-                loss.backward()
-                opt.step()
-                self.sigma.data = torch.clamp(self.sigma, min=eps)
+            # loss = (f * (f * m / g).log()).sum()
+            loss = (g * m * (g * m / f).log()).sum()
+            if istep % 100 == 0:
+                # print("-------------")
+                # print("mean:", self.mean.data)
+                # print("sigma:", self.sigma.data)
+                print("acc rate:", (torch.sum(accepted) / self.nwalkers).item())
+                print("loss:", loss.item())
+            loss.backward()
+            opt.step()
+            self.sigma.data = torch.clamp(self.sigma, min=eps)
+            self.weights.data = torch.clamp(self.weights, min=eps)
 
             if (istep >= self.ntherm):
                 if (idecor % self.ndecor == 0):

@@ -129,7 +129,7 @@ class Hamiltonian(SamplerBase):
                 idecor += 1
 
         # print stats
-        log.options(style='percent').info(
+        log.info(
             "  Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
         return torch.cat(pos).requires_grad_()
 
