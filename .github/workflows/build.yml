@@ -29,7 +29,7 @@ jobs:
     # - run: conda install -c conda-forge openmpi
     - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
     # - run: pip install horovod==0.27.0
-    # - run: conda install -c conda-forge libstdcxx-ng=12 
+    - run: conda install -c conda-forge libstdcxx-ng=12 
 
     - name: Install the package
       run: pip install .[test,hpc]
