@@ -27,9 +27,10 @@ jobs:
     - run: conda --version
     - run: which python
     - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
+    - run: pip install horovod==0.27.0
 
     - name: Install the package
-      run: pip install .[test,hpc]
+      run: pip install .[test]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
