@@ -8,6 +8,7 @@ from .. import log
 
 
 def print_insert_error(obj, obj_name):
+    print(obj_name, obj)
     log.critical('Issue inserting data {0} of type {type}',
                  obj_name, type=str(type(obj)))
 
@@ -15,8 +16,7 @@ def print_insert_error(obj, obj_name):
 def print_insert_type_error(obj, obj_name):
     log.critical('Issue inserting type of data {0}} ({type}})' %
                  obj_name, type=str(type(obj)))
-
-
+    
 def print_load_error(grp):
     log.critical('Issue loading {grp}', grp=grp)
 
@@ -209,6 +209,7 @@ def insert_group(obj, parent_grp, obj_name):
         except Exception as inst:
             print(type(inst))
             print(inst)
+            
             print_insert_error(obj, obj_name)
 
     # if something went wrong anyway
@@ -247,7 +248,8 @@ def insert_data(obj, parent_grp, obj_name):
     try:
         insert_fn(obj, parent_grp, obj_name)
         # insert_type(obj, parent_grp, obj_name)
-    except:
+    except Exception as expt_message:
+        print("YYY", expt_message)
         print_insert_error(obj, obj_name)
 
 
@@ -288,10 +290,9 @@ def insert_list(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
-    np.warnings.filterwarnings(
-        'ignore', category=np.VisibleDeprecationWarning)
+    
     try:
-        parent_grp.create_dataset(obj_name, data=obj)
+        parent_grp.create_dataset(obj_name, data=np.array(obj))
     except:
         for il, l in enumerate(obj):
             try:
