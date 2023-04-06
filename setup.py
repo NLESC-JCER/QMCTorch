@@ -42,12 +42,11 @@ setup(
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch',
-                      # 'plams@git+https://github.com/SCM-NV/PLAMS@master',
                       'plams',
                       'pyscf', 'mendeleev', 'twiggy', 'mpi4py'],
 
     extras_require={
-        'hpc': ['horovod'],
+        'hpc': ['horovod==0.27.0'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
