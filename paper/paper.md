@@ -15,7 +15,7 @@ affiliations:
  - name: Netherlands eScience Center, Science Park 402, 1098 XH Amsterdam, The Netherlands
    index: 1
 date: 11 April 2023
-bibliography: qmctorch.bib
+bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
 # https://blog.joss.theoj.org/2018/12/a-new-collaboration-with-aas-publishing
