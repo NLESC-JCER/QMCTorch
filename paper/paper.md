@@ -1,5 +1,5 @@
 ---
-title: 'QMCTorch: Differentiable and GPU Enabled Real-Space Quantum Monte Carlo Simulations of Molecular Systems using PyTorch'
+title: 'QMCTorch: a PyTorch Implementation of Real-Space Quantum Monte Carlo Simulations of Molecular Systems'
 tags:
   - Python
   - Deep Learning
@@ -57,15 +57,14 @@ The neural network used to encode the wave-function ansatz used in `QMCTorch` is
 
 The Jastrow factor and the sum of Slater determinants are then multiplied to yield the final value of the wave function calculated for the electronic and atomic positions $\Psi(R)$ with $R = \{r_e, R_{at}\}$. One can easily compute the associated value of the electronic density $\rho(R) = |\Psi(R)|^2$.
 
-# Sampling & Cost Function 
+# Sampling, Cost Function & Optimization 
 
-A simple forward pass of the neural network wave function ansatz described above can then be used to sample the electronic density using Markov-Chain Monte-Carlo techniques. Users can choose betwee Metropolis-Hasting and Hamiltoian Monte-Carlo sampling methods. All the parameters of both methods can be controlled by the user to fine tune the sampling. Each sample, $R_i$, contains then the positions of all the electrons contained in the system. The value of local energy of the system is then computed at each sampling point and these values are summed up to compute the total energy of the system: $E = \sum_i \frac{H\Psi(R_i)}{\Psi(R_i)}$, where $H$ is the Hamiltonian of the molecular system: $H = -\frac{1}{2}\sum_e \Delta_e + V_{ee} + V_{en}$. The calculation of the Laplacian of a determinant can either be performed using automatic differentiation but analytical expressions are often preferred as they are computationally more robust and less expensive [@jacobi_trace]. The gradients of the total energy w.r.t the variational parameters of the wave function, i.e. $\frac{\partial E}{\partial \theta_i}$ are simply obtained via automatic differentiation. Thanks to this automatic differentiation, users can for example define new kernels for the backflow and Jastrow factor without having to derive analytical expressions of the energy gradients.  
+A simple forward pass of the neural network wave function ansatz described above can then be used to sample the electronic density using Markov-Chain Monte-Carlo techniques. Users can choose betwee Metropolis-Hasting and Hamiltoian Monte-Carlo sampling methods but different sampling methods can easily be implemented and used during the simulations. All the parameters of both methods can be controlled by the user to fine tune the sampling. Each sample, $R_i$, contains then the positions of all the electrons contained in the system. The value of local energy of the system is then computed at each sampling point and these values are summed up to compute the total energy of the system: $E = \sum_i \frac{H\Psi(R_i)}{\Psi(R_i)}$, where $H$ is the Hamiltonian of the molecular system: $H = -\frac{1}{2}\sum_e \Delta_e + V_{ee} + V_{en}$. The calculation of the Laplacian of a determinant can either be performed using automatic differentiation but analytical expressions are often preferred as they are computationally more robust and less expensive [@jacobi_trace]. The gradients of the total energy w.r.t the variational parameters of the wave function, i.e. $\frac{\partial E}{\partial \theta_i}$ are simply obtained via automatic differentiation. Thanks to this automatic differentiation, users can for example define new kernels for the backflow and Jastrow factor without having to derive analytical expressions of the energy gradients. Any optimizer included in pytorch or compatible with it can then be used to optimize the wave function. This gives users access to a wide range of optimization techniques that they can freely explore for their own use cases. Users can also decide to freeze certain variational parameters, such as the parameters of the atomic orbitals, or defined different learning rates for different layers. Note that the positions of atoms are also variational parameters, and therefore one can readily perform geometry optimization using `QMCTorch`. At the end of the optimization, all the information relative to the simulations are dumped in a dedicated HDF5 file for reproducibility purposes.
 
-
+# Example
 
 # Acknowledgements
 
-We acknowledge contributions from Brigitta Sipocz, Syrtis Major, and Semyeong
-Oh, and support from Kathryn Johnston during the genesis of this project.
+We acknowledge contributions from Felipe Zapata, Matthijs de Witt and guidance from Claudia Fillipi. The development of the code was done during the project "A Light in the Dark" from the Joint Call for Energy Research funded by the Netherlands Wetenschap Organizatie and the Netherlands eScience Center, project number 
 
 # References
