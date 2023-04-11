@@ -1,5 +1,5 @@
 ---
-title: 'QMCTorch: Real-Space Quantum Monte Carlo Simulations of Molecular Systems using PyTorch'
+title: 'QMCTorch: Differentiable and GPU Enabled Real-Space Quantum Monte Carlo Simulations of Molecular Systems using PyTorch'
 tags:
   - Python
   - Deep Learning
@@ -37,11 +37,15 @@ to facilitate its utilisation and help its adoption by quantum chemists and mate
 
 # Statement of need
 
-`QMCTorch` is a Python package using PyTorch [paszke2019pytorch] as a backend to perform Quantum Monte-Carlo (QMC) simulations of molecular systems. Many software such as `QMCPack`[@qmcpack], `QMC=Chem` [@qmcchem], `CHAMP` [@champ] provide high-quality implementation of advanced QMC methodologies in low-level languages (C++/Fortran).  Python implementations of QMC such as `PAUXY` [@pauxy] and `PyQMC` [@pyqmc] have also been proposed to facilitate the use and development of QMC techniques. Recently large efforts have been made to leverage recent development of deep learning techniques for QMC simulations. Hence neural-network based wave-function ansatz has been proposed [@paulinet,@ferminet]. These recent advances lead to very interesting results but lack in explainability of the resulting wave function ansatz. `QMCTorch` allows to perform QMC simulations using physically motivated neural netwrok architecture that closely follows the wnave function ansatz used by QMC practitioners. As such, it still allows to leverage automatic differentiation for the calculation of the gradients of the total energy wrt the variational parameters and the GPU capabilites offered by PyTorch without loosing the physical intuition behind the wave function ansatz. 
+`QMCTorch` is a Python package using PyTorch [@pytorch] as a backend to perform Quantum Monte-Carlo (QMC) simulations of molecular systems. Many software such as `QMCPack`[@qmcpack], `QMC=Chem` [@qmcchem], `CHAMP` [@champ] provide high-quality implementation of advanced QMC methodologies in low-level languages (C++/Fortran).  Python implementations of QMC such as `PAUXY` [@pauxy] and `PyQMC` [@pyqmc] have also been proposed to facilitate the use and development of QMC techniques. Recently large efforts have been made to leverage recent development of deep learning techniques for QMC simulations. Hence neural-network based wave-function ansatz has been proposed [@paulinet; @ferminet]. These recent advances lead to very interesting results but lack in explainability of the resulting wave function ansatz. `QMCTorch` allows to perform QMC simulations using physically motivated neural netwrok architecture that closely follows the wnave function ansatz used by QMC practitioners. As such, it still allows to leverage automatic differentiation for the calculation of the gradients of the total energy wrt the variational parameters and the GPU capabilites offered by PyTorch without loosing the physical intuition behind the wave function ansatz. 
 
 
-# Architecture
+# Wave Function Ansatz
 ![General architectureof the neural network used by `QMCTorch` to encodie the wave function ansatz.\label{fig:arch}](qmctorch2.png)
+
+The neural network used to encode the wave-function ansatz used in `QMCTorch` is shown in Fig. \ref{fig:arch}. As common in QMC simulations the wave function is given by the product of a Jastrow factor, $J(r)$, that accounts for electronic correlation and a sum of Slater determinants $D^\updownarrow(r_\updownarrow)$ built over molecular orbitals of the spin up or down electrons:  $\Psi(r) = J(r)\sum_n c_n D^\uparrow(r_\uparrow)D^\downarrow(r_\downarrow)$.
+
+
 
 
 # Acknowledgements
