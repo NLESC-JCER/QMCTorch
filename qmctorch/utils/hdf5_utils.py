@@ -289,10 +289,12 @@ def insert_list(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
-    if np.all([isinstance(el,torch.Tensor) for el in obj]):
-        obj = [el.numpy() for el in obj]
+
     
     try:
+        if np.all([isinstance(el,torch.Tensor) for el in obj]):
+            obj = [el.numpy() for el in obj]
+            
         parent_grp.create_dataset(obj_name, data=np.array(obj))
     except:
         for il, l in enumerate(obj):

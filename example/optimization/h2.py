@@ -26,24 +26,24 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='single_double(2,2)',
-                   jastrow_kernel=PadeJastrowKernel)
+                   jastrow_kernel=PadeJastrowKernel).gto2sto()
 
 # sampler
-sampler = Metropolis(nwalkers=200,
-                     nstep=2000, step_size=0.2,
+sampler = Metropolis(nwalkers=5000,
+                     nstep=200, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 3E-3},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
-           {'params': wf.mo.parameters(), 'lr': 1E-3},
+           {'params': wf.mo.parameters(), 'lr': 2E-3},
            {'params': wf.fc.parameters(), 'lr': 2E-3}]
 opt = optim.Adam(lr_dict, lr=1E-3)
 
 # scheduler
-scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
+scheduler = optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.90)
 
 # QMC solver
 solver = SolverSlaterJastrow(wf=wf, sampler=sampler,
@@ -53,16 +53,16 @@ solver = SolverSlaterJastrow(wf=wf, sampler=sampler,
 obs = solver.single_point()
 
 # configure the solver
-solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
-                 loss='energy', grad='auto',
+solver.configure(track=['local_energy', 'parameters'], freeze=['ao'],
+                 loss='energy', grad='manual',
                  ortho_mo=False, clip_loss=False,
                  resampling={'mode': 'update',
                              'resample_every': 1,
-                             'nstep_update': 50})
+                             'nstep_update': 25})
 
 # optimize the wave function
-obs = solver.run(250)
+obs = solver.run(50)
 
 # plot
 plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
-plot_data(solver.observable, obsname='jastrow.weight')
+plot_data(solver.observable, obsname='jastrow.jastrow_kernel.weight')

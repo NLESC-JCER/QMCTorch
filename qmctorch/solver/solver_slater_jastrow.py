@@ -391,7 +391,7 @@ class SolverSlaterJastrow(SolverBase):
         return loss, eloc
 
     def evaluate_grad_manual(self, lpos):
-        """Evaluate the gradient using low variance express
+        """Evaluate the gradient using low variance expression
 
         Args:
             lpos ([type]): [description]

@@ -58,17 +58,9 @@ def plot_data(observable, obsname):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    data = np.array(observable.models.best[obsname]).flatten()
+    data = np.array(observable.__dict__[obsname]).squeeze()
     epoch = np.arange(len(data))
     ax.plot(epoch, data, color='#144477')
-
-    if obsname + '.grad' in observable.__dict__.keys():
-        data = np.array(observable.__getattribute__(
-            obsname + '.grad')).flatten()
-        ax2 = ax.twinx()
-        ax2.plot(epoch, data, color='blue')
-        ax2.set_ylabel('gradient', color='blue')
-        ax2.tick_params(axis='y', labelcolor='blue')
 
     plt.show()
 
