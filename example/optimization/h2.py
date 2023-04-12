@@ -29,11 +29,11 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
                    jastrow_kernel=PadeJastrowKernel)
 
 # sampler
-sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
-                      step_size=0.1, L=30,
-                      ntherm=-1, ndecor=10,
-                      init=mol.domain('atomic'))
-
+sampler = Metropolis(nwalkers=200,
+                     nstep=2000, step_size=0.2,
+                     ntherm=-1, ndecor=100,
+                     nelec=wf.nelec, init=mol.domain('atomic'),
+                     move={'type': 'all-elec', 'proba': 'normal'})
 
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 3E-3},
