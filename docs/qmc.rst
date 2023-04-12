@@ -1,4 +1,4 @@
-Quantum Monte Carlo a 1 min introduction
+Quantum Monte Carlo: a 1 min introduction
 ========================
 
 Quantum Monte Carlo simulations rely on the variational principle:
