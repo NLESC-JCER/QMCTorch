@@ -94,9 +94,8 @@ def plot_walkers_traj(eloc, walkers='mean'):
             plt.plot(np.mean(celoc.T, axis=1), linewidth=5)
 
         else:
-            plt.plot(eloc[walkers, :], 'o',
-                     alpha=1 / nwalkers, c='grey')
-            plt.plot(celoc.T[traj_index, :])
+            raise ValueError('walkers argument must be all or mean')
+        
         plt.grid()
         plt.xlabel('Monte Carlo Steps')
         plt.ylabel('Energy (Hartree)')
