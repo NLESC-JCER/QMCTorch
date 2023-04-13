@@ -454,7 +454,7 @@ class SolverBase:
         raise NotImplementedError()
 
     def log_data(self):
-        """Log basi information about the sampler."""
+        """Log basic information about the sampler."""
 
         log.info('')
         log.info(' QMC Solver ')

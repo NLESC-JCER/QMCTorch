@@ -73,15 +73,10 @@ def plot_walkers_traj(eloc, walkers='mean'):
         walkers (int, str, optional): all, mean or index of a given walker Defaults to 'all'
     """
     nstep, nwalkers = eloc.shape
-
     celoc = np.cumsum(eloc, axis=0).T
     celoc /= np.arange(1, nstep + 1)
-
-    var_decor = np.sqrt(np.var(np.mean(celoc, axis=1)))
-    var = np.sqrt(np.var(celoc, axis=1) / (nstep - 1))
-
+    
     if walkers is not None:
-        # plt.subplot(1, 2, 1)
 
         if walkers == 'all':
             plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
@@ -91,8 +86,12 @@ def plot_walkers_traj(eloc, walkers='mean'):
 
         elif walkers == 'mean':
             plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
-            plt.plot(np.mean(celoc.T, axis=1), linewidth=5)
-
+            emean = np.mean(celoc.T, axis=1)
+            emin = emean.min()
+            emax = emean.max()
+            delta = emax-emin
+            plt.plot(emean, linewidth=5)
+            plt.ylim(emin-0.25*delta,emax+0.25*delta)
         else:
             raise ValueError('walkers argument must be all or mean')
         

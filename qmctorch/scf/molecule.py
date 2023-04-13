@@ -15,8 +15,8 @@ from .. import log
 
 class Molecule:
 
-    def __init__(self, atom=None, calculator='adf',
-                 scf='hf', basis='dzp', unit='bohr',
+    def __init__(self, atom=None, calculator='pyscf',
+                 scf='hf', basis='sto-3g', unit='bohr',
                  name=None, load=None, save_scf_file=False,
                  redo_scf=False, rank=0):
         """Create a molecule in QMCTorch

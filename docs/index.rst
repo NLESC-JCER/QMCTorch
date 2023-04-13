@@ -10,7 +10,7 @@ Quantum Monte Carlo with Pytorch
    :maxdepth: 1
    :caption: QMCTorch
 
-   intro
+   install
    qmc
    qmctorch/molecule
    qmctorch/wavefunction

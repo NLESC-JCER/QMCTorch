@@ -16,7 +16,7 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
 sampler = Metropolis(nwalkers=100, nstep=500, step_size=0.25,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('atomic'),
-                     move={'type': 'one-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec', 'proba': 'normal'})
 
 # solver
 solver = SolverSlaterJastrow(wf=wf, sampler=sampler)
