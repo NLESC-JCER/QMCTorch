@@ -10,10 +10,10 @@ Quantum Monte Carlo with Pytorch
    :maxdepth: 1
    :caption: QMCTorch
 
-   install
-   qmc
-   qmctorch
-   hdf5
+   rst/install
+   rst/qmc
+   rst/qmctorch
+   rst/hdf5
 
 .. toctree::
    :maxdepth: 1

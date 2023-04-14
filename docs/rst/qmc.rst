@@ -5,7 +5,7 @@ Quantum Monte Carlo simulations rely on the variational principle:
 
 .. math::
 
-    E = \frac{\int \Psi^*_\theta(R) \; H \; \Psi_theta(R) dR}{\int |\Psi_theta(R)|^2} \geq E_0
+    E = \frac{\int \Psi^*_\theta(R) \; H \; \Psi_\theta(R) dR}{\int |\Psi_\theta(R)|^2} \geq E_0
 
 where :math:`\Psi_\theta(R)` is the wave function of the system computed for the atomic and electronic positions :math:`R`, 
 and with variational parameters :math:`\theta`, :math:`H` is the Hamiltonian of the system given by:
@@ -42,4 +42,4 @@ where :math:`R_i` are samples of the density :math:`\rho` for example obtained v
 QMC simulations rely then on the optimization of the variational parameters of the wave function, :math:`\theta`, to minimize the value
 of the total energy of the system.
 
-.. image:: ./pics/qmc.png
+.. image:: ../pics/qmc.png
