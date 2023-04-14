@@ -12,33 +12,28 @@ Quantum Monte Carlo with Pytorch
 
    install
    qmc
-   qmctorch/molecule
-   qmctorch/wavefunction
-   qmctorch/sampler
-   qmctorch/optimizer
-   qmctorch/solver
+   qmctorch
+   hdf5
 
 .. toctree::
    :maxdepth: 1
    :caption: Tutorial
 
-   tutorial/tutorial_sampling_traj
-   tutorial/tutorial_correlation
-   tutorial/tutorial_wf_opt
-   tutorial/tutorial_jastrow
-   tutorial/tutorial_backflow
-   # tutorial/tutorial_geo_opt
-   tutorial/tutorial_gpus
-   tutorial/tutorial_hdf5
+   notebooks/molecule
+   notebooks/sampling
+   notebooks/wfopt 
+   notebooks/geoopt 
+   notebooks/gpu
 
 .. toctree::
    :maxdepth: 1
-   :caption: Examples
+   :caption: Advanced Tutorial
 
-   example/example_sp
-   example/example_opt
-   example/example_gpu
-   example/example_horovod
+   notebooks/correlation
+   notebooks/create_jastrow
+   notebooks/create_backflow
+   notebooks/horovod
+
 
 .. toctree::
    :maxdepth: 1

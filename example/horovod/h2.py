@@ -15,7 +15,8 @@ from qmctorch.utils import (plot_energy, plot_data)
 # bond dissociation energy 4.478 eV -> 0.16 hartree
 
 hvd.init()
-if torch.cuda.is_available():
+use_cuda = torch.cuda.is_available()
+if use_cuda:
     torch.cuda.set_device(hvd.rank())
 
 set_torch_double_precision()
@@ -29,14 +30,15 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='cas(2,2)',
-                   cuda=False)
+                   cuda=use_cuda)
 
 # sampler
 sampler = Metropolis(nwalkers=200,
                      nstep=200, step_size=0.2,
                      ntherm=-1, ndecor=100,
                      nelec=wf.nelec, init=mol.domain('atomic'),
-                     move={'type': 'all-elec', 'proba': 'normal'})
+                     move={'type': 'all-elec', 'proba': 'normal'},
+                     cuda=use_cuda)
 
 
 # optimizer
