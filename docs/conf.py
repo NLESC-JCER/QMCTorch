@@ -166,7 +166,7 @@ todo_include_todos = False
 #     html_theme = 'classic'
 
 html_theme = 'sphinx_rtd_theme'
-html_logo = "qmctorch_white.png"
+html_logo = "./pics/qmctorch_white.png"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the

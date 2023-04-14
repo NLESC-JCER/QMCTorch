@@ -4,7 +4,7 @@ QMCTorch
 `QMCTorch` allows to epxress the wave function ususally used by QMC practitioner as neural network. The most generic architecture of the
 neural network used by the code is:
 
-.. image:: ../paper/qmctorch2.png
+.. image:: ./pics/qmctorch2.png
 
 Slater Jastrow Wave Function
 ----------------------------------------

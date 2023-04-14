@@ -42,4 +42,4 @@ where :math:`R_i` are samples of the density :math:`\rho` for example obtained v
 QMC simulations rely then on the optimization of the variational parameters of the wave function, :math:`\theta`, to minimize the value
 of the total energy of the system.
 
-.. image:: ../pics/qmc.png
+.. image:: ./pics/qmc.png
