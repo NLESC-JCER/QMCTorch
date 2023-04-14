@@ -200,13 +200,15 @@ class SolverBase:
                 data = func(pos)
                 if isinstance(data, torch.Tensor):
                     data = data.cpu().detach().numpy()
-                    if (ibatch is None) or (ibatch == 0):
-                        self.observable.__getattribute__(
-                            obs).append(data)
-                    else:
-                        self.observable.__getattribute__(
-                            obs)[-1] = np.append(self.observable.__getattribute__(
-                                obs)[-1], data)
+                if isinstance(data, list):
+                    data = np.array(data)
+                if (ibatch is None) or (ibatch == 0):
+                    self.observable.__getattribute__(
+                        obs).append(data)
+                else:
+                    self.observable.__getattribute__(
+                        obs)[-1] = np.append(self.observable.__getattribute__(
+                            obs)[-1], data)
 
     def print_observable(self, cumulative_loss, verbose=False):
         """Print the observalbe to csreen
