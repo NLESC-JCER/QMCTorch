@@ -3,11 +3,9 @@ import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
-from mpi4py import MPI
 import h5py
-
-from .calculator.adf import CalculatorADF
-from .calculator.pyscf import CalculatorPySCF
+from mpi4py import MPI
+from .calculator import CalculatorADF, CalculatorPySCF, CalculatorAMS
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
 from .. import log
@@ -100,6 +98,7 @@ class Molecule:
                     log.info('  Running scf  calculation')
 
                     calc = {'adf': CalculatorADF,
+                            'ams': CalculatorAMS,
                             'pyscf': CalculatorPySCF}[calculator]
 
                     self.calculator = calc(self.atoms,
