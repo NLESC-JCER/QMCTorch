@@ -24,33 +24,42 @@ class CalculatorADF(CalculatorBase):
         # basis from the emma paper
         self.additional_basis_type = ['VB1', 'VB2', 'VB3',
                                       'CVB1', 'CVB2', 'CVB3']
+
         self.additional_basis_path = os.path.join(os.path.dirname(
             os.path.abspath(__file__)), 'atomicdata/adf/')
+
+        self.adf_version = 'adf2020+'
+        self.job_name = ''.join(self.atoms) + '_' + self.basis_name
+        self.output_file = 'adf.rkf'
 
     def run(self):
         """Run the calculation using ADF."""
 
         # path needed for the calculation
-        wd = ''.join(self.atoms) + '_' + self.basis_name
-        t21_name = wd + '.t21'
         plams_wd = './plams_workdir'
-        t21_path = os.path.join(
-            plams_wd, os.path.join(wd, t21_name))
+        outputdir_path = os.path.join(
+            plams_wd, os.path.join(self.job_name, self.output_file))
+
+        # get the correct exec
+        plams_job = {
+            'adf2020+': plams.AMSJob,
+            'adf2019' : plams.ADFJob
+        }[self.adf_version]
 
         # configure plams and run the calculation
         self.init_plams()
         mol = self.get_plams_molecule()
         sett = self.get_plams_settings()
-        job = plams.ADFJob(molecule=mol, settings=sett, name=wd)
+        job = plams_job(molecule=mol, settings=sett, name=self.job_name)
         job.run()
 
         # extract the data to hdf5
-        basis = self.get_basis_data(t21_path)
+        basis = self.get_basis_data(outputdir_path)
 
         # remove adf data
         if self.savefile:
-            shutil.copyfile(t21_path, t21_name)
-            self.savefile = t21_name
+            shutil.copyfile(outputdir_path, self.output_file)
+            self.savefile = self.output_file
         shutil.rmtree(plams_wd)
 
         return basis
@@ -64,7 +73,12 @@ class CalculatorADF(CalculatorBase):
     def get_plams_molecule(self):
         """Returns a plams molecule object."""
         mol = plams.Molecule()
+        bohr2angs = 0.529177
+        scale = 1.
+        if self.units == 'bohr':
+            scale = bohr2angs
         for at, xyz in zip(self.atoms, self.atom_coords):
+            xyz = list(scale * np.array(xyz))
             mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
         return mol
 
@@ -72,26 +86,23 @@ class CalculatorADF(CalculatorBase):
         """Returns a plams setting object."""
 
         sett = plams.Settings()
-        sett.input.basis.type = self.basis_name.upper()
+        sett.input.ams.Task = 'SinglePoint'
+        sett.input.adf.basis.type = self.basis_name.upper()
         if self.basis_name.upper() in self.additional_basis_type:
-            sett.input.basis.path = self.additional_basis_path
-        sett.input.basis.core = 'None'
-        sett.input.symmetry = 'nosym'
+            sett.input.adf.basis.path = self.additional_basis_path
+        sett.input.adf.basis.core = 'None'
+        sett.input.adf.symmetry = 'nosym'
 
         if self.scf.lower() == 'hf':
-            sett.input.XC.HartreeFock = ''
+            sett.input.adf.XC.HartreeFock = ''
 
         elif self.scf.lower() == 'dft':
-            sett.input.XC.LDA = 'VWN'
+            sett.input.adf.XC.LDA = 'VWN'
 
-        # correct unit
-        if self.units == 'angs':
-            sett.input.units.length = 'Angstrom'
-        elif self.units == 'bohr':
-            sett.input.units.length = 'Bohr'
+        sett.input.adf.relativity.level = 'None'
 
         # total energy
-        sett.input.totalenergy = True
+        sett.input.adf.totalenergy = True
 
         return sett
 
@@ -215,3 +226,48 @@ class CalculatorADF(CalculatorBase):
         if data.shape == ():
             data = np.array([data])
         return data
+        
+class CalculatorADF2019(CalculatorADF):
+
+    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
+
+        CalculatorADF.__init__(
+            self, atoms, atom_coords, basis, scf, units, molname, savefile)
+
+        self.adf_version = 'adf2019'
+        self.job_name = ''.join(self.atoms) + '_' + self.basis_name
+        self.output_file = self.job_name + '.t21' 
+
+    def get_plams_molecule(self):
+        """Returns a plams molecule object."""
+        mol = plams.Molecule()
+        for at, xyz in zip(self.atoms, self.atom_coords):
+            mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
+        return mol
+
+    def get_plams_settings(self):
+        """Returns a plams setting object."""
+
+        sett = plams.Settings()
+        sett.input.basis.type = self.basis_name.upper()
+        if self.basis_name.upper() in self.additional_basis_type:
+            sett.input.basis.path = self.additional_basis_path
+        sett.input.basis.core = 'None'
+        sett.input.symmetry = 'nosym'
+
+        if self.scf.lower() == 'hf':
+            sett.input.XC.HartreeFock = ''
+
+        elif self.scf.lower() == 'dft':
+            sett.input.XC.LDA = 'VWN'
+
+        # correct unit
+        if self.units == 'angs':
+            sett.input.units.length = 'Angstrom'
+        elif self.units == 'bohr':
+            sett.input.units.length = 'Bohr'
+
+        # total energy
+        sett.input.totalenergy = True
+
+        return sett
