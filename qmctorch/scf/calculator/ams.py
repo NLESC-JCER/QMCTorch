@@ -28,9 +28,6 @@ class CalculatorAMS(CalculatorBase):
         self.additional_basis_path = os.path.join(os.path.dirname(
             os.path.abspath(__file__)), 'atomicdata/adf/')
 
-        # if units == 'bohr':
-        #     raise ValueError('Please provide de the atoomic coordinate in Angs')
-
     def run(self):
         """Run the calculation using ADF."""
 
@@ -95,12 +92,6 @@ class CalculatorAMS(CalculatorBase):
             sett.input.adf.XC.LDA = 'VWN'
 
         sett.input.adf.relativity.level = 'None'
-
-        # correct unit
-        # if self.units == 'angs':
-        #     sett.input.ams.units.length = 'Angstrom'
-        # elif self.units == 'bohr':
-        #     sett.input.ams.units.length = 'Bohr'
 
         # total energy
         sett.input.adf.totalenergy = True
