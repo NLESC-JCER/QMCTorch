@@ -28,15 +28,14 @@ class CalculatorAMS(CalculatorBase):
         self.additional_basis_path = os.path.join(os.path.dirname(
             os.path.abspath(__file__)), 'atomicdata/adf/')
 
-        if units == 'bohr':
-            raise ValueError('Please provide de the atoomic coordinate in Angs')
+        # if units == 'bohr':
+        #     raise ValueError('Please provide de the atoomic coordinate in Angs')
 
     def run(self):
         """Run the calculation using ADF."""
 
         # path needed for the calculation
         wd = ''.join(self.atoms) + '_' + self.basis_name
-        # t21_name = wd + '.t21'
         rkf_name = 'adf.rkf'
         plams_wd = './plams_workdir'
         rkf_path = os.path.join(
@@ -69,7 +68,12 @@ class CalculatorAMS(CalculatorBase):
     def get_plams_molecule(self):
         """Returns a plams molecule object."""
         mol = plams.Molecule()
+        bohr2angs = 0.529177
+        scale = 1.
+        if self.units == 'bohr':
+            scale = bohr2angs
         for at, xyz in zip(self.atoms, self.atom_coords):
+            xyz = list(scale * np.array(xyz))
             mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
         return mol
 
