@@ -23,20 +23,39 @@ class SlaterCombinedJastrow(SlaterJastrow):
                      'een': {}},
                  cuda=False,
                  include_all_mo=True):
-        """Implementation of the QMC Network.
+        """Slater Jastrow wave function with many body Jastrow factor
+
+        .. math::
+            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\uparrow_n(r^\uparrow)D^\downarrow_n(r^\downarrow)
+
+        with
+
+        .. math::
+            J(r) = \\exp\\left( K_{ee}(r) + K_{en}(R_{at},r) + K_{een}(R_{at}, r) \\right)    
+
+        with the different kernels representing electron-electron, electron-nuclei and electron-electron-nuclei terms
 
         Args:
-            mol (qmc.wavefunction.Molecule): a molecule object
+            mol (Molecule): a QMCTorch molecule object
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
+                - ground_state : only the ground state determinant in the wave function
+                - single(n,m) : only single excitation with n electrons and m orbitals 
+                - single_double(n,m) : single and double excitation with n electrons and m orbitals
+                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
-            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
+                - jacobi : use the Jacobi formula to compute the kinetic energy 
+                - auto : use automatic differentiation to compute the kinetic energy
+            jastrow_kernel (dict, optional) : different Jastrow kernels for the different terms. 
+                By default only electron-electron and electron-nuclei terms are used
+            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernels contructor
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
         Examples::
+            >>> from qmctorch.scf import Molecule
+            >>> from qmctorch.wavefunction import SlaterCombinedJastrow
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
+            >>> wf = SlaterCombinedJastrow(mol, configs='cas(2,2)')
         """
 
         super().__init__(mol, configs, kinetic, None, {}, cuda, include_all_mo)

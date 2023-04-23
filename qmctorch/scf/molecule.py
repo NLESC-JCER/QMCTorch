@@ -21,10 +21,17 @@ class Molecule:
 
         Args:
             atom (str or None, optional): defines the atoms and their positions. Defaults to None.
+                - At1 x y z; At2 x y z ... : Provide the atomic coordinate directly
+                - <file>.xyz : provide the path to an .xyz file containing the atomic coordinates 
             calculator (str, optional): selet scf calculator. Defaults to 'adf'.
+                - pyscf : PySCF calculator
+                - adf : ADF2020+ calculator
+                - adf2019 : ADF2019 calculatori
             scf (str, optional): select scf level of theory. Defaults to 'hf'.
+                - hf : perform a Hatree-Fock calculation to obtain the molecular orbital coefficients
+                - dft : perform a density functional theory using the local density approximation
             basis (str, optional): select the basis set. Defaults to 'dzp'.
-            unit (str, optional): units of the coordinates. Defaults to 'bohr'.
+            unit (str, optional): units of the coordinates; 'bohr' or 'angs'. Defaults to 'bohr'.
             name (str or None, optional): name of the molecule. Defaults to None.
             load (str or None, optional): path to a hdf5 file to load. Defaults to None.
             save_scf_file (bool, optional): save the scf file (when applicable) Defaults to False
@@ -32,7 +39,7 @@ class Molecule:
             rank (int, optional): Rank of the process. Defaults to 0.
 
         Examples:
-            >>> from qmctorch.wavefunction import Molecule
+            >>> from qmctorch.scf import Molecule
             >>> mol = Molecule(atom='H 0 0 0; H 0 0 1', unit='angs',
             ...                calculator='adf', basis='dzp')
         """

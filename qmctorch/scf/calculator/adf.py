@@ -26,7 +26,7 @@ class CalculatorADF(CalculatorBase):
                                       'CVB1', 'CVB2', 'CVB3']
 
         self.additional_basis_path = os.path.join(os.path.dirname(
-            os.path.abspath(__file__)), 'atomicdata/adf/')
+            os.path.abspath(__file__)), 'atomicdata/adf/') 
 
         self.adf_version = 'adf2020+'
         self.job_name = ''.join(self.atoms) + '_' + self.basis_name
