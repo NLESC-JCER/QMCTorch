@@ -4,7 +4,7 @@ import horovod.torch as hvd
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
-from qmctorch.solver import SolverSlaterJastrowHorovod
+from qmctorch.solver import SolverMPI
 from qmctorch.sampler import Metropolis
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils import (plot_energy, plot_data)
@@ -52,7 +52,7 @@ opt = optim.Adam(lr_dict, lr=1E-3)
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=100, gamma=0.90)
 
 # QMC solver
-solver = SolverSlaterJastrowHorovod(wf=wf, sampler=sampler,
+solver = SolverMPI(wf=wf, sampler=sampler,
                                     optimizer=opt, scheduler=scheduler,
                                     rank=hvd.rank())
 

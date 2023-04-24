@@ -8,7 +8,7 @@ from qmctorch.utils import (DataSet, Loss, OrthoReg, add_group_attr,
                             dump_to_hdf5)
 
 from .. import log
-from .solver_slater_jastrow import SolverSlaterJastrow
+from .solver import Solver
 
 try:
     import horovod.torch as hvd
@@ -21,7 +21,7 @@ def logd(rank, *args):
         log.info(*args)
 
 
-class SolverSlaterJastrowHorovod(SolverSlaterJastrow):
+class SolverMPI(Solver):
 
     def __init__(self, wf=None, sampler=None, optimizer=None,
                  scheduler=None, output=None, rank=0):

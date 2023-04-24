@@ -3,7 +3,7 @@ import os
 import argparse
 
 
-dist_solvers = ['SolverSlaterJastrowHorovod']
+dist_solvers = ['SolverMPI']
 
 
 def check_file(fname):
