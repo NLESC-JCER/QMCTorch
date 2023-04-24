@@ -17,8 +17,7 @@ Two-body Jastrow factors
 
 Many-Body Jastrow factors
 ^^^^^^^^^^^^^^^^^^^^^
-* `SlaterCombinedJastrow`: A wave function that contains a many body Jastrow factor and a sum of Slater determinants
-with backflow transformation for the electrons
+* `SlaterCombinedJastrow`: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
 * `SlaterCombinedJastrowBackflow`: A `SlaterCombinedJastrow` wave function with a backflow transformation
 
 
@@ -152,7 +151,7 @@ The Jastrow factor combines here multiple terms that represent electron-electron
 
 .. math::
 
-    J(R_{at},r) = \exp\left(  \sum_{i<j} K_{ee}(r_i, r_j}) + \sum_{i,\alpha}K_{en}(R_\alpha, r_i) + \sum_{i<j,\alpha} K_{een}(R_\alpha,r_i, r_j) \right)
+    J(R_{at},r) = \exp\left(  \sum_{i<j} K_{ee}(r_i, r_j) + \sum_{i,\alpha}K_{en}(R_\alpha, r_i) + \sum_{i<j,\alpha} K_{een}(R_\alpha, r_i, r_j) \right)
 
 
 Usage
