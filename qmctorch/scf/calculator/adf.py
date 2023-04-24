@@ -87,9 +87,20 @@ class CalculatorADF(CalculatorBase):
 
         sett = plams.Settings()
         sett.input.ams.Task = 'SinglePoint'
-        sett.input.adf.basis.type = self.basis_name.upper()
+        
         if self.basis_name.upper() in self.additional_basis_type:
-            sett.input.adf.basis.path = self.additional_basis_path
+            sett.input.adf.basis.type = 'DZP'
+            parsed_atoms = []
+            for at in self.atoms:
+                if at not in parsed_atoms:
+                    basis_path = os.path.join(self.additional_basis_path, self.basis_name.upper(), at)
+                    atomtype = "Symbol={at} File={path}".format(at=at,
+                                                                path=basis_path)
+                    sett.input.adf.basis.peratomtype = atomtype
+                    parsed_atoms.append(at)
+        else:
+            sett.input.adf.basis.type = self.basis_name.upper()
+
         sett.input.adf.basis.core = 'None'
         sett.input.adf.symmetry = 'nosym'
 

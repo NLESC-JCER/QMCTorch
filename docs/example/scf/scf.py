@@ -2,14 +2,14 @@ from qmctorch.scf import Molecule
 
 # Select the SCF calculator
 calc = ['pyscf',            # pyscf  
-        'adf2019',          # adf 2019 
-        'adf'               # adf 2020+
-    ][2]
+        'adf',          # adf 2019 
+        'adf2019'               # adf 2020+
+    ][1]
 
 # select an appropriate basis
 basis = {
     'pyscf'  : 'sto-6g',
-    'adf'    : 'dz',
+    'adf'    : 'VB1',
     'adf2019': 'dz'
 }[calc]
 
