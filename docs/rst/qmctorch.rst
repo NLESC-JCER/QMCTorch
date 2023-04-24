@@ -6,6 +6,21 @@ neural network used by the code is:
 
 .. image:: ../pics/qmctorch2.png
 
+Different wave function forms have been implemented to easily create and use wave function ansatz
+
+Two-body Jastrow factors
+----------------------------
+
+* `SlaterJastrow`: A simple wave function containing an electron-electron Jastrow factor and a sum of Slater determinants 
+* `SlaterOrbitalDependentJastrow`: A  `SlaterJastrow` for but each molecular orbitals has its own Jastrow factor 
+* `SlaterJastrowBackflow`: A `SlaterJastrow` wave function with backflow transformation for the electrons
+
+Many-Body Jastrow factors
+-----------------------------
+* `SlaterCombinedJastrow`: A wave function that contains a many body Jastrow factor and a sum of Slater determinants
+with backflow transformation for the electrons
+
+
 Slater Jastrow Wave Function
 ----------------------------------------
 
