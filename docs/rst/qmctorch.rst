@@ -11,14 +11,14 @@ Different wave function forms have been implemented to easily create and use wav
 Two-body Jastrow factors
 ^^^^^^^^^^^^^^^^^^^^^
 
-* `SlaterJastrow`: A simple wave function containing an electron-electron Jastrow factor and a sum of Slater determinants 
-* `SlaterOrbitalDependentJastrow`: A  `SlaterJastrow` for but each molecular orbitals has its own Jastrow factor 
-* `SlaterJastrowBackflow`: A `SlaterJastrow` wave function with backflow transformation for the electrons
+* ``SlaterJastrow``: A simple wave function containing an electron-electron Jastrow factor and a sum of Slater determinants 
+* ``SlaterOrbitalDependentJastrow``: A  ``SlaterJastrow`` for but each molecular orbitals has its own Jastrow factor 
+* ``SlaterJastrowBackflow``: A ``SlaterJastrow`` wave function with backflow transformation for the electrons
 
 Many-Body Jastrow factors
 ^^^^^^^^^^^^^^^^^^^^^
-* `SlaterCombinedJastrow`: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
-* `SlaterCombinedJastrowBackflow`: A `SlaterCombinedJastrow` wave function with a backflow transformation
+* ``SlaterCombinedJastrow``: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
+* ``SlaterCombinedJastrowBackflow``: A ``SlaterCombinedJastrow`` wave function with a backflow transformation
 
 
 
@@ -52,8 +52,6 @@ The determinantal parts in the expression of :math:`\Psi` are given by the spin-
 
     D_n^{\uparrow} = \frac{1}{\sqrt{N}} \begin{vmatrix} & & \\ & \phi_j(r_i) & \\ & & \end{vmatrix}
 
-Usage
-^^^^^^^^^^^^^^^^^^^^^
 
 A ``SlaterJastrow`` wave function can instantiated following :
 
@@ -76,10 +74,6 @@ Orbital dependent Slater Jastrow Wave Function
 
 A slight modification of the the Slater Jastrow is obtained by making the the Jastrow factor can be made orbital dependent. 
 This is implemented in the ``SlaterOrbitalDependentJastrow`` that can be instantiated as:
-
-
-Usage
-^^^^^^^^^^^^^^^^^^^^^
 
 >>> from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
 >>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
@@ -125,9 +119,6 @@ The backflow transformation can be different for each atomic orbitals.
 
 where each orbital has its dedicated backflow kernel. This provides much more flexibility when optimizing the wave function.
 
-Usage
-^^^^^^^^^^^^^^^^^^^^^
-
 This wave function can be used with
 
 >>> from qmctorch.wavefunction import SlaterJastrowBackFlow
@@ -154,8 +145,6 @@ The Jastrow factor combines here multiple terms that represent electron-electron
     J(R_{at},r) = \exp\left(  \sum_{i<j} K_{ee}(r_i, r_j) + \sum_{i,\alpha}K_{en}(R_\alpha, r_i) + \sum_{i<j,\alpha} K_{een}(R_\alpha, r_i, r_j) \right)
 
 
-Usage
-^^^^^^^^^^^^^^^^^^^^^
 
 >>> from qmctorch.wavefunction import SlaterCombinedJastrow
 >>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowElecElec
@@ -176,8 +165,6 @@ Many-Body Jastrow Wave Function with backflow transformation
 
 A backflow transformation can be used together with the many body Jastrow
 
-Usage
-^^^^^^^^^^^^^^^^^^^^^
 
 >>> from qmctorch.wavefunction import SlaterCombinedJastrowBackflow
 >>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowElecElec
