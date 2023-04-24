@@ -19,7 +19,7 @@ class SlaterJastrow(SlaterJastrowBase):
         """Slater Jastrow wave function with electron-electron Jastrow factor
 
         .. math::
-            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\uparrow_n(r^\uparrow)D^\downarrow_n(r^\downarrow)
+            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\\uparrow_n(r^\\uparrow)D^\\downarrow_n(r^\\downarrow)
 
         with
 
@@ -40,7 +40,7 @@ class SlaterJastrow(SlaterJastrowBase):
                 - auto : use automatic differentiation to compute the kinetic energy
             jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
             jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
-            cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
+            cuda (bool, optional): turns GPU ON/OFF  Defaults to Fals   e.
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
         Examples::

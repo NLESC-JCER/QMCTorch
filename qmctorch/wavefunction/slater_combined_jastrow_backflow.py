@@ -36,7 +36,7 @@ class SlaterCombinedJastrowBackflow(SlaterJastrow):
         """Slater Jastrow wave function with many-body Jastrow factor and backflow
 
         .. math::
-            \\Psi(R_{at}, r) = J(R_{at}, r)\\sum_n c_n D^\uparrow_n(q^\uparrow)D^\downarrow_n(q^\downarrow)
+            \\Psi(R_{at}, r) = J(R_{at}, r)\\sum_n c_n D^\\uparrow_n(q^\\uparrow)D^\\downarrow_n(q^\\downarrow)
 
         with
 

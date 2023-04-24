@@ -29,7 +29,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         """Slater Jastrow wave function with electron-electron Jastrow factor and backflow
 
         .. math::
-            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\uparrow_n(q^\uparrow)D^\downarrow_n(q^\downarrow)
+            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\\uparrow_n(q^\\uparrow)D^\\downarrow_n(q^\\downarrow)
 
         with
 
@@ -65,38 +65,6 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
     
-        Examples::
-            >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
-        """
-
-        """Slater Jastrow wave function with electron-electron Jastrow factor
-
-        .. math::
-            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\uparrow_n(r^\uparrow)D^\downarrow_n(r^\downarrow)
-
-        with
-
-        .. math::
-            J(r) = \\exp\\left( K_{ee}(r) \\right)
-
-        with K, a kernel function depending only on the electron-eletron distances 
-
-        Args:
-            mol (Molecule): a QMCTorch molecule object
-            configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
-                - ground_state : only the ground state determinant in the wave function
-                - single(n,m) : only single excitation with n electrons and m orbitals 
-                - single_double(n,m) : single and double excitation with n electrons and m orbitals
-                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
-            kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-                - jacobi : use the Jacobi formula to compute the kinetic energy 
-                - auto : use automatic differentiation to compute the kinetic energy
-            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
-            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
-            cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
-            include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
-                                             popualted in the configs. Defaults to False
         Examples::
             >>> from qmctorch.scf import Molecule
             >>> from qmctorch.wavefunction import SlaterJastrowBackFlow

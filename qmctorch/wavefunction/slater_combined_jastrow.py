@@ -26,7 +26,7 @@ class SlaterCombinedJastrow(SlaterJastrow):
         """Slater Jastrow wave function with many body Jastrow factor
 
         .. math::
-            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\uparrow_n(r^\uparrow)D^\downarrow_n(r^\downarrow)
+            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\\uparrow_n(r^\\uparrow)D^\\downarrow_n(r^\\downarrow)
 
         with
 
