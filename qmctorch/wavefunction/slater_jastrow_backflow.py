@@ -167,7 +167,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
 
         .. math::
-             \\frac{\Delta (J(R) \Psi(R))}{ J(R) \Psi(R)} = \\frac{\\Delta J(R)}{J(R}
+             \\frac{\\Delta (J(R) \\Psi(R))}{ J(R) \\Psi(R)} = \\frac{\\Delta J(R)}{J(R}
                                                           + 2 \\frac{\\nabla J(R)}{J(R)} \\frac{\\nabla \\Psi(R)}{\\Psi(R)}
                                                           + \\frac{\\Delta \\Psi(R)}{\\Psi(R)}
 

@@ -70,7 +70,7 @@ class SlaterJastrow(SlaterJastrowBase):
         """computes the value of the wave function for the sampling points
 
         .. math::
-            \\Psi(R) =  \\sum_{n} c_n J(R) D^{u}_n(r^u) \\times D^{d}_n(r^d)
+            \\Psi(R) =  J(R) \\sum_{n} c_n  D^{u}_n(r^u) \\times D^{d}_n(r^d)
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -132,16 +132,19 @@ class SlaterJastrow(SlaterJastrowBase):
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-             \\frac{\Delta \\Psi(R)}{ \\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\\Delta D_n^u}{D_n^u} + \\frac{\\Delta D_n^d}{D_n^d}) D_n^u D_n^d
+
+             \\frac{\\Delta \\Psi(R)}{\\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\\Delta D_n^u}{D_n^u} + \\frac{\\Delta D_n^d}{D_n^d}) D_n^u D_n^d
 
         We compute the laplacian of the determinants through the Jacobi formula
 
         .. math::
+
             \\frac{\\Delta det(A)}{det(A)} = Tr(A^{-1} \\Delta A)
 
-        Here A = J(R) phi and therefore :
+        Here :math: `A = J(R) \\phi` and therefore :
 
         .. math::
+
             \\Delta A = (\\Delta J) D + 2 \\nabla J \\nabla D + (\\Delta D) J
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -168,7 +171,7 @@ class SlaterJastrow(SlaterJastrowBase):
 
         The gradients of the wave function
 
-        .. math:
+        .. math::
             \\Psi(R) = J(R) \\sum_n c_n D^{u}_n D^{d}_n = J(R) \\Sigma
 
         are computed following
@@ -186,7 +189,7 @@ class SlaterJastrow(SlaterJastrowBase):
 
         .. math::
 
-            \\nabla \\Sigma =  \\sum_n c_n (Tr( (D^u_n)^-1 \\nabla D^u_n) + Tr( (D^d_n)^-1 \\nabla D^d_n)) D^u_n D^d_n
+            \\nabla \\Sigma =  \\sum_n c_n (Tr( (D^u_n)^{-1} \\nabla D^u_n) + Tr( (D^d_n)^{-1} \\nabla D^d_n)) D^u_n D^d_n
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)

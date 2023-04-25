@@ -300,7 +300,7 @@ class SlaterJastrowBase(WaveFunction):
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
+             \\frac{K(R)}{\\Psi(R)} = Tr(A^{-1} B_{kin})
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)

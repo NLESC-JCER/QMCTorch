@@ -1,4 +1,4 @@
-QMCTorch
+Wave Function ansatz in QMCTorch
 ===========================================
 
 `QMCTorch` allows to epxress the wave function ususally used by QMC practitioner as neural network. The most generic architecture of the
@@ -6,20 +6,19 @@ neural network used by the code is:
 
 .. image:: ../pics/qmctorch2.png
 
-Different wave function forms have been implemented to easily create and use wave function ansatz
+Different wave function forms have been implemented to easily create and use wave function ansatz. 
+These different functional forms differ mainly by the Jastrow factor they use and the presence of backflow transformation or not. 
 
 Two-body Jastrow factors
-^^^^^^^^^^^^^^^^^^^^^
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+In its simplest form the Jastrow factor only depends on the electron-electron distances. This means that the Jastrow layer only has a single kernel function :math: `K_{ee}`. 
+This Jastrow factor can be applied globally, or different Jastrow factors can be applied to individual orbitals. In addition a Backflow transformation can be added or not to the definition
+of the wave function. We therefore have the following wave function available:
 
 * ``SlaterJastrow``: A simple wave function containing an electron-electron Jastrow factor and a sum of Slater determinants 
 * ``SlaterOrbitalDependentJastrow``: A  ``SlaterJastrow`` for but each molecular orbitals has its own Jastrow factor 
 * ``SlaterJastrowBackflow``: A ``SlaterJastrow`` wave function with backflow transformation for the electrons
-
-Many-Body Jastrow factors
-^^^^^^^^^^^^^^^^^^^^^
-* ``SlaterCombinedJastrow``: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
-* ``SlaterCombinedJastrowBackflow``: A ``SlaterCombinedJastrow`` wave function with a backflow transformation
-
 
 
 Slater Jastrow Wave Function
@@ -106,10 +105,21 @@ The wave function is then constructed as :
     \Psi(R) = J(R) \sum_n c_n D_n^{\uparrow}(Q) D_n^{\downarrow}(Q)
 
 The Jastrow factor is still computed using the original positions of the electrons while the determinant part uses the
-backflow transformed positions.
+backflow transformed positions. One can define such wave function with:
+
+>>> from qmctorch.wavefunction import SlaterJastrowBackFlow
+>>> from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
+>>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+>>>
+>>> wf = SlaterJastrowBackFlow(mol, 
+>>>                            configs='single_double(2,2)',
+>>>                            jastrow_kernel=PadeJastrowKernel,
+>>>                            backflow_kernel=BackFlowKernelInverse)
+
+Compared to the ``SlaterJastrow`` wave function, the kernel of the backflow transformation must be specified. By default the inverse kernel will be used.
 
 Orbital Dependent Backflow Transformation
------------------------------------------------
+******************************************
 
 The backflow transformation can be different for each atomic orbitals.
 
@@ -128,11 +138,20 @@ This wave function can be used with
 >>> wf = SlaterJastrowBackFlow(mol, 
 >>>                            configs='single_double(2,2)',
 >>>                            jastrow_kernel=PadeJastrowKernel,
->>>                            orbital_dependent_backflow=False,
+>>>                            orbital_dependent_backflow=True,
 >>>                            backflow_kernel=BackFlowKernelInverse)
 
-Compared to the ``SlaterJastrow`` wave function, the kernel of the backflow transformation must be specified.
-By default the inverse kernel will be used. Orbital dependent backflow orbitals can be easily achieved by using ``orbital_dependent_backflow=True``
+
+Many-Body Jastrow factors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Jastrow factors can also depends on the electron-nuclei distances and the many body terms involving two electrons and one nuclei. 
+In that case the Jastrow factor depends on all the kernel function represented in the figure above. A backflow transformation can also be added to the definition of the wave function.
+As a result we have the following wave function forms available. 
+
+* ``SlaterCombinedJastrow``: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
+* ``SlaterCombinedJastrowBackflow``: A ``SlaterCombinedJastrow`` wave function with a backflow transformation
+
 
 
 Many-Body Jastrow Wave Function
@@ -143,7 +162,6 @@ The Jastrow factor combines here multiple terms that represent electron-electron
 .. math::
 
     J(R_{at},r) = \exp\left(  \sum_{i<j} K_{ee}(r_i, r_j) + \sum_{i,\alpha}K_{en}(R_\alpha, r_i) + \sum_{i<j,\alpha} K_{een}(R_\alpha, r_i, r_j) \right)
-
 
 
 >>> from qmctorch.wavefunction import SlaterCombinedJastrow
