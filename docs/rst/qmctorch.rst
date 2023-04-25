@@ -157,8 +157,8 @@ Jastrow factors can also depends on the electron-nuclei distances and the many b
 In that case the Jastrow factor depends on all the kernel function represented in the figure above. A backflow transformation can also be added to the definition of the wave function.
 As a result we have the following wave function forms available. 
 
-* ``SlaterCombinedJastrow``: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
-* ``SlaterCombinedJastrowBackflow``: A ``SlaterCombinedJastrow`` wave function with a backflow transformation
+* ``SlaterManyBodyJastrow``: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
+* ``SlaterManyBodyJastrowBackflow``: A ``SlaterManyBodyJastrow`` wave function with a backflow transformation
 
 
 
@@ -172,12 +172,12 @@ The Jastrow factor combines here multiple terms that represent electron-electron
     J(R_{at},r) = \exp\left(  \sum_{i<j} K_{ee}(r_i, r_j) + \sum_{i,\alpha}K_{en}(R_\alpha, r_i) + \sum_{i<j,\alpha} K_{een}(R_\alpha, r_i, r_j) \right)
 
 
->>> from qmctorch.wavefunction import SlaterCombinedJastrow
+>>> from qmctorch.wavefunction import SlaterManyBodyJastrow
 >>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowElecElec
 >>> from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
 >>> from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import BoysHandyJastrowKernel
 >>>
->>> wf = SlaterCombinedJastrow(mol, 
+>>> wf = SlaterManyBodyJastrow(mol, 
 >>>                            configs='single_double(2,2)',
 >>>                            jastrow_kernel={
 >>>                                 'ee': PadeJastrowKernelElecElec,
@@ -192,12 +192,12 @@ Many-Body Jastrow Wave Function with backflow transformation
 A backflow transformation can be used together with the many body Jastrow
 
 
->>> from qmctorch.wavefunction import SlaterCombinedJastrowBackflow
+>>> from qmctorch.wavefunction import SlaterManyBodyJastrowBackflow
 >>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowElecElec
 >>> from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
 >>> from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.boys_handy_jastrow_kernel import BoysHandyJastrowKernel
 >>>
->>> wf = SlaterCombinedJastrowBackflow(mol, 
+>>> wf = SlaterManyBodyJastrowBackflow(mol, 
 >>>                            configs='single_double(2,2)',
 >>>                            jastrow_kernel={
 >>>                                 'ee': PadeJastrowKernelElecElec,

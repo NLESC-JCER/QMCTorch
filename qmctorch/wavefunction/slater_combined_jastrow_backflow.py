@@ -16,7 +16,7 @@ from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsO
 from .orbitals.backflow.kernels import BackFlowKernelInverse
 
 
-class SlaterCombinedJastrowBackflow(SlaterJastrow):
+class SlaterManyBodyJastrowBackflow(SlaterJastrow):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -75,9 +75,9 @@ class SlaterCombinedJastrowBackflow(SlaterJastrow):
     
         Examples::
             >>> from qmctorch.scf import Molecule
-            >>> from qmctorch.wavefunction import SlaterCombinedJastrowBackflow
+            >>> from qmctorch.wavefunction import SlaterManyBodyJastrowBackflow
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = SlaterCombinedJastrowBackflow(mol, configs='cas(2,2)')
+            >>> wf = SlaterManyBodyJastrowBackflow(mol, configs='cas(2,2)')
         """
 
         super().__init__(mol, configs, kinetic, None, {}, cuda, include_all_mo)

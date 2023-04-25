@@ -9,7 +9,7 @@ from .jastrows.jastrow_factor_combined_terms import JastrowFactorCombinedTerms
 from .jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
 
 
-class SlaterCombinedJastrow(SlaterJastrow):
+class SlaterManyBodyJastrow(SlaterJastrow):
 
     def __init__(self, mol, configs='ground_state',
                  kinetic='jacobi',
@@ -53,9 +53,9 @@ class SlaterCombinedJastrow(SlaterJastrow):
                                              popualted in the configs. Defaults to False
         Examples::
             >>> from qmctorch.scf import Molecule
-            >>> from qmctorch.wavefunction import SlaterCombinedJastrow
+            >>> from qmctorch.wavefunction import SlaterManyBodyJastrow
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = SlaterCombinedJastrow(mol, configs='cas(2,2)')
+            >>> wf = SlaterManyBodyJastrow(mol, configs='cas(2,2)')
         """
 
         super().__init__(mol, configs, kinetic, None, {}, cuda, include_all_mo)
