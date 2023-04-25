@@ -6,8 +6,16 @@ neural network used by the code is:
 
 .. image:: ../pics/qmctorch2.png
 
-Different wave function forms have been implemented to easily create and use wave function ansatz. 
-These different functional forms differ mainly by the Jastrow factor they use and the presence of backflow transformation or not. 
+Starting from the electronic and atomic coordinates, the first layer on the bottom computes the electron-electron and electron-atoms distances. These distances are used in
+a Jastrow layer that computes the Jastrow facrtor. Users can freely define Jastro kernels to define the exact form the Jastrow factor.
+
+In parallel the electronic coordinates are first transformed through a backflow transformation. Users can here as well specify the kernel of the backflow transformation. 
+The resulting new coordinates are used to evaluate the atomic orbitals of the systems. The basis set information of these orbitals are extracted from the SCF calculation performed with ``pyscf`` or ``ADF``.
+These atomic orbital values are then transformed to molecular orbital values through the next layer. The coefficients of the molecular orbitals are also extracted fron the SCF calculations.
+Then a Slater determinant layer extract the different determinants contained in the wave function. Users can there as well specify wich determinants they require. The weighted sum of the determinants
+is then computed and finally muliplied with the value of the Jastrow factor.
+
+Different wave function forms have been implemented to easily create and use wave function ansatz. These different functional forms differ mainly by the Jastrow factor they use and the presence of backflow transformation or not. 
 
 Two-body Jastrow factors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
