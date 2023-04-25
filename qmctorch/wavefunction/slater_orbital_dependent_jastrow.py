@@ -212,7 +212,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrowBase):
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
 
     def kinetic_energy_jacobi(self, x,  **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::

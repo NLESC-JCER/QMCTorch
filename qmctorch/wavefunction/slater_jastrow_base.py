@@ -296,7 +296,7 @@ class SlaterJastrowBase(WaveFunction):
         raise NotImplementedError('Implement a get_mo_vals method')
 
     def kinetic_energy_jacobi(self, x,  **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::

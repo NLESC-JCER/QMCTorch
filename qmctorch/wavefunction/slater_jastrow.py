@@ -128,7 +128,7 @@ class SlaterJastrow(SlaterJastrowBase):
         return self.mo(self.mo_scf(self.ao(x, derivative=derivative)))
 
     def kinetic_energy_jacobi(self, x, **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
@@ -142,7 +142,7 @@ class SlaterJastrow(SlaterJastrowBase):
         Here :math:`A = J(R) \\phi` and therefore :
 
         .. math::
-            \Delta A = (\Delta J) D + 2 \\nabla J \\nabla D + (\Delta D) J
+            \\Delta A = (\\Delta J) D + 2 \\nabla J \\nabla D + (\\Delta D) J
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)

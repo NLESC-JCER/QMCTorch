@@ -163,7 +163,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         return self.ao2mo(ao)
 
     def kinetic_energy_jacobi(self, x,  **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
 
 
         .. math::
