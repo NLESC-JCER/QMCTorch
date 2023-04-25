@@ -117,7 +117,7 @@ backflow transformed positions. One can define such wave function with:
 
 >>> from qmctorch.wavefunction import SlaterJastrowBackFlow
 >>> from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+>>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 >>>
 >>> wf = SlaterJastrowBackFlow(mol, 
 >>>                            configs='single_double(2,2)',
@@ -141,7 +141,7 @@ This wave function can be used with
 
 >>> from qmctorch.wavefunction import SlaterJastrowBackFlow
 >>> from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+>>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 >>>
 >>> wf = SlaterJastrowBackFlow(mol, 
 >>>                            configs='single_double(2,2)',
@@ -173,9 +173,9 @@ The Jastrow factor combines here multiple terms that represent electron-electron
 
 
 >>> from qmctorch.wavefunction import SlaterCombinedJastrow
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowElecElec
->>> from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
->>> from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.boys_handy_jastrow_kernel import BoysHandyJastrowKernel
+>>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowElecElec
+>>> from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
+>>> from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import BoysHandyJastrowKernel
 >>>
 >>> wf = SlaterCombinedJastrow(mol, 
 >>>                            configs='single_double(2,2)',
