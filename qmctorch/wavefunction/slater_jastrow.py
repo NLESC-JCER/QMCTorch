@@ -132,20 +132,18 @@ class SlaterJastrow(SlaterJastrowBase):
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-
-             \\frac{\\Delta \\Psi(R)}{\\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\\Delta D_n^u}{D_n^u} + \\frac{\\Delta D_n^d}{D_n^d}) D_n^u D_n^d
+            \\frac{\Delta \\Psi(R)}{\\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\Delta D_n^u}{D_n^u} + \\frac{\Delta D_n^d}{D_n^d}) D_n^u D_n^d
 
         We compute the laplacian of the determinants through the Jacobi formula
 
         .. math::
+            \\frac{\\Delta \\det(A)}{\\det(A)} = Tr(A^{-1} \\Delta A)
 
-            \\frac{\\Delta det(A)}{det(A)} = Tr(A^{-1} \\Delta A)
-
-        Here :math: `A = J(R) \\phi` and therefore :
+        Here :math:`A = J(R) \\phi` and therefore :
 
         .. math::
+            \Delta A = (\Delta J) D + 2 \\nabla J \\nabla D + (\Delta D) J
 
-            \\Delta A = (\\Delta J) D + 2 \\nabla J \\nabla D + (\\Delta D) J
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
