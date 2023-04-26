@@ -26,7 +26,7 @@ class CalculatorADF(CalculatorBase):
                                       'CVB1', 'CVB2', 'CVB3']
 
         self.additional_basis_path = os.path.join(os.path.dirname(
-            os.path.abspath(__file__)), 'atomicdata/adf/') 
+            os.path.abspath(__file__)), 'atomicdata/adf/')
 
         self.adf_version = 'adf2020+'
         self.job_name = ''.join(self.atoms) + '_' + self.basis_name
@@ -94,8 +94,7 @@ class CalculatorADF(CalculatorBase):
             for at in self.atoms:
                 if at not in parsed_atoms:
                     basis_path = os.path.join(self.additional_basis_path, self.basis_name.upper(), at)
-                    atomtype = "Symbol={at} File={path}".format(at=at,
-                                                                path=basis_path)
+                    atomtype = f"Symbol={at} File={basis_path}"
                     sett.input.adf.basis.peratomtype = atomtype
                     parsed_atoms.append(at)
         else:
@@ -247,7 +246,7 @@ class CalculatorADF2019(CalculatorADF):
 
         self.adf_version = 'adf2019'
         self.job_name = ''.join(self.atoms) + '_' + self.basis_name
-        self.output_file = self.job_name + '.t21' 
+        self.output_file = self.job_name + '.t21'
 
     def get_plams_molecule(self):
         """Returns a plams molecule object."""

@@ -75,7 +75,7 @@ def plot_walkers_traj(eloc, walkers='mean'):
     nstep, nwalkers = eloc.shape
     celoc = np.cumsum(eloc, axis=0).T
     celoc /= np.arange(1, nstep + 1)
-    
+
     if walkers is not None:
 
         if walkers == 'all':

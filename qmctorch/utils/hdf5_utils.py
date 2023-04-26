@@ -249,6 +249,7 @@ def insert_data(obj, parent_grp, obj_name):
         insert_fn(obj, parent_grp, obj_name)
         # insert_type(obj, parent_grp, obj_name)
     except Exception as expt_message:
+        print(expt_message)
         print_insert_error(obj, obj_name)
 
 

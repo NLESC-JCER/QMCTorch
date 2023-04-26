@@ -413,9 +413,9 @@ class Solver(SolverBase):
 
         if self.loss.method in ['energy', 'weighted-energy']:
 
-            ''' Get the gradient of the total energy
-            dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
-            '''
+            # Get the gradient of the total energy
+            # dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
+            
 
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=no_grad_eloc)
