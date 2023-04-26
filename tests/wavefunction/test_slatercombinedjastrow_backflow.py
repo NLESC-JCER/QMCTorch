@@ -1,5 +1,5 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterCombinedJastrowBackflow
+from qmctorch.wavefunction import SlaterManyBodyJastrowBackflow
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowKernelElecElec
@@ -56,7 +56,7 @@ class TestSlaterCombinedJastrowBackflow(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterCombinedJastrowBackflow(mol,
+        self.wf = SlaterManyBodyJastrowBackflow(mol,
                                                 kinetic='auto',
                                                 include_all_mo=False,
                                                 configs='single_double(2,2)',

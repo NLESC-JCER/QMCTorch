@@ -1,5 +1,5 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterCombinedJastrow
+from qmctorch.wavefunction import SlaterManyBodyJastrow
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowKernelElecElec
@@ -54,7 +54,7 @@ class TestSlaterCombinedJastrow(unittest.TestCase):
             basis='sto-3g',
             redo_scf=True)
 
-        self.wf = SlaterCombinedJastrow(mol,
+        self.wf = SlaterManyBodyJastrow(mol,
                                         kinetic='auto',
                                         include_all_mo=False,
                                         configs='single_double(2,2)',

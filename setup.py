@@ -41,13 +41,12 @@ setup(
     ],
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
-                      'scipy', 'tqdm', 'torch',
-                      'plams',
+                      'scipy', 'tqdm', 'torch', 'plams',
                       'pyscf', 'mendeleev', 'twiggy', 'mpi4py'],
 
     extras_require={
         'hpc': ['horovod==0.27.0'],
-        'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
+        'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme', 'nbsphinx'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
     }

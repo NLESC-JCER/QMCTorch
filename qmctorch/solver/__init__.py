@@ -1,6 +1,6 @@
-__all__ = ['SolverBase', 'SolverSlaterJastrow',
-           'SolverSlaterJastrowHorovod']
+__all__ = ['SolverBase', 'Solver',
+           'SolverMPI']
 
 from .solver_base import SolverBase
-from .solver_slater_jastrow import SolverSlaterJastrow
-from .solver_slater_jastrow_horovod import SolverSlaterJastrowHorovod
+from .solver import Solver
+from .solver_mpi import SolverMPI

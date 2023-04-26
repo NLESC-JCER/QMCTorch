@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.autograd import grad
+from torch.autograd import grad, Variable
 from torch.utils.data import Dataset
 
 
@@ -135,15 +135,14 @@ class Loss(nn.Module):
             self,
             wf,
             method='energy',
-            clip=False,
-            no_weight=False):
+            clip=False):
         """Defines the loss to use during the optimization
 
         Arguments:
             wf {WaveFunction} -- wave function object used
 
         Keyword Arguments:
-            method {str} -- method to use  (default: {'variance'})
+            method {str} -- method to use  (default: {'energy'})
                             (energy, variance, weighted-energy,
                             weighted-variance)
             clip {bool} -- clip the values that are +/- % sigma away from
@@ -196,7 +195,7 @@ class Loss(nn.Module):
             mask = self.get_clipping_mask(local_energies)
 
             # sampling_weight
-            weight = self.get_sampling_weights(deactivate_weight)
+            weight = self.get_sampling_weights(pos, deactivate_weight)
 
             # compute the loss
             loss = self.loss_fn((weight * local_energies)[mask])
@@ -233,7 +232,7 @@ class Loss(nn.Module):
 
         return mask
 
-    def get_sampling_weights(self, deactivate_weight):
+    def get_sampling_weights(self, pos, deactivate_weight):
         """Get the weight needed when resampling is not
             done at every step
         """

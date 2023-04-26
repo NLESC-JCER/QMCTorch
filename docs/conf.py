@@ -105,7 +105,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.ifconfig',
     'sphinx.ext.napoleon',
-    'sphinx.ext.viewcode'
+    'sphinx.ext.viewcode',
+    'nbsphinx'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -139,7 +140,7 @@ release = '0.1.0'
 #
 # This is also used if you do content translation via gettext catalogs.
 # Usually you set "language" from the command line for these cases.
-language = None
+language = 'en'
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -165,7 +166,7 @@ todo_include_todos = False
 #     html_theme = 'classic'
 
 html_theme = 'sphinx_rtd_theme'
-html_logo = "qmctorch_white.png"
+html_logo = "./pics/qmctorch_white.png"
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -261,3 +262,4 @@ intersphinx_mapping = {
 
 autoclass_content = 'init'
 autodoc_member_order = 'bysource'
+nbsphinx_allow_errors = True

@@ -27,7 +27,7 @@ class Metropolis(SamplerBase):
             nstep (int, optional): Number of steps. Defaults to 1000.
             step_size (int, optional): length of the step. Defaults to 0.2.
             nelec (int, optional): total number of electrons. Defaults to 1.
-            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
+            ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep only the last position
             ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
             ndim (int, optional): total number of dimension. Defaults to 3.
             init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
@@ -38,7 +38,7 @@ class Metropolis(SamplerBase):
                                         'all-elec': move all electrons at the same time \n
                                         'all-elec-iter': move all electrons by iterating through single elec moves \n
                                     'proba' :
-                                        'uniform': uniform ina cube \n
+                                        'uniform': uniform in a cube \n
                                         'normal': gussian in a sphere \n
             cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
 

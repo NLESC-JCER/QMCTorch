@@ -8,8 +8,8 @@ Submodules
    :maxdepth: 4
 
    qmctorch.solver.solver_base
-   qmctorch.solver.solver_slater_jastrow
-   qmctorch.solver.solver_slater_jastrow_horovod
+   qmctorch.solver.solver
+   qmctorch.solver.solver_mpi
 
 Module contents
 ---------------

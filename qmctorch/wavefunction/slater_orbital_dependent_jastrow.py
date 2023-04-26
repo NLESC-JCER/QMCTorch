@@ -15,19 +15,36 @@ class SlaterOrbitalDependentJastrow(SlaterJastrowBase):
                  jastrow_kernel_kwargs={},
                  cuda=False,
                  include_all_mo=True):
-        """Implementation of the QMC Network.
+        """Slater Jastrow Wave function with an orbital dependent Electron-Electron Jastrow Factor
+
+        .. math::
+            \\Psi(R_{at}, r) = \\sum_n c_n D^\\uparrow_n(r^\\uparrow)D^\\downarrow_n(r^\\downarrow)
+
+        where each molecular orbital of the determinants is multiplied with a different electron-electron Jastrow
+
+        .. math::
+            \\phi_i(r) \\rightarrow J_i(r) \\phi_i(r) 
 
         Args:
-            mol (qmc.wavefunction.Molecule): a molecule object
+            mol (Molecule): a QMCTorch molecule object
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
+                - ground_state : only the ground state determinant in the wave function
+                - single(n,m) : only single excitation with n electrons and m orbitals 
+                - single_double(n,m) : single and double excitation with n electrons and m orbitals
+                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-            use_jastrow (bool, optional): turn jastrow factor ON/OFF. Defaults to True.
+                - jacobi : use the Jacobi formula to compute the kinetic energy 
+                - auto : use automatic differentiation to compute the kinetic energy
+            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
+            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
         Examples::
+            >>> from qmctorch.scf import Molecule
+            >>> from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
-            >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
+            >>> wf = SlaterOrbitalDependentJastrow(mol, configs='cas(2,2)')
         """
 
         if jastrow_kernel is None:
@@ -195,11 +212,12 @@ class SlaterOrbitalDependentJastrow(SlaterJastrowBase):
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
 
     def kinetic_energy_jacobi(self, x,  **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-             \\frac{K(R)}{\Psi(R)} = Tr(A^{-1} B_{kin})
+
+             \\frac{K(R)}{\\Psi(R)} = Tr(A^{-1} B_{kin})
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
