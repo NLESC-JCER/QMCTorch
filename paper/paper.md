@@ -31,7 +31,7 @@ to facilitate its utilization.
 
 # Statement of need
 
-`QMCTorch` is a Python package using `PyTorch` [@pytorch] as a backend to perform Quantum Monte-Carlo (QMC) simulations of molecular systems. Many software such as `QMCPack`[@qmcpack], `QMC=Chem` [@qmcchem], `CHAMP` [@champ] provide high-quality implementation of advanced QMC methodologies in low-level languages (C++/Fortran).  Python implementations of QMC such as `PAUXY` [@pauxy] and `PyQMC` [@pyqmc] have also been proposed to facilitate the use and development of QMC techniques. Large efforts have been made to leverage recent development of deep learning techniques for QMC simulations. Hence neural-network based wave-function ansatz has been proposed [@paulinet; @ferminet]. These recent advances lead to very interesting results but results in wave functions that are difficult to understand. `QMCTorch` allows to perform QMC simulations using physically motivated neural network architectures that closely follow the wave function ansatz used by QMC practitioners. As such, it allows to leverage automatic differentiation for the calculation of the gradients of the total energy w.r.t. the variational parameters and the GPU capabilities offered by `PyTorch` without loosing the physical intuition behind the wave function ansatz. The parallelization over multiple computing nodes, each potentially using GPUs, can be obtained via the `Horovod` library [@horovod] .
+`QMCTorch` is a Python package using `PyTorch` [@pytorch] as a backend to perform Quantum Monte-Carlo (QMC) simulations, namely Variational Monte-Carlo,  of molecular systems. Many software such as `QMCPack`[@qmcpack], `QMC=Chem` [@qmcchem], `CHAMP` [@champ] provide high-quality implementation of advanced QMC methodologies in low-level languages (C++/Fortran).  Python implementations of QMC such as `PAUXY` [@pauxy] and `PyQMC` [@pyqmc] have also been proposed to facilitate the use and development of QMC techniques. Large efforts have been made to leverage recent development of deep learning techniques for QMC simulations. Hence neural-network based wave-function ansatz has been proposed [@paulinet; @ferminet]. These recent advances lead to very interesting results but results in wave functions that are difficult to understand. `QMCTorch` allows to perform QMC simulations using physically motivated neural network architectures that closely follow the wave function ansatz used by QMC practitioners. As such, it allows to rapidly explore new functional form of the some key elements of the wave function ansatz and leverage automatic differentiation for the calculation of the gradients of the total energy w.r.t. the variational parameters. In addition the GPU capabilities offered by `PyTorch` combined with the parallelization over multiple computing nodes obtained via the `Horovod` library [@horovod], allows to deploy the simulations on large heterogenous computing architectures. 
 
 
 # Wave Function Ansatz
@@ -60,10 +60,37 @@ Each sample, $R_i$, contains  the positions of all the electrons contained in th
 Any optimizer included in `PyTorch` (or compatible with it) can then used to optimize the wave function. This gives users access to a wide range of optimization techniques that they can freely explore for their own use cases. Users can also decide to freeze certain variational parameters or defined different learning rates for different layers. Note that the positions of atoms are also variational parameters, and therefore one can perform geometry optimization using `QMCTorch`. At the end of the optimization, all the information relative to the simulations are dumped in a dedicated HDF5 file to enhance reproducibility of the simulations.
 
 # Example
+```python
+from torch import optim
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.solver import Solver
+from qmctorch.sampler import Metropolis
+
+# define the molecule
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+               calculator='pyscf', basis='sto-3g')
+
+# define the wave function
+wf = SlaterJastrow(mol, configs='single_double(2,2)').gto2sto()
+
+# sampler
+sampler = Metropolis(nwalkers=5000, nstep=200,
+                     nelec=wf.nelec, init=mol.domain('atomic'))
+
+# optimizer
+opt = optim.Adam(wf.parmaters(), lr=1E-3)
+
+# QMC solver
+solver = Solver(wf=wf, sampler=sampler, optimizer=opt)
+
+# optimize the wave function
+obs = solver.run(50)
+```
 
 ![Snippet of code showing the use of QMCTorch to compute the electronic structure of H2. The left panel shows the optimization of the wave function of LiH and NH3 using atomic atomic orbitals provided by `pyscf`, `ADF` and also a STO fit of the `pyscf` atomic orbitals. \label{fig:results}](qmctorch_results.png)
 
-The left panel of Fig. \ref{fig:results} shows a typical example of `QMCTorch` script. A `Molecule` object is first created by specifying the atomic positions and the calculator required to run the HF or DFT calculations (here `pyscf` using  a `sto-3g` basis set). This molecule is then used to create a `SlaterJastrow` wave function ansatz. Other options, such as the required Jastrow kernel, active space, and the use of GPUs can also be specified here. A sampler and optimizer are then defined that are then used with the wave function to instantiate the solver. This solver can then be used to optimize the variational parameters here though 50 epochs. 
+The snippet of code above shows a typical example of `QMCTorch` script. A `Molecule` object is first created by specifying the atomic positions and the calculator required to run the HF or DFT calculations (here `pyscf` using  a `sto-3g` basis set). This molecule is then used to create a `SlaterJastrow` wave function ansatz. Other options, such as the required Jastrow kernel, active space, and the use of GPUs can also be specified here. A sampler and optimizer are then defined that are then used with the wave function to instantiate the solver. This solver can then be used to optimize the variational parameters here though 50 epochs. 
 
 The right panel of Fig. \ref{fig:results} shows typical optimization runs for two different molecular structures, LiH and NH3 using atomic orbitals provided by `pyscf`, `ADF` and also a STO fit of the `pyscf` atomic orbitals. As seen in this figure, the variance of the local energy values obtained with the GTOs provided by `pyscf` is a limiting factor for the optimization. A simple STO fit of these atomic orbitals leads to variance comparable to those obtained with the STO of `ADF`.
 
