@@ -21,17 +21,15 @@ bibliography: paper.bib
 # Summary
 
 Quantum Monte-Carlo (QMC) simulations allow to compute the electronic structure of quantum systems
-with high accuracy and can be parallelized over large compute resources. QMC relies on the variational principle and optimize a wave function ansatz to minimize the total energy of the quantum system. `QMCTorch`
-allows to express this optimization process as a deep-learning problem where the wave function ansatz is encoded
+with high accuracy and can be parallelized over large compute resources. QMC relies on the variational principle and optimize a wave function ansatz to minimize the total energy of the quantum system. `QMCTorch` expresses this optimization process as a machine learning problem where the wave function ansatz is encoded
 in a physically-motivated neural network. The use of `PyTorch` as a backend to perform the optimization, allows 
 leveraging automatic differentiation to compute the gradients of the total energy w.r.t. the variational parameters
-as well as GPU computing to accelerate the calculation. `QMCTorch` is interfaced with popular quantum chemistry packages, such as `pyscf` and `ADF`
-to facilitate its utilization.
+as well as GPU computing to accelerate the calculation. `QMCTorch` supports the use of both Gaussian and Slater type orbitals via interface to popular quantum chemistry packages `pyscf` and `ADF`.
 
 
 # Statement of need
 
-`QMCTorch` is a Python package using `PyTorch` [@pytorch] as a backend to perform Quantum Monte-Carlo (QMC) simulations, namely Variational Monte-Carlo,  of molecular systems. Many software such as `QMCPack`[@qmcpack], `QMC=Chem` [@qmcchem], `CHAMP` [@champ] provide high-quality implementation of advanced QMC methodologies in low-level languages (C++/Fortran).  Python implementations of QMC such as `PAUXY` [@pauxy] and `PyQMC` [@pyqmc] have also been proposed to facilitate the use and development of QMC techniques. Large efforts have been made to leverage recent development of deep learning techniques for QMC simulations. Hence neural-network based wave-function ansatz has been proposed [@paulinet; @ferminet]. These recent advances lead to very interesting results but results in wave functions that are difficult to understand. `QMCTorch` allows to perform QMC simulations using physically motivated neural network architectures that closely follow the wave function ansatz used by QMC practitioners. As such, it allows to rapidly explore new functional form of the some key elements of the wave function ansatz and leverage automatic differentiation for the calculation of the gradients of the total energy w.r.t. the variational parameters. In addition the GPU capabilities offered by `PyTorch` combined with the parallelization over multiple computing nodes obtained via the `Horovod` library [@horovod], allows to deploy the simulations on large heterogenous computing architectures. 
+`QMCTorch` is a Python package using `PyTorch` [@pytorch] as a backend to perform Quantum Monte-Carlo (QMC) simulations, namely Variational Monte-Carlo,  of molecular systems. Many software such as `QMCPack`[@qmcpack], `QMC=Chem` [@qmcchem], `CHAMP` [@champ] provide high-quality implementation of advanced QMC methodologies in low-level languages (C++/Fortran).  Python implementations of QMC such as `PAUXY` [@pauxy] and `PyQMC` [@pyqmc] have also been proposed to facilitate the use and development of QMC techniques. Large efforts have been made to leverage recent development of deep learning techniques for QMC simulations with for example the creation of neural-network based wave-function ansatz [@paulinet; @ferminet] that lead to very interesting results. `QMCTorch` allows to perform QMC simulations using physically motivated neural network architectures that closely follow the wave function ansatz used by QMC practitioners. Its architecture allows to rapidly explore new functional forms of some key elements of the wave function ansatz. Users do not need to derive analytical expressions for the gradients of the total energy w.r.t. the variational parameters, that are simply obtained via automatic diffentiation. This includes the parameters of the atomic orbitals that can be varioationally optimized and the atomic coordinates that allows `QMCTorch` to perfomr geometry optimization of molecular structures. In addition, the GPU capabilities offered by `PyTorch` combined with the parallelization over multiple computing nodes obtained via `Horovod` [@horovod], allow to deploy the simulations on large heterogenous computing architectures.
 
 
 # Wave Function Ansatz
@@ -41,7 +39,7 @@ The neural network used to encode the wave-function ansatz used in `QMCTorch` is
 
 **Jastrow Factor** The `Jastrow` layer computes the sum of three components: an electron-electron term $K_{ee}$; an electron-nuclei term $K_{en}$; and a three body electron-electron-nuclei term $K_{een}$. The sum is then exponentiated to give the Jastrow factor: $J(r_{ee}, r_{en}) = \exp\left( K_{ee}(r_{ee})+K_{en}(r_{en}) + K_{een}(r_{ee},r_{en})\right)$ where $r_{ee}$ and $r_{en}$ are the electron-electron and electron-nuclei distances. Several well-known Jastrow factor functional forms, as for example the electron-electron Pade-Jastrow: $K(r_{ee}) = \frac{\omega_0 r_{ee}}{1 + \omega r_{ee}}$, where $\omega$ is a variational parameter, are already implemented and available for use. Users can also define their own functional forms for the different kernel functions, $K$, and explore their effects on the resulting optimization.  
 
-**Backflow Transformation** The backflow transformation layer, `BF`, creates quasi-particles by mixing the electronic positions of the electrons: $q_i = r_i + \sum_{i\neq j} K_{BF}(r_{ij}(r_i-r_j))$ [@backflow]. Well-known transformations such as: $K_{BF} = \frac{\omega}{r_{ij}}$ where $\omega$ is a variational parameter, are already implemented and ready to use. Users can also easily specify the kernel of the backflow transformation, $K_{BF}$ to explore its impact on the wave function optimization.
+**Backflow Transformation** The backflow transformation layer, `BF`, creates quasi-particles by mixing the electronic positions of the electrons: $q_i = r_i + \sum_{i\neq j} K_{BF}(r_{ij})(r_i-r_j)$ [@backflow]. Well-known transformations such as: $K_{BF} = \frac{\omega}{r_{ij}}$ where $\omega$ is a variational parameter, are already implemented and ready to use. Users can also easily specify the kernel of the backflow transformation, $K_{BF}$ to explore its impact on the wave function optimization.
 
 **Atomic Orbitals** The Atomic Orbital layer `AO` computes the values of the different atomic orbitals of the system at all the positions $q_e$. Both Slater type orbitals (STOs) and Gaussian type orbitals (GTOs) are supported. The initial parameters of the AOs are extracted from popular quantum chemistry codes, `pyscf` [@pyscf] and `ADF` [@adf].  During the optimization, the parameters of the AOs (exponents, coefficients) are variational parameters that can be optimized to minimize the total energy. Since GTOs can introduce a significant amount of noise in the QMC simulations, `QMCTorch` offers the possibility to fit GTOs to single exponent STOs.
 
@@ -55,7 +53,7 @@ The Jastrow factor and the sum of Slater determinants are then multiplied to yie
 
 QMC simulations use samples of the electronic density to approximate the total energy of the system. In `QMCTorch`, Markov-Chain Monte-Carlo (MCMC) techniques, namely Metropolis-Hasting and Hamiltonian Monte-Carlo, are used to obtained those sample. MCMC techniques require the calculation of the density for a given positions of the electrons: $\rho(R) = |\Psi(R)|^2$. This value is simply obtained by squaring the result of a forward pass of the network described above.
 
-Each sample, $R_i$, contains  the positions of all the electrons contained in the system. The value of local energy of the system is then computed at each sampling point and these values are summed up to compute the total energy of the system: $E = \sum_i \frac{H\Psi(R_i)}{\Psi(R_i)}$, where $H$ is the Hamiltonian of the molecular system: $H = -\frac{1}{2}\sum_i \Delta_i + V_{ee} + V_{en}$, with $\Delta_i$ the Laplacian w.r.t the i-th electron, $V_{ee}$ the coulomb potential between the electrons and $V_{en}$ the electron-nuclei potential. The calculation of the Laplacian of a determinant can either be performed using automatic differentiation but analytical expressions are often preferred as they are computationally more robust and less expensive [@jacobi_trace]. The gradients of the total energy w.r.t the variational parameters of the wave function, i.e. $\frac{\partial E}{\partial \theta_i}$ are simply obtained via automatic differentiation. Thanks to this automatic differentiation, users can define new kernels for the backflow transformation and Jastrow factor without having to derive analytical expressions of the energy gradients. 
+Each sample, $R_i$, contains  the positions of all the electrons contained in the system. The value of local energy of the system is then computed at each sampling point and these values are summed up to compute the total energy of the system: $E = \sum_i \frac{H\Psi(R_i)}{\Psi(R_i)}$, where $H$ is the Hamiltonian of the molecular system: $H = -\frac{1}{2}\sum_i \Delta_i + V_{ee} + V_{en}$, with $\Delta_i$ the Laplacian w.r.t the i-th electron, $V_{ee}$ the coulomb potential between the electrons and $V_{en}$ the electron-nuclei potential. The calculation of the Laplacian of the Slater determinants can be performed using automatic differentiation but analytical expressions are often preferred as they are computationally more robust and less expensive [@jacobi_trace]. The gradients of the total energy w.r.t the variational parameters of the wave function, i.e. $\frac{\partial E}{\partial \theta_i}$ are simply obtained via automatic differentiation. Thanks to this automatic differentiation, users can define new kernels for the backflow transformation and Jastrow factor without having to derive analytical expressions of the energy gradients. 
 
 Any optimizer included in `PyTorch` (or compatible with it) can then used to optimize the wave function. This gives users access to a wide range of optimization techniques that they can freely explore for their own use cases. Users can also decide to freeze certain variational parameters or defined different learning rates for different layers. Note that the positions of atoms are also variational parameters, and therefore one can perform geometry optimization using `QMCTorch`. At the end of the optimization, all the information relative to the simulations are dumped in a dedicated HDF5 file to enhance reproducibility of the simulations.
 
@@ -68,20 +66,18 @@ from qmctorch.solver import Solver
 from qmctorch.sampler import Metropolis
 
 # define the molecule
-mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
-               calculator='pyscf', basis='sto-3g')
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69', calculator='pyscf', basis='sto-3g')
 
-# define the wave function
+# define the wave function ansatz
 wf = SlaterJastrow(mol, configs='single_double(2,2)').gto2sto()
 
-# sampler
-sampler = Metropolis(nwalkers=5000, nstep=200,
-                     nelec=wf.nelec, init=mol.domain('atomic'))
+# define a Metroplos Hasting Sampler
+sampler = Metropolis(nwalkers=5000, nstep=200, nelec=wf.nelec, init=mol.domain('atomic'))
 
-# optimizer
+# define the optimizer
 opt = optim.Adam(wf.parmaters(), lr=1E-3)
 
-# QMC solver
+# define the solver
 solver = Solver(wf=wf, sampler=sampler, optimizer=opt)
 
 # optimize the wave function
