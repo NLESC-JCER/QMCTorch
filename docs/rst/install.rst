@@ -26,7 +26,7 @@ To install the code
 
 You can then test the installation :
 
- * ``cd test``
+ * ``cd tests``
  * ``pytest``
 
 
