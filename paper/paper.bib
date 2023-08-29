@@ -82,7 +82,7 @@ doi={10.1007/978-3-642-38718-0_14}
 	pages = {114801},
 	author = {William A. Wheeler and Shivesh Pathak and Kevin G. Kleiner and Shunyue Yuan and Jo{\~{a}
 }o N. B. Rodrigues and Cooper Lorsung and Kittithat Krongchon and Yueqing Chang and Yiqing Zhou and Brian Busemeyer and Kiel T. Williams and Alexander Mu{\~{n}}oz and Chun Yu Chow and Lucas K. Wagner},
-	title = {$\less$tt$\greater${PyQMC}$\less$/tt$\greater$: An all-Python real-space quantum Monte Carlo module in $\less$tt$\greater${PySCF}$\less$/tt$\greater$},
+	title = {PyQMC: An all-Python real-space quantum Monte Carlo module in PySCF},
 	journal = {The Journal of Chemical Physics}
 }
 
@@ -135,6 +135,123 @@ doi={10.1007/978-3-642-38718-0_14}
   Url                      = {http://dx.doi.org/10.1002/jcc.1056}
 }
 
+@article{ANN_WF,
+author = {Yang, Peng-Jian and Sugiyama, Mahito and Tsuda, Koji and Yanai, Takeshi},
+title = {Artificial Neural Networks Applied as Molecular Wave Function Solvers},
+journal = {Journal of Chemical Theory and Computation},
+volume = {16},
+number = {6},
+pages = {3513-3529},
+year = {2020},
+doi = {10.1021/acs.jctc.9b01132},
+    note ={PMID: 32320233},
+URL = { https://doi.org/10.1021/acs.jctc.9b01132},
+eprint = {https://doi.org/10.1021/acs.jctc.9b01132}
+}
+
+@article{Lin_2023,
+	doi = {10.1016/j.jcp.2022.111765},
+	url = {https://doi.org/10.1016%2Fj.jcp.2022.111765},
+	year = 2023,
+	month = {feb},
+	publisher = {Elsevier {BV}},
+	volume = {474},
+	pages = {111765},
+	author = {Jeffmin Lin and Gil Goldshlager and Lin Lin},
+	title = {Explicitly antisymmetrized neural network layers for variational Monte Carlo simulation},
+	journal = {Journal of Computational Physics}
+}
+
+@article{fixed_node,
+    author = {Schätzle, Z. and Hermann, J. and Noé, F.},
+    title = "{Convergence to the fixed-node limit in deep variational Monte Carlo}",
+    journal = {The Journal of Chemical Physics},
+    volume = {154},
+    number = {12},
+    pages = {124108},
+    year = {2021},
+    month = {03},
+    abstract = "{Variational quantum Monte Carlo (QMC) is an ab initio method for solving the electronic Schrödinger equation that is exact in principle, but limited by the flexibility of the available Ansätze in practice. The recently introduced deep QMC approach, specifically two deep-neural-network Ansätze PauliNet and FermiNet, allows variational QMC to reach the accuracy of diffusion QMC, but little is understood about the convergence behavior of such Ansätze. Here, we analyze how deep variational QMC approaches the fixed-node limit with increasing network size. First, we demonstrate that a deep neural network can overcome the limitations of a small basis set and reach the mean-field (MF) complete-basis-set limit. Moving to electron correlation, we then perform an extensive hyperparameter scan of a deep Jastrow factor for LiH and H4 and find that variational energies at the fixed-node limit can be obtained with a sufficiently large network. Finally, we benchmark MF and many-body Ansätze on H2O, increasing the fraction of recovered fixed-node correlation energy of single-determinant Slater–Jastrow-type Ansätze by half an order of magnitude compared to previous variational QMC results, and demonstrate that a single-determinant Slater–Jastrow-backflow version of the Ansatz overcomes the fixed-node limitations. This analysis helps understand the superb accuracy of deep variational Ansätze in comparison to the traditional trial wavefunctions at the respective level of theory and will guide future improvements of the neural-network architectures in deep QMC.}",
+    issn = {0021-9606},
+    doi = {10.1063/5.0032836},
+    url = {https://doi.org/10.1063/5.0032836},
+    eprint = {https://pubs.aip.org/aip/jcp/article-pdf/doi/10.1063/5.0032836/14009445/124108\_1\_online.pdf},
+}
+
+@article{detfree_nn,
+  title = {Determinant-free fermionic wave function using feed-forward neural networks},
+  author = {Inui, Koji and Kato, Yasuyuki and Motome, Yukitoshi},
+  journal = {Phys. Rev. Res.},
+  volume = {3},
+  issue = {4},
+  pages = {043126},
+  numpages = {9},
+  year = {2021},
+  month = {Nov},
+  publisher = {American Physical Society},
+  doi = {10.1103/PhysRevResearch.3.043126},
+  url = {https://link.aps.org/doi/10.1103/PhysRevResearch.3.043126}
+}
+
+
+@article{ANN_QMC,
+author = {Kessler, Jan and Calcavecchia, Francesco and Kühne, Thomas D.},
+title = {Artificial Neural Networks as Trial Wave Functions for Quantum Monte Carlo},
+journal = {Advanced Theory and Simulations},
+volume = {4},
+number = {4},
+pages = {2000269},
+keywords = {Monte Carlo simulations, quantum Monte Carlo simulations, variational Monte Carlo simulations},
+doi = {https://doi.org/10.1002/adts.202000269},
+url = {https://onlinelibrary.wiley.com/doi/abs/10.1002/adts.202000269},
+eprint = {https://onlinelibrary.wiley.com/doi/pdf/10.1002/adts.202000269},
+abstract = {Abstract Inspired by the universal approximation theorem and widespread adoption of artificial neural network techniques in a diversity of fields, feed-forward neural networks are proposed as a general purpose trial wave function for quantum Monte Carlo simulations of continuous many-body systems. Whereas for simple model systems the whole many-body wave function can be represented by a neural network, the antisymmetry condition of non-trivial fermionic systems is incorporated by means of a Slater determinant. To demonstrate the accuracy of the trial wave functions, an exactly solvable model system of two trapped interacting particles, as well as the hydrogen dimer, is studied.},
+year = {2021}
+}
+
+@article{HAN2019108929,
+title = {Solving many-electron Schrödinger equation using deep neural networks},
+journal = {Journal of Computational Physics},
+volume = {399},
+pages = {108929},
+year = {2019},
+issn = {0021-9991},
+doi = {https://doi.org/10.1016/j.jcp.2019.108929},
+url = {https://www.sciencedirect.com/science/article/pii/S0021999119306345},
+author = {Jiequn Han and Linfeng Zhang and Weinan E},
+keywords = {Schrödinger equation, Variational Monte Carlo, Deep neural networks, Trial wave-function},
+abstract = {We introduce a new family of trial wave-functions based on deep neural networks to solve the many-electron Schrödinger equation. The Pauli exclusion principle is dealt with explicitly to ensure that the trial wave-functions are physical. The optimal trial wave-function is obtained through variational Monte Carlo and the computational cost scales quadratically with the number of electrons. The algorithm does not make use of any prior knowledge such as atomic orbitals. Yet it is able to represent accurately the ground-states of the tested systems, including He, H2, Be, B, LiH, and a chain of 10 hydrogen atoms. This opens up new possibilities for solving large-scale many-electron Schrödinger equation.}
+}
+
+@article{choo_fermionic_2020,
+	title = {Fermionic neural-network states for ab-initio electronic structure},
+	volume = {11},
+	issn = {2041-1723},
+	url = {https://doi.org/10.1038/s41467-020-15724-9},
+	doi = {10.1038/s41467-020-15724-9},
+	abstract = {Neural-network quantum states have been successfully used to study a variety of lattice and continuous-space problems. Despite a great deal of general methodological developments, representing fermionic matter is however still early research activity. Here we present an extension of neural-network quantum states to model interacting fermionic problems. Borrowing techniques from quantum simulation, we directly map fermionic degrees of freedom to spin ones, and then use neural-network quantum states to perform electronic structure calculations. For several diatomic molecules in a minimal basis set, we benchmark our approach against widely used coupled cluster methods, as well as many-body variational states. On some test molecules, we systematically improve upon coupled cluster methods and Jastrow wave functions, reaching chemical accuracy or better. Finally, we discuss routes for future developments and improvements of the methods presented.},
+	number = {1},
+	journal = {Nature Communications},
+	author = {Choo, Kenny and Mezzacapo, Antonio and Carleo, Giuseppe},
+	month = may,
+	year = {2020},
+	pages = {2368},
+}
+
+@article{backflow_1981,
+  title = {Structure of the Ground State of a Fermion Fluid},
+  author = {Schmidt, K. E. and Lee, Michael A. and Kalos, M. H. and Chester, G. V.},
+  journal = {Phys. Rev. Lett.},
+  volume = {47},
+  issue = {11},
+  pages = {807--810},
+  numpages = {0},
+  year = {1981},
+  month = {Sep},
+  publisher = {American Physical Society},
+  doi = {10.1103/PhysRevLett.47.807},
+  url = {https://link.aps.org/doi/10.1103/PhysRevLett.47.807}
+}
 
 
 @article{jacobi_trace,
