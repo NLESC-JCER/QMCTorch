@@ -217,7 +217,7 @@ class Molecule:
 
             conv2bohr = 1
             if self.unit == 'angs':
-                conv2bohr = 1.88973
+                conv2bohr = 1.8897259886
             self.atom_coords.append(
                 [x * conv2bohr, y * conv2bohr, z * conv2bohr])
 

@@ -23,7 +23,7 @@ class CalculatorPySCF(CalculatorBase):
         mol = gto.M(
             atom=atom_str,
             basis=self.basis_name,
-            unit=self.units,
+            unit='Bohr',
             cart=False)
 
         if self.scf.lower() == 'hf':
