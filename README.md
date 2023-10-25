@@ -15,4 +15,4 @@ Clone the repository and install the code from source or use the Python package 
 `pip install qmctorch`
 
 ## Documentation 
-https://qmctorch.readthedocs.io/en/latest/intro.html
+https://qmctorch.readthedocs.io
