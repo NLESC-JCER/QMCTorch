@@ -51,6 +51,10 @@ class CalculatorPySCF(CalculatorBase):
             rhf {pyscf.scf} -- scf object
         """
 
+        # sphereical quantum nummbers
+        mvalues = {0: [0], 1: [-1,0,1], 2: [-2,-1,0,1,2]}
+
+        # cartesian quantum numbers
         kx = {0: [0], 1: [1, 0, 0], 2: [2, 1, 1, 0, 0, 0]}
         ky = {0: [0], 1: [0, 1, 0], 2: [0, 1, 0, 2, 1, 0]}
         kz = {0: [0], 1: [0, 0, 1], 2: [0, 0, 1, 0, 1, 2]}
@@ -58,7 +62,10 @@ class CalculatorPySCF(CalculatorBase):
         basis = SimpleNamespace()
         basis.TotalEnergy = rhf.e_tot
         basis.radial_type = 'gto_pure'
-        basis.harmonics_type = 'cart'
+        if self.basis_name.startswith('cc-'):
+            basis.harmonics_type = 'cart'
+        else:
+            basis.harmonics_type = 'cart'
 
         # number of AO / MO
         # can be different if d or f orbs are present
@@ -72,23 +79,23 @@ class CalculatorPySCF(CalculatorBase):
         # init bas properties
         bas_coeff, bas_exp = [], []
         index_ctr = []
-        bas_n, bas_l = [], []
+        bas_n, bas_m, bas_l = [], [], []
         bas_zeta = []
         bas_kx, bas_ky, bas_kz = [], [], []
-        bas_n = []
         bas_n_ori = self.get_bas_n(mol)
 
         iao = 0
+        ishell = 0
         for ibas in range(mol.nbas):
 
-            # number of zeta function per bas
-            nzeta = mol.bas_nctr(ibas)
+            # number of contracted gto per shell
+            nctr = mol.bas_nctr(ibas)
 
-            # number of contracted gaussian in that bas
-            nctr = mol.bas_nprim(ibas)
+            # number of primitive gaussian in that shell
+            nprim = mol.bas_nprim(ibas)
 
-            # number of ao from that bas <= ?
-            mult = mol.bas_len_cart(ibas) 
+            # number of cartesian component of that bas ?
+            ncart_comp = mol.bas_len_cart(ibas) 
 
             # quantum numbers
             n = bas_n_ori[ibas]
@@ -98,46 +105,58 @@ class CalculatorPySCF(CalculatorBase):
             coeffs = mol.bas_ctr_coeff(ibas)
             exps =  mol.bas_exp(ibas)
 
-            # deal with the multiple zeta
-            if coeffs.shape != (nctr, nzeta):
+            # deal with  multiple zeta
+            if coeffs.shape != (nprim, nctr):
                 raise ValueError('Contraction coefficients issue')
-            
-            if exps.shape != (nctr, nzeta):
-                exps = exps[:,np.newaxis]
-                exps = np.tile(exps,nzeta)
-                nctr *= nzeta
 
-            # coeffs/exp
-            bas_coeff += coeffs.flatten().tolist() * mult
-            bas_exp += exps.flatten().tolist() * mult 
+            # if nctr > 1:
+            #     coeffs /= np.array(range(1,nctr+1))
+            #     exps = exps[:,np.newaxis]
+            #     exps = np.tile(exps,nctr)
+            #     nprim *= nctr
+                        
+            ictr = 0
+            while ictr < nctr:
 
+                n = bas_n_ori[ishell]
+                coeffs_ictr = coeffs[:,ictr] / (ictr+1) 
 
-            # get quantum numbers per bas
-            bas_n += [n] * nctr * mult
-            bas_l += [lval] * nctr * mult 
+                # coeffs/exp
+                bas_coeff += coeffs_ictr.flatten().tolist() * ncart_comp
+                bas_exp += exps.flatten().tolist() * ncart_comp 
 
-            #record the zetas per bas 
-            bas_zeta += [nzeta] * nctr * mult 
+                # get quantum numbers per bas
+                bas_n += [n] * nprim * ncart_comp
+                bas_l += [lval] * nprim * ncart_comp 
 
-            # number of shell per atoms
-            nshells[mol.bas_atom(ibas)] += nctr * mult
+                # record the zetas per bas 
+                bas_zeta += [nctr] * nprim * ncart_comp 
 
-            for _ in range(mult):
-                index_ctr += [iao] * nctr
-                iao += 1
+                # number of shell per atoms
+                nshells[mol.bas_atom(ibas)] += nprim * ncart_comp
 
-            for k in kx[lval]:
-                bas_kx += [k] * nctr
+                for _ in range(ncart_comp):
+                    index_ctr += [iao] * nprim
+                    iao += 1
 
-            for k in ky[lval]:
-                bas_ky += [k] * nctr
+                for m in mvalues[lval]:
+                    bas_m += [m] * nprim 
 
-            for k in kz[lval]:
-                bas_kz += [k] * nctr
+                for k in kx[lval]:
+                    bas_kx += [k] * nprim
+
+                for k in ky[lval]:
+                    bas_ky += [k] * nprim
+
+                for k in kz[lval]:
+                    bas_kz += [k] * nprim
+
+                ictr += 1
+                ishell += 1
 
         bas_norm = []
-        for expnt, lval, zeta in zip(bas_exp, bas_l, bas_zeta):
-            bas_norm.append(mol.gto_norm(lval, expnt)/zeta)
+        for expnt, lval in zip(bas_exp, bas_l):
+            bas_norm.append(mol.gto_norm(lval, expnt))
 
         basis.nshells = nshells
         basis.index_ctr = index_ctr
@@ -160,6 +179,7 @@ class CalculatorPySCF(CalculatorBase):
 
         basis.bas_n = bas_n
         basis.bas_l = bas_l
+        basis.bas_m = bas_m 
 
         # the cartesian gto are all :
         #   x^a y^b z^c exp(-zeta r)
@@ -205,7 +225,7 @@ class CalculatorPySCF(CalculatorBase):
         nlabel = [l[2][1] for l in unique_labels]
 
         if np.any([nl not in recognized_labels for nl in nlabel]):
-            log.error('QMCTORCH only implement the following orbitals: {0}', recognized_labels)
+            log.error('the pyscf calculator only supports the following orbitals: {0}', recognized_labels)
             log.error('The following orbitals have been found: {0}', nlabel)
             log.error('Using the basis set: {0}', mol.basis)
             raise ValueError('Basis set not supported')

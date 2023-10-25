@@ -6,7 +6,7 @@ from qmctorch.utils import plot_walkers_traj
 
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
-               calculator='pyscf', basis='cc-pvdz', 
+               calculator='pyscf', basis='sto-3g' , 
                name='water', redo_scf=True)
 
 # define the wave function
@@ -14,7 +14,7 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='ground_state')
 
 # sampler
-sampler = Metropolis(nwalkers=100, nstep=500, step_size=0.25,
+sampler = Metropolis(nwalkers=1000, nstep=500, step_size=0.25,
                      nelec=wf.nelec, ndim=wf.ndim,
                      init=mol.domain('atomic'),
                      move={'type': 'all-elec', 'proba': 'normal'})
