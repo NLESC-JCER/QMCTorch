@@ -62,10 +62,8 @@ class CalculatorPySCF(CalculatorBase):
         basis = SimpleNamespace()
         basis.TotalEnergy = rhf.e_tot
         basis.radial_type = 'gto_pure'
-        if self.basis_name.startswith('cc-'):
-            basis.harmonics_type = 'cart'
-        else:
-            basis.harmonics_type = 'cart'
+        basis.harmonics_type = 'cart'
+
 
         # number of AO / MO
         # can be different if d or f orbs are present
@@ -108,12 +106,6 @@ class CalculatorPySCF(CalculatorBase):
             # deal with  multiple zeta
             if coeffs.shape != (nprim, nctr):
                 raise ValueError('Contraction coefficients issue')
-
-            # if nctr > 1:
-            #     coeffs /= np.array(range(1,nctr+1))
-            #     exps = exps[:,np.newaxis]
-            #     exps = np.tile(exps,nctr)
-            #     nprim *= nctr
                         
             ictr = 0
             while ictr < nctr:
@@ -154,10 +146,12 @@ class CalculatorPySCF(CalculatorBase):
                 ictr += 1
                 ishell += 1
 
+        # normalize the basis function
         bas_norm = []
         for expnt, lval in zip(bas_exp, bas_l):
             bas_norm.append(mol.gto_norm(lval, expnt))
 
+        # load in data structure
         basis.nshells = nshells
         basis.index_ctr = index_ctr
         intervals = np.concatenate(([0], np.cumsum(nshells)))
@@ -181,9 +175,8 @@ class CalculatorPySCF(CalculatorBase):
         basis.bas_l = bas_l
         basis.bas_m = bas_m 
 
-        # the cartesian gto are all :
-        #   x^a y^b z^c exp(-zeta r)
-        # i.e. there is no r dependency
+        # the cartesian gto are all: x^a y^b z^c exp(-zeta r)
+        # i.e. there is no kr dependency
         basis.bas_kr = np.zeros_like(basis.bas_exp)
 
         basis.bas_kx = np.array(bas_kx)
