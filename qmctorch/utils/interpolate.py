@@ -170,7 +170,7 @@ class InterpolateAtomicOrbitals:
             bas = self.wf.ao.norm_cst * self.wf.ao.bas_coeffs * bas
             ao = torch.zeros(nbatch, self.wf.ao.nelec,
                              self.wf.ao.norb, device=self.wf.ao.device)
-            print(ao.shape, self.wf.ao.index_ctr.shape, bas.shape)
+            bas = bas.tile(1,self.wf.ao.nelec,1)
             ao.index_add_(2, self.wf.ao.index_ctr, bas)
             return ao
 
