@@ -4,6 +4,9 @@ import numpy as np
 import torch
 from scipy.interpolate import LinearNDInterpolator, RegularGridInterpolator
 
+#################################################################################
+# TO DO : Remove this features as they are never used anywhere
+#################################################################################
 
 class InterpolateMolecularOrbitals:
 
