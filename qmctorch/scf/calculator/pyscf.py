@@ -6,6 +6,7 @@ import shutil
 from .calculator_base import CalculatorBase
 from ... import log
 
+
 class CalculatorPySCF(CalculatorBase):
 
     def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
@@ -93,7 +94,7 @@ class CalculatorPySCF(CalculatorBase):
             nprim = mol.bas_nprim(ibas)
 
             # number of cartesian component of that bas ?
-            ncart_comp = mol.bas_len_cart(ibas) 
+            ncart_comp = mol.bas_len_cart(ibas)
 
             # quantum numbers
             n = bas_n_ori[ibas]
@@ -106,23 +107,23 @@ class CalculatorPySCF(CalculatorBase):
             # deal with  multiple zeta
             if coeffs.shape != (nprim, nctr):
                 raise ValueError('Contraction coefficients issue')
-                        
+         
             ictr = 0
             while ictr < nctr:
 
                 n = bas_n_ori[ishell]
-                coeffs_ictr = coeffs[:,ictr] / (ictr+1) 
+                coeffs_ictr = coeffs[:,ictr] / (ictr+1)
 
                 # coeffs/exp
                 bas_coeff += coeffs_ictr.flatten().tolist() * ncart_comp
-                bas_exp += exps.flatten().tolist() * ncart_comp 
+                bas_exp += exps.flatten().tolist() * ncart_comp
 
                 # get quantum numbers per bas
                 bas_n += [n] * nprim * ncart_comp
-                bas_l += [lval] * nprim * ncart_comp 
+                bas_l += [lval] * nprim * ncart_comp
 
-                # record the zetas per bas 
-                bas_zeta += [nctr] * nprim * ncart_comp 
+                # record the zetas per bas
+                bas_zeta += [nctr] * nprim * ncart_comp
 
                 # number of shell per atoms
                 nshells[mol.bas_atom(ibas)] += nprim * ncart_comp
@@ -132,7 +133,7 @@ class CalculatorPySCF(CalculatorBase):
                     iao += 1
 
                 for m in mvalues[lval]:
-                    bas_m += [m] * nprim 
+                    bas_m += [m] * nprim
 
                 for k in kx[lval]:
                     bas_kx += [k] * nprim
@@ -173,7 +174,7 @@ class CalculatorPySCF(CalculatorBase):
 
         basis.bas_n = bas_n
         basis.bas_l = bas_l
-        basis.bas_m = bas_m 
+        basis.bas_m = bas_m
 
         # the cartesian gto are all: x^a y^b z^c exp(-zeta r)
         # i.e. there is no kr dependency

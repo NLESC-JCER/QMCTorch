@@ -208,7 +208,7 @@ def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True, sum_hess=True):
     if not sum_hess:
         raise NotImplementedError(
             'SphericalHarmonics cannot return individual component of the laplacian')
-    
+
     if not isinstance(derivative, list):
         derivative = [derivative]
 
