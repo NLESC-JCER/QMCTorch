@@ -6,7 +6,7 @@ from qmctorch.utils import plot_walkers_traj
 
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
-               calculator='pyscf', basis='sto-3g' , 
+               calculator='pyscf', basis='dzp' , 
                name='water', redo_scf=True)
 
 # define the wave function

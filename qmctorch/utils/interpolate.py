@@ -132,17 +132,14 @@ class InterpolateAtomicOrbitals:
         t0 = time()
         bas_coords = self.wf.ao.atom_coords.repeat_interleave(
             self.wf.ao.nao_per_atom, dim=0)  # <- we need the number of AO per atom not the number of BAS per atom
-        print('___bas ', time()-t0)
 
         t0 = time()
         xyz = (pos.view(-1, self.wf.ao.nelec, 1, self.wf.ao.ndim) -
                bas_coords[None, ...]).detach().numpy()
-        print('___ xyz', time()-t0)
 
         t0 = time()
         data = np.array([self.interp_func[iorb](xyz[:, :, iorb, :])
                          for iorb in range(self.wf.ao.norb)])
-        print('___ data', time()-t0)
 
         return torch.as_tensor(data.transpose(1, 2, 0))
 
@@ -173,6 +170,7 @@ class InterpolateAtomicOrbitals:
             bas = self.wf.ao.norm_cst * self.wf.ao.bas_coeffs * bas
             ao = torch.zeros(nbatch, self.wf.ao.nelec,
                              self.wf.ao.norb, device=self.wf.ao.device)
+            print(ao.shape, self.wf.ao.index_ctr.shape, bas.shape)
             ao.index_add_(2, self.wf.ao.index_ctr, bas)
             return ao
 
