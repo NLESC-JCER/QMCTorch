@@ -46,7 +46,7 @@ jobs:
         HOROVOD_WITHOUT_MXNET: 1
         HOROVOD_WITHOUT_GLOO: 1
       run: |
-        python -m pip torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+        python -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
         python -m pip install horovod
 
     - name: Install the package
