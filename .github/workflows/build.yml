@@ -31,15 +31,14 @@ jobs:
     - name: Install conda packages
       run: |
         conda install -c anaconda cmake
-        conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
-        conda install mpi4py h5py -c conda-forge
+        conda install mpi4py h5py pytorch==2.0.0 torchvision==0.15.0 cpuonly -c pytorch -c conda-forge
         conda install -c conda-forge libstdcxx-ng
         conda install -c anaconda gxx_linux-64
-    - name: Instal pip packages
-      run: |
-        python -m pip install --upgrade pip
-        python -m pip install packaging
-        python -m pip install setuptools wheel
+    # - name: Instal pip packages
+    #   run: |
+    #     python -m pip install --upgrade pip
+    #     python -m pip install packaging
+    #     python -m pip install setuptools wheel
     # - name: Install horovod
     #   env:
     #     HOROVOD_WITHOUT_TENSORFLOW: 1
@@ -50,7 +49,7 @@ jobs:
     #     python -m pip install horovod
 
     - name: Install the package
-      run: python -m pip install .[test]
+      run: python -m pip install .[hpc, test]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 

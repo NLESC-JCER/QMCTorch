@@ -6,7 +6,7 @@ from qmctorch.utils import plot_walkers_traj
 
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
-               calculator='pyscf', basis='dzp' , 
+               calculator='pyscf', basis='sto-3g' , 
                name='water', redo_scf=True)
 
 # define the wave function
@@ -25,11 +25,11 @@ solver = Solver(wf=wf, sampler=sampler)
 # single point
 obs = solver.single_point()
 
-# # reconfigure sampler
-# solver.sampler.ntherm = 0
-# solver.sampler.ndecor = 5
+# reconfigure sampler
+solver.sampler.ntherm = 0
+solver.sampler.ndecor = 5
 
-# # compute the sampling traj
-# pos = solver.sampler(solver.wf.pdf)
-# obs = solver.sampling_traj(pos)
-# plot_walkers_traj(obs.local_energy, walkers='mean')
+# compute the sampling traj
+pos = solver.sampler(solver.wf.pdf)
+obs = solver.sampling_traj(pos)
+plot_walkers_traj(obs.local_energy, walkers='mean')
