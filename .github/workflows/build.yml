@@ -24,20 +24,28 @@ jobs:
         update-conda: true
         python-version: ${{ matrix.version }}
         conda-channels: anaconda
-    - run: sudo apt update
-    - run: sudo apt install build-essential
-    - run: conda --version
-    - run: which python
-    # - run: conda install -c conda-forge openmpi
-    - run: conda install -c anaconda cmake
-    - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
-    - run: conda install -c conda-forge libstdcxx-ng
-    - run: conda install -c anaconda gxx_linux-64
-    - run: python -m pip install --upgrade pip
-    - run: python -m pip install setuptools wheel 
-    - run: python -m pip install packaging
-    # - run: pip3 install setuptools==66.0.0
-    - run: python -m pip install horovod
+    - name: Install essential
+      run: |
+        sudo apt update
+        sudo apt install build-essential
+
+    - name: Install conda packages
+      run: |
+        conda install -c anaconda cmake
+        conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
+        conda install -c conda-forge libstdcxx-ng
+        conda install -c anaconda gxx_linux-64
+    - name: Instal pip packages
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install packaging
+        pip3 install setuptools==66.0.0
+    - name: Install horovod
+      env:
+        HOROVOD_WITHOUT_TENSORFLOW: 1
+        HOROVOD_WITHOUT_MXNET: 1
+        HOROVOD_WITHOUT_GLOO: 1
+      run: python -m pip install  --use-pep517 horovod
 
     - name: Install the package
       run: python -m pip install .[test]
