@@ -28,7 +28,7 @@ jobs:
     - run: which python
     # - run: conda install -c conda-forge openmpi
     - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
-    - run: conda install -c conda-forge libstdcxx-ng=12 
+    # - run: conda install -c conda-forge libstdcxx-ng=12 
     - run: conda install -c anaconda gxx_linux-64
     - run: pip3 install packaging
     - run: pip3 install setuptools==66.0.0
