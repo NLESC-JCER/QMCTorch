@@ -39,13 +39,13 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         python -m pip install packaging
-        pip3 install setuptools==66.0.0
+        python -m pip install setuptools wheel
     - name: Install horovod
       env:
         HOROVOD_WITHOUT_TENSORFLOW: 1
         HOROVOD_WITHOUT_MXNET: 1
         HOROVOD_WITHOUT_GLOO: 1
-      run: python -m pip install  --use-pep517 horovod
+      run: python -m pip install horovod
 
     - name: Install the package
       run: python -m pip install .[test]
