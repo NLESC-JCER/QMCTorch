@@ -2,6 +2,18 @@
 Change Log
 ##########
 
+0.3.1 [Released]
+*****************
+
+Change
+-------
+
+* Support cc-pvdz orbitals (#151)
+* Freeze Pytorch version (#151)
+* Fix read the doc (#150)
+
+
+
 0.1.1 [Unreleased]
 ******************
 
