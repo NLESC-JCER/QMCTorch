@@ -208,14 +208,20 @@ def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True, sum_hess=True):
     if not sum_hess:
         raise NotImplementedError(
             'SphericalHarmonics cannot return individual component of the laplacian')
-    if derivative > 2:
-        raise NotImplementedError(
-            "Spherical Harmonics only accpet derivative=0,1,2 (%d found)" % derivative)
+
+    if not isinstance(derivative, list):
+        derivative = [derivative]
+
 
     if sum_grad:
-        return get_spherical_harmonics(xyz, l, m, derivative)
+        output = [get_spherical_harmonics(xyz, l, m, d) for d in derivative]
+        if len(derivative) == 1:
+            return output[0]
+        else:
+            return output
+        
     else:
-        if derivative != 1:
+        if derivative != [1]:
             raise ValueError(
                 'Gradient of the spherical harmonics require derivative=1')
         return get_grad_spherical_harmonics(xyz, l, m)

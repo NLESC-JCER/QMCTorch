@@ -14,25 +14,29 @@ jobs:
 
     steps:
     - name: Cancel Previous Runs
-      uses: styfle/cancel-workflow-action@0.4.0
+      uses: styfle/cancel-workflow-action@0.12.0
       with:
           access_token: ${{ github.token }}
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Setup conda
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
         python-version: ${{ matrix.version }}
         conda-channels: anaconda
-    - run: conda --version
-    - run: which python
-    # - run: conda install -c conda-forge openmpi
-    - run: conda install mpi4py h5py pytorch torchvision cpuonly -c pytorch -c conda-forge
-    # - run: pip install horovod==0.27.0
-    - run: conda install -c conda-forge libstdcxx-ng=12 
+    - name: Install essential
+      run: |
+        sudo apt update
+        sudo apt install build-essential
+    - name: Install conda packages
+      run: |
+        conda install -c anaconda cmake
+        conda install mpi4py h5py pytorch==2.0.0 torchvision==0.15.0 cpuonly -c pytorch -c conda-forge
+        conda install -c conda-forge libstdcxx-ng
+        conda install -c anaconda gxx_linux-64
 
     - name: Install the package
-      run: pip install .[test,hpc]
+      run: python -m pip install .[test,hpc]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
