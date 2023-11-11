@@ -7,7 +7,7 @@ neural network used by the code is:
 .. image:: ../pics/qmctorch2.png
 
 Starting from the electronic and atomic coordinates, the first layer on the bottom computes the electron-electron and electron-atoms distances. These distances are used in
-a Jastrow layer that computes the Jastrow facrtor. Users can freely define Jastro kernels to define the exact form the Jastrow factor.
+a Jastrow layer that computes the Jastrow facrtor. Users can freely define Jastrow kernels to define the exact form the Jastrow factor.
 
 In parallel the electronic coordinates are first transformed through a backflow transformation. Users can here as well specify the kernel of the backflow transformation. 
 The resulting new coordinates are used to evaluate the atomic orbitals of the systems. The basis set information of these orbitals are extracted from the SCF calculation performed with ``pyscf`` or ``ADF``.
@@ -20,7 +20,7 @@ Different wave function forms have been implemented to easily create and use wav
 Two-body Jastrow factors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In its simplest form the Jastrow factor only depends on the electron-electron distances. This means that the Jastrow layer only has a single kernel function :math: `K_{ee}`. 
+In its simplest form the Jastrow factor only depends on the electron-electron distances. This means that the Jastrow layer only has a single kernel function :math:`K_{ee}`. 
 This Jastrow factor can be applied globally, or different Jastrow factors can be applied to individual orbitals. In addition a Backflow transformation can be added or not to the definition
 of the wave function. We therefore have the following wave function available:
 
