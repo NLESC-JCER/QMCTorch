@@ -110,7 +110,7 @@ def norm_slater_cartesian(a, b, c, n, exp):
 
     lvals = a + b + c + n + 1.
 
-    lfact = torch.as_tensor([np.math.factorial(2 * i)
+    lfact = torch.as_tensor([np.math.factorial(int(2 * i))
                              for i in lvals]).type(torch.get_default_dtype())
 
     prefact = 4 * np.pi * lfact / ((2 * exp)**(2 * lvals + 1))
