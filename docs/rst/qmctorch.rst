@@ -20,7 +20,7 @@ Different wave function forms have been implemented to easily create and use wav
 Two-body Jastrow factors
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-In its simplest form the Jastrow factor only depends on the electron-electron distances. This means that the Jastrow layer only has a single kernel function :math: `K_{ee}`. 
+In its simplest form the Jastrow factor only depends on the electron-electron distances. This means that the Jastrow layer only has a single kernel function :math:`K_{ee}`. 
 This Jastrow factor can be applied globally, or different Jastrow factors can be applied to individual orbitals. In addition a Backflow transformation can be added or not to the definition
 of the wave function. We therefore have the following wave function available:
 
