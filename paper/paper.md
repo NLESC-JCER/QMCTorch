@@ -82,7 +82,7 @@ solver = Solver(wf=wf, sampler=sampler, optimizer=opt)
 obs = solver.run(50)
 ```
 
-![Result of the  optimization of the wave function of LiH and NH3 using atomic atomic orbitals provided by `pyscf`, `ADF` and also a STO fit of the `pyscf` atomic orbitals. The vertical axis shows the difference between the variational energy and the true groud state energy. The horizontal dashed line indicate the Hatree-Fock energy. \label{fig:results}](qmctorch_results.png)
+![Result of the  optimization of the wave function of LiH and NH3 using atomic orbitals provided by `pyscf`, `ADF` and also a STO fit of the `pyscf` atomic orbitals. The vertical axis shows the difference between the variational energy and the true groud state energy. The horizontal dashed line indicate the Hartree-Fock energy. \label{fig:results}](qmctorch_results.png)
 
 The snippet of code above shows a typical example of `QMCTorch` script. A `Molecule` object is first created by specifying the atomic positions and the calculator required to run the HF or DFT calculations (here `pyscf` using  a `sto-3g` basis set). This molecule is then used to create a `SlaterJastrow` wave function ansatz. Other options, such as the required Jastrow kernel, active space, and the use of GPUs can also be specified here. A sampler and optimizer are then defined that are then used with the wave function to instantiate the solver. This solver can then be used to optimize the variational parameters, that is done here through 50 epochs. 
 
