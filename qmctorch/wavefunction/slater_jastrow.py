@@ -224,11 +224,7 @@ class SlaterJastrow(WaveFunction):
         """computes the value of the wave function for the sampling points
 
         .. math::
-<<<<<<< HEAD
-            J(R) \\Psi(R) =  J(R) \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
-=======
             \\Psi(R) =  J(R) \\sum_{n} c_n  D^{u}_n(r^u) \\times D^{d}_n(r^d)
->>>>>>> master
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
