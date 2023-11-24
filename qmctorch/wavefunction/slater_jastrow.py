@@ -27,20 +27,36 @@ class SlaterJastrow(WaveFunction):
                  kinetic='jacobi',
                  cuda=False,
                  include_all_mo=True):
-        """Implementation of the QMC Network.
+        """Slater Jastrow wave function with electron-electron Jastrow factor
+
+        .. math::
+            \\Psi(R_{at}, r) = J(r)\\sum_n c_n D^\\uparrow_n(r^\\uparrow)D^\\downarrow_n(r^\\downarrow)
+
+        with
+
+        .. math::
+            J(r) = \\exp\\left( K_{ee}(r) \\right)
+
+        with K, a kernel function depending only on the electron-eletron distances 
 
         Args:
-            mol (qmc.wavefunction.Molecule): a molecule object
+            mol (Molecule): a QMCTorch molecule object
+            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels        
+            backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation    
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
+                - ground_state : only the ground state determinant in the wave function
+                - single(n,m) : only single excitation with n electrons and m orbitals 
+                - single_double(n,m) : single and double excitation with n electrons and m orbitals
+                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
-            jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
-            backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation
-            backflow_kernel_kwargs (dict, optional) : keyword arguments for the backflow kernel contructor
-            cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
+                - jacobi : use the Jacobi formula to compute the kinetic energy 
+                - auto : use automatic differentiation to compute the kinetic energy
+            cuda (bool, optional): turns GPU ON/OFF  Defaults to False..
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
         Examples::
+            >>> from qmctorch.scf import Molecule
+            >>> from qmctorch.wavefunction import SlaterJastrow
             >>> mol = Molecule('h2o.xyz', calculator='adf', basis = 'dzp')
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
@@ -208,7 +224,11 @@ class SlaterJastrow(WaveFunction):
         """computes the value of the wave function for the sampling points
 
         .. math::
+<<<<<<< HEAD
             J(R) \\Psi(R) =  J(R) \\sum_{n} c_n D^{u}_n(r^u) \\times D^{d}_n(r^d)
+=======
+            \\Psi(R) =  J(R) \\sum_{n} c_n  D^{u}_n(r^u) \\times D^{d}_n(r^d)
+>>>>>>> master
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
@@ -271,21 +291,22 @@ class SlaterJastrow(WaveFunction):
         return self.ao2mo(ao)
 
     def kinetic_energy_jacobi(self, x, **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
         .. math::
-             \\frac{\Delta \\Psi(R)}{ \\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\\Delta D_n^u}{D_n^u} + \\frac{\\Delta D_n^d}{D_n^d}) D_n^u D_n^d
+            \\frac{\Delta \\Psi(R)}{\\Psi(R)} = \\Psi(R)^{-1} \\sum_n c_n (\\frac{\Delta D_n^u}{D_n^u} + \\frac{\Delta D_n^d}{D_n^d}) D_n^u D_n^d
 
         We compute the laplacian of the determinants through the Jacobi formula
 
         .. math::
-            \\frac{\\Delta det(A)}{det(A)} = Tr(A^{-1} \\Delta A)
+            \\frac{\\Delta \\det(A)}{\\det(A)} = Tr(A^{-1} \\Delta A)
 
-        Here A = J(R) phi and therefore :
+        Here :math:`A = J(R) \\phi` and therefore :
 
         .. math::
             \\Delta A = (\\Delta J) D + 2 \\nabla J \\nabla D + (\\Delta D) J
+
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)
 
@@ -312,7 +333,7 @@ class SlaterJastrow(WaveFunction):
 
         The gradients of the wave function
 
-        .. math:
+        .. math::
             \\Psi(R) = J(R) \\sum_n c_n D^{u}_n D^{d}_n = J(R) \\Sigma
 
         are computed following
@@ -330,7 +351,7 @@ class SlaterJastrow(WaveFunction):
 
         .. math::
 
-            \\nabla \\Sigma =  \\sum_n c_n (Tr( (D^u_n)^-1 \\nabla D^u_n) + Tr( (D^d_n)^-1 \\nabla D^d_n)) D^u_n D^d_n
+            \\nabla \\Sigma =  \\sum_n c_n (Tr( (D^u_n)^{-1} \\nabla D^u_n) + Tr( (D^d_n)^{-1} \\nabla D^d_n)) D^u_n D^d_n
 
         Args:
             x (torch.tensor): sampling points (Nbatch, 3*Nelec)

@@ -175,15 +175,14 @@ class Loss(nn.Module):
             self,
             wf,
             method='energy',
-            clip=False,
-            no_weight=False):
+            clip=False):
         """Defines the loss to use during the optimization
 
         Arguments:
             wf {WaveFunction} -- wave function object used
 
         Keyword Arguments:
-            method {str} -- method to use  (default: {'variance'})
+            method {str} -- method to use  (default: {'energy'})
                             (energy, variance, weighted-energy,
                             weighted-variance)
             clip {bool} -- clip the values that are +/- % sigma away from

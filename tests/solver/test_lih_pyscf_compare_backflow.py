@@ -6,7 +6,7 @@ import torch
 import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverSlaterJastrow
+from qmctorch.solver import Solver
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
@@ -109,10 +109,10 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         self.opt_ref = optim.Adam(self.wf_ref.parameters(), lr=0.01)
 
         # solver
-        self.solver_ref = SolverSlaterJastrow(wf=self.wf_ref, sampler=self.sampler_ref,
+        self.solver_ref = Solver(wf=self.wf_ref, sampler=self.sampler_ref,
                                               optimizer=self.opt_ref)
 
-        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
         # artificial pos

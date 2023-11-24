@@ -7,7 +7,7 @@ import horovod.torch as hvd
 from mpi4py import MPI
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverSlaterJastrowHorovod
+from qmctorch.solver import SolverMPI
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
@@ -65,7 +65,7 @@ class TestH2Hvd(unittest.TestCase):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverSlaterJastrowHorovod(wf=self.wf, sampler=self.sampler,
+        self.solver = SolverMPI(wf=self.wf, sampler=self.sampler,
                                                  optimizer=self.opt, rank=hvd.rank())
 
         # ground state energy

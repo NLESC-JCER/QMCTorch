@@ -5,7 +5,7 @@ import torch
 import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverSlaterJastrow
+from qmctorch.solver import Solver
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
@@ -46,7 +46,7 @@ class TestH2ADFJacobi(BaseTestSolvers.BaseTestSolverMolecule):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
         # vals on different archs

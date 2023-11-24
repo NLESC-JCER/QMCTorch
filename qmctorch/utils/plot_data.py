@@ -58,17 +58,9 @@ def plot_data(observable, obsname):
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
-    data = np.array(observable.models.best[obsname]).flatten()
+    data = np.array(observable.__dict__[obsname]).squeeze()
     epoch = np.arange(len(data))
     ax.plot(epoch, data, color='#144477')
-
-    if obsname + '.grad' in observable.__dict__.keys():
-        data = np.array(observable.__getattribute__(
-            obsname + '.grad')).flatten()
-        ax2 = ax.twinx()
-        ax2.plot(epoch, data, color='blue')
-        ax2.set_ylabel('gradient', color='blue')
-        ax2.tick_params(axis='y', labelcolor='blue')
 
     plt.show()
 
@@ -81,15 +73,10 @@ def plot_walkers_traj(eloc, walkers='mean'):
         walkers (int, str, optional): all, mean or index of a given walker Defaults to 'all'
     """
     nstep, nwalkers = eloc.shape
-
     celoc = np.cumsum(eloc, axis=0).T
     celoc /= np.arange(1, nstep + 1)
 
-    var_decor = np.sqrt(np.var(np.mean(celoc, axis=1)))
-    var = np.sqrt(np.var(celoc, axis=1) / (nstep - 1))
-
     if walkers is not None:
-        # plt.subplot(1, 2, 1)
 
         if walkers == 'all':
             plt.plot(eloc, 'o', alpha=max(
@@ -99,6 +86,7 @@ def plot_walkers_traj(eloc, walkers='mean'):
                 plt.plot(celoc.T[:, i], color=cmap[i])
 
         elif walkers == 'mean':
+<<<<<<< HEAD
             # plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
             plt.plot(np.mean(celoc.T, axis=1), linewidth=5)
 
@@ -106,6 +94,18 @@ def plot_walkers_traj(eloc, walkers='mean'):
             plt.plot(eloc[walkers, :], 'o',
                      alpha=max(1 / nwalkers, 1E-2), c='grey')
             plt.plot(celoc.T[traj_index, :])
+=======
+            plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
+            emean = np.mean(celoc.T, axis=1)
+            emin = emean.min()
+            emax = emean.max()
+            delta = emax-emin
+            plt.plot(emean, linewidth=5)
+            plt.ylim(emin-0.25*delta,emax+0.25*delta)
+        else:
+            raise ValueError('walkers argument must be all or mean')
+        
+>>>>>>> master
         plt.grid()
         plt.xlabel('Monte Carlo Steps')
         plt.ylabel('Energy (Hartree)')

@@ -43,11 +43,12 @@ setup(
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch', 'dgl', 'dgllife',
                       'plams', 'pints',
-                      'pyscf', 'mendeleev', 'twiggy'],
+                      'pyscf', 'mendeleev', 'twiggy',
+                      'plams', 'mpi4py'],
 
     extras_require={
-        'hpc': ['horovod'],
-        'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme'],
+        'hpc': ['horovod==0.27.0'],
+        'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme', 'nbsphinx'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
     }

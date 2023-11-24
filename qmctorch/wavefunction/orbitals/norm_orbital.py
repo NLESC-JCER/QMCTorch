@@ -80,10 +80,11 @@ def norm_gaussian_spherical(bas_n, bas_exp):
 
     from scipy.special import factorial2 as f2
 
+    bas_n = torch.tensor(bas_n)
     bas_n = bas_n + 1.
     exp1 = 0.25 * (2. * bas_n + 1.)
 
-    A = bas_exp**exp1
+    A = torch.tensor(bas_exp)**exp1
     B = 2**(2. * bas_n + 3. / 2)
     C = torch.as_tensor(f2(2 * bas_n.int() - 1) * np.pi **
                         0.5).type(torch.get_default_dtype())
@@ -109,7 +110,7 @@ def norm_slater_cartesian(a, b, c, n, exp):
 
     lvals = a + b + c + n + 1.
 
-    lfact = torch.as_tensor([np.math.factorial(2 * i)
+    lfact = torch.as_tensor([np.math.factorial(int(2 * i))
                              for i in lvals]).type(torch.get_default_dtype())
 
     prefact = 4 * np.pi * lfact / ((2 * exp)**(2 * lvals + 1))

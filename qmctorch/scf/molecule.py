@@ -4,9 +4,8 @@ import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
 import h5py
-
-from .calculator.adf import CalculatorADF
-from .calculator.pyscf import CalculatorPySCF
+from mpi4py import MPI
+from .calculator import CalculatorADF, CalculatorPySCF, CalculatorADF2019
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
 from .. import log
@@ -28,13 +27,19 @@ class Molecule:
 
         Args:
             atom (str or None, optional): defines the atoms and their positions. Defaults to None.
-            spin (int): Nup-Ndown electrons
+                - At1 x y z; At2 x y z ... : Provide the atomic coordinate directly
+                - <file>.xyz : provide the path to an .xyz file containing the atomic coordinates 
             calculator (str, optional): selet scf calculator. Defaults to 'adf'.
+                - pyscf : PySCF calculator
+                - adf : ADF2020+ calculator
+                - adf2019 : ADF2019 calculatori
             scf (str, optional): select scf level of theory. Defaults to 'hf'.
+                - hf : perform a Hatree-Fock calculation to obtain the molecular orbital coefficients
+                - dft : perform a density functional theory using the local density approximation
             charge (int, optional): extra charge on the molecule, Default to 0
             spin (int, optional): exess of spin up electrons on the molecule, Default to 0
             basis (str, optional): select the basis set. Defaults to 'dzp'.
-            unit (str, optional): units of the coordinates. Defaults to 'bohr'.
+            unit (str, optional): units of the coordinates; 'bohr' or 'angs'. Defaults to 'bohr'.
             name (str or None, optional): name of the molecule. Defaults to None.
             load (str or None, optional): path to a hdf5 file to load. Defaults to None.
             save_scf_file (bool, optional): save the scf file (when applicable) Defaults to False
@@ -43,7 +48,7 @@ class Molecule:
             mpi_size (int, optional): size of the mpi world
 
         Examples:
-            >>> from qmctorch.wavefunction import Molecule
+            >>> from qmctorch.scf import Molecule
             >>> mol = Molecule(atom='H 0 0 0; H 0 0 1', unit='angs',
             ...                calculator='adf', basis='dzp')
         """
@@ -110,7 +115,8 @@ class Molecule:
                 else:
                     log.info('  Running scf  calculation')
 
-                    calc = {'adf': CalculatorADF,
+                    calc = {'adf2019': CalculatorADF2019,
+                            'adf': CalculatorADF,
                             'pyscf': CalculatorPySCF}[calculator]
 
                     self.calculator = calc(self.atoms,
@@ -227,7 +233,7 @@ class Molecule:
 
             conv2bohr = 1
             if self.unit == 'angs':
-                conv2bohr = 1.88973
+                conv2bohr = 1.8897259886
             self.atom_coords.append(
                 [x * conv2bohr, y * conv2bohr, z * conv2bohr])
 

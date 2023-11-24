@@ -11,6 +11,12 @@ import torch
 import torch.optim as optim
 
 from .test_base_solver import BaseTestSolvers
+from qmctorch.sampler import Metropolis
+from qmctorch.solver import Solver
+from qmctorch.scf import Molecule
+from qmctorch.wavefunction import SlaterJastrow
+
+from ..path_utils import PATH_TEST
 
 
 class TestH2ADF(BaseTestSolvers.BaseTestSolverMolecule):
@@ -48,7 +54,7 @@ class TestH2ADF(BaseTestSolvers.BaseTestSolverMolecule):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
         # vals on different archs

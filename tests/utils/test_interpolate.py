@@ -63,5 +63,5 @@ if __name__ == "__main__":
     t = TestInterpolate()
     t.setUp()
     t.test_ao()
-    t.test_mo_reg()
-    t.test_mo_irreg()
+    # t.test_mo_reg()
+    # t.test_mo_irreg()
