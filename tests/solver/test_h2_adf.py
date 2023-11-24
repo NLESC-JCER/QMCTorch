@@ -2,7 +2,6 @@ from ..path_utils import PATH_TEST
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.scf import Molecule
-from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.sampler import Metropolis
 import unittest
 

@@ -8,7 +8,7 @@ import torch.optim as optim
 from .test_base_solver import BaseTestSolvers
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverSlaterJastrow
+from qmctorch.solver import Solver
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow

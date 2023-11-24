@@ -6,7 +6,6 @@ import torch.optim as optim
 
 
 from qmctorch.sampler import Metropolis
-from qmctorch.solver import SolverSlaterJastrow
 from qmctorch.utils.plot_data import (plot_block, plot_blocking_energy,
                                       plot_correlation_coefficient,
                                       plot_integrated_autocorrelation_time,
@@ -14,6 +13,7 @@ from qmctorch.utils.plot_data import (plot_block, plot_blocking_energy,
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from qmctorch.solver import Solver
 
 __PLOT__ = True
 
@@ -61,7 +61,7 @@ class TestH2GeoOpt(unittest.TestCase):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
     def test_geo_opt(self):
