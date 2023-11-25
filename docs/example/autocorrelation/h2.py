@@ -3,7 +3,7 @@ from torch import optim
 
 from qmctorch.sampler import Metropolis
 from qmctorch.scf import Molecule
-from qmctorch.solver import SolverSlaterJastrow
+from qmctorch.solver import Solver
 from qmctorch.utils import plot_correlation_coefficient, plot_integrated_autocorrelation_time
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
@@ -41,7 +41,7 @@ sampler = Metropolis(
 
 opt = optim.Adam(wf.parameters(), lr=0.01)
 
-solver = SolverSlaterJastrow(wf=wf, sampler=sampler, optimizer=opt)
+solver = Solver(wf=wf, sampler=sampler, optimizer=opt)
 
 pos = solver.sampler(wf.pdf)
 obs = solver.sampling_traj(pos)

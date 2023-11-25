@@ -60,7 +60,7 @@ class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverSlaterJastrow(wf=self.wf, sampler=self.sampler,
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
                                           optimizer=self.opt)
 
         # values on different arch
