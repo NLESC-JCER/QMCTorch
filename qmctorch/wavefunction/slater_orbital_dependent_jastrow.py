@@ -51,7 +51,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             raise ValueError(
                 'Orbital dependent Jastrow factor requires a valid jastrow kernel.')
 
-        super().__init__(mol, configs, kinetic, cuda, include_all_mo)
+        super().__init__(mol, None, None, configs, kinetic, cuda, include_all_mo)
         self.use_jastrow = True
 
         self.jastrow = JastrowFactorElectronElectron(
