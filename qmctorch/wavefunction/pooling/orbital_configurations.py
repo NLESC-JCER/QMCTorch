@@ -2,9 +2,7 @@ import torch
 
 
 class OrbitalConfigurations:
-
     def __init__(self, mol):
-
         self.nup = mol.nup
         self.ndown = mol.ndown
         self.nelec = self.nup + self.ndown
@@ -29,22 +27,22 @@ class OrbitalConfigurations:
         if isinstance(configs, torch.Tensor):
             return configs
 
-        elif configs == 'ground_state':
+        elif configs == "ground_state":
             return self._get_ground_state_config()
 
-        elif configs.startswith('cas('):
+        elif configs.startswith("cas("):
             nelec, norb = eval(configs.lstrip("cas"))
             self.sanity_check(nelec, norb)
             nocc, nvirt = self._get_orb_number(nelec, norb)
             return self._get_cas_config(nocc, nvirt, nelec)
 
-        elif configs.startswith('single('):
+        elif configs.startswith("single("):
             nelec, norb = eval(configs.lstrip("single"))
             self.sanity_check(nelec, norb)
             nocc, nvirt = self._get_orb_number(nelec, norb)
             return self._get_single_config(nocc, nvirt)
 
-        elif configs.startswith('single_double('):
+        elif configs.startswith("single_double("):
             nelec, norb = eval(configs.lstrip("single_double"))
             self.sanity_check(nelec, norb)
             nocc, nvirt = self._get_orb_number(nelec, norb)
@@ -52,10 +50,10 @@ class OrbitalConfigurations:
 
         else:
             print(configs, " not recognized as valid configuration")
-            print('Options are : ground_state')
-            print('              single(nelec,norb)')
-            print('              single_double(nelec,norb)')
-            print('              cas(nelec,norb)')
+            print("Options are : ground_state")
+            print("              single(nelec,norb)")
+            print("              single_double(nelec,norb)")
+            print("              cas(nelec,norb)")
             raise ValueError("Config error")
 
     def sanity_check(self, nelec, norb):
@@ -68,12 +66,10 @@ class OrbitalConfigurations:
 
         """
         if nelec > self.nelec:
-            raise ValueError(
-                'required number of electron in config too large')
+            raise ValueError("required number of electron in config too large")
 
         if norb > self.norb:
-            raise ValueError(
-                'required number of orbitals in config too large')
+            raise ValueError("required number of orbitals in config too large")
 
     def _get_ground_state_config(self):
         """Return only the ground state configuration
@@ -103,29 +99,21 @@ class OrbitalConfigurations:
         _gs_down = list(range(self.ndown))
         cup, cdown = [_gs_up], [_gs_down]
 
-        for iocc in range(
-                self.nup - 1, self.nup - 1 - nocc[0], -1):
+        for iocc in range(self.nup - 1, self.nup - 1 - nocc[0], -1):
             for ivirt in range(self.nup, self.nup + nvirt[0], 1):
-
                 # create an excitation is spin pu
-                _xt = self._create_excitation(
-                    _gs_up.copy(), iocc, ivirt)
+                _xt = self._create_excitation(_gs_up.copy(), iocc, ivirt)
 
                 # append that excitation
-                cup, cdown = self._append_excitations(
-                    cup, cdown, _xt, _gs_down)
+                cup, cdown = self._append_excitations(cup, cdown, _xt, _gs_down)
 
-        for iocc in range(
-                self.ndown - 1, self.ndown - 1 - nocc[1], -1):
+        for iocc in range(self.ndown - 1, self.ndown - 1 - nocc[1], -1):
             for ivirt in range(self.ndown, self.ndown + nvirt[1], 1):
-
                 # create an excitation is spin down
-                _xt = self._create_excitation(
-                    _gs_down.copy(), iocc, ivirt)
+                _xt = self._create_excitation(_gs_down.copy(), iocc, ivirt)
 
                 # append that excitation
-                cup, cdown = self._append_excitations(
-                    cup, cdown, _gs_up, _xt)
+                cup, cdown = self._append_excitations(cup, cdown, _gs_up, _xt)
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
@@ -143,48 +131,40 @@ class OrbitalConfigurations:
         cup = cup.tolist()
         cdown = cdown.tolist()
 
-        idx_occ_up = list(
-            range(self.nup - 1, self.nup - 1 - nocc[0], -1))
+        idx_occ_up = list(range(self.nup - 1, self.nup - 1 - nocc[0], -1))
         idx_vrt_up = list(range(self.nup, self.nup + nvirt[0], 1))
 
-        idx_occ_down = list(range(
-            self.ndown - 1, self.ndown - 1 - nocc[1], -1))
-        idx_vrt_down = list(
-            range(self.ndown, self.ndown + nvirt[1], 1))
+        idx_occ_down = list(range(self.ndown - 1, self.ndown - 1 - nocc[1], -1))
+        idx_vrt_down = list(range(self.ndown, self.ndown + nvirt[1], 1))
 
         # ground, single and double with 1 elec excited per spin
         for iocc_up in idx_occ_up:
             for ivirt_up in idx_vrt_up:
-
                 for iocc_down in idx_occ_down:
                     for ivirt_down in idx_vrt_down:
-
                         _xt_up = self._create_excitation(
-                            _gs_up.copy(), iocc_up, ivirt_up)
+                            _gs_up.copy(), iocc_up, ivirt_up
+                        )
                         _xt_down = self._create_excitation(
-                            _gs_down.copy(), iocc_down, ivirt_down)
+                            _gs_down.copy(), iocc_down, ivirt_down
+                        )
                         cup, cdown = self._append_excitations(
-                            cup, cdown, _xt_up, _xt_down)
+                            cup, cdown, _xt_up, _xt_down
+                        )
 
         # double with 2elec excited on spin up
         for occ1, occ2 in torch.combinations(torch.as_tensor(idx_occ_up), r=2):
             for vrt1, vrt2 in torch.combinations(torch.as_tensor(idx_vrt_up), r=2):
-                _xt_up = self._create_excitation(
-                    _gs_up.copy(), occ1, vrt2)
+                _xt_up = self._create_excitation(_gs_up.copy(), occ1, vrt2)
                 _xt_up = self._create_excitation(_xt_up, occ2, vrt1)
-                cup, cdown = self._append_excitations(
-                    cup, cdown, _xt_up, _gs_down)
+                cup, cdown = self._append_excitations(cup, cdown, _xt_up, _gs_down)
 
         # double with 2elec excited per spin
         for occ1, occ2 in torch.combinations(torch.as_tensor(idx_occ_down), r=2):
             for vrt1, vrt2 in torch.combinations(torch.as_tensor(idx_vrt_down), r=2):
-
-                _xt_down = self._create_excitation(
-                    _gs_down.copy(), occ1, vrt2)
-                _xt_down = self._create_excitation(
-                    _xt_down, occ2, vrt1)
-                cup, cdown = self._append_excitations(
-                    cup, cdown, _gs_up, _xt_down)
+                _xt_down = self._create_excitation(_gs_down.copy(), occ1, vrt2)
+                _xt_down = self._create_excitation(_xt_down, occ2, vrt1)
+                cup, cdown = self._append_excitations(cup, cdown, _gs_up, _xt_down)
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
@@ -196,23 +176,22 @@ class OrbitalConfigurations:
             nvirt ([type]): number of virt orbitals in the CAS
         """
         from itertools import combinations, product
+
         if self.spin != 0:
             raise ValueError(
-                'CAS active space not possible with spin polarized calculation')
+                "CAS active space not possible with spin polarized calculation"
+            )
 
         idx_low, idx_high = self.nup - nocc[0], self.nup + nvirt[0]
         orb_index_up = range(idx_low, idx_high)
         idx_frz = list(range(idx_low))
-        _cup = [idx_frz + list(l)
-                for l in list(combinations(orb_index_up, nelec // 2))]
+        _cup = [idx_frz + list(l) for l in list(combinations(orb_index_up, nelec // 2))]
 
-        idx_low, idx_high = self.nup - \
-            nocc[0] - 1, self.nup + nvirt[0] - 1
+        idx_low, idx_high = self.nup - nocc[0] - 1, self.nup + nvirt[0] - 1
 
         _cdown = [
-            idx_frz +
-            list(l) for l in list(
-                combinations(orb_index_up, nelec // 2))]
+            idx_frz + list(l) for l in list(combinations(orb_index_up, nelec // 2))
+        ]
 
         confs = list(product(_cup, _cdown))
         cup, cdown = [], []
@@ -242,7 +221,7 @@ class OrbitalConfigurations:
             nocc = (nelec // 2 + 1, nelec // 2)
 
         # determine the number of virt mo per spin in the active space
-        nvirt = (norb - nocc[0], norb-nocc[1])
+        nvirt = (norb - nocc[0], norb - nocc[1])
         return nocc, nvirt
 
     def _create_excitation(self, conf, iocc, ivirt):
@@ -316,7 +295,6 @@ def get_excitation(configs):
     """
     exc_up, exc_down = [], []
     for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
-
         set_cup = set(tuple(cup.tolist()))
         set_cdown = set(tuple(cdown.tolist()))
 
@@ -325,11 +303,19 @@ def get_excitation(configs):
             set_gs_down = set_cdown
 
         else:
-            exc_up.append([list(set_gs_up.difference(set_cup)),
-                           list(set_cup.difference(set_gs_up))])
+            exc_up.append(
+                [
+                    list(set_gs_up.difference(set_cup)),
+                    list(set_cup.difference(set_gs_up)),
+                ]
+            )
 
-            exc_down.append([list(set_gs_down.difference(set_cdown)),
-                             list(set_cdown.difference(set_gs_down))])
+            exc_down.append(
+                [
+                    list(set_gs_down.difference(set_cdown)),
+                    list(set_cdown.difference(set_gs_down)),
+                ]
+            )
 
     return (exc_up, exc_down)
 
@@ -353,7 +339,6 @@ def get_unique_excitation(configs):
     uniq_exc_up, uniq_exc_down = [], []
     index_uniq_exc_up, index_uniq_exc_down = [], []
     for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
-
         set_cup = set(tuple(cup.tolist()))
         set_cdown = set(tuple(cdown.tolist()))
 
@@ -361,11 +346,15 @@ def get_unique_excitation(configs):
             set_gs_up = set_cup
             set_gs_down = set_cdown
 
-        exc_up = [list(set_gs_up.difference(set_cup)),
-                  list(set_cup.difference(set_gs_up))]
+        exc_up = [
+            list(set_gs_up.difference(set_cup)),
+            list(set_cup.difference(set_gs_up)),
+        ]
 
-        exc_down = [list(set_gs_down.difference(set_cdown)),
-                    list(set_cdown.difference(set_gs_down))]
+        exc_down = [
+            list(set_gs_down.difference(set_cdown)),
+            list(set_cdown.difference(set_gs_down)),
+        ]
 
         if exc_up not in uniq_exc_up:
             uniq_exc_up.append(exc_up)
@@ -374,7 +363,6 @@ def get_unique_excitation(configs):
             uniq_exc_down.append(exc_down)
 
         index_uniq_exc_up.append(uniq_exc_up.index(exc_up))
-        index_uniq_exc_down.append(
-            uniq_exc_down.index(exc_down))
+        index_uniq_exc_down.append(uniq_exc_down.index(exc_down))
 
     return (uniq_exc_up, uniq_exc_down), (index_uniq_exc_up, index_uniq_exc_down)

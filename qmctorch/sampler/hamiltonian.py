@@ -8,18 +8,19 @@ from .. import log
 
 
 class Hamiltonian(SamplerBase):
-
-    def __init__(self,
-                 nwalkers: int = 100,
-                 nstep: int = 100,
-                 step_size: float = 0.2,
-                 L: int = 10,
-                 ntherm: int = -1,
-                 ndecor: int = 1,
-                 nelec: int = 1,
-                 ndim: int = 3,
-                 init: Dict = {'min': -5, 'max': 5},
-                 cuda: bool = False):
+    def __init__(
+        self,
+        nwalkers: int = 100,
+        nstep: int = 100,
+        step_size: float = 0.2,
+        L: int = 10,
+        ntherm: int = -1,
+        ndecor: int = 1,
+        nelec: int = 1,
+        ndim: int = 3,
+        init: Dict = {"min": -5, "max": 5},
+        cuda: bool = False,
+    ):
         """Hamiltonian Monte Carlo Sampler.
 
         Args:
@@ -35,9 +36,9 @@ class Hamiltonian(SamplerBase):
             cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+        SamplerBase.__init__(
+            self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
+        )
         self.traj_length = L
 
     @staticmethod
@@ -99,16 +100,19 @@ class Hamiltonian(SamplerBase):
         rate = 0
         idecor = 0
 
-        rng = tqdm(range(self.nstep),
-                   desc='INFO:QMCTorch|  Sampling',
-                   disable=not with_tqdm)
+        rng = tqdm(
+            range(self.nstep), desc="INFO:QMCTorch|  Sampling", disable=not with_tqdm
+        )
 
         for istep in rng:
-
             # move the walkers
             self.walkers.pos, _r = self._step(
-                logpdf, self.get_grad, self.step_size, self.traj_length,
-                self.walkers.pos)
+                logpdf,
+                self.get_grad,
+                self.step_size,
+                self.traj_length,
+                self.walkers.pos,
+            )
             rate += _r
 
             # store
@@ -118,8 +122,9 @@ class Hamiltonian(SamplerBase):
                 idecor += 1
 
         # print stats
-        log.options(style='percent').debug(
-            "  Acceptance rate %1.3f %%" % (rate / self.nstep * 100))
+        log.options(style="percent").debug(
+            "  Acceptance rate %1.3f %%" % (rate / self.nstep * 100)
+        )
         return torch.cat(pos).requires_grad_()
 
     @staticmethod
@@ -143,7 +148,7 @@ class Hamiltonian(SamplerBase):
         p = torch.randn(q.shape)
 
         # initial energy terms
-        E_init = U(q) + 0.5 * (p*p).sum(1)
+        E_init = U(q) + 0.5 * (p * p).sum(1)
 
         # half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)
@@ -163,11 +168,11 @@ class Hamiltonian(SamplerBase):
         p = -p
 
         # current energy term
-        E_new = U(q) + 0.5 * (p*p).sum(1)
+        E_new = U(q) + 0.5 * (p * p).sum(1)
 
         # metropolis accept/reject
         eps = torch.rand(E_new.shape)
-        rejected = (torch.exp(E_init - E_new) < eps)
+        rejected = torch.exp(E_init - E_new) < eps
         q[rejected] = q_init[rejected]
 
         # compute the accept rate

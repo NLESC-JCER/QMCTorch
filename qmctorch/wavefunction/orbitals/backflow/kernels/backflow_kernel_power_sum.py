@@ -4,7 +4,6 @@ from .backflow_kernel_base import BackFlowKernelBase
 
 
 class BackFlowKernelPowerSum(BackFlowKernelBase):
-
     def __init__(self, mol, cuda, order=2):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
@@ -15,8 +14,8 @@ class BackFlowKernelPowerSum(BackFlowKernelBase):
         super().__init__(mol, cuda)
         self.order = order
         self.fc = nn.Linear(order, 1, bias=False)
-        self.fc.weight.data *= 0.
-        self.fc.weight.data[0, 0] = 1E-4
+        self.fc.weight.data *= 0.0
+        self.fc.weight.data[0, 0] = 1e-4
 
     def _backflow_kernel(self, ree):
         """Computes the kernel via autodiff

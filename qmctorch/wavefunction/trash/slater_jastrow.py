@@ -1,21 +1,24 @@
-
-
 import numpy as np
 import torch
 from .slater_jastrow_base import SlaterJastrowBase
 
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
-from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from .jastrows.elec_elec.jastrow_factor_electron_electron import (
+    JastrowFactorElectronElectron,
+)
 
 
 class SlaterJastrow(SlaterJastrowBase):
-
-    def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi',
-                 jastrow_kernel=PadeJastrowKernel,
-                 jastrow_kernel_kwargs={},
-                 cuda=False,
-                 include_all_mo=True):
+    def __init__(
+        self,
+        mol,
+        configs="ground_state",
+        kinetic="jacobi",
+        jastrow_kernel=PadeJastrowKernel,
+        jastrow_kernel_kwargs={},
+        cuda=False,
+        include_all_mo=True,
+    ):
         """Implementation of the QMC Network.
 
         Args:
@@ -36,12 +39,15 @@ class SlaterJastrow(SlaterJastrowBase):
 
         # process the Jastrow
         if jastrow_kernel is not None:
-
             self.use_jastrow = True
             self.jastrow_type = jastrow_kernel.__name__
             self.jastrow = JastrowFactorElectronElectron(
-                self.mol.nup, self.mol.ndown, jastrow_kernel,
-                kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
+                self.mol.nup,
+                self.mol.ndown,
+                jastrow_kernel,
+                kernel_kwargs=jastrow_kernel_kwargs,
+                cuda=cuda,
+            )
 
             if self.cuda:
                 self.jastrow = self.jastrow.to(self.device)
@@ -213,7 +219,6 @@ class SlaterJastrow(SlaterJastrowBase):
         out = out.transpose(0, 1).squeeze()
 
         if self.use_jastrow:
-
             nbatch = x.shape[0]
 
             # nbatch x 1
@@ -226,11 +231,10 @@ class SlaterJastrow(SlaterJastrowBase):
             grad_jast = grad_jast.permute(0, 2, 1)
 
             # compute J(R) (\nabla\Sigma)
-            out = jast*out
+            out = jast * out
 
             # add the product (\nabla J(R)) \Sigma
-            out = out + \
-                (grad_jast * self.fc(dets).unsqueeze(-1)).reshape(nbatch, -1)
+            out = out + (grad_jast * self.fc(dets).unsqueeze(-1)).reshape(nbatch, -1)
 
         # compute the gradient of the pdf (i.e. the square of the wave function)
         # \nabla f^2 = 2 (\nabla f) f
@@ -241,7 +245,7 @@ class SlaterJastrow(SlaterJastrowBase):
 
         return out
 
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
+    def get_kinetic_operator(self, x, ao, dao, d2ao, mo):
         """Compute the Bkin matrix
 
         Args:
@@ -255,10 +259,7 @@ class SlaterJastrow(SlaterJastrowBase):
         bkin = self.ao2mo(d2ao)
 
         if self.use_jastrow:
-
-            jast, djast, d2jast = self.jastrow(x,
-                                               derivative=[0, 1, 2],
-                                               sum_grad=False)
+            jast, djast, d2jast = self.jastrow(x, derivative=[0, 1, 2], sum_grad=False)
 
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
             d2jast = d2jast / jast

@@ -1,10 +1,11 @@
 __all__ = [
-    'SamplerBase',
-    'Metropolis',
-    'Hamiltonian',
-    'PintsSampler',
-    'MetropolisHasting',
-    'GeneralizedMetropolis']
+    "SamplerBase",
+    "Metropolis",
+    "Hamiltonian",
+    "PintsSampler",
+    "MetropolisHasting",
+    "GeneralizedMetropolis",
+]
 
 from .sampler_base import SamplerBase
 from .metropolis import Metropolis

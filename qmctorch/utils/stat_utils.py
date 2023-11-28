@@ -13,7 +13,7 @@ def blocking(x, block_size, expand=False):
     nstep, nwalkers = x.shape
     nblock = nstep // block_size
 
-    xb = np.copy(x[:block_size * nblock, :])
+    xb = np.copy(x[: block_size * nblock, :])
     xb = xb.reshape(nblock, block_size, nwalkers).mean(axis=1)
 
     if expand:
@@ -33,7 +33,7 @@ def correlation_coefficient(x, norm=True):
     N = x.shape[0]
     xm = x - x.mean(0)
 
-    c = fftconvolve(xm, xm[::-1], axes=0)[N - 1:]
+    c = fftconvolve(xm, xm[::-1], axes=0)[N - 1 :]
 
     if norm:
         c /= c[0]
@@ -48,7 +48,7 @@ def integrated_autocorrelation_time(correlation_coeff, size_max):
         correlation_coeff (np.ndarray): coeff size Nsample,Nexp
         size_max (int): max size
     """
-    return 1. + 2. * np.cumsum(correlation_coeff[1:size_max], 0)
+    return 1.0 + 2.0 * np.cumsum(correlation_coeff[1:size_max], 0)
 
 
 def fit_correlation_coefficient(coeff):
@@ -68,7 +68,7 @@ def fit_correlation_coefficient(coeff):
         def func(x, tau):
             return np.exp(-x / tau)
 
-        popt, pcov = curve_fit(func, x, y, p0=(1.))
+        popt, pcov = curve_fit(func, x, y, p0=(1.0))
         return popt[0], func(x, popt)
 
     return fit_exp(np.arange(len(coeff)), coeff)

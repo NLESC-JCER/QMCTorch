@@ -1,11 +1,12 @@
 import torch
 
 from .atomic_orbitals import AtomicOrbitals
-from .backflow.orbital_dependent_backflow_transformation import OrbitalDependentBackFlowTransformation
+from .backflow.orbital_dependent_backflow_transformation import (
+    OrbitalDependentBackFlowTransformation,
+)
 
 
 class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
-
     def __init__(self, mol, backflow_kernel, backflow_kernel_kwargs={}, cuda=False):
         """Computes the value of atomic orbitals
 
@@ -16,12 +17,16 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         super().__init__(mol, cuda)
         dtype = torch.get_default_dtype()
-        self.backflow_trans = OrbitalDependentBackFlowTransformation(mol,
-                                                                     backflow_kernel=backflow_kernel,
-                                                                     backflow_kernel_kwargs=backflow_kernel_kwargs,
-                                                                     cuda=cuda)
+        self.backflow_trans = OrbitalDependentBackFlowTransformation(
+            mol,
+            backflow_kernel=backflow_kernel,
+            backflow_kernel_kwargs=backflow_kernel_kwargs,
+            cuda=cuda,
+        )
 
-    def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
+    def forward(
+        self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False
+    ):
         r"""Computes the values of the atomic orbitals.
 
         .. math::
@@ -64,10 +69,10 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
             derivative = [derivative]
 
         if not sum_grad:
-            assert(1 in derivative)
+            assert 1 in derivative
 
         if not sum_hess:
-            assert(2 in derivative)
+            assert 2 in derivative
 
         if one_elec:
             nelec_save = self.nelec
@@ -77,12 +82,10 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
             ao = self._compute_ao_values(pos)
 
         elif derivative == [1]:
-            ao = self._compute_first_derivative_ao_values(
-                pos, sum_grad)
+            ao = self._compute_first_derivative_ao_values(pos, sum_grad)
 
         elif derivative == [2]:
-            ao = self._compute_second_derivative_ao_values(
-                pos, sum_hess)
+            ao = self._compute_second_derivative_ao_values(pos, sum_hess)
 
         elif derivative == [3]:
             ao = self._compute_mixed_second_derivative_ao_values(pos)
@@ -92,7 +95,8 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         else:
             raise ValueError(
-                'derivative must be 0, 1, 2 or [0, 1, 2], got ', derivative)
+                "derivative must be 0, 1, 2 or [0, 1, 2], got ", derivative
+            )
 
         if one_elec:
             self.nelec = nelec_save
@@ -177,7 +181,9 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         return hess
 
-    def _compute_diag_hessian_backflow_ao_values(self, pos, hess_ao=None, mixed_ao=None, grad_ao=None):
+    def _compute_diag_hessian_backflow_ao_values(
+        self, pos, hess_ao=None, mixed_ao=None, grad_ao=None
+    ):
         """Compute the laplacian of the backflow ao fromn xyz tensor
 
         Args:
@@ -192,8 +198,7 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
             hess_ao = self._compute_diag_hessian_ao_values(pos)
 
         if mixed_ao is None:
-            mixed_ao = self._compute_mixed_second_derivative_ao_values(
-                pos)
+            mixed_ao = self._compute_mixed_second_derivative_ao_values(pos)
 
         if grad_ao is None:
             grad_ao = self._compute_gradient_ao_values(pos)
@@ -219,14 +224,13 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
         d2bf = self.backflow_trans(pos, derivative=2)
 
         # compute the back flow second der
-        hess_ao = (hess_ao * (dbf*dbf)).sum(1)
+        hess_ao = (hess_ao * (dbf * dbf)).sum(1)
 
         # compute the backflow grad
         hess_ao += (grad_ao * d2bf).sum(1)
 
         # compute the contribution of the mixed derivative
-        hess_ao += 2*(mixed_ao *
-                      dbf[:, [[0, 1], [0, 2], [1, 2]], ...].prod(2)).sum(1)
+        hess_ao += 2 * (mixed_ao * dbf[:, [[0, 1], [0, 2], [1, 2]], ...].prod(2)).sum(1)
 
         # permute to have Nelec x Ndim x Nbatch x Nelec x Norb
         hess_ao = hess_ao.permute(3, 1, 0, 2, 4)
@@ -252,13 +256,19 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         xyz, r = self._process_position(pos)
 
-        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
-                                 xyz=xyz, derivative=[0, 1, 2],
-                                 sum_grad=False, sum_hess=False)
+        R, dR, d2R = self.radial(
+            r,
+            self.bas_n,
+            self.bas_exp,
+            xyz=xyz,
+            derivative=[0, 1, 2],
+            sum_grad=False,
+            sum_hess=False,
+        )
 
-        Y, dY, d2Y = self.harmonics(xyz,
-                                    derivative=[0, 1, 2],
-                                    sum_grad=False, sum_hess=False)
+        Y, dY, d2Y = self.harmonics(
+            xyz, derivative=[0, 1, 2], sum_grad=False, sum_hess=False
+        )
 
         # vals of the bf ao
         ao = self._ao_kernel(R, Y)
@@ -267,16 +277,15 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
         grad_ao = self._gradient_kernel(R, dR, Y, dY)
 
         # diag hess kernel of the bf ao
-        hess_ao = self._diag_hessian_kernel(
-            R, dR, d2R, Y, dY, d2Y)
+        hess_ao = self._diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
         # compute the bf ao
         hess_ao = self._compute_diag_hessian_backflow_ao_values(
-            pos, hess_ao=hess_ao, grad_ao=grad_ao)
+            pos, hess_ao=hess_ao, grad_ao=grad_ao
+        )
 
         # compute the bf grad
-        grad_ao = self._compute_gradient_backflow_ao_values(
-            pos, grad_ao=grad_ao)
+        grad_ao = self._compute_gradient_backflow_ao_values(pos, grad_ao=grad_ao)
 
         return (ao, grad_ao, hess_ao)
 
@@ -329,15 +338,14 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
 
         # interleave the atomic positions
         # nao x ndim
-        atom_coords = self.atom_coords.repeat_interleave(
-            self.nao_per_atom, dim=0)
+        atom_coords = self.atom_coords.repeat_interleave(self.nao_per_atom, dim=0)
 
         # compute the vectors between electrons and atoms
         # nbatch x nelec x nao x ndim
-        xyz = (bf_pos-atom_coords)
+        xyz = bf_pos - atom_coords
 
         # distance between electrons and atoms
         # nbatch x nelec x nao
-        r = torch.sqrt((xyz*xyz).sum(3))
+        r = torch.sqrt((xyz * xyz).sum(3))
 
         return xyz, r

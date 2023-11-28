@@ -8,8 +8,7 @@ from .. import log
 
 
 class DensityVarianceKernel(object):
-
-    def __init__(self, atomic_pos, sigma=1., scale_factor=1.):
+    def __init__(self, atomic_pos, sigma=1.0, scale_factor=1.0):
         self.atomic_pos = atomic_pos.unsqueeze(0).unsqueeze(1)
         self.sigma = sigma
         self.scale_factor = scale_factor
@@ -18,7 +17,7 @@ class DensityVarianceKernel(object):
 
     def __call__(self, x):
         d = self.get_estimate_density(x)
-        out = self.sigma * (1. - d).sum(-1)
+        out = self.sigma * (1.0 - d).sum(-1)
         return out.unsqueeze(-1)
 
     def get_atomic_distance(self, pos):
@@ -29,14 +28,12 @@ class DensityVarianceKernel(object):
 
     def get_estimate_density(self, pos):
         d = self.get_atomic_distance(pos)
-        d = torch.exp(-self.scale_factor*d**2)
+        d = torch.exp(-self.scale_factor * d**2)
         return d
 
 
 class CenterVarianceKernel(object):
-
-    def __init__(self, sigma=1., scale_factor=1.):
-
+    def __init__(self, sigma=1.0, scale_factor=1.0):
         self.sigma = sigma
         self.scale_factor = scale_factor
         self.nelec = None
@@ -44,14 +41,14 @@ class CenterVarianceKernel(object):
 
     def __call__(self, x):
         d = self.get_estimate_density(x)
-        out = self.sigma * (1. - d)
+        out = self.sigma * (1.0 - d)
         return out.unsqueeze(-1)
 
     def get_estimate_density(self, pos):
         nwalkers = pos.shape[0]
         pos = pos.view(nwalkers, self.nelec, self.ndim)
         d = pos.norm(dim=-1)
-        d = torch.exp(-self.scale_factor*d**2)
+        d = torch.exp(-self.scale_factor * d**2)
         return d
 
 
