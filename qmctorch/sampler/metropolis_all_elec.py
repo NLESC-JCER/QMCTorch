@@ -8,20 +8,19 @@ from .. import log
 
 
 class Metropolis(SamplerBase):
-    def __init__(
-        self,
-        nwalkers: int = 100,
-        nstep: int = 1000,
-        step_size: float = 0.2,
-        ntherm: int = -1,
-        ndecor: int = 1,
-        nelec: int = 1,
-        ndim: int = 3,
-        init: Dict = {"min": -5, "max": 5},
-        move: Dict = {"proba": "normal"},
-        logspace: bool = False,
-        cuda: bool = False,
-    ):
+
+    def __init__(self,
+                 nwalkers: int = 100,
+                 nstep: int = 1000,
+                 step_size: float = 0.2,
+                 ntherm: int = -1,
+                 ndecor: int = 1,
+                 nelec: int = 1,
+                 ndim: int = 3,
+                 init: Dict = {'min': -5, 'max': 5},
+                 move: Dict = {'proba': 'normal'},
+                 logspace: bool = False,
+                 cuda: bool = False):
         """Metropolis Hasting generator
 
         Args:
@@ -52,27 +51,26 @@ class Metropolis(SamplerBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(
-            self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
-        )
+        SamplerBase.__init__(self, nwalkers, nstep,
+                             step_size, ntherm, ndecor,
+                             nelec, ndim, init, cuda)
 
         self.logspace = logspace
         self.movedict = move
 
-        if self.movedict["proba"] == "normal":
-            _sigma = self.step_size / (
-                2 * torch.sqrt(2 * torch.log(torch.as_tensor(2.0)))
-            )
+        if self.movedict['proba'] == 'normal':
+            _sigma = self.step_size / \
+                (2 * torch.sqrt(2 * torch.log(torch.as_tensor(2.))))
             self.multiVariate = MultivariateNormal(
-                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim)
-            )
+                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
 
         self.log_data()
 
     def log_data(self):
         """log data about the sampler."""
-        log.info("  Move type           : {0}", "all-elec")
-        log.info("  Move proba          : {0}", self.movedict["proba"])
+        log.info('  Move type           : {0}', 'all-elec')
+        log.info(
+            '  Move proba          : {0}', self.movedict['proba'])
 
     @staticmethod
     def log_func(func):
@@ -86,12 +84,8 @@ class Metropolis(SamplerBase):
         """
         return lambda x: torch.log(func(x))
 
-    def __call__(
-        self,
-        pdf: Callable,
-        pos: Union[None, torch.Tensor] = None,
-        with_tqdm: bool = True,
-    ) -> torch.Tensor:
+    def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
@@ -111,9 +105,10 @@ class Metropolis(SamplerBase):
         #     eps = 1E-16
 
         if self.ntherm >= self.nstep:
-            raise ValueError("Thermalisation longer than trajectory")
+            raise ValueError('Thermalisation longer than trajectory')
 
         with torch.no_grad():
+
             if self.ntherm < 0:
                 self.ntherm = self.nstep + self.ntherm
 
@@ -126,14 +121,13 @@ class Metropolis(SamplerBase):
             # fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
 
-            rng = tqdm(
-                range(self.nstep),
-                desc="INFO:QMCTorch|  Sampling",
-                disable=not with_tqdm,
-            )
+            rng = tqdm(range(self.nstep),
+                       desc='INFO:QMCTorch|  Sampling',
+                       disable=not with_tqdm)
             tstart = time()
 
             for istep in rng:
+
                 # new positions
                 Xn = self.move(pdf)
 
@@ -151,27 +145,26 @@ class Metropolis(SamplerBase):
                 index = self._accept(df)
 
                 # acceptance rate
-                rate += index.byte().sum().float().to("cpu") / (self.walkers.nwalkers)
+                rate += index.byte().sum().float().to('cpu') / \
+                    (self.walkers.nwalkers)
 
                 # update position/function value
                 self.walkers.pos[index, :] = Xn[index, :]
                 fx[index] = fxn[index]
                 # fx[fx == 0] = eps
 
-                if istep >= self.ntherm:
-                    if idecor % self.ndecor == 0:
-                        pos.append(self.walkers.pos.to("cpu").clone())
+                if (istep >= self.ntherm):
+                    if (idecor % self.ndecor == 0):
+                        pos.append(self.walkers.pos.to('cpu').clone())
                     idecor += 1
 
             if with_tqdm:
                 log.info(
-                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100)
-                )
+                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100))
                 log.info(
-                    "   Timing statistics   : {:1.2f} steps/sec.",
-                    self.nstep / (time() - tstart),
-                )
-                log.info("   Total Time          : {:1.2f} sec.", (time() - tstart))
+                    "   Timing statistics   : {:1.2f} steps/sec.", self.nstep/(time()-tstart))
+                log.info(
+                    "   Total Time          : {:1.2f} sec.", (time()-tstart))
 
         return torch.cat(pos).requires_grad_()
 
@@ -196,17 +189,16 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: new positions of the walkers
         """
-        if self.movedict["proba"] == "uniform":
+        if self.movedict['proba'] == 'uniform':
             d = torch.rand(
-                (self.walkers.nwalkers, num_elec * self.ndim), device=self.device
-            )
-            return self.step_size * (2.0 * d - 1.0)
+                (self.walkers.nwalkers, num_elec*self.ndim), device=self.device)
+            return self.step_size * (2. * d - 1.)
 
-        elif self.movedict["proba"] == "normal":
+        elif self.movedict['proba'] == 'normal':
             displacement = self.multiVariate.sample(
-                (self.walkers.nwalkers, num_elec)
-            ).to(self.device)
-            return displacement.view(self.walkers.nwalkers, num_elec * self.ndim)
+                (self.walkers.nwalkers, num_elec)).to(self.device)
+            return displacement.view(
+                self.walkers.nwalkers, num_elec * self.ndim)
 
     def _accept(self, proba: torch.Tensor) -> torch.Tensor:
         """accept the move or not

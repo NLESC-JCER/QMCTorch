@@ -40,41 +40,26 @@ class MGCNPredictor(nn.Module):
         Size for hidden representations in the output MLP predictor. Default to 64.
     """
 
-    def __init__(
-        self,
-        feats=128,
-        n_layers=3,
-        classifier_hidden_feats=64,
-        n_tasks=1,
-        num_node_types=100,
-        num_edge_types=3000,
-        cutoff=5.0,
-        gap=1.0,
-        predictor_hidden_feats=64,
-    ):
+    def __init__(self, feats=128, n_layers=3, classifier_hidden_feats=64,
+                 n_tasks=1, num_node_types=100, num_edge_types=3000,
+                 cutoff=5.0, gap=1.0, predictor_hidden_feats=64):
         super(MGCNPredictor, self).__init__()
 
         if predictor_hidden_feats == 64 and classifier_hidden_feats != 64:
-            print(
-                "classifier_hidden_feats is deprecated and will be removed in the future, "
-                "use predictor_hidden_feats instead"
-            )
+            print('classifier_hidden_feats is deprecated and will be removed in the future, '
+                  'use predictor_hidden_feats instead')
             predictor_hidden_feats = classifier_hidden_feats
 
-        self.gnn = MGCNGNN(
-            feats=feats,
-            n_layers=n_layers,
-            num_node_types=num_node_types,
-            num_edge_types=num_edge_types,
-            cutoff=cutoff,
-            gap=gap,
-        )
-        self.readout = MLPNodeReadout(
-            node_feats=(n_layers + 1) * feats,
-            hidden_feats=predictor_hidden_feats,
-            graph_feats=n_tasks,
-            activation=nn.Softplus(beta=1, threshold=20),
-        )
+        self.gnn = MGCNGNN(feats=feats,
+                           n_layers=n_layers,
+                           num_node_types=num_node_types,
+                           num_edge_types=num_edge_types,
+                           cutoff=cutoff,
+                           gap=gap)
+        self.readout = MLPNodeReadout(node_feats=(n_layers + 1) * feats,
+                                      hidden_feats=predictor_hidden_feats,
+                                      graph_feats=n_tasks,
+                                      activation=nn.Softplus(beta=1, threshold=20))
 
     def forward(self, g, node_types, edge_dists):
         """Graph-level regression/soft classification.

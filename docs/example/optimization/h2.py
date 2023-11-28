@@ -7,7 +7,7 @@ from qmctorch.scf import Molecule
 from qmctorch.solver import Solver
 from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.utils.plot_data import plot_energy, plot_data
+from qmctorch.utils.plot_data import (plot_energy, plot_data)
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
@@ -21,15 +21,18 @@ torch.random.manual_seed(0)
 np.random.seed(0)
 
 # define the molecule
-mol = Molecule(
-    atom="H 0 0 -0.69; H 0 0 0.69", calculator="pyscf", basis="sto-3g", unit="bohr"
-)
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+               calculator='pyscf',
+               basis='sto-3g',
+               unit='bohr')
 
 # jastrow
 jastrow = JastrowFactor(mol, PadeJastrowKernel)
 
 # define the wave function
-wf = SlaterJastrow(mol, kinetic="jacobi", configs="single_double(2,2)", jastrow=jastrow)
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   configs='single_double(2,2)',
+                   jastrow=jastrow)
 
 # sampler
 # sampler = Hamiltonian(nwalkers=100, nstep=100, nelec=wf.nelec,
@@ -37,24 +40,15 @@ wf = SlaterJastrow(mol, kinetic="jacobi", configs="single_double(2,2)", jastrow=
 #                       ntherm=-1, ndecor=10,
 #                       init=mol.domain('atomic'))
 
-sampler = Metropolis(
-    nwalkers=10,
-    nstep=200,
-    nelec=wf.nelec,
-    ntherm=100,
-    ndecor=10,
-    step_size=0.05,
-    init=mol.domain("atomic"),
-)
+sampler = Metropolis(nwalkers=10, nstep=200, nelec=wf.nelec, ntherm=100, ndecor=10,
+                     step_size=0.05, init=mol.domain('atomic'))
 
 # optimizer
-lr_dict = [
-    {"params": wf.jastrow.parameters(), "lr": 1e-2},
-    {"params": wf.ao.parameters(), "lr": 1e-6},
-    {"params": wf.mo.parameters(), "lr": 2e-3},
-    {"params": wf.fc.parameters(), "lr": 2e-3},
-]
-opt = optim.Adam(lr_dict, lr=1e-3)
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
+           {'params': wf.ao.parameters(), 'lr': 1E-6},
+           {'params': wf.mo.parameters(), 'lr': 2E-3},
+           {'params': wf.fc.parameters(), 'lr': 2E-3}]
+opt = optim.Adam(lr_dict, lr=1E-3)
 
 # scheduler
 scheduler = optim.lr_scheduler.StepLR(opt, step_size=10, gamma=0.90)
@@ -66,20 +60,14 @@ solver = Solver(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
 # obs = solver.single_point()
 
 # configure the solver
-solver.configure(
-    track=["local_energy", "parameters"],
-    freeze=["ao"],
-    loss="energy",
-    grad="manual",
-    ortho_mo=False,
-    clip_loss=False,
-    resampling={
-        "mode": "update",
-        "resample_every": 1,
-        "nstep_update": 150,
-        "ntherm_update": 50,
-    },
-)
+solver.configure(track=['local_energy', 'parameters'], freeze=['ao'],
+                 loss='energy', grad='manual',
+                 ortho_mo=False, clip_loss=False,
+                 resampling={'mode': 'update',
+                             'resample_every': 1,
+                             'nstep_update': 150,
+                             'ntherm_update': 50}
+                 )
 
 # optimize the wave function
 obs = solver.run(5)  # , batchsize=10)

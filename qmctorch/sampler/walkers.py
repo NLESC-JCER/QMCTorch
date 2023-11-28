@@ -6,14 +6,9 @@ from .. import log
 
 
 class Walkers(object):
-    def __init__(
-        self,
-        nwalkers: int = 100,
-        nelec: int = 1,
-        ndim: int = 3,
-        init: Union[Dict, None] = None,
-        cuda: bool = False,
-    ):
+
+    def __init__(self, nwalkers: int = 100, nelec: int = 1, ndim: int = 3,
+                 init: Union[Dict, None] = None, cuda: bool = False):
         """Creates Walkers for the sampler.
 
         Args:
@@ -34,9 +29,9 @@ class Walkers(object):
         self.cuda = cuda
 
         if cuda:
-            self.device = torch.device("cuda")
+            self.device = torch.device('cuda')
         else:
-            self.device = torch.device("cpu")
+            self.device = torch.device('cpu')
 
     def initialize(self, pos: Union[None, torch.Tensor] = None):
         """Initalize the position of the walkers
@@ -49,29 +44,29 @@ class Walkers(object):
             ValueError: if the method is not recognized
         """
         if self.cuda:
-            self.device = torch.device("cuda")
+            self.device = torch.device('cuda')
 
         if pos is not None:
             if len(pos) > self.nwalkers:
-                pos = pos[-self.nwalkers :, :]
+                pos = pos[-self.nwalkers:, :]
             self.pos = pos
 
         else:
             log.debug("  Initialize walkers")
-            if "center" in self.init_domain.keys():
+            if 'center' in self.init_domain.keys():
                 self.pos = self._init_center()
 
-            elif "min" in self.init_domain.keys():
+            elif 'min' in self.init_domain.keys():
                 self.pos = self._init_uniform()
 
-            elif "mean" in self.init_domain.keys():
+            elif 'mean' in self.init_domain.keys():
                 self.pos = self._init_multivar()
 
-            elif "atom_coords" in self.init_domain.keys():
+            elif 'atom_coords' in self.init_domain.keys():
                 self.pos = self._init_atomic()
 
             else:
-                raise ValueError("Init walkers not recognized")
+                raise ValueError('Init walkers not recognized')
 
     def _init_center(self):
         """Initialize the walkers at the center of the molecule
@@ -79,9 +74,12 @@ class Walkers(object):
         Returns:
             torch.tensor: positions of the walkers
         """
-        eps = 1e-3
-        pos = -eps + 2 * eps * torch.rand(self.nwalkers, self.nelec * self.ndim)
-        return pos.type(torch.get_default_dtype()).to(device=self.device)
+        eps = 1E-3
+        pos = -eps + 2 * eps * \
+            torch.rand(self.nwalkers, self.nelec * self.ndim)
+        return pos.type(
+            torch.get_default_dtype()).to(
+            device=self.device)
 
     def _init_uniform(self):
         """Initialize the walkers in a box covering the molecule
@@ -90,9 +88,11 @@ class Walkers(object):
             torch.tensor: positions of the walkers
         """
         pos = torch.rand(self.nwalkers, self.nelec * self.ndim)
-        pos *= self.init_domain["max"] - self.init_domain["min"]
-        pos += self.init_domain["min"]
-        return pos.type(torch.get_default_dtype()).to(device=self.device)
+        pos *= (self.init_domain['max'] - self.init_domain['min'])
+        pos += self.init_domain['min']
+        return pos.type(
+            torch.get_default_dtype()).to(
+            device=self.device)
 
     def _init_multivar(self):
         """Initialize the walkers in a sphere covering the molecule
@@ -101,10 +101,10 @@ class Walkers(object):
             torch.tensor -- positions of the walkers
         """
         multi = MultivariateNormal(
-            torch.as_tensor(self.init_domain["mean"]),
-            torch.as_tensor(self.init_domain["sigma"]),
-        )
-        pos = multi.sample((self.nwalkers, self.nelec)).type(torch.get_default_dtype())
+            torch.as_tensor(self.init_domain['mean']),
+            torch.as_tensor(self.init_domain['sigma']))
+        pos = multi.sample((self.nwalkers, self.nelec)).type(
+            torch.get_default_dtype())
         pos = pos.view(self.nwalkers, self.nelec * self.ndim)
         return pos.to(device=self.device)
 
@@ -118,26 +118,30 @@ class Walkers(object):
         idx_ref, nelec_tot = [], 0
 
         nelec_placed, natom = [], 0
-        for iat, nelec in enumerate(self.init_domain["atom_nelec"]):
+        for iat, nelec in enumerate(self.init_domain['atom_nelec']):
             idx_ref += [iat] * nelec
             nelec_tot += nelec
             natom += 1
 
         for iw in range(self.nwalkers):
+
             nelec_placed = [0] * natom
             idx = torch.as_tensor(idx_ref)
             idx = idx[torch.randperm(nelec_tot)]
-            xyz = torch.as_tensor(self.init_domain["atom_coords"])[idx, :]
+            xyz = torch.as_tensor(
+                self.init_domain['atom_coords'])[
+                idx, :]
 
             for ielec in range(nelec_tot):
                 _idx = idx[ielec]
                 if nelec_placed[_idx] == 0:
-                    s = 1.0 / self.init_domain["atom_num"][_idx]
+                    s = 1. / self.init_domain['atom_num'][_idx]
                 elif nelec_placed[_idx] < 5:
-                    s = 2.0 / (self.init_domain["atom_num"][_idx] - 2)
+                    s = 2. / (self.init_domain['atom_num'][_idx] - 2)
                 else:
-                    s = 3.0 / (self.init_domain["atom_num"][_idx] - 3)
-                xyz[ielec, :] += np.random.normal(scale=s, size=(1, 3))
+                    s = 3. / (self.init_domain['atom_num'][_idx] - 3)
+                xyz[ielec,
+                    :] += np.random.normal(scale=s, size=(1, 3))
                 nelec_placed[_idx] += 1
 
             pos[iw, :] = xyz.view(-1)

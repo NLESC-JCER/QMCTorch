@@ -19,10 +19,11 @@ def ElecElecGraph(nelec, nup):
 
 
 def get_elec_elec_edges(nelec):
-    """Compute the edge index of the electron-electron graph."""
+    """Compute the edge index of the electron-electron graph.
+    """
     ee_edges = ([], [])
-    for i in range(nelec - 1):
-        for j in range(i + 1, nelec):
+    for i in range(nelec-1):
+        for j in range(i+1, nelec):
             ee_edges[0].append(i)
             ee_edges[1].append(j)
 
@@ -33,7 +34,8 @@ def get_elec_elec_edges(nelec):
 
 
 def get_elec_elec_ndata(nelec, nup):
-    """Compute the node data of the elec-elec graph"""
+    """Compute the node data of the elec-elec graph
+    """
 
     ee_ndata = []
     for i in range(nelec):

@@ -11,16 +11,14 @@ from .elec_nuc_graph import ElecNucGraph
 
 
 class JastrowFactorGraph(nn.Module):
-    def __init__(
-        self,
-        mol,
-        ee_model=MGCNPredictor,
-        ee_model_kwargs={},
-        en_model=MGCNPredictor,
-        en_model_kwargs={},
-        atomic_features=["atomic_number"],
-        cuda=False,
-    ):
+
+    def __init__(self, mol,
+                 ee_model=MGCNPredictor,
+                 ee_model_kwargs={},
+                 en_model=MGCNPredictor,
+                 en_model_kwargs={},
+                 atomic_features=["atomic_number"],
+                 cuda=False):
         """Graph Neural Network Jastrow Factor
 
         Args:
@@ -44,13 +42,14 @@ class JastrowFactorGraph(nn.Module):
         self.ndim = 3
 
         self.cuda = cuda
-        self.device = torch.device("cpu")
+        self.device = torch.device('cpu')
         if self.cuda:
-            self.device = torch.device("cuda")
+            self.device = torch.device('cuda')
 
         self.atom_types = mol.atoms
         self.atomic_features = atomic_features
-        self.atoms = torch.as_tensor(mol.atom_coords).to(self.device)
+        self.atoms = torch.as_tensor(
+            mol.atom_coords).to(self.device)
         self.natoms = self.atoms.shape[0]
 
         self.requires_autograd = True
@@ -59,8 +58,10 @@ class JastrowFactorGraph(nn.Module):
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
         # distance calculator
-        self.elel_dist = ElectronElectronDistance(self.nelec, self.ndim)
-        self.elnu_dist = ElectronNucleiDistance(self.nelec, self.atoms, self.ndim)
+        self.elel_dist = ElectronElectronDistance(self.nelec,
+                                                  self.ndim)
+        self.elnu_dist = ElectronNucleiDistance(self.nelec,
+                                                self.atoms, self.ndim)
 
         # instantiate the ee mode; to use
         ee_model_kwargs["num_node_types"] = 2
@@ -69,16 +70,15 @@ class JastrowFactorGraph(nn.Module):
 
         # instantiate the en model
         en_model_kwargs["num_node_types"] = 2 + self.natoms
-        en_model_kwargs["num_edge_types"] = 2 * self.natoms
+        en_model_kwargs["num_edge_types"] = 2*self.natoms
         self.en_model = en_model(**en_model_kwargs)
 
         # compute the elec-elec graph
         self.ee_graph = ElecElecGraph(self.nelec, self.nup)
 
         # compute the elec-nuc graph
-        self.en_graph = ElecNucGraph(
-            self.natoms, self.atom_types, self.atomic_features, self.nelec, self.nup
-        )
+        self.en_graph = ElecNucGraph(self.natoms, self.atom_types,
+                                     self.atomic_features, self.nelec, self.nup)
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
@@ -105,8 +105,8 @@ class JastrowFactorGraph(nn.Module):
         assert size[1] == self.nelec * self.ndim
         nbatch = size[0]
 
-        batch_ee_graph = dgl.batch([self.ee_graph] * nbatch)
-        batch_en_graph = dgl.batch([self.en_graph] * nbatch)
+        batch_ee_graph = dgl.batch([self.ee_graph]*nbatch)
+        batch_en_graph = dgl.batch([self.en_graph]*nbatch)
 
         # get the elec-elec distance matrix
         ree = self.extract_tri_up(self.elel_dist(pos)).reshape(-1, 1)
@@ -115,16 +115,22 @@ class JastrowFactorGraph(nn.Module):
         ren = self.extract_elec_nuc_dist(self.elnu_dist(pos))
 
         # put the data in the graph
-        batch_ee_graph.edata["distance"] = ree.repeat_interleave(2, dim=0)
-        batch_en_graph.edata["distance"] = ren.repeat_interleave(2, dim=0)
+        batch_ee_graph.edata['distance'] = ree.repeat_interleave(
+            2, dim=0)
+        batch_en_graph.edata['distance'] = ren.repeat_interleave(
+            2, dim=0)
 
-        ee_node_types = batch_ee_graph.ndata.pop("node_types")
-        ee_edge_distance = batch_ee_graph.edata.pop("distance")
-        ee_kernel = self.ee_model(batch_ee_graph, ee_node_types, ee_edge_distance)
+        ee_node_types = batch_ee_graph.ndata.pop('node_types')
+        ee_edge_distance = batch_ee_graph.edata.pop('distance')
+        ee_kernel = self.ee_model(batch_ee_graph,
+                                  ee_node_types,
+                                  ee_edge_distance)
 
-        en_node_types = batch_en_graph.ndata.pop("node_types")
-        en_edge_distance = batch_en_graph.edata.pop("distance")
-        en_kernel = self.en_model(batch_en_graph, en_node_types, en_edge_distance)
+        en_node_types = batch_en_graph.ndata.pop('node_types')
+        en_edge_distance = batch_en_graph.edata.pop('distance')
+        en_kernel = self.en_model(batch_en_graph,
+                                  en_node_types,
+                                  en_edge_distance)
 
         if derivative == 0:
             return torch.exp(ee_kernel + en_kernel)
@@ -136,9 +142,7 @@ class JastrowFactorGraph(nn.Module):
             return self._get_hess_vals(pos, ee_kernel, en_kernel, return_all=False)
 
         elif derivative == [0, 1, 2]:
-            return self._get_hess_vals(
-                pos, ee_kernel, en_kernel, sum_grad=sum_grad, return_all=True
-            )
+            return self._get_hess_vals(pos, ee_kernel, en_kernel, sum_grad=sum_grad, return_all=True)
 
     def _get_val(self, ee_kernel, en_kernel):
         """Get the jastrow values.
@@ -162,19 +166,18 @@ class JastrowFactorGraph(nn.Module):
 
         nbatch = len(pos)
         jval = torch.exp(ee_kernel + en_kernel)
-        grad_val = grad(
-            jval, pos, grad_outputs=torch.ones_like(jval), only_inputs=True
-        )[0]
-        grad_val = grad_val.reshape(nbatch, self.nelec, 3).transpose(1, 2)
+        grad_val = grad(jval, pos,
+                        grad_outputs=torch.ones_like(jval),
+                        only_inputs=True)[0]
+        grad_val = grad_val.reshape(
+            nbatch, self.nelec, 3).transpose(1, 2)
 
         if sum_grad:
             grad_val = grad_val.sum(1)
 
         return grad_val
 
-    def _get_hess_vals(
-        self, pos, ee_kernel, en_kernel, sum_grad=False, return_all=False
-    ):
+    def _get_hess_vals(self, pos, ee_kernel, en_kernel, sum_grad=False, return_all=False):
         """Get the hessian values
 
         Args:
@@ -189,13 +192,10 @@ class JastrowFactorGraph(nn.Module):
 
         jval = torch.exp(ee_kernel + en_kernel)
 
-        grad_val = grad(
-            jval,
-            pos,
-            grad_outputs=torch.ones_like(jval),
-            only_inputs=True,
-            create_graph=True,
-        )[0]
+        grad_val = grad(jval, pos,
+                        grad_outputs=torch.ones_like(jval),
+                        only_inputs=True,
+                        create_graph=True)[0]
 
         ndim = grad_val.shape[1]
         hval = torch.zeros(nbatch, ndim).to(self.device)
@@ -203,19 +203,18 @@ class JastrowFactorGraph(nn.Module):
         z.requires_grad = True
 
         for idim in range(ndim):
-            tmp = grad(
-                grad_val[:, idim],
-                pos,
-                grad_outputs=z,
-                only_inputs=True,
-                retain_graph=True,
-            )[0]
+            tmp = grad(grad_val[:, idim], pos,
+                       grad_outputs=z,
+                       only_inputs=True,
+                       retain_graph=True)[0]
             hval[:, idim] = tmp[:, idim]
 
-        hval = hval.reshape(nbatch, self.nelec, 3).transpose(1, 2).sum(1)
+        hval = hval.reshape(
+            nbatch, self.nelec, 3).transpose(1, 2).sum(1)
 
         if return_all:
-            grad_val = grad_val.detach().reshape(nbatch, self.nelec, 3).transpose(1, 2)
+            grad_val = grad_val.detach().reshape(
+                nbatch, self.nelec, 3).transpose(1, 2)
 
             if sum_grad:
                 grad_val = grad_val.sum(1)
@@ -231,10 +230,11 @@ class JastrowFactorGraph(nn.Module):
         Returns:
             torch.tensor: mask of the tri up matrix
         """
-        mask = torch.zeros(self.nelec, self.nelec).type(torch.bool).to(self.device)
+        mask = torch.zeros(self.nelec, self.nelec).type(
+            torch.bool).to(self.device)
         index_col, index_row = [], []
-        for i in range(self.nelec - 1):
-            for j in range(i + 1, self.nelec):
+        for i in range(self.nelec-1):
+            for j in range(i+1, self.nelec):
                 index_row.append(i)
                 index_col.append(j)
                 mask[i, j] = True

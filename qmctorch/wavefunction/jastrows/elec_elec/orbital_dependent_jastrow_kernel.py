@@ -1,13 +1,14 @@
+
 import torch
 from torch import nn
 from torch.autograd import grad
-from .kernels.jastrow_kernel_electron_electron_base import (
-    JastrowKernelElectronElectronBase,
-)
+from .kernels.jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 
 class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
-    def __init__(self, nup, ndown, nmo, cuda, jastrow_kernel, kernel_kwargs={}):
+
+    def __init__(self, nup, ndown, nmo, cuda,
+                 jastrow_kernel, kernel_kwargs={}):
         """Transform a kernel into a orbital dependent kernel
 
         Args:
@@ -22,11 +23,10 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
         super().__init__(nup, ndown, cuda)
         self.nmo = nmo
         self.jastrow_functions = nn.ModuleList(
-            [jastrow_kernel(nup, ndown, cuda, **kernel_kwargs) for _ in range(self.nmo)]
-        )
+            [jastrow_kernel(nup, ndown, cuda, **kernel_kwargs) for _ in range(self.nmo)])
 
     def forward(self, r):
-        """Get the jastrow kernel.
+        """ Get the jastrow kernel.
 
         Args:
             r (torch.tensor): matrix of the e-e distances
@@ -66,7 +66,9 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
             r.requires_grad = True
 
         with torch.enable_grad():
+
             for jast in self.jastrow_functions:
+
                 kernel = jast(r)
                 ker_grad = self._grads(kernel, r)
                 ker_grad = ker_grad.unsqueeze(1) * dr
@@ -105,11 +107,14 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
             r.requires_grad = True
 
         with torch.enable_grad():
+
             for jast in self.jastrow_functions:
+
                 kernel = jast(r)
                 ker_hess, ker_grad = self._hess(kernel, r)
 
-                jhess = (ker_hess).unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
+                jhess = (ker_hess).unsqueeze(1) * \
+                    dr2 + ker_grad.unsqueeze(1) * d2r
 
                 jhess = jhess.unsqueeze(0)
 
@@ -150,8 +155,11 @@ class OrbitalDependentJastrowKernel(JastrowKernelElectronElectronBase):
             torch.tensor: second derivative of the values wrt to ee distance
         """
 
-        gval = grad(val, r, grad_outputs=torch.ones_like(val), create_graph=True)[0]
+        gval = grad(val, r,
+                    grad_outputs=torch.ones_like(val),
+                    create_graph=True)[0]
 
-        hval = grad(gval, r, grad_outputs=torch.ones_like(gval))[0]
+        hval = grad(gval, r,
+                    grad_outputs=torch.ones_like(gval))[0]
 
         return hval, gval

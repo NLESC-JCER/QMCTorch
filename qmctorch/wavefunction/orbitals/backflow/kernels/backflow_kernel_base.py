@@ -4,6 +4,7 @@ from torch.autograd import grad, Variable
 
 
 class BackFlowKernelBase(nn.Module):
+
     def __init__(self, mol, cuda):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
@@ -14,9 +15,9 @@ class BackFlowKernelBase(nn.Module):
         super().__init__()
         self.nelec = mol.nelec
         self.cuda = cuda
-        self.device = torch.device("cpu")
+        self.device = torch.device('cpu')
         if self.cuda:
-            self.device = torch.device("cuda")
+            self.device = torch.device('cuda')
 
     def forward(self, ree, derivative=0):
         """Computes the desired values of the kernel
@@ -38,7 +39,8 @@ class BackFlowKernelBase(nn.Module):
             return self._backflow_kernel_second_derivative(ree)
 
         else:
-            raise ValueError("derivative of the kernel must be 0, 1 or 2")
+            raise ValueError(
+                'derivative of the kernel must be 0, 1 or 2')
 
     def _backflow_kernel(self, ree):
         """Computes the kernel via autodiff
@@ -49,7 +51,8 @@ class BackFlowKernelBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        raise NotImplementedError("Please implement the backflow kernel")
+        raise NotImplementedError(
+            'Please implement the backflow kernel')
 
     def _backflow_kernel_derivative(self, ree):
         """Computes the first derivative of the kernel via autodiff
@@ -81,6 +84,7 @@ class BackFlowKernelBase(nn.Module):
             ree.requires_grad = True
 
         with torch.enable_grad():
+
             kernel_val = self._backflow_kernel(ree)
             hess_val, _ = self._hess(kernel_val, ree)
 
@@ -109,7 +113,10 @@ class BackFlowKernelBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val, ree, grad_outputs=torch.ones_like(val), create_graph=True)[0]
+        gval = grad(val,
+                    ree,
+                    grad_outputs=torch.ones_like(val),
+                    create_graph=True)[0]
 
         hval = grad(gval, ree, grad_outputs=torch.ones_like(gval))[0]
 

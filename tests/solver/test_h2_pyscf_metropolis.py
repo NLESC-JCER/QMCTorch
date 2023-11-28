@@ -18,7 +18,9 @@ __PLOT__ = True
 
 
 class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
+
     def setUp(self):
+
         torch.manual_seed(0)
         np.random.seed(0)
 
@@ -28,19 +30,19 @@ class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
 
         # molecule
         self.mol = Molecule(
-            atom="H 0 0 -0.69; H 0 0 0.69",
-            unit="bohr",
-            calculator="pyscf",
-            basis="sto-3g",
-        )
+            atom='H 0 0 -0.69; H 0 0 0.69',
+            unit='bohr',
+            calculator='pyscf',
+            basis='sto-3g')
 
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # wave function
-        self.wf = SlaterJastrow(
-            self.mol, kinetic="auto", configs="single(2,2)", jastrow=jastrow
-        )
+        self.wf = SlaterJastrow(self.mol,
+                                kinetic='auto',
+                                configs='single(2,2)',
+                                jastrow=jastrow)
 
         # sampler
         self.sampler = Metropolis(
@@ -49,31 +51,39 @@ class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain("normal"),
-            move={"type": "all-elec", "proba": "normal"},
-        )
+            init=self.mol.domain('normal'),
+            move={
+                'type': 'all-elec',
+                'proba': 'normal'})
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
         # values on different arch
-        self.expected_energy = [-1.1464850902557373, -1.14937478612449]
+        self.expected_energy = [-1.1464850902557373,
+                                -1.14937478612449]
 
         # values on different arch
-        self.expected_variance = [0.9279592633247375, 0.7445300449383236]
+        self.expected_variance = [0.9279592633247375,
+                                  0.7445300449383236]
 
     def test4_geo_opt(self):
-        self.solver.wf.ao.atom_coords[0, 2].data = torch.as_tensor(-0.37)
-        self.solver.wf.ao.atom_coords[1, 2].data = torch.as_tensor(0.37)
 
-        self.solver.configure(track=["local_energy"], loss="energy", grad="auto")
+        self.solver.wf.ao.atom_coords[0,
+                                      2].data = torch.as_tensor(-0.37)
+        self.solver.wf.ao.atom_coords[1,
+                                      2].data = torch.as_tensor(0.37)
+
+        self.solver.configure(track=['local_energy'],
+                              loss='energy', grad='auto')
         self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
         # load the best model
-        self.solver.wf.load(self.solver.hdf5file, "geo_opt")
+        self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
         self.solver.wf.eval()
 
         # sample and compute variables
@@ -85,8 +95,8 @@ class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
 
         # it might be too much to assert with the ground state energy
         gse = -1.16
-        assert e > 2 * gse and e < 0.0
-        assert v > 0 and v < 2.0
+        assert(e > 2 * gse and e < 0.)
+        assert(v > 0 and v < 2.)
 
 
 if __name__ == "__main__":

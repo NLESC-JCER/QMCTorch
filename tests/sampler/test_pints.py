@@ -7,6 +7,7 @@ from .test_sampler_base import TestSamplerBase
 
 
 class TestPints(TestSamplerBase):
+
     def test_Haario(self):
         """Test Metropolis sampling."""
 
@@ -15,9 +16,8 @@ class TestPints(TestSamplerBase):
             nstep=20,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain("normal"),
-            method=pints.HaarioBardenetACMC,
-        )
+            init=self.mol.domain('normal'),
+            method=pints.HaarioBardenetACMC)
 
         _ = sampler(self.wf.pdf)
 
@@ -29,10 +29,9 @@ class TestPints(TestSamplerBase):
             nstep=20,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain("normal"),
+            init=self.mol.domain('normal'),
             method=pints.MALAMCMC,
-            method_requires_grad=True,
-        )
+            method_requires_grad=True)
 
         _ = sampler(self.wf.pdf)
 

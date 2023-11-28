@@ -8,7 +8,11 @@ from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 
 
 class JastrowFactorElectronElectronNuclei(nn.Module):
-    def __init__(self, mol, jastrow_kernel, kernel_kwargs={}, cuda=False):
+
+    def __init__(self, mol,
+                 jastrow_kernel,
+                 kernel_kwargs={},
+                 cuda=False):
         """Jastrow Factor of the elec-elec-nuc term:
 
         .. math::
@@ -30,9 +34,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         self.nelec = mol.nup + mol.ndown
 
         self.cuda = cuda
-        self.device = torch.device("cpu")
+        self.device = torch.device('cpu')
         if self.cuda:
-            self.device = torch.device("cuda")
+            self.device = torch.device('cuda')
 
         atomic_pos = torch.as_tensor(mol.atom_coords)
         self.atoms = atomic_pos.to(self.device)
@@ -40,20 +44,24 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         self.ndim = 3
 
         # kernel function
-        self.jastrow_kernel = jastrow_kernel(
-            mol.nup, mol.ndown, atomic_pos, cuda, **kernel_kwargs
-        )
+        self.jastrow_kernel = jastrow_kernel(mol.nup, mol.ndown,
+                                             atomic_pos,
+                                             cuda,
+                                             **kernel_kwargs)
 
         # requires autograd to compute derivatives
         self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # index to extract tri up matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
-        self.index_elec = [self.index_row.tolist(), self.index_col.tolist()]
+        self.index_elec = [
+            self.index_row.tolist(), self.index_col.tolist()]
 
         # distance calculator
-        self.elel_dist = ElectronElectronDistance(self.nelec, self.ndim)
-        self.elnu_dist = ElectronNucleiDistance(self.nelec, self.atoms, self.ndim)
+        self.elel_dist = ElectronElectronDistance(
+            self.nelec, self.ndim)
+        self.elnu_dist = ElectronNucleiDistance(
+            self.nelec, self.atoms, self.ndim)
 
         # method to compute the second derivative
         # If False jastrow_factor_second_derivative will be used
@@ -69,10 +77,11 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         Returns:
             torch.tensor: mask of the tri up matrix
         """
-        mask = torch.zeros(self.nelec, self.nelec).type(torch.bool).to(self.device)
+        mask = torch.zeros(self.nelec, self.nelec).type(
+            torch.bool).to(self.device)
         index_col, index_row = [], []
-        for i in range(self.nelec - 1):
-            for j in range(i + 1, self.nelec):
+        for i in range(self.nelec-1):
+            for j in range(i+1, self.nelec):
                 index_row.append(i)
                 index_col.append(j)
                 mask[i, j] = True
@@ -112,7 +121,8 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         elif en_dist.ndim == 4:
             return out.permute(0, 1, 4, 3, 2)
         else:
-            raise ValueError("elec-nuc distance matrix should have 3 or 4 dim")
+            raise ValueError(
+                'elec-nuc distance matrix should have 3 or 4 dim')
 
     def assemble_dist(self, pos):
         """Assemle the different distances for easy calculations
@@ -167,9 +177,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
     def _to_device(self):
         """Export the non parameter variable to the device."""
 
-        self.device = torch.device("cuda")
+        self.device = torch.device('cuda')
         self.to(self.device)
-        attrs = ["static_weight"]
+        attrs = ['static_weight']
         for at in attrs:
             if at in self.__dict__:
                 self.__dict__[at] = self.__dict__[at].to(self.device)
@@ -211,10 +221,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             return self.jastrow_factor_derivative(r, dr, jast, sum_grad)
 
         elif derivative == 2:
+
             if self.auto_second_derivative:
-                return self.jastrow_factor_second_derivative_auto(
-                    pos, jast=jast.unsqueeze(-1)
-                )
+                return self.jastrow_factor_second_derivative_auto(pos, jast=jast.unsqueeze(-1))
 
             else:
                 dr = self.assemble_dist_deriv(pos, 1)
@@ -223,21 +232,23 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                 return self.jastrow_factor_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
+
             dr = self.assemble_dist_deriv(pos, 1)
-            djast = self.jastrow_factor_derivative(r, dr, jast, sum_grad)
+            djast = self.jastrow_factor_derivative(
+                r, dr, jast, sum_grad)
 
             if self.auto_second_derivative:
                 d2jast = self.jastrow_factor_second_derivative_auto(
-                    pos, jast=jast.unsqueeze(-1)
-                )
+                    pos, jast=jast.unsqueeze(-1))
             else:
                 d2r = self.assemble_dist_deriv(pos, 2)
-                d2jast = self.jastrow_factor_second_derivative(r, dr, d2r, jast)
+                d2jast = self.jastrow_factor_second_derivative(
+                    r, dr, d2r, jast)
 
-            return (jast.unsqueeze(-1), djast, d2jast)
+            return(jast.unsqueeze(-1), djast, d2jast)
 
         else:
-            raise ValueError("Derivative value nor recognized")
+            raise ValueError('Derivative value nor recognized')
 
     def jastrow_factor_derivative(self, r, dr, jast, sum_grad):
         """Compute the value of the derivative of the Jastrow factor
@@ -253,6 +264,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         """
 
         if sum_grad:
+
             # derivative of the jastrow elements
             # nbatch x ndim x natom x nelec_pair x 3
             # last dim is (ria rja rij)
@@ -277,6 +289,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             out.index_add_(-1, self.index_col, djast[..., 1])
 
         else:
+
             # derivative of the jastrow elements
             # nbatch x ndim x natom x nelec_pair x 3
             # last dim is (ria rja rij)
@@ -284,7 +297,8 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
             # sum atom
             djast = djast.sum(2)
-            djast = djast * jast.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
+            djast = djast * \
+                jast.unsqueeze(-1).unsqueeze(-1).unsqueeze(-1)
 
             # might cause problems with backward cause in place operation
             out_shape = list(djast.shape[:-2]) + [self.nelec]
@@ -316,7 +330,8 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         # puresecond derivative of the jast el
         # nbatch x ndim x natom x nelec_pair x 3
         # last dim is (ria rja rij)
-        d2jast = self.jastrow_kernel.compute_second_derivative(r, dr, d2r)
+        d2jast = self.jastrow_kernel.compute_second_derivative(
+            r, dr, d2r)
 
         # sum over the dim and the atom
         d2jast = d2jast.sum([1, 2])
@@ -360,7 +375,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         out.index_add_(-1, self.index_row, djast[..., 0])
         out.index_add_(-1, self.index_col, djast[..., 1])
 
-        return ((out.sum(2)) ** 2).sum(1)
+        return ((out.sum(2))**2).sum(1)
 
     def jastrow_factor_second_derivative_auto(self, pos, jast=None):
         """Compute the second derivative of the jastrow factor automatically.
@@ -372,24 +387,24 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         """
 
         def hess(out, pos):
+
             # compute the jacobian
             z = Variable(torch.ones_like(out))
-            jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[
-                0
-            ]
+            jacob = grad(out, pos,
+                         grad_outputs=z,
+                         only_inputs=True,
+                         create_graph=True)[0]
 
             # compute the diagonal element of the Hessian
             z = Variable(torch.ones(jacob.shape[0])).to(self.device)
             hess = torch.zeros_like(jacob)
 
             for idim in range(jacob.shape[1]):
-                tmp = grad(
-                    jacob[:, idim],
-                    pos,
-                    grad_outputs=z,
-                    only_inputs=True,
-                    create_graph=True,
-                )[0]
+
+                tmp = grad(jacob[:, idim], pos,
+                           grad_outputs=z,
+                           only_inputs=True,
+                           create_graph=True)[0]
 
                 hess[:, idim] = tmp[:, idim]
 

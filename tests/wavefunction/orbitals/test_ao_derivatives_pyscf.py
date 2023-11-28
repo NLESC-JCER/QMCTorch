@@ -8,19 +8,23 @@ from torch.autograd import Variable
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
-
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 class TestAOderivativesPyscf(BaseTestAO.BaseTestAOderivatives):
+
     def setUp(self):
+
         torch.manual_seed(101)
         np.random.seed(101)
 
         # define the molecule
-        at = "Li 0 0 0; H 0 0 1"
-        basis = "dzp"
-        self.mol = Molecule(atom=at, calculator="pyscf", basis=basis, unit="bohr")
+        at = 'Li 0 0 0; H 0 0 1'
+        basis = 'dzp'
+        self.mol = Molecule(atom=at,
+                            calculator='pyscf',
+                            basis=basis,
+                            unit='bohr')
 
         # define the aos
         self.ao = AtomicOrbitals(self.mol)

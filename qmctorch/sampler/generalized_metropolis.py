@@ -9,18 +9,12 @@ from .. import log
 
 
 class GeneralizedMetropolis(SamplerBase):
-    def __init__(
-        self,
-        nwalkers=100,
-        nstep=1000,
-        step_size=3,
-        ntherm=-1,
-        ndecor=1,
-        nelec=1,
-        ndim=1,
-        init={"type": "uniform", "min": -5, "max": 5},
-        cuda=False,
-    ):
+
+    def __init__(self, nwalkers=100, nstep=1000, step_size=3,
+                 ntherm=-1, ndecor=1,
+                 nelec=1, ndim=1,
+                 init={'type': 'uniform', 'min': -5, 'max': 5},
+                 cuda=False):
         """Generalized Metropolis Hasting sampler
 
         Args:
@@ -35,9 +29,9 @@ class GeneralizedMetropolis(SamplerBase):
             cuda (bool, optional): use cuda. Defaults to False.
         """
 
-        SamplerBase.__init__(
-            self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
-        )
+        SamplerBase.__init__(self, nwalkers, nstep,
+                             step_size, ntherm, ndecor, nelec, ndim, init,
+                             cuda)
 
     def __call__(self, pdf, pos=None, with_tqdm=True):
         """Generate a series of point using MC sampling
@@ -52,6 +46,7 @@ class GeneralizedMetropolis(SamplerBase):
             torch.tensor: positions of the walkers
         """
         with torch.no_grad():
+
             if self.ntherm < 0:
                 self.ntherm = self.nstep + self.ntherm
 
@@ -63,23 +58,22 @@ class GeneralizedMetropolis(SamplerBase):
             rhoi = pdf(xi)
             drifti = self.get_drift(pdf, xi)
 
-            rhoi[rhoi == 0] = 1e-16
+            rhoi[rhoi == 0] = 1E-16
             pos, rate, idecor = [], 0, 0
 
-            rng = tqdm(
-                range(self.nstep),
-                desc="INFO:QMCTorch|  Sampling",
-                disable=not with_tqdm,
-            )
+            rng = tqdm(range(self.nstep),
+                       desc='INFO:QMCTorch|  Sampling',
+                       disable=not with_tqdm)
 
             for istep in rng:
+
                 # new positions
                 xf = self.move(drifti)
 
                 # new function
                 rhof = pdf(xf)
                 driftf = self.get_drift(pdf, xf)
-                rhof[rhof == 0.0] = 1e-16
+                rhof[rhof == 0.] = 1E-16
 
                 # transtions
                 Tif = self.trans(xi, xf, driftf)
@@ -95,18 +89,17 @@ class GeneralizedMetropolis(SamplerBase):
                 # update position/function value
                 xi[index, :] = xf[index, :]
                 rhoi[index] = rhof[index]
-                rhoi[rhoi == 0] = 1e-16
+                rhoi[rhoi == 0] = 1E-16
 
                 drifti[index, :] = driftf[index, :]
 
-                if istep >= self.ntherm:
-                    if idecor % self.ndecor == 0:
+                if (istep >= self.ntherm):
+                    if (idecor % self.ndecor == 0):
                         pos.append(xi.clone().detach())
                     idecor += 1
 
-            log.options(style="percent").debug(
-                "  Acceptance rate %1.3f" % (rate / self.nstep * 100)
-            )
+            log.options(style='percent').debug("  Acceptance rate %1.3f" %
+                                               (rate / self.nstep * 100))
 
             self.walkers.pos.data = xi.data
 
@@ -124,12 +117,15 @@ class GeneralizedMetropolis(SamplerBase):
 
         # clone and reshape data : Nwlaker, Nelec, Ndim
         new_pos = self.walkers.pos.clone()
-        new_pos = new_pos.view(self.walkers.nwalkers, self.nelec, self.ndim)
+        new_pos = new_pos.view(self.walkers.nwalkers,
+                               self.nelec, self.ndim)
 
         # get indexes
-        index = torch.LongTensor(self.walkers.nwalkers).random_(0, self.nelec)
+        index = torch.LongTensor(self.walkers.nwalkers).random_(
+            0, self.nelec)
 
-        new_pos[range(self.walkers.nwalkers), index, :] += self._move(drift, index)
+        new_pos[range(self.walkers.nwalkers), index,
+                :] += self._move(drift, index)
 
         return new_pos.view(self.walkers.nwalkers, self.nelec * self.ndim)
 
@@ -144,16 +140,14 @@ class GeneralizedMetropolis(SamplerBase):
             torch.tensor: position of the walkers
         """
 
-        d = drift.view(self.walkers.nwalkers, self.nelec, self.ndim)
+        d = drift.view(self.walkers.nwalkers,
+                       self.nelec, self.ndim)
 
-        mv = MultivariateNormal(
-            torch.zeros(self.ndim), np.sqrt(self.step_size) * torch.eye(self.ndim)
-        )
+        mv = MultivariateNormal(torch.zeros(self.ndim), np.sqrt(
+            self.step_size) * torch.eye(self.ndim))
 
-        return (
-            self.step_size * d[range(self.walkers.nwalkers), index, :]
+        return self.step_size * d[range(self.walkers.nwalkers), index, :] \
             + mv.sample((self.walkers.nwalkers, 1)).squeeze()
-        )
 
     def trans(self, xf, xi, drifti):
         """transform the positions
@@ -167,7 +161,7 @@ class GeneralizedMetropolis(SamplerBase):
             [type]: [description]
         """
         a = (xf - xi - drifti * self.step_size).norm(dim=1)
-        return torch.exp(-0.5 * a / self.step_size)
+        return torch.exp(- 0.5 * a / self.step_size)
 
     def get_drift(self, pdf, x):
         """Compute the drift velocity
@@ -180,10 +174,13 @@ class GeneralizedMetropolis(SamplerBase):
             torch.tensor: drift velocity
         """
         with torch.enable_grad():
+
             x.requires_grad = True
             rho = pdf(x).view(-1, 1)
             z = Variable(torch.ones_like(rho))
-            grad_rho = grad(rho, x, grad_outputs=z, only_inputs=True)[0]
+            grad_rho = grad(rho, x,
+                            grad_outputs=z,
+                            only_inputs=True)[0]
             return 0.5 * grad_rho / rho
 
     def _accept(self, P):

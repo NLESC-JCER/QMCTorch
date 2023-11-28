@@ -14,29 +14,26 @@ from .test_base_solver import BaseTestSolvers
 
 
 class TestLiH(BaseTestSolvers.BaseTestSolverMolecule):
+
     def setUp(self):
+
         torch.manual_seed(0)
         np.random.seed(0)
 
         # molecule
         self.mol = Molecule(
-            atom="Li 0 0 0; H 0 0 3.015",
-            unit="bohr",
-            calculator="pyscf",
-            basis="sto-3g",
-        )
+            atom='Li 0 0 0; H 0 0 3.015',
+            unit='bohr',
+            calculator='pyscf',
+            basis='sto-3g')
 
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # wave function
-        self.wf = SlaterJastrow(
-            self.mol,
-            kinetic="jacobi",
-            configs="single(2,2)",
-            include_all_mo=False,
-            jastrow=jastrow,
-        )
+        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
+                                configs='single(2,2)',
+                                include_all_mo=False, jastrow=jastrow)
 
         # sampler
         self.sampler = Metropolis(
@@ -45,15 +42,17 @@ class TestLiH(BaseTestSolvers.BaseTestSolverMolecule):
             step_size=0.05,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain("normal"),
-            move={"type": "all-elec", "proba": "normal"},
-        )
+            init=self.mol.domain('normal'),
+            move={
+                'type': 'all-elec',
+                'proba': 'normal'})
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
 
 if __name__ == "__main__":

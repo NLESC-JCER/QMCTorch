@@ -1,9 +1,5 @@
 from qmctorch.utils.plot_data import (
-    plot_energy,
-    plot_data,
-    plot_block,
-    plot_walkers_traj,
-)
+    plot_energy, plot_data, plot_block, plot_walkers_traj)
 import matplotlib.pyplot as plt
 import numpy as np
 

@@ -10,19 +10,18 @@ from .state_dependent_normal_proposal import StateDependentNormalProposal
 
 
 class MetropolisHasting(SamplerBase):
-    def __init__(
-        self,
-        kernel=ConstantVarianceKernel(0.2),
-        nwalkers: int = 100,
-        nstep: int = 1000,
-        ntherm: int = -1,
-        ndecor: int = 1,
-        nelec: int = 1,
-        ndim: int = 3,
-        init: Dict = {"min": -5, "max": 5},
-        logspace: bool = False,
-        cuda: bool = False,
-    ):
+
+    def __init__(self,
+                 kernel=ConstantVarianceKernel(0.2),
+                 nwalkers: int = 100,
+                 nstep: int = 1000,
+                 ntherm: int = -1,
+                 ndecor: int = 1,
+                 nelec: int = 1,
+                 ndim: int = 3,
+                 init: Dict = {'min': -5, 'max': 5},
+                 logspace: bool = False,
+                 cuda: bool = False):
         """Metropolis Hasting generator
 
         Args:
@@ -53,11 +52,12 @@ class MetropolisHasting(SamplerBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(
-            self, nwalkers, nstep, 0.0, ntherm, ndecor, nelec, ndim, init, cuda
-        )
+        SamplerBase.__init__(self, nwalkers, nstep,
+                             0.0, ntherm, ndecor,
+                             nelec, ndim, init, cuda)
 
-        self.proposal = StateDependentNormalProposal(kernel, nelec, ndim, self.device)
+        self.proposal = StateDependentNormalProposal(
+            kernel, nelec, ndim, self.device)
 
         self.proposal.kernel.nelec = nelec
         self.proposal.kernel.ndim = ndim
@@ -82,12 +82,8 @@ class MetropolisHasting(SamplerBase):
         """
         return lambda x: torch.log(func(x))
 
-    def __call__(
-        self,
-        pdf: Callable,
-        pos: Union[None, torch.Tensor] = None,
-        with_tqdm: bool = True,
-    ) -> torch.Tensor:
+    def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
@@ -101,9 +97,10 @@ class MetropolisHasting(SamplerBase):
         """
 
         if self.ntherm >= self.nstep:
-            raise ValueError("Thermalisation longer than trajectory")
+            raise ValueError('Thermalisation longer than trajectory')
 
         with torch.no_grad():
+
             if self.ntherm < 0:
                 self.ntherm = self.nstep + self.ntherm
 
@@ -112,16 +109,16 @@ class MetropolisHasting(SamplerBase):
 
             pos, rate, idecor = [], 0, 0
 
-            rng = tqdm(
-                range(self.nstep),
-                desc="INFO:QMCTorch|  Sampling",
-                disable=not with_tqdm,
-            )
+            rng = tqdm(range(self.nstep),
+                       desc='INFO:QMCTorch|  Sampling',
+                       disable=not with_tqdm)
             tstart = time()
 
             for istep in rng:
+
                 # new positions
-                Xn = self.walkers.pos + self.proposal(self.walkers.pos)
+                Xn = self.walkers.pos + \
+                    self.proposal(self.walkers.pos)
 
                 # new function
                 fxn = pdf(Xn)
@@ -130,7 +127,8 @@ class MetropolisHasting(SamplerBase):
                 prob_ratio = fxn / fx
 
                 # get transition ratio
-                trans_ratio = self.proposal.get_transition_ratio(self.walkers.pos, Xn)
+                trans_ratio = self.proposal.get_transition_ratio(
+                    self.walkers.pos, Xn)
 
                 # get the proba
                 df = prob_ratio * trans_ratio
@@ -139,26 +137,25 @@ class MetropolisHasting(SamplerBase):
                 index = self.accept_reject(df)
 
                 # acceptance rate
-                rate += index.byte().sum().float().to("cpu") / (self.walkers.nwalkers)
+                rate += index.byte().sum().float().to('cpu') / \
+                    (self.walkers.nwalkers)
 
                 # update position/function value
                 self.walkers.pos[index, :] = Xn[index, :]
                 fx[index] = fxn[index]
 
-                if istep >= self.ntherm:
-                    if idecor % self.ndecor == 0:
-                        pos.append(self.walkers.pos.to("cpu").clone())
+                if (istep >= self.ntherm):
+                    if (idecor % self.ndecor == 0):
+                        pos.append(self.walkers.pos.to('cpu').clone())
                     idecor += 1
 
             if with_tqdm:
                 log.info(
-                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100)
-                )
+                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100))
                 log.info(
-                    "   Timing statistics   : {:1.2f} steps/sec.",
-                    self.nstep / (time() - tstart),
-                )
-                log.info("   Total Time          : {:1.2f} sec.", (time() - tstart))
+                    "   Timing statistics   : {:1.2f} steps/sec.", self.nstep/(time()-tstart))
+                log.info(
+                    "   Total Time          : {:1.2f} sec.", (time()-tstart))
 
         return torch.cat(pos).requires_grad_()
 

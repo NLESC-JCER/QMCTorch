@@ -6,13 +6,10 @@ import torch.optim as optim
 
 
 from qmctorch.sampler import Metropolis
-from qmctorch.utils.plot_data import (
-    plot_block,
-    plot_blocking_energy,
-    plot_correlation_coefficient,
-    plot_integrated_autocorrelation_time,
-    plot_walkers_traj,
-)
+from qmctorch.utils.plot_data import (plot_block, plot_blocking_energy,
+                                      plot_correlation_coefficient,
+                                      plot_integrated_autocorrelation_time,
+                                      plot_walkers_traj)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
@@ -22,7 +19,9 @@ __PLOT__ = True
 
 
 class TestH2GeoOpt(unittest.TestCase):
+
     def setUp(self):
+
         torch.manual_seed(0)
         np.random.seed(0)
 
@@ -32,19 +31,19 @@ class TestH2GeoOpt(unittest.TestCase):
 
         # molecule
         self.mol = Molecule(
-            atom="H 0 0 -0.69; H 0 0 0.69",
-            unit="bohr",
-            calculator="pyscf",
-            basis="sto-3g",
-        )
+            atom='H 0 0 -0.69; H 0 0 0.69',
+            unit='bohr',
+            calculator='pyscf',
+            basis='sto-3g')
 
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # wave function
-        self.wf = SlaterJastrow(
-            self.mol, kinetic="auto", configs="single(2,2)", jastrow=jastrow
-        )
+        self.wf = SlaterJastrow(self.mol,
+                                kinetic='auto',
+                                configs='single(2,2)',
+                                jastrow=jastrow)
 
         # sampler
         self.sampler = Metropolis(
@@ -53,25 +52,31 @@ class TestH2GeoOpt(unittest.TestCase):
             step_size=0.5,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain("normal"),
-            move={"type": "all-elec", "proba": "normal"},
-        )
+            init=self.mol.domain('normal'),
+            move={
+                'type': 'all-elec',
+                'proba': 'normal'})
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler,
+                                          optimizer=self.opt)
 
     def test_geo_opt(self):
-        self.solver.wf.ao.atom_coords[0, 2].data = torch.as_tensor(-0.37)
-        self.solver.wf.ao.atom_coords[1, 2].data = torch.as_tensor(0.37)
 
-        self.solver.configure(track=["local_energy"], loss="energy", grad="auto")
+        self.solver.wf.ao.atom_coords[0,
+                                      2].data = torch.as_tensor(-0.37)
+        self.solver.wf.ao.atom_coords[1,
+                                      2].data = torch.as_tensor(0.37)
+
+        self.solver.configure(track=['local_energy'],
+                              loss='energy', grad='auto')
         self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
         # load the best model
-        self.solver.wf.load(self.solver.hdf5file, "geo_opt")
+        self.solver.wf.load(self.solver.hdf5file, 'geo_opt')
         self.solver.wf.eval()
 
         # sample and compute variables
@@ -83,8 +88,8 @@ class TestH2GeoOpt(unittest.TestCase):
 
         # it might be too much to assert with the ground state energy
         gse = -1.16
-        assert e > 2 * gse and e < 0.0
-        assert v > 0 and v < 2.0
+        assert(e > 2 * gse and e < 0.)
+        assert(v > 0 and v < 2.)
 
 
 if __name__ == "__main__":

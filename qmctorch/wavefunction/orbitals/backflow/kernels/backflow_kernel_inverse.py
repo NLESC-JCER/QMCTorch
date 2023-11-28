@@ -4,6 +4,7 @@ from .backflow_kernel_base import BackFlowKernelBase
 
 
 class BackFlowKernelInverse(BackFlowKernelBase):
+
     def __init__(self, mol, cuda=False):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
@@ -17,7 +18,8 @@ class BackFlowKernelInverse(BackFlowKernelBase):
             f(r_{ij) = \\frac{w}{r_{ij}
         """
         super().__init__(mol, cuda)
-        self.weight = nn.Parameter(torch.as_tensor([1e-3]))  # .to(self.device)
+        self.weight = nn.Parameter(
+            torch.as_tensor([1E-3]))  # .to(self.device)
 
     def _backflow_kernel(self, ree):
         """Computes the backflow kernel:
@@ -34,7 +36,7 @@ class BackFlowKernelInverse(BackFlowKernelBase):
 
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
         mask = torch.ones_like(ree) - eye
-        return self.weight * mask * (1.0 / (ree + eye) - eye)
+        return self.weight * mask * (1./(ree+eye) - eye)
 
     def _backflow_kernel_derivative(self, ree):
         """Computes the derivative of the kernel function
@@ -50,8 +52,8 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """
 
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
-        invree = 1.0 / (ree + eye) - eye
-        return -self.weight * invree * invree
+        invree = (1./(ree+eye) - eye)
+        return - self.weight * invree * invree
 
     def _backflow_kernel_second_derivative(self, ree):
         """Computes the derivative of the kernel function
@@ -67,5 +69,5 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """
 
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
-        invree = 1.0 / (ree + eye) - eye
+        invree = (1./(ree+eye) - eye)
         return 2 * self.weight * invree * invree * invree

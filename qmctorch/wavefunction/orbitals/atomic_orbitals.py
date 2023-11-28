@@ -2,16 +2,13 @@ import torch
 from torch import nn
 
 from .norm_orbital import atomic_orbital_norm
-from .radial_functions import (
-    radial_gaussian,
-    radial_gaussian_pure,
-    radial_slater,
-    radial_slater_pure,
-)
+from .radial_functions import (radial_gaussian, radial_gaussian_pure,
+                               radial_slater, radial_slater_pure)
 from .spherical_harmonics import Harmonics
 
 
 class AtomicOrbitals(nn.Module):
+
     def __init__(self, mol, cuda=False):
         """Computes the value of atomic orbitals
 
@@ -29,9 +26,8 @@ class AtomicOrbitals(nn.Module):
         self.ndim = 3
 
         # make the atomic position optmizable
-        self.atom_coords = nn.Parameter(
-            torch.as_tensor(mol.basis.atom_coords_internal).type(dtype)
-        )
+        self.atom_coords = nn.Parameter(torch.as_tensor(
+            mol.basis.atom_coords_internal).type(dtype))
         self.atom_coords.requires_grad = True
         self.natoms = len(self.atom_coords)
         self.atomic_number = mol.atomic_number
@@ -39,94 +35,85 @@ class AtomicOrbitals(nn.Module):
         # define the BAS positions.
         self.nshells = torch.as_tensor(mol.basis.nshells)
         self.nao_per_atom = torch.as_tensor(mol.basis.nao_per_atom)
-        self.bas_coords = self.atom_coords.repeat_interleave(self.nshells, dim=0)
+        self.bas_coords = self.atom_coords.repeat_interleave(
+            self.nshells, dim=0)
         self.nbas = len(self.bas_coords)
 
         # index for the contractions
         self.index_ctr = torch.as_tensor(mol.basis.index_ctr)
         self.nctr_per_ao = torch.as_tensor(mol.basis.nctr_per_ao)
-        self.contract = not len(torch.unique(self.index_ctr)) == len(self.index_ctr)
+        self.contract = not len(torch.unique(
+            self.index_ctr)) == len(self.index_ctr)
 
         # get the coeffs of the bas
-        self.bas_coeffs = torch.as_tensor(mol.basis.bas_coeffs).type(dtype)
+        self.bas_coeffs = torch.as_tensor(
+            mol.basis.bas_coeffs).type(dtype)
 
         # get the exponents of the bas
-        self.bas_exp = nn.Parameter(torch.as_tensor(mol.basis.bas_exp).type(dtype))
+        self.bas_exp = nn.Parameter(
+            torch.as_tensor(mol.basis.bas_exp).type(dtype))
         self.bas_exp.requires_grad = True
 
         # harmonics generator
         self.harmonics_type = mol.basis.harmonics_type
-        if mol.basis.harmonics_type == "sph":
+        if mol.basis.harmonics_type == 'sph':
             self.bas_n = torch.as_tensor(mol.basis.bas_n).type(dtype)
             self.harmonics = Harmonics(
                 mol.basis.harmonics_type,
                 bas_l=mol.basis.bas_l,
                 bas_m=mol.basis.bas_m,
-                cuda=cuda,
-            )
+                cuda=cuda)
 
-        elif mol.basis.harmonics_type == "cart":
+        elif mol.basis.harmonics_type == 'cart':
             self.bas_n = torch.as_tensor(mol.basis.bas_kr).type(dtype)
             self.harmonics = Harmonics(
                 mol.basis.harmonics_type,
                 bas_kx=mol.basis.bas_kx,
                 bas_ky=mol.basis.bas_ky,
                 bas_kz=mol.basis.bas_kz,
-                cuda=cuda,
-            )
+                cuda=cuda)
 
         # select the radial apart
-        radial_dict = {
-            "sto": radial_slater,
-            "gto": radial_gaussian,
-            "sto_pure": radial_slater_pure,
-            "gto_pure": radial_gaussian_pure,
-        }
+        radial_dict = {'sto': radial_slater,
+                       'gto': radial_gaussian,
+                       'sto_pure': radial_slater_pure,
+                       'gto_pure': radial_gaussian_pure}
         self.radial = radial_dict[mol.basis.radial_type]
         self.radial_type = mol.basis.radial_type
 
         # get the normalisation constants
-        if hasattr(mol.basis, "bas_norm") and False:
-            self.norm_cst = torch.as_tensor(mol.basis.bas_norm).type(dtype)
+        if hasattr(mol.basis, 'bas_norm') and False:
+            self.norm_cst = torch.as_tensor(
+                mol.basis.bas_norm).type(dtype)
         else:
             with torch.no_grad():
-                self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
+                self.norm_cst = atomic_orbital_norm(
+                    mol.basis).type(dtype)
 
         self.cuda = cuda
-        self.device = torch.device("cpu")
+        self.device = torch.device('cpu')
         if self.cuda:
             self._to_device()
 
     def __repr__(self):
         name = self.__class__.__name__
-        return name + "(%s, %s, %d -> (%d,%d) )" % (
-            self.radial_type,
-            self.harmonics_type,
-            self.nelec * self.ndim,
-            self.nelec,
-            self.norb,
-        )
+        return name + '(%s, %s, %d -> (%d,%d) )' % (self.radial_type, self.harmonics_type,
+                                                    self.nelec*self.ndim, self.nelec,
+                                                    self.norb)
 
     def _to_device(self):
         """Export the non parameter variable to the device."""
 
-        self.device = torch.device("cuda")
+        self.device = torch.device('cuda')
         self.to(self.device)
-        attrs = [
-            "bas_n",
-            "bas_coeffs",
-            "nshells",
-            "norm_cst",
-            "index_ctr",
-            "nctr_per_ao",
-            "nao_per_atom",
-        ]
+        attrs = ['bas_n', 'bas_coeffs',
+                 'nshells', 'norm_cst',
+                 'index_ctr', 'nctr_per_ao',
+                 'nao_per_atom']
         for at in attrs:
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(
-        self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False
-    ):
+    def forward(self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False):
         """Computes the values of the atomic orbitals.
 
         .. math::
@@ -174,10 +161,10 @@ class AtomicOrbitals(nn.Module):
             derivative = [derivative]
 
         if not sum_grad:
-            assert 1 in derivative
+            assert(1 in derivative)
 
         if not sum_hess:
-            assert 2 in derivative
+            assert(2 in derivative)
 
         if one_elec:
             nelec_save = self.nelec
@@ -187,10 +174,12 @@ class AtomicOrbitals(nn.Module):
             ao = self._compute_ao_values(pos)
 
         elif derivative == [1]:
-            ao = self._compute_first_derivative_ao_values(pos, sum_grad)
+            ao = self._compute_first_derivative_ao_values(
+                pos, sum_grad)
 
         elif derivative == [2]:
-            ao = self._compute_second_derivative_ao_values(pos, sum_hess)
+            ao = self._compute_second_derivative_ao_values(
+                pos, sum_hess)
 
         elif derivative == [3]:
             ao = self._compute_mixed_second_derivative_ao_values(pos)
@@ -200,8 +189,7 @@ class AtomicOrbitals(nn.Module):
 
         else:
             raise ValueError(
-                "derivative must be 0, 1, 2, 3 or [0, 1, 2, 3], got ", derivative
-            )
+                'derivative must be 0, 1, 2, 3 or [0, 1, 2, 3], got ', derivative)
 
         if one_elec:
             self.nelec = nelec_save
@@ -270,7 +258,9 @@ class AtomicOrbitals(nn.Module):
 
         xyz, r = self._process_position(pos)
 
-        R, dR = self.radial(r, self.bas_n, self.bas_exp, xyz=xyz, derivative=[0, 1])
+        R, dR = self.radial(r, self.bas_n,
+                            self.bas_exp, xyz=xyz,
+                            derivative=[0, 1])
 
         Y, dY = self.harmonics(xyz, derivative=[0, 1])
 
@@ -306,9 +296,10 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R, dR = self.radial(
-            r, self.bas_n, self.bas_exp, xyz=xyz, derivative=[0, 1], sum_grad=False
-        )
+        R, dR = self.radial(r, self.bas_n,
+                            self.bas_exp, xyz=xyz,
+                            derivative=[0, 1],
+                            sum_grad=False)
 
         Y, dY = self.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
@@ -329,12 +320,12 @@ class AtomicOrbitals(nn.Module):
         nbatch = R.shape[0]
         bas = dR * Y.unsqueeze(-1) + R.unsqueeze(-1) * dY
 
-        bas = self.norm_cst.unsqueeze(-1) * self.bas_coeffs.unsqueeze(-1) * bas
+        bas = self.norm_cst.unsqueeze(-1) * \
+            self.bas_coeffs.unsqueeze(-1) * bas
 
         if self.contract:
-            ao = torch.zeros(nbatch, self.nelec, self.norb, 3, device=self.device).type(
-                torch.get_default_dtype()
-            )
+            ao = torch.zeros(nbatch, self.nelec, self.norb,
+                             3, device=self.device).type(torch.get_default_dtype())
             ao.index_add_(2, self.index_ctr, bas)
         else:
             ao = bas
@@ -370,11 +361,13 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R, dR, d2R = self.radial(
-            r, self.bas_n, self.bas_exp, xyz=xyz, derivative=[0, 1, 2], sum_grad=False
-        )
+        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 sum_grad=False)
 
-        Y, dY, d2Y = self.harmonics(xyz, derivative=[0, 1, 2], sum_grad=False)
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    sum_grad=False)
         return self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
     def _sum_diag_hessian_kernel(self, R, dR, d2R, Y, dY, d2Y):
@@ -392,7 +385,8 @@ class AtomicOrbitals(nn.Module):
             torch.tensor: values of the laplacian of the AOs (with contraction)
         """
 
-        d2ao = self.norm_cst * (d2R * Y + 2.0 * (dR * dY).sum(3) + R * d2Y)
+        d2ao = self.norm_cst * \
+            (d2R * Y + 2. * (dR * dY).sum(3) + R * d2Y)
         if self.contract:
             d2ao = self._contract(d2ao)
         return d2ao
@@ -411,19 +405,13 @@ class AtomicOrbitals(nn.Module):
 
         xyz, r = self._process_position(pos)
 
-        R, dR, d2R = self.radial(
-            r,
-            self.bas_n,
-            self.bas_exp,
-            xyz=xyz,
-            derivative=[0, 1, 2],
-            sum_grad=False,
-            sum_hess=False,
-        )
+        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 sum_grad=False, sum_hess=False)
 
-        Y, dY, d2Y = self.harmonics(
-            xyz, derivative=[0, 1, 2], sum_grad=False, sum_hess=False
-        )
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    sum_grad=False, sum_hess=False)
 
         return self._diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
@@ -444,16 +432,13 @@ class AtomicOrbitals(nn.Module):
 
         nbatch = R.shape[0]
 
-        bas = (
-            self.norm_cst.unsqueeze(-1)
-            * self.bas_coeffs.unsqueeze(-1)
-            * (d2R * Y.unsqueeze(-1) + 2.0 * (dR * dY) + R.unsqueeze(-1) * d2Y)
-        )
+        bas = self.norm_cst.unsqueeze(-1) * self.bas_coeffs.unsqueeze(-1) * \
+            (d2R * Y.unsqueeze(-1) + 2. *
+             (dR * dY) + R.unsqueeze(-1) * d2Y)
 
         if self.contract:
-            d2ao = torch.zeros(
-                nbatch, self.nelec, self.norb, 3, device=self.device
-            ).type(torch.get_default_dtype())
+            d2ao = torch.zeros(nbatch, self.nelec, self.norb,
+                               3, device=self.device).type(torch.get_default_dtype())
             d2ao.index_add_(2, self.index_ctr, bas)
         else:
             d2ao = bas
@@ -473,16 +458,14 @@ class AtomicOrbitals(nn.Module):
         """
         xyz, r = self._process_position(pos)
 
-        R, dR, d2R, d2mR = self.radial(
-            r,
-            self.bas_n,
-            self.bas_exp,
-            xyz=xyz,
-            derivative=[0, 1, 2, 3],
-            sum_grad=False,
-        )
+        R, dR, d2R, d2mR = self.radial(r, self.bas_n, self.bas_exp,
+                                       xyz=xyz, derivative=[
+                                           0, 1, 2, 3],
+                                       sum_grad=False)
 
-        Y, dY, d2Y, d2mY = self.harmonics(xyz, derivative=[0, 1, 2, 3], sum_grad=False)
+        Y, dY, d2Y, d2mY = self.harmonics(xyz,
+                                          derivative=[0, 1, 2, 3],
+                                          sum_grad=False)
 
         return self._off_diag_hessian_kernel(R, dR, d2R, d2mR, Y, dY, d2Y, d2mY)
 
@@ -505,25 +488,15 @@ class AtomicOrbitals(nn.Module):
 
         nbatch = R.shape[0]
 
-        bas = (
-            self.norm_cst.unsqueeze(-1)
-            * self.bas_coeffs.unsqueeze(-1)
-            * (
-                d2mR * Y.unsqueeze(-1)
-                + (
-                    (
-                        dR[..., [[0, 1], [0, 2], [1, 2]]]
-                        * dY[..., [[1, 0], [2, 0], [2, 1]]]
-                    ).sum(-1)
-                )
-                + R.unsqueeze(-1) * d2mY
-            )
-        )
+        bas = self.norm_cst.unsqueeze(-1) * self.bas_coeffs.unsqueeze(-1) * \
+            (d2mR * Y.unsqueeze(-1) +
+             ((dR[..., [[0, 1], [0, 2], [1, 2]]] *
+               dY[..., [[1, 0], [2, 0], [2, 1]]]).sum(-1))
+             + R.unsqueeze(-1) * d2mY)
 
         if self.contract:
-            d2ao = torch.zeros(
-                nbatch, self.nelec, self.norb, 3, device=self.device
-            ).type(torch.get_default_dtype())
+            d2ao = torch.zeros(nbatch, self.nelec, self.norb,
+                               3, device=self.device).type(torch.get_default_dtype())
             d2ao.index_add_(2, self.index_ctr, bas)
         else:
             d2ao = bas
@@ -549,19 +522,19 @@ class AtomicOrbitals(nn.Module):
 
         # the gradients elements are needed to compute the second der
         # we therefore use sum_grad=False regardless of the input arg
-        R, dR, d2R = self.radial(
-            r, self.bas_n, self.bas_exp, xyz=xyz, derivative=[0, 1, 2], sum_grad=False
-        )
+        R, dR, d2R = self.radial(r, self.bas_n, self.bas_exp,
+                                 xyz=xyz, derivative=[0, 1, 2],
+                                 sum_grad=False)
 
         # the gradients elements are needed to compute the second der
         # we therefore use sum_grad=False regardless of the input arg
-        Y, dY, d2Y = self.harmonics(xyz, derivative=[0, 1, 2], sum_grad=False)
+        Y, dY, d2Y = self.harmonics(xyz,
+                                    derivative=[0, 1, 2],
+                                    sum_grad=False)
 
-        return (
-            self._ao_kernel(R, Y),
-            self._gradient_kernel(R, dR, Y, dY),
-            self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y),
-        )
+        return (self._ao_kernel(R, Y),
+                self._gradient_kernel(R, dR, Y, dY),
+                self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y))
 
     def _process_position(self, pos):
         """Computes the positions/distance bewteen elec/orb
@@ -580,10 +553,8 @@ class AtomicOrbitals(nn.Module):
 
         # repeat/interleave to get vector and distance between
         # electrons and orbitals
-        return (
-            xyz.repeat_interleave(self.nshells, dim=2),
-            r.repeat_interleave(self.nshells, dim=2),
-        )
+        return (xyz.repeat_interleave(self.nshells, dim=2),
+                r.repeat_interleave(self.nshells, dim=2))
 
     def _elec_atom_dist(self, pos):
         """Computes the positions/distance bewteen elec/atoms
@@ -599,10 +570,11 @@ class AtomicOrbitals(nn.Module):
         """
 
         # compute the vectors between electrons and atoms
-        xyz = pos.view(-1, self.nelec, 1, self.ndim) - self.atom_coords[None, ...]
+        xyz = (pos.view(-1, self.nelec, 1, self.ndim) -
+               self.atom_coords[None, ...])
 
         # distance between electrons and atoms
-        r = torch.sqrt((xyz * xyz).sum(3))
+        r = torch.sqrt((xyz*xyz).sum(3))
 
         return xyz, r
 
@@ -617,9 +589,9 @@ class AtomicOrbitals(nn.Module):
         """
         nbatch = bas.shape[0]
         bas = self.bas_coeffs * bas
-        cbas = torch.zeros(nbatch, self.nelec, self.norb, device=self.device).type(
-            torch.get_default_dtype()
-        )
+        cbas = torch.zeros(nbatch, self.nelec,
+                           self.norb, device=self.device
+                           ).type(torch.get_default_dtype())
         cbas.index_add_(2, self.index_ctr, bas)
         return cbas
 
@@ -646,5 +618,6 @@ class AtomicOrbitals(nn.Module):
 
         ao_new = ao.clone()
         ids, ide = (idelec) * 3, (idelec + 1) * 3
-        ao_new[:, idelec, :] = self.forward(pos[:, ids:ide], one_elec=True).squeeze(1)
+        ao_new[:, idelec, :] = self.forward(
+            pos[:, ids:ide], one_elec=True).squeeze(1)
         return ao_new

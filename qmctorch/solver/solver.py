@@ -2,16 +2,18 @@ from copy import deepcopy
 from time import time
 
 import torch
-from qmctorch.utils import Loss, OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
+from qmctorch.utils import (Loss,
+                            OrthoReg, add_group_attr,
+                            dump_to_hdf5, DataLoader)
 
 from .. import log
 from .solver_base import SolverBase
 
 
 class Solver(SolverBase):
-    def __init__(
-        self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
-    ):
+
+    def __init__(self, wf=None, sampler=None, optimizer=None,
+                 scheduler=None, output=None, rank=0):
         """Basic QMC solver
 
         Args:
@@ -22,30 +24,22 @@ class Solver(SolverBase):
             output (str, optional): hdf5 filename. Defaults to None.
             rank (int, optional): rank of he process. Defaults to 0.
         """
-        SolverBase.__init__(self, wf, sampler, optimizer, scheduler, output, rank)
+        SolverBase.__init__(self, wf, sampler,
+                            optimizer, scheduler, output, rank)
 
         self.set_params_requires_grad()
 
-        self.configure(
-            track=["local_energy"],
-            freeze=None,
-            loss="energy",
-            grad="manual",
-            ortho_mo=False,
-            clip_loss=False,
-            resampling={"mode": "update", "resample_every": 1, "nstep_update": 25},
-        )
+        self.configure(track=['local_energy'], freeze=None,
+                       loss='energy', grad='manual',
+                       ortho_mo=False, clip_loss=False,
+                       resampling={'mode': 'update',
+                                   'resample_every': 1,
+                                   'nstep_update': 25})
 
-    def configure(
-        self,
-        track=None,
-        freeze=None,
-        loss=None,
-        grad=None,
-        ortho_mo=None,
-        clip_loss=False,
-        resampling=None,
-    ):
+    def configure(self, track=None, freeze=None,
+                  loss=None, grad=None,
+                  ortho_mo=None, clip_loss=False,
+                  resampling=None):
         """Configure the solver
 
         Args:
@@ -75,9 +69,8 @@ class Solver(SolverBase):
         if grad is not None:
             self.grad_method = grad
             self.evaluate_gradient = {
-                "auto": self.evaluate_grad_auto,
-                "manual": self.evaluate_grad_manual,
-            }[grad]
+                'auto': self.evaluate_grad_auto,
+                'manual': self.evaluate_grad_manual}[grad]
 
         # resampling of the wave function
         if resampling is not None:
@@ -86,7 +79,8 @@ class Solver(SolverBase):
         # get the loss
         if loss is not None:
             self.loss = Loss(self.wf, method=loss, clip=clip_loss)
-            self.loss.use_weight = self.resampling_options.resample_every > 1
+            self.loss.use_weight = (
+                self.resampling_options.resample_every > 1)
 
         # orthogonalization penalty for the MO coeffs
         if ortho_mo is not None:
@@ -105,7 +99,7 @@ class Solver(SolverBase):
 
         self.wf.fc.weight.requires_grad = wf_params
 
-        if hasattr(self.wf, "jastrow"):
+        if hasattr(self.wf, 'jastrow'):
             for param in self.wf.jastrow.parameters():
                 param.requires_grad = wf_params
 
@@ -123,32 +117,33 @@ class Solver(SolverBase):
                 freeze = [freeze]
 
             for name in freeze:
-                if name.lower() == "ci":
+                if name.lower() == 'ci':
                     self.wf.fc.weight.requires_grad = False
 
-                elif name.lower() == "mo":
+                elif name.lower() == 'mo':
                     for param in self.wf.mo.parameters():
                         param.requires_grad = False
 
-                elif name.lower() == "ao":
+                elif name.lower() == 'ao':
                     self.wf.ao.bas_exp.requires_grad = False
                     self.wf.ao.bas_coeffs.requires_grad = False
 
-                elif name.lower() == "jastrow":
+                elif name.lower() == 'jastrow':
                     for param in self.wf.jastrow.parameters():
                         param.requires_grad = False
 
                 else:
-                    opt_freeze = ["ci", "mo", "ao", "jastrow"]
-                    raise ValueError("Valid arguments for freeze are :", opt_freeze)
+                    opt_freeze = ['ci', 'mo', 'ao', 'jastrow']
+                    raise ValueError(
+                        'Valid arguments for freeze are :', opt_freeze)
 
     def save_sampling_parameters(self, pos):
-        """save the sampling params."""
+        """ save the sampling params."""
         self.sampler._nstep_save = self.sampler.nstep
         self.sampler._ntherm_save = self.sampler.ntherm
         # self.sampler._nwalker_save = self.sampler.walkers.nwalkers
 
-        if self.resampling_options.mode == "update":
+        if self.resampling_options.mode == 'update':
             self.sampler.ntherm = self.resampling_options.ntherm_update
             self.sampler.nstep = self.resampling_options.nstep_update
             # self.sampler.walkers.nwalkers = pos.shape[0]
@@ -159,17 +154,9 @@ class Solver(SolverBase):
         self.sampler.ntherm = self.sampler._ntherm_save
         # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
-    def geo_opt(
-        self,
-        nepoch,
-        geo_lr=1e-2,
-        batchsize=None,
-        nepoch_wf_init=100,
-        nepoch_wf_update=50,
-        hdf5_group="geo_opt",
-        chkpt_every=None,
-        tqdm=False,
-    ):
+    def geo_opt(self, nepoch, geo_lr=1e-2, batchsize=None,
+                nepoch_wf_init=100, nepoch_wf_update=50,
+                hdf5_group='geo_opt', chkpt_every=None, tqdm=False):
         """optimize the geometry of the molecule
 
         Args:
@@ -196,27 +183,31 @@ class Solver(SolverBase):
 
         # log data
         self.prepare_optimization(batchsize, None, tqdm)
-        self.log_data_opt(nepoch, "geometry optimization")
+        self.log_data_opt(nepoch, 'geometry optimization')
 
         # init the traj
         xyz = [self.wf.geometry(None)]
 
         # initial wf optimization
-        self.set_params_requires_grad(wf_params=True, geo_params=False)
+        self.set_params_requires_grad(wf_params=True,
+                                      geo_params=False)
         self.freeze_parameters(self.freeze_params_list)
         self.run_epochs(nepoch_wf_init)
 
         # iterations over geo optim
         for n in range(nepoch):
+
             # make one step geo optim
-            self.set_params_requires_grad(wf_params=False, geo_params=True)
+            self.set_params_requires_grad(wf_params=False,
+                                          geo_params=True)
             self.opt = opt_geo
             self.evaluate_gradient = self.evaluate_grad_auto
             self.run_epochs(1)
             xyz.append(self.wf.geometry(None))
 
             # make a few wf optim
-            self.set_params_requires_grad(wf_params=True, geo_params=False)
+            self.set_params_requires_grad(wf_params=True,
+                                          geo_params=False)
             self.freeze_parameters(self.freeze_params_list)
             self.opt = opt_wf
             self.evaluate_gradient = eval_grad_wf
@@ -237,9 +228,8 @@ class Solver(SolverBase):
 
         return self.observable
 
-    def run(
-        self, nepoch, batchsize=None, hdf5_group="wf_opt", chkpt_every=None, tqdm=False
-    ):
+    def run(self, nepoch, batchsize=None,
+            hdf5_group='wf_opt', chkpt_every=None, tqdm=False):
         """Run a wave function optimization
 
         Args:
@@ -255,7 +245,7 @@ class Solver(SolverBase):
 
         # prepare the optimization
         self.prepare_optimization(batchsize, chkpt_every, tqdm)
-        self.log_data_opt(nepoch, "wave function optimization")
+        self.log_data_opt(nepoch, 'wave function optimization')
 
         # run the epochs
         self.run_epochs(nepoch)
@@ -287,7 +277,8 @@ class Solver(SolverBase):
         self.save_sampling_parameters(pos)
 
         # create the data loader
-        self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=self.cuda)
+        self.dataloader = DataLoader(
+            pos, batch_size=batchsize, pin_memory=self.cuda)
 
         for ibatch, data in enumerate(self.dataloader):
             self.store_observable(data, ibatch=ibatch)
@@ -303,9 +294,10 @@ class Solver(SolverBase):
         """
         self.observable.models.last = dict(self.wf.state_dict())
 
-        hdf5_group = dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
+        hdf5_group = dump_to_hdf5(
+            self.observable, self.hdf5file, hdf5_group)
 
-        add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
+        add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
 
     def run_epochs(self, nepoch):
         """Run a certain number of epochs
@@ -319,11 +311,11 @@ class Solver(SolverBase):
 
         # loop over the epoch
         for n in range(nepoch):
+
             tstart = time()
-            log.info("")
-            log.info(
-                "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
-            )
+            log.info('')
+            log.info('  epoch %d | %d sampling points' %
+                     (n, len(self.dataloader.dataset)))
 
             cumulative_loss = 0
 
@@ -331,6 +323,7 @@ class Solver(SolverBase):
 
             # loop over the batches
             for ibatch, data in enumerate(self.dataloader):
+
                 # port data to device
                 lpos = data.to(self.device)
 
@@ -340,11 +333,12 @@ class Solver(SolverBase):
 
                 # check for nan
                 if torch.isnan(eloc).any():
-                    log.info("Error : Nan detected in local energy")
+                    log.info('Error : Nan detected in local energy')
                     return cumulative_loss
 
                 # observable
-                self.store_observable(lpos, local_energy=eloc, ibatch=ibatch)
+                self.store_observable(
+                    lpos, local_energy=eloc, ibatch=ibatch)
 
             # optimize the parameters
             self.optimization_step(lpos)
@@ -352,7 +346,8 @@ class Solver(SolverBase):
             # save the model if necessary
             if n == 0 or cumulative_loss < min_loss:
                 min_loss = cumulative_loss
-                self.observable.models.best = dict(self.wf.state_dict())
+                self.observable.models.best = dict(
+                    self.wf.state_dict())
 
             # save checkpoint file
             if self.chkpt_every is not None:
@@ -362,13 +357,14 @@ class Solver(SolverBase):
             self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
-            self.dataloader.dataset = self.resample(n, self.dataloader.dataset)
+            self.dataloader.dataset = self.resample(
+                n, self.dataloader.dataset)
 
             # scheduler step
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            log.info("  epoch done in %1.2f sec." % (time() - tstart))
+            log.info('  epoch done in %1.2f sec.' % (time()-tstart))
 
         return cumulative_loss
 
@@ -409,26 +405,28 @@ class Solver(SolverBase):
 
         # determine if we need the grad of eloc
         no_grad_eloc = True
-        if self.wf.kinetic_method == "auto":
+        if self.wf.kinetic_method == 'auto':
             no_grad_eloc = False
 
         if self.wf.jastrow.requires_autograd:
             no_grad_eloc = False
 
-        if self.loss.method in ["energy", "weighted-energy"]:
+        if self.loss.method in ['energy', 'weighted-energy']:
+
             # Get the gradient of the total energy
             # dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
+            
 
             # compute local energy and wf values
             _, eloc = self.loss(lpos, no_grad=no_grad_eloc)
             psi = self.wf(lpos)
-            norm = 1.0 / len(psi)
+            norm = 1. / len(psi)
 
             # evaluate the prefactor of the grads
             weight = eloc.clone()
             weight -= torch.mean(eloc)
             weight /= psi
-            weight *= 2.0
+            weight *= 2.
             weight *= norm
 
             # compute the gradients
@@ -437,22 +435,30 @@ class Solver(SolverBase):
             return torch.mean(eloc), eloc
 
         else:
-            raise ValueError("Manual gradient only for energy minimization")
+            raise ValueError(
+                'Manual gradient only for energy minimization')
 
     def log_data_opt(self, nepoch, task):
         """Log data for the optimization."""
-        log.info("")
-        log.info("  Optimization")
-        log.info("  Task                :", task)
-        log.info("  Number Parameters   : {0}", self.wf.get_number_parameters())
-        log.info("  Number of epoch     : {0}", nepoch)
-        log.info("  Batch size          : {0}", self.sampler.get_sampling_size())
-        log.info("  Loss function       : {0}", self.loss.method)
-        log.info("  Clip Loss           : {0}", self.loss.clip)
-        log.info("  Gradients           : {0}", self.grad_method)
-        log.info("  Resampling mode     : {0}", self.resampling_options.mode)
-        log.info("  Resampling every    : {0}", self.resampling_options.resample_every)
-        log.info("  Resampling steps    : {0}", self.resampling_options.nstep_update)
-        log.info("  Output file         : {0}", self.hdf5file)
-        log.info("  Checkpoint every    : {0}", self.chkpt_every)
-        log.info("")
+        log.info('')
+        log.info('  Optimization')
+        log.info('  Task                :', task)
+        log.info(
+            '  Number Parameters   : {0}', self.wf.get_number_parameters())
+        log.info('  Number of epoch     : {0}', nepoch)
+        log.info(
+            '  Batch size          : {0}', self.sampler.get_sampling_size())
+        log.info('  Loss function       : {0}', self.loss.method)
+        log.info('  Clip Loss           : {0}', self.loss.clip)
+        log.info('  Gradients           : {0}', self.grad_method)
+        log.info(
+            '  Resampling mode     : {0}', self.resampling_options.mode)
+        log.info(
+            '  Resampling every    : {0}', self.resampling_options.resample_every)
+        log.info(
+            '  Resampling steps    : {0}', self.resampling_options.nstep_update)
+        log.info(
+            '  Output file         : {0}', self.hdf5file)
+        log.info(
+            '  Checkpoint every    : {0}', self.chkpt_every)
+        log.info('')

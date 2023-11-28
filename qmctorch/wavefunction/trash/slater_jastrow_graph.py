@@ -1,30 +1,27 @@
+
+
 import numpy as np
 import torch
 from .slater_jastrow import SlaterJastrow
 
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
-from .jastrows.elec_elec.jastrow_factor_electron_electron import (
-    JastrowFactorElectronElectron,
-)
+from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 
 from .jastrows.graph.jastrow_graph import JastrowFactorGraph
 from .jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
 
 
 class SlaterJastrowGraph(SlaterJastrow):
-    def __init__(
-        self,
-        mol,
-        configs="ground_state",
-        kinetic="jacobi",
-        ee_model=MGCNPredictor,
-        ee_model_kwargs={},
-        en_model=MGCNPredictor,
-        en_model_kwargs={},
-        atomic_features=["atomic_number"],
-        cuda=False,
-        include_all_mo=True,
-    ):
+
+    def __init__(self, mol, configs='ground_state',
+                 kinetic='jacobi',
+                 ee_model=MGCNPredictor,
+                 ee_model_kwargs={},
+                 en_model=MGCNPredictor,
+                 en_model_kwargs={},
+                 atomic_features=["atomic_number"],
+                 cuda=False,
+                 include_all_mo=True):
         """Implementation of a SlaterJastrow Network using Graph neural network to express the Jastrow.
 
         Args:
@@ -46,23 +43,19 @@ class SlaterJastrowGraph(SlaterJastrow):
 
         super().__init__(mol, configs, kinetic, None, None, cuda, include_all_mo)
 
-        self.jastrow_type = "Graph(ee:%s, en:%s)" % (
-            ee_model.__name__,
-            en_model.__name__,
-        )
+        self.jastrow_type = 'Graph(ee:%s, en:%s)' % (
+            ee_model.__name__, en_model.__name__)
         self.use_jastrow = True
-        self.jastrow = JastrowFactorGraph(
-            mol.nup,
-            mol.ndown,
-            torch.as_tensor(mol.atom_coords),
-            mol.atoms,
-            ee_model=ee_model,
-            ee_model_kwargs=ee_model_kwargs,
-            en_model=en_model,
-            en_model_kwargs=en_model_kwargs,
-            atomic_features=atomic_features,
-            cuda=cuda,
-        )
+        self.jastrow = JastrowFactorGraph(mol.nup, mol.ndown,
+                                          torch.as_tensor(
+                                              mol.atom_coords),
+                                          mol.atoms,
+                                          ee_model=ee_model,
+                                          ee_model_kwargs=ee_model_kwargs,
+                                          en_model=en_model,
+                                          en_model_kwargs=en_model_kwargs,
+                                          atomic_features=atomic_features,
+                                          cuda=cuda)
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)

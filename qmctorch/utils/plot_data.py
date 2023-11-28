@@ -2,12 +2,9 @@ import matplotlib.pyplot as plt
 import numpy as np
 from matplotlib import cm
 
-from .stat_utils import (
-    blocking,
-    correlation_coefficient,
-    fit_correlation_coefficient,
-    integrated_autocorrelation_time,
-)
+from .stat_utils import (blocking, correlation_coefficient,
+                         fit_correlation_coefficient,
+                         integrated_autocorrelation_time)
 
 
 def plot_energy(local_energy, e0=None, show_variance=False):
@@ -30,22 +27,21 @@ def plot_energy(local_energy, e0=None, show_variance=False):
     variance = np.array([np.var(e) for e in local_energy])
 
     # plot
-    ax.fill_between(
-        epoch, energy - variance, energy + variance, alpha=0.5, color="#4298f4"
-    )
-    ax.plot(epoch, energy, color="#144477")
+    ax.fill_between(epoch, energy - variance, energy +
+                    variance, alpha=0.5, color='#4298f4')
+    ax.plot(epoch, energy, color='#144477')
     if e0 is not None:
-        ax.axhline(e0, color="black", linestyle="--")
+        ax.axhline(e0, color='black', linestyle='--')
 
     ax.grid()
-    ax.set_xlabel("Number of epoch")
-    ax.set_ylabel("Energy", color="black")
+    ax.set_xlabel('Number of epoch')
+    ax.set_ylabel('Energy', color='black')
 
     if show_variance:
         ax2 = ax.twinx()
-        ax2.plot(epoch, variance, color="blue")
-        ax2.set_ylabel("variance", color="blue")
-        ax2.tick_params(axis="y", labelcolor="blue")
+        ax2.plot(epoch, variance, color='blue')
+        ax2.set_ylabel('variance', color='blue')
+        ax2.tick_params(axis='y', labelcolor='blue')
         fig.tight_layout()
 
     plt.show()
@@ -64,12 +60,12 @@ def plot_data(observable, obsname):
 
     data = np.array(observable.__dict__[obsname]).squeeze()
     epoch = np.arange(len(data))
-    ax.plot(epoch, data, color="#144477")
+    ax.plot(epoch, data, color='#144477')
 
     plt.show()
 
 
-def plot_walkers_traj(eloc, walkers="mean"):
+def plot_walkers_traj(eloc, walkers='mean'):
     """Plot the trajectory of all the individual walkers
 
     Args:
@@ -81,26 +77,28 @@ def plot_walkers_traj(eloc, walkers="mean"):
     celoc /= np.arange(1, nstep + 1)
 
     if walkers is not None:
-        if walkers == "all":
-            plt.plot(eloc, "o", alpha=max(1 / nwalkers, 1e-2), c="grey")
+
+        if walkers == 'all':
+            plt.plot(eloc, 'o', alpha=max(
+                1 / nwalkers, 1E-2), c='grey')
             cmap = cm.hot(np.linspace(0, 1, nwalkers))
             for i in range(nwalkers):
                 plt.plot(celoc.T[:, i], color=cmap[i])
 
-        elif walkers == "mean":
-            plt.plot(eloc, "o", alpha=1 / nwalkers, c="grey")
+        elif walkers == 'mean':
+            plt.plot(eloc, 'o', alpha=1 / nwalkers, c='grey')
             emean = np.mean(celoc.T, axis=1)
             emin = emean.min()
             emax = emean.max()
-            delta = emax - emin
+            delta = emax-emin
             plt.plot(emean, linewidth=5)
-            plt.ylim(emin - 0.25 * delta, emax + 0.25 * delta)
+            plt.ylim(emin-0.25*delta,emax+0.25*delta)
         else:
-            raise ValueError("walkers argument must be all or mean")
-
+            raise ValueError('walkers argument must be all or mean')
+        
         plt.grid()
-        plt.xlabel("Monte Carlo Steps")
-        plt.ylabel("Energy (Hartree)")
+        plt.xlabel('Monte Carlo Steps')
+        plt.ylabel('Energy (Hartree)')
 
     plt.show()
 
@@ -118,18 +116,18 @@ def plot_correlation_coefficient(eloc, size_max=100):
     """
 
     rho = correlation_coefficient(eloc)
-    tau_fit, fitted = fit_correlation_coefficient(rho.mean(1)[:size_max])
+    tau_fit, fitted = fit_correlation_coefficient(
+        rho.mean(1)[:size_max])
 
     plt.plot(rho, alpha=0.25)
-    plt.plot(rho.mean(1), linewidth=3, c="black")
-    plt.plot(fitted, "--", c="grey")
+    plt.plot(rho.mean(1), linewidth=3, c='black')
+    plt.plot(fitted, '--', c='grey')
     plt.xlim([0, size_max])
     plt.ylim([-0.25, 1.5])
-    plt.xlabel("MC steps")
-    plt.ylabel("Correlation coefficient")
-    plt.text(
-        0.5 * size_max, 1.05, "tau=%1.3f" % tau_fit, {"color": "black", "fontsize": 15}
-    )
+    plt.xlabel('MC steps')
+    plt.ylabel('Correlation coefficient')
+    plt.text(0.5 * size_max, 1.05, 'tau=%1.3f' %
+             tau_fit, {'color': 'black', 'fontsize': 15})
     plt.grid()
     plt.show()
 
@@ -154,9 +152,11 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5):
     tc, idx_tc = [], []
     idx = np.arange(1, size_max)
     for iw in range(eloc.shape[1]):
+
         t = tau[:, iw]
-        if len(t[C * t <= idx]) > 0:
-            tval = t[C * t <= idx][0]
+        if len(t[C*t <= idx]) > 0:
+
+            tval = t[C*t <= idx][0]
             ii = np.where(t == tval)[0][0]
 
             tc.append(tval)
@@ -164,23 +164,23 @@ def plot_integrated_autocorrelation_time(eloc, rho=None, size_max=100, C=5):
 
     plt.plot(tau, alpha=0.25)
     tm = tau.mean(1)
-    plt.plot(tm, c="black")
-    plt.plot(idx / C, "--", c="grey")
+    plt.plot(tm, c='black')
+    plt.plot(idx/C, '--', c='grey')
 
-    plt.plot(idx_tc, tc, "o", alpha=0.25)
-    tt = tm[tm * C <= idx][0]
+    plt.plot(idx_tc, tc, 'o', alpha=0.25)
+    tt = tm[tm*C <= idx][0]
     ii = np.where(tm == tt)[0][0]
-    plt.plot(ii, tt, "o")
+    plt.plot(ii, tt, 'o')
 
     plt.grid()
-    plt.xlabel("MC step")
-    plt.ylabel("IAC")
+    plt.xlabel('MC step')
+    plt.ylabel('IAC')
     plt.show()
 
     return ii
 
 
-def plot_blocking_energy(eloc, block_size, walkers="mean"):
+def plot_blocking_energy(eloc, block_size, walkers='mean'):
     """Plot the blocked energy values
 
     Args:
@@ -192,24 +192,24 @@ def plot_blocking_energy(eloc, block_size, walkers="mean"):
         ValueError: [description]
     """
     eb = blocking(eloc, block_size, expand=True)
-    if walkers == "all":
+    if walkers == 'all':
         plt.plot(eloc)
         plt.plot(eb)
 
-    elif walkers == "mean":
+    elif walkers == 'mean':
         plt.plot(eloc.mean(1))
         plt.plot(eb.mean(1))
 
-    elif walkers.__class__.__name__ in ["int", "list"]:
+    elif walkers.__class__.__name__ in ['int', 'list']:
         plt.plot(eloc[:, walkers])
         plt.plot(eb[:, walkers])
 
     else:
-        raise ValueError("walkers ", walkers, " not recognized")
+        raise ValueError('walkers ', walkers, ' not recognized')
 
     plt.grid()
-    plt.xlabel("MC steps")
-    plt.ylabel("Energy")
+    plt.xlabel('MC steps')
+    plt.ylabel('Energy')
     plt.show()
 
     return blocking(eloc, block_size, expand=False)
@@ -233,8 +233,8 @@ def plot_correlation_time(eloc):
         evar.append(np.std(eb, axis=0) * size / var)
 
     plt.plot(np.array(evar))
-    plt.xlabel("Blocking size")
-    plt.ylabel("Correlation steps")
+    plt.xlabel('Blocking size')
+    plt.ylabel('Correlation steps')
     plt.show()
 
 

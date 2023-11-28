@@ -1,3 +1,5 @@
+
+
 import numpy as np
 import torch
 import unittest
@@ -7,17 +9,11 @@ from .base_test_cases import BaseTestCases
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
-from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import (
-    JastrowFactorElectronElectron,
-)
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
-from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
-    BackFlowTransformation,
-)
-from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import (
-    BackFlowKernelInverse,
-)
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
+from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import BackFlowKernelInverse
 
 from qmctorch.utils import set_torch_double_precision
 
@@ -25,10 +21,10 @@ from qmctorch.utils import set_torch_double_precision
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
-class TestSlaterJastrowOrbitalDependentBackFlow(
-    BaseTestCases.BackFlowWaveFunctionBaseTest
-):
+class TestSlaterJastrowOrbitalDependentBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
+
     def setUp(self):
+
         torch.manual_seed(101)
         np.random.seed(101)
 
@@ -36,29 +32,26 @@ class TestSlaterJastrowOrbitalDependentBackFlow(
 
         # molecule
         mol = Molecule(
-            atom="Li 0 0 0; H 0 0 3.015",
-            unit="bohr",
-            calculator="pyscf",
-            basis="sto-3g",
-            redo_scf=True,
-        )
+            atom='Li 0 0 0; H 0 0 3.015',
+            unit='bohr',
+            calculator='pyscf',
+            basis='sto-3g',
+            redo_scf=True)
 
         # define jastrow factor
-        jastrow = JastrowFactorElectronElectron(mol, PadeJastrowKernel)
+        jastrow = JastrowFactorElectronElectron(
+            mol, PadeJastrowKernel)
 
         # define backflow trans
         backflow = BackFlowTransformation(
-            mol, BackFlowKernelInverse, orbital_dependent=True
-        )
+            mol, BackFlowKernelInverse, orbital_dependent=True)
 
-        self.wf = SlaterJastrow(
-            mol,
-            kinetic="jacobi",
-            include_all_mo=True,
-            configs="single_double(2,2)",
-            jastrow=jastrow,
-            backflow=backflow,
-        )
+        self.wf = SlaterJastrow(mol,
+                                kinetic='jacobi',
+                                include_all_mo=True,
+                                configs='single_double(2,2)',
+                                jastrow=jastrow,
+                                backflow=backflow)
 
         # change the weights
         for ker in self.wf.ao.backflow_trans.backflow_kernel.orbital_dependent_kernel:
@@ -68,7 +61,8 @@ class TestSlaterJastrowOrbitalDependentBackFlow(
         self.wf.fc.weight.data = self.random_fc_weight
 
         self.nbatch = 5
-        self.pos = torch.Tensor(np.random.rand(self.nbatch, self.wf.nelec * 3))
+        self.pos = torch.Tensor(np.random.rand(
+            self.nbatch,  self.wf.nelec*3))
         self.pos.requires_grad = True
 
 

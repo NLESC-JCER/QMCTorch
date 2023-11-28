@@ -7,10 +7,7 @@ import numpy as np
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
-from qmctorch.wavefunction.jastrows.distance.electron_electron_distance import (
-    ElectronElectronDistance,
-)
-
+from qmctorch.wavefunction.jastrows.distance.electron_electron_distance import ElectronElectronDistance
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.manual_seed(101)
@@ -18,18 +15,24 @@ np.random.seed(101)
 
 
 def hess(out, pos):
+
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
+    jacob = grad(out, pos,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
 
     for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
+
+        tmp = grad(jacob[:, idim], pos,
+                   grad_outputs=z,
+                   only_inputs=True,
+                   create_graph=True)[0]
 
         hess[:, idim] = tmp[:, idim]
 
@@ -37,27 +40,39 @@ def hess(out, pos):
 
 
 def hess_single_element(out, inp):
+
     shape = out.shape
     out = out.reshape(-1, 1)
 
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
-    jacob = grad(out, inp, grad_outputs=z, only_inputs=True, create_graph=True)[0]
+    jacob = grad(out, inp,
+                 grad_outputs=z,
+                 only_inputs=True,
+                 create_graph=True)[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape))
 
-    hess = grad(jacob, inp, grad_outputs=z, only_inputs=True, create_graph=True)[0]
+    hess = grad(jacob, inp,
+                grad_outputs=z,
+                only_inputs=True,
+                create_graph=True)[0]
 
     return hess.reshape(*shape)
 
 
 class TestBackFlowKernel(unittest.TestCase):
+
     def setUp(self):
+
         # define the molecule
-        at = "C 0 0 0"
-        basis = "dzp"
-        self.mol = Molecule(atom=at, calculator="pyscf", basis=basis, unit="bohr")
+        at = 'C 0 0 0'
+        basis = 'dzp'
+        self.mol = Molecule(atom=at,
+                            calculator='pyscf',
+                            basis=basis,
+                            unit='bohr')
 
         # define the kernel
         self.kernel = BackFlowKernelInverse(self.mol)
@@ -71,21 +86,20 @@ class TestBackFlowKernel(unittest.TestCase):
 
     def test_derivative_backflow_kernel(self):
         """Test the derivative of the kernel function
-        wrt the elec-elec distance."""
+            wrt the elec-elec distance."""
 
         ree = self.edist(self.pos)
         bf_kernel = self.kernel(ree)
-        dbf_kernel_auto = grad(bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel))[
-            0
-        ]
+        dbf_kernel_auto = grad(
+            bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel))[0]
         dbf_kernel = self.kernel(ree, derivative=1)
 
-        assert torch.allclose(dbf_kernel.sum(), dbf_kernel_auto.sum())
-        assert torch.allclose(dbf_kernel, dbf_kernel_auto)
+        assert(torch.allclose(dbf_kernel.sum(), dbf_kernel_auto.sum()))
+        assert(torch.allclose(dbf_kernel, dbf_kernel_auto))
 
     def test_second_derivative_backflow_kernel(self):
         """Test the 2nd derivative of the kernel function
-        wrt the elec-elec distance."""
+           wrt the elec-elec distance."""
 
         ree = self.edist(self.pos)
         bf_kernel = self.kernel(ree)
@@ -94,8 +108,8 @@ class TestBackFlowKernel(unittest.TestCase):
 
         d2bf_kernel = self.kernel(ree, derivative=2)
 
-        assert torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum())
-        assert torch.allclose(d2bf_kernel, d2bf_kernel_auto)
+        assert(torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum()))
+        assert(torch.allclose(d2bf_kernel, d2bf_kernel_auto))
 
     def test_derivative_backflow_kernel_pos(self):
         """Test the derivative of the kenel function wrt the pos of the elecs.
@@ -117,7 +131,8 @@ class TestBackFlowKernel(unittest.TestCase):
         dj_ree = di_ree
 
         # compute the derivative of the kernal values
-        bf_der = self.kernel(ree, derivative=1)
+        bf_der = self.kernel(
+            ree, derivative=1)
 
         # get the der of the bf wrt the first elec in ree
         di_bfpos = bf_der.unsqueeze(1) * di_ree
@@ -130,14 +145,16 @@ class TestBackFlowKernel(unittest.TestCase):
         d_bfpos = di_bfpos + dj_bfpos
 
         # computes the the derivative of the kernal values with autograd
-        dbfpos_grad = grad(bfpos, self.pos, grad_outputs=torch.ones_like(bfpos))[0]
+        dbfpos_grad = grad(
+            bfpos, self.pos, grad_outputs=torch.ones_like(bfpos))[0]
 
         # checksum
-        assert torch.allclose(d_bfpos.sum(), dbfpos_grad.sum())
+        assert(torch.allclose(d_bfpos.sum(), dbfpos_grad.sum()))
 
         # reshape and check individual elements
-        dbfpos = d_bfpos.sum(-1).permute(0, 2, 1).reshape(self.npts, -1)
-        assert torch.allclose(dbfpos, dbfpos_grad)
+        dbfpos = d_bfpos.sum(-1).permute(0, 2,
+                                         1).reshape(self.npts, -1)
+        assert(torch.allclose(dbfpos, dbfpos_grad))
 
     def test_second_derivative_backflow_kernel_pos(self):
         """Test the derivative of the kenel function wrt the pos of the elecs.
@@ -164,30 +181,29 @@ class TestBackFlowKernel(unittest.TestCase):
         d2j_ree = d2i_ree
 
         # compute the derivative of the kernel values
-        d2bf_kernel = self.kernel(ree, derivative=2).unsqueeze(1) * di_ree * di_ree
+        d2bf_kernel = self.kernel(
+            ree, derivative=2).unsqueeze(1) * di_ree * di_ree
 
-        d2bf_kernel += (
-            self.kernel(ree, derivative=2).permute(0, 2, 1).unsqueeze(1)
-            * dj_ree
-            * dj_ree
-        )
+        d2bf_kernel += self.kernel(
+            ree, derivative=2).permute(0, 2, 1).unsqueeze(1) * dj_ree * dj_ree
 
-        d2bf_kernel += self.kernel(ree, derivative=1).unsqueeze(1) * d2i_ree
+        d2bf_kernel += self.kernel(
+            ree, derivative=1).unsqueeze(1) * d2i_ree
 
-        d2bf_kernel += (
-            self.kernel(ree, derivative=1).permute(0, 2, 1).unsqueeze(1) * d2j_ree
-        )
+        d2bf_kernel += self.kernel(
+            ree, derivative=1).permute(0, 2, 1).unsqueeze(1) * d2j_ree
 
         # computes the the derivative of the kernal values with autograd
         d2bf_kernel_auto = hess(bf_kernel, self.pos)
 
         # checksum
-        assert torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum())
+        assert(torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum()))
 
         # reshape and check individual elements
-        d2bf_kernel = d2bf_kernel.sum(-1).permute(0, 2, 1).reshape(self.npts, -1)
+        d2bf_kernel = d2bf_kernel.sum(-1).permute(0, 2,
+                                                  1).reshape(self.npts, -1)
 
-        assert torch.allclose(d2bf_kernel, d2bf_kernel_auto)
+        assert(torch.allclose(d2bf_kernel, d2bf_kernel_auto))
 
 
 if __name__ == "__main__":
