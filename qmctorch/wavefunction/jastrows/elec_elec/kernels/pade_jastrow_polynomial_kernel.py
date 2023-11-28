@@ -6,11 +6,7 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 
 
 class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
-
-    def __init__(self, nup, ndown, cuda,
-                 order=2,
-                 weight_a=None,
-                 weight_b=None):
+    def __init__(self, nup, ndown, cuda, order=2, weight_a=None, weight_b=None):
         """Computes a polynomial Pade-Jastrow factor
 
         .. math::
@@ -51,16 +47,29 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
             torch.tensor: static weight (0.5 (0.25) for parallel(anti) spins
         """
 
-        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
-                         torch.ones(self.nup, self.ndown)), dim=1)
+        bup = torch.cat(
+            (
+                0.25 * torch.ones(self.nup, self.nup),
+                0.5 * torch.ones(self.nup, self.ndown),
+            ),
+            dim=1,
+        )
 
-        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
-                           torch.ones(self.ndown, self.ndown)), dim=1)
+        bdown = torch.cat(
+            (
+                0.5 * torch.ones(self.ndown, self.nup),
+                0.25 * torch.ones(self.ndown, self.ndown),
+            ),
+            dim=1,
+        )
 
         static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
-        mask_tri_up = torch.triu(torch.ones_like(
-            static_weight), diagonal=1).type(torch.BoolTensor).to(self.device)
+        mask_tri_up = (
+            torch.triu(torch.ones_like(static_weight), diagonal=1)
+            .type(torch.BoolTensor)
+            .to(self.device)
+        )
         static_weight = static_weight.masked_select(mask_tri_up)
 
         return static_weight
@@ -75,7 +84,7 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
         """
 
         # that can cause a nan if too low ...
-        w0 = 1E-5
+        w0 = 1e-5
 
         if weight_a is not None:
             assert weight_a.shape[0] == self.porder
@@ -88,13 +97,13 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
             self.weight_b = nn.Parameter(weight_b)
         else:
             self.weight_b = nn.Parameter(w0 * torch.ones(self.porder))
-            self.weight_b.data[0] = 1.
+            self.weight_b.data[0] = 1.0
 
-        register_extra_attributes(self, ['weight_a'])
-        register_extra_attributes(self, ['weight_b'])
+        register_extra_attributes(self, ["weight_a"])
+        register_extra_attributes(self, ["weight_b"])
 
     def forward(self, r):
-        """ Get the jastrow kernel.
+        """Get the jastrow kernel.
 
         .. math::
 
@@ -191,12 +200,13 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
         der_num, der_denom = self._compute_polynom_derivatives(r, dr)
 
-        d2_num, d2_denom = self._compute_polynom_second_derivative(
-            r, dr, d2r)
+        d2_num, d2_denom = self._compute_polynom_second_derivative(r, dr, d2r)
 
-        out = d2_num / denom - (2 * der_num * der_denom + num * d2_denom) / (
-            denom * denom) + 2 * num * der_denom * der_denom / (denom * denom *
-                                                                denom)
+        out = (
+            d2_num / denom
+            - (2 * der_num * der_denom + num * d2_denom) / (denom * denom)
+            + 2 * num * der_denom * der_denom / (denom * denom * denom)
+        )
 
         return out
 
@@ -213,7 +223,7 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
         """
 
         num = self.static_weight * r
-        denom = (1.0 + self.weight_b[0] * r)
+        denom = 1.0 + self.weight_b[0] * r
         riord = r.clone()
 
         for iord in range(1, self.porder):
@@ -245,7 +255,6 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
         riord = r.unsqueeze(1)
 
         for iord in range(1, self.porder):
-
             fact = (iord + 1) * dr * riord
             der_num += self.weight_a[iord] * fact
             der_denom += self.weight_b[iord] * fact
@@ -277,10 +286,9 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
         r_ = r.unsqueeze(1)
         rnm1 = r.unsqueeze(1)
-        rnm2 = 1.
+        rnm2 = 1.0
 
         for iord in range(1, self.porder):
-
             n = iord + 1
             fact = n * (d2r * rnm1 + iord * dr2 * rnm2)
             d2_num += self.weight_a[iord] * fact

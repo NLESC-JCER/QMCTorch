@@ -1,12 +1,13 @@
 import torch
 from torch import nn
-from .scaling import (get_scaled_distance,
-                      get_der_scaled_distance,
-                      get_second_der_scaled_distance)
+from .scaling import (
+    get_scaled_distance,
+    get_der_scaled_distance,
+    get_second_der_scaled_distance,
+)
 
 
 class ElectronElectronDistance(nn.Module):
-
     def __init__(self, nelec, ndim=3, scale=False, scale_factor=0.6):
         """Computes the electron-electron distances
 
@@ -36,9 +37,9 @@ class ElectronElectronDistance(nn.Module):
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
-            self.eps = 1E-6
+            self.eps = 1e-6
         elif _type_ == torch.float64:
-            self.eps = 1E-16
+            self.eps = 1e-16
 
     def forward(self, input, derivative=0):
         """Compute the pairwise distance between the electrons
@@ -79,7 +80,6 @@ class ElectronElectronDistance(nn.Module):
                 return dist
 
         elif derivative == 1:
-
             der_dist = self.get_der_distance(input_, dist)
 
             if self.scale:
@@ -88,15 +88,13 @@ class ElectronElectronDistance(nn.Module):
                 return der_dist
 
         elif derivative == 2:
-
             d2_dist = self.get_second_der_distance(input_, dist)
 
             if self.scale:
                 der_dist = self.get_der_distance(input_, dist)
-                return get_second_der_scaled_distance(self.kappa,
-                                                      dist,
-                                                      der_dist,
-                                                      d2_dist)
+                return get_second_der_scaled_distance(
+                    self.kappa, dist, der_dist, d2_dist
+                )
             else:
                 return d2_dist
 
@@ -113,14 +111,11 @@ class ElectronElectronDistance(nn.Module):
         """
 
         # epsilon on the diag needed for back prop
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+        eps_ = self.eps * torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
 
         # extact the diagonal as diag can be negative someties
         # due to numerical noise
-        diag = torch.diag_embed(
-            torch.diagonal(
-                dist, dim1=-1, dim2=-2))
+        diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
 
         # remove diagonal and add eps for backprop
         dist = torch.sqrt(dist - diag + eps_)
@@ -143,11 +138,9 @@ class ElectronElectronDistance(nn.Module):
             [type]: [description]
         """
 
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(
-                dist.shape[-1])).expand_as(dist)
+        eps_ = self.eps * torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
 
-        invr = (1. / (dist + eps_)).unsqueeze(1)
+        invr = (1.0 / (dist + eps_)).unsqueeze(1)
         diff_axis = pos.transpose(1, 2).unsqueeze(3)
         diff_axis = diff_axis - diff_axis.transpose(2, 3)
         return diff_axis * invr
@@ -168,16 +161,13 @@ class ElectronElectronDistance(nn.Module):
             [type]: [description]
         """
 
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(
-                dist.shape[-1])).expand_as(dist)
-        invr3 = (1. / (dist**3 + eps_)).unsqueeze(1)
+        eps_ = self.eps * torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+        invr3 = (1.0 / (dist**3 + eps_)).unsqueeze(1)
         diff_axis = pos.transpose(1, 2).unsqueeze(3)
-        diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
+        diff_axis = (diff_axis - diff_axis.transpose(2, 3)) ** 2
 
-        diff_axis = diff_axis[:, [
-            [1, 2], [2, 0], [0, 1]], ...].sum(2)
-        return (diff_axis * invr3)
+        diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
+        return diff_axis * invr3
 
     @staticmethod
     def get_distance_quadratic(pos):
@@ -191,8 +181,7 @@ class ElectronElectronDistance(nn.Module):
         """
 
         norm = (pos**2).sum(-1).unsqueeze(-1)
-        dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(pos, pos.transpose(1, 2)))
+        dist = norm + norm.transpose(1, 2) - 2.0 * torch.bmm(pos, pos.transpose(1, 2))
         return dist
 
     @staticmethod

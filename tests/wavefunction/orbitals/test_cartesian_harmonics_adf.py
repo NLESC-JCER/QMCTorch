@@ -11,29 +11,24 @@ from .second_derivative import second_derivative
 
 
 class TestCartesianHarmonicsADF(unittest.TestCase):
-
     def setUp(self):
-
         torch.manual_seed(0)
         np.random.seed(0)
 
-        path_hdf5 = (
-            PATH_TEST / 'hdf5/CO2_adf_dzp.hdf5').absolute().as_posix()
+        path_hdf5 = (PATH_TEST / "hdf5/CO2_adf_dzp.hdf5").absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
         # wave function
         self.ao = AtomicOrbitals(self.mol)
 
     def test_first_derivative_x(self):
-
         npts = 1000
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
         self.pos[:, 0] = torch.linspace(-4, 4, npts)
         self.dx = self.pos[1, 0] - self.pos[0, 0]
 
         xyz, r = self.ao._process_position(self.pos)
-        R, dR = self.ao.harmonics(
-            xyz, derivative=[0, 1], sum_grad=False)
+        R, dR = self.ao.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -43,24 +38,22 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 0]
             dz_r0_fd = np.gradient(r0, self.dx)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
             # plt.show()
 
-            assert(np.all(delta < 1E-3))
+            assert np.all(delta < 1e-3)
 
     def test_first_derivative_y(self):
-
         npts = 1000
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
         self.pos[:, 1] = torch.linspace(-4, 4, npts)
         self.dy = self.pos[1, 1] - self.pos[0, 1]
 
         xyz, r = self.ao._process_position(self.pos)
-        R, dR = self.ao.harmonics(
-            xyz, derivative=[0, 1], sum_grad=False)
+        R, dR = self.ao.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
@@ -70,46 +63,41 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 1]
             dz_r0_fd = np.gradient(r0, self.dy)
-            delta = np.delete(
-                np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
+            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
             # plt.show()
 
-            assert(np.all(delta < 1E-3))
+            assert np.all(delta < 1e-3)
 
     def test_first_derivative_z(self):
-
         npts = 1000
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
         self.pos[:, 2] = torch.linspace(-4, 4, npts)
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
         xyz, r = self.ao._process_position(self.pos)
-        R, dR = self.ao.harmonics(
-            xyz, derivative=[0, 1], sum_grad=False)
+        R, dR = self.ao.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
         dR = dR.detach().numpy()
         ielec = 0
 
         for iorb in range(7):
-
             r0 = R[:, ielec, iorb]
             dz_r0 = dR[:, ielec, iorb, 2]
             dz_r0_fd = np.gradient(r0, self.dz)
-            delta = np.delete(np.abs(dz_r0-dz_r0_fd), np.s_[450:550])
+            delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
             # plt.plot(r0)
             # plt.plot(dz_r0)
             # plt.plot(dz_r0_fd)
             # plt.show()
 
-            assert(np.all(delta < 1E-3))
+            assert np.all(delta < 1e-3)
 
-    def test_laplacian(self, eps=1E-4):
-
+    def test_laplacian(self, eps=1e-4):
         npts = 1000
 
         self.pos = torch.zeros(npts, self.mol.nelec * 3)
@@ -131,11 +119,9 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
         xyz, r = self.ao._process_position(self.pos)
-        R, dR, d2R = self.ao.harmonics(
-            xyz, derivative=[0, 1, 2], sum_grad=False)
+        R, dR, d2R = self.ao.harmonics(xyz, derivative=[0, 1, 2], sum_grad=False)
 
         for iorb in range(7):
-
             lap_analytic = np.zeros(npts - 2)
             lap_fd = np.zeros(npts - 2)
 
@@ -143,8 +129,8 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
                 lap_analytic[i - 1] = d2R[i, 0, iorb]
 
                 r0 = R[i, 0, iorb].detach().numpy()
-                rpz = R[i+1, 0, iorb].detach().numpy()
-                rmz = R[i-1, 0, iorb].detach().numpy()
+                rpz = R[i + 1, 0, iorb].detach().numpy()
+                rmz = R[i - 1, 0, iorb].detach().numpy()
                 d2z = second_derivative(rmz, r0, rpz, eps)
 
                 r0 = R[i, 0, iorb]
@@ -157,12 +143,11 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
                 rmy = R[i, 4, iorb]
                 d2y = second_derivative(rmy, r0, rpy, eps)
 
-                lap_fd[i-1] = d2x + d2y + d2z
+                lap_fd[i - 1] = d2x + d2y + d2z
 
-            delta = np.delete(
-                np.abs(lap_analytic - lap_fd), np.s_[450:550])
+            delta = np.delete(np.abs(lap_analytic - lap_fd), np.s_[450:550])
 
-            assert(np.all(delta < 5E-3))
+            assert np.all(delta < 5e-3)
 
             # plt.plot(lap_analytic, linewidth=2)
             # plt.plot(lap_fd)
@@ -172,13 +157,11 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         npts = 100
         self.pos = torch.rand(npts, self.mol.nelec * 3)
         xyz, r = self.ao._process_position(self.pos)
-        d2R_sum = self.ao.harmonics(
-            xyz, derivative=2, sum_hess=True)
+        d2R_sum = self.ao.harmonics(xyz, derivative=2, sum_hess=True)
 
-        d2R = self.ao.harmonics(
-            xyz, derivative=2, sum_hess=False)
+        d2R = self.ao.harmonics(xyz, derivative=2, sum_hess=False)
 
-        assert(torch.allclose(d2R.sum(-1), d2R_sum))
+        assert torch.allclose(d2R.sum(-1), d2R_sum)
 
 
 if __name__ == "__main__":

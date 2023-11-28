@@ -1,5 +1,3 @@
-
-
 import torch
 
 from torch import nn
@@ -8,24 +6,31 @@ import operator
 from .. import log
 
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
-from .orbitals.atomic_orbitals_orbital_dependent_backflow import AtomicOrbitalsOrbitalDependentBackFlow
+from .orbitals.atomic_orbitals_orbital_dependent_backflow import (
+    AtomicOrbitalsOrbitalDependentBackFlow,
+)
 from .slater_jastrow_base import SlaterJastrowBase
 from .orbitals.backflow.kernels import BackFlowKernelInverse
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
-from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from .jastrows.elec_elec.jastrow_factor_electron_electron import (
+    JastrowFactorElectronElectron,
+)
 
 
 class SlaterJastrowBackFlow(SlaterJastrowBase):
-
-    def __init__(self, mol, configs='ground_state',
-                 kinetic='jacobi',
-                 jastrow_kernel=PadeJastrowKernel,
-                 jastrow_kernel_kwargs={},
-                 backflow_kernel=BackFlowKernelInverse,
-                 backflow_kernel_kwargs={},
-                 orbital_dependent_backflow=False,
-                 cuda=False,
-                 include_all_mo=True):
+    def __init__(
+        self,
+        mol,
+        configs="ground_state",
+        kinetic="jacobi",
+        jastrow_kernel=PadeJastrowKernel,
+        jastrow_kernel_kwargs={},
+        backflow_kernel=BackFlowKernelInverse,
+        backflow_kernel_kwargs={},
+        orbital_dependent_backflow=False,
+        cuda=False,
+        include_all_mo=True,
+    ):
         """Slater Jastrow wave function with electron-electron Jastrow factor and backflow
 
         .. math::
@@ -35,7 +40,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
         .. math::
             J(r) = \\exp\\left( K_{ee}(r) \\right)
-        
+
         with K, a kernel function depending only on the electron-eletron distances, and
 
         .. math::
@@ -49,22 +54,22 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             mol (Molecule): a QMCTorch molecule object
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
                 - ground_state : only the ground state determinant in the wave function
-                - single(n,m) : only single excitation with n electrons and m orbitals 
+                - single(n,m) : only single excitation with n electrons and m orbitals
                 - single_double(n,m) : single and double excitation with n electrons and m orbitals
-                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
+                - cas(n, m) : all possible configuration using n eletrons and m orbitals
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-                - jacobi : use the Jacobi formula to compute the kinetic energy 
+                - jacobi : use the Jacobi formula to compute the kinetic energy
                 - auto : use automatic differentiation to compute the kinetic energy
             jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
             jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
-            backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation. 
+            backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation.
                 - By default an inverse kernel K(r_{ij}) = w/r_{ij} is used
             backflow_kernel_kwargs (dict, optional) : keyword arguments for the backflow kernel contructor
-            orbital_dependent_backflow (bool, optional) : every orbital has a different transformation if True. Default to False 
+            orbital_dependent_backflow (bool, optional) : every orbital has a different transformation if True. Default to False
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False.
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
-    
+
         Examples::
             >>> from qmctorch.scf import Molecule
             >>> from qmctorch.wavefunction import SlaterJastrowBackFlow
@@ -77,15 +82,21 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         # process the backflow transformation
         if orbital_dependent_backflow:
             self.ao = AtomicOrbitalsOrbitalDependentBackFlow(
-                mol, backflow_kernel, backflow_kernel_kwargs, cuda)
+                mol, backflow_kernel, backflow_kernel_kwargs, cuda
+            )
         else:
             self.ao = AtomicOrbitalsBackFlow(
-                mol, backflow_kernel, backflow_kernel_kwargs, cuda)
+                mol, backflow_kernel, backflow_kernel_kwargs, cuda
+            )
 
         # process the Jastrow
         self.jastrow = JastrowFactorElectronElectron(
-            self.mol.nup, self.mol.ndown, jastrow_kernel,
-            kernel_kwargs=jastrow_kernel_kwargs, cuda=cuda)
+            self.mol.nup,
+            self.mol.ndown,
+            jastrow_kernel,
+            kernel_kwargs=jastrow_kernel_kwargs,
+            cuda=cuda,
+        )
 
         if jastrow_kernel is not None:
             self.use_jastrow = True
@@ -162,7 +173,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         ao = self.ao(x, derivative=derivative, sum_grad=sum_grad)
         return self.ao2mo(ao)
 
-    def kinetic_energy_jacobi(self, x,  **kwargs):
+    def kinetic_energy_jacobi(self, x, **kwargs):
         """Compute the value of the kinetic enery using the Jacobi Formula.
 
 
@@ -196,8 +207,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         """
 
         # get ao values
-        ao, dao, d2ao = self.ao(
-            x, derivative=[0, 1, 2], sum_grad=False)
+        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 
         # get the mo values
         mo = self.ao2mo(ao)
@@ -218,10 +228,12 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
         grad2 = self.pool.operator(mo, dmo, op_squared=True)
 
         # assemble the total second derivative term
-        hess = (hess.sum(0)
-                + operator.add(*[(g**2).sum(0) for g in grad])
-                - grad2.sum(0)
-                + 2 * operator.mul(*grad).sum(0))
+        hess = (
+            hess.sum(0)
+            + operator.add(*[(g**2).sum(0) for g in grad])
+            - grad2.sum(0)
+            + 2 * operator.mul(*grad).sum(0)
+        )
 
         hess = self.fc(hess * slater_dets) / sum_slater_dets
 
@@ -229,9 +241,7 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             return -0.5 * hess
 
         # compute the Jastrow terms
-        jast, djast, d2jast = self.jastrow(x,
-                                           derivative=[0, 1, 2],
-                                           sum_grad=False)
+        jast, djast, d2jast = self.jastrow(x, derivative=[0, 1, 2], sum_grad=False)
 
         # prepare the second derivative term d2Jast/Jast
         # Nbatch x Nelec
@@ -248,15 +258,13 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
 
         # prepare the grad of the dets
         # [Nelec*Ndim] x Nbatch x 1
-        grad_val = self.fc(operator.add(*grad) *
-                           slater_dets) / sum_slater_dets
+        grad_val = self.fc(operator.add(*grad) * slater_dets) / sum_slater_dets
 
         # [Nelec*Ndim] x Nbatch
         grad_val = grad_val.squeeze()
 
         # assemble the derivaite terms
-        out = d2jast.sum(-1) + 2*(grad_val * djast).sum(0) + \
-            hess.squeeze(-1)
+        out = d2jast.sum(-1) + 2 * (grad_val * djast).sum(0) + hess.squeeze(-1)
 
         return -0.5 * out.unsqueeze(-1)
 
@@ -267,4 +275,5 @@ class SlaterJastrowBackFlow(SlaterJastrowBase):
             x ([type]): [description]
         """
         raise NotImplementedError(
-            'Gradient through Jacobi formulat not implemented for backflow orbitals')
+            "Gradient through Jacobi formulat not implemented for backflow orbitals"
+        )

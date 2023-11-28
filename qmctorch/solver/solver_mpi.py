@@ -2,8 +2,7 @@ from time import time
 from types import SimpleNamespace
 
 import torch
-from qmctorch.utils import (DataLoader, Loss, OrthoReg, add_group_attr,
-                            dump_to_hdf5)
+from qmctorch.utils import DataLoader, Loss, OrthoReg, add_group_attr, dump_to_hdf5
 
 from .. import log
 from .solver import Solver
@@ -20,9 +19,9 @@ def logd(rank, *args):
 
 
 class SolverMPI(Solver):
-
-    def __init__(self, wf=None, sampler=None, optimizer=None,
-                 scheduler=None, output=None, rank=0):
+    def __init__(
+        self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
+    ):
         """Distributed QMC solver
 
         Args:
@@ -34,18 +33,26 @@ class SolverMPI(Solver):
             rank (int, optional): rank of he process. Defaults to 0.
         """
 
-        super().__init__(wf, sampler,
-                         optimizer, scheduler, output, rank)
+        super().__init__(wf, sampler, optimizer, scheduler, output, rank)
 
         hvd.broadcast_optimizer_state(self.opt, root_rank=0)
         self.opt = hvd.DistributedOptimizer(
-            self.opt, named_parameters=self.wf.named_parameters())
+            self.opt, named_parameters=self.wf.named_parameters()
+        )
 
         self.sampler.walkers.nwalkers //= hvd.size()
 
-    def run(self, nepoch, batchsize=None, loss='energy',
-            clip_loss=False, grad='manual', hdf5_group='wf_opt',
-            num_threads=1, chkpt_every=None):
+    def run(
+        self,
+        nepoch,
+        batchsize=None,
+        loss="energy",
+        clip_loss=False,
+        grad="manual",
+        hdf5_group="wf_opt",
+        num_threads=1,
+        chkpt_every=None,
+    ):
         """Run the optimization
 
         Args:
@@ -63,21 +70,27 @@ class SolverMPI(Solver):
                                     Defaults to 'wf_opt'
         """
 
-        logd(hvd.rank(), '')
-        logd(hvd.rank(),
-             '  Distributed Optimization on {num} process'.format(num=hvd.size()))
-        log.info('   - Process {id} using {nw} walkers'.format(
-                 id=hvd.rank(), nw=self.sampler.walkers.nwalkers))
+        logd(hvd.rank(), "")
+        logd(
+            hvd.rank(),
+            "  Distributed Optimization on {num} process".format(num=hvd.size()),
+        )
+        log.info(
+            "   - Process {id} using {nw} walkers".format(
+                id=hvd.rank(), nw=self.sampler.walkers.nwalkers
+            )
+        )
 
         # observable
-        if not hasattr(self, 'observable'):
-            self.track_observable(['local_energy'])
+        if not hasattr(self, "observable"):
+            self.track_observable(["local_energy"])
 
         self.evaluate_gradient = {
-            'auto': self.evaluate_grad_auto,
-            'manual': self.evaluate_grad_manual}[grad]
+            "auto": self.evaluate_grad_auto,
+            "manual": self.evaluate_grad_manual,
+        }[grad]
 
-        if 'lpos_needed' not in self.opt.__dict__.keys():
+        if "lpos_needed" not in self.opt.__dict__.keys():
             self.opt.lpos_needed = False
 
         self.wf.train()
@@ -87,8 +100,7 @@ class SolverMPI(Solver):
 
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
-        self.loss.use_weight = (
-            self.resampling_options.resample_every > 1)
+        self.loss.use_weight = self.resampling_options.resample_every > 1
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_loss = OrthoReg()
@@ -96,7 +108,7 @@ class SolverMPI(Solver):
         self.prepare_optimization(batchsize, chkpt_every)
         # log data
         if hvd.rank() == 0:
-            self.log_data_opt(nepoch, 'wave function optimization')
+            self.log_data_opt(nepoch, "wave function optimization")
 
         # sample the wave function
         if hvd.rank() == 0:
@@ -119,27 +131,24 @@ class SolverMPI(Solver):
         _nstep_save = self.sampler.nstep
         _ntherm_save = self.sampler.ntherm
         _nwalker_save = self.sampler.walkers.nwalkers
-        if self.resampling_options.mode == 'update':
+        if self.resampling_options.mode == "update":
             self.sampler.ntherm = -1
             self.sampler.nstep = self.resampling_options.nstep_update
             self.sampler.walkers.nwalkers = pos.shape[0]
 
         # create the data loader
         # self.dataset = DataSet(pos)
-        self.dataloader = DataLoader(
-            pos, batch_size=batchsize, pin_memory=self.cuda)
-        min_loss = 1E3
+        self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=self.cuda)
+        min_loss = 1e3
 
         for n in range(nepoch):
-
             tstart = time()
-            logd(hvd.rank(), '')
-            logd(hvd.rank(), '  epoch %d' % n)
+            logd(hvd.rank(), "")
+            logd(hvd.rank(), "  epoch %d" % n)
 
-            cumulative_loss = 0.
+            cumulative_loss = 0.0
 
             for ibatch, data in enumerate(self.dataloader):
-
                 # get data
                 lpos = data.to(self.device)
                 lpos.requires_grad = True
@@ -153,16 +162,13 @@ class SolverMPI(Solver):
 
                 # observable
                 if hvd.rank() == 0:
-                    self.store_observable(
-                        pos, local_energy=eloc, ibatch=ibatch)
+                    self.store_observable(pos, local_energy=eloc, ibatch=ibatch)
 
-            cumulative_loss = self.metric_average(cumulative_loss,
-                                                  'cum_loss')
+            cumulative_loss = self.metric_average(cumulative_loss, "cum_loss")
 
             if hvd.rank() == 0:
                 if n == 0 or cumulative_loss < min_loss:
-                    self.observable.models.best = dict(
-                        self.wf.state_dict())
+                    self.observable.models.best = dict(self.wf.state_dict())
                 min_loss = cumulative_loss
 
                 if self.chkpt_every is not None:
@@ -179,8 +185,7 @@ class SolverMPI(Solver):
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            logd(hvd.rank(), '  epoch done in %1.2f sec.' %
-                 (time()-tstart))
+            logd(hvd.rank(), "  epoch done in %1.2f sec." % (time() - tstart))
 
         # restore the sampler number of step
         self.sampler.nstep = _nstep_save
@@ -189,11 +194,11 @@ class SolverMPI(Solver):
 
         if hvd.rank() == 0:
             dump_to_hdf5(self.observable, self.hdf5file, hdf5_group)
-            add_group_attr(self.hdf5file, hdf5_group, {'type': 'opt'})
+            add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
         return self.observable
 
-    def single_point(self, with_tqdm=True, hdf5_group='single_point'):
+    def single_point(self, with_tqdm=True, hdf5_group="single_point"):
         """Performs a single point calculation
 
         Args:
@@ -205,13 +210,17 @@ class SolverMPI(Solver):
             SimpleNamespace: contains the local energy, positions, ...
         """
 
-        logd(hvd.rank(), '')
-        logd(hvd.rank(), '  Single Point Calculation : {nw} walkers | {ns} steps'.format(
-             nw=self.sampler.walkers.nwalkers, ns=self.sampler.nstep))
+        logd(hvd.rank(), "")
+        logd(
+            hvd.rank(),
+            "  Single Point Calculation : {nw} walkers | {ns} steps".format(
+                nw=self.sampler.walkers.nwalkers, ns=self.sampler.nstep
+            ),
+        )
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()
-        if self.wf.kinetic == 'auto':
+        if self.wf.kinetic == "auto":
             grad_mode = torch.enable_grad()
 
         # distribute the calculation
@@ -220,46 +229,39 @@ class SolverMPI(Solver):
         torch.set_num_threads(num_threads)
 
         with grad_mode:
-
             # sample the wave function
             pos = self.sampler(self.wf.pdf)
-            if self.wf.cuda and pos.device.type == 'cpu':
+            if self.wf.cuda and pos.device.type == "cpu":
                 pos = pos.to(self.device)
 
             # compute energy/variance/error
             eloc = self.wf.local_energy(pos)
-            e, s, err = torch.mean(eloc), torch.var(
-                eloc), self.wf.sampling_error(eloc)
+            e, s, err = torch.mean(eloc), torch.var(eloc), self.wf.sampling_error(eloc)
 
             # gather all data
-            eloc_all = hvd.allgather(eloc, name='local_energies')
-            e, s, err = torch.mean(eloc_all), torch.var(
-                eloc_all), self.wf.sampling_error(eloc_all)
+            eloc_all = hvd.allgather(eloc, name="local_energies")
+            e, s, err = (
+                torch.mean(eloc_all),
+                torch.var(eloc_all),
+                self.wf.sampling_error(eloc_all),
+            )
 
             # print
             if hvd.rank() == 0:
-                log.options(style='percent').info(
-                    '  Energy   : %f +/- %f' % (e.detach().item(), err.detach().item()))
-                log.options(style='percent').info(
-                    '  Variance : %f' % s.detach().item())
+                log.options(style="percent").info(
+                    "  Energy   : %f +/- %f" % (e.detach().item(), err.detach().item())
+                )
+                log.options(style="percent").info("  Variance : %f" % s.detach().item())
 
             # dump data to hdf5
             obs = SimpleNamespace(
-                pos=pos,
-                local_energy=eloc_all,
-                energy=e,
-                variance=s,
-                error=err
+                pos=pos, local_energy=eloc_all, energy=e, variance=s, error=err
             )
 
             # dump to file
             if hvd.rank() == 0:
-
-                dump_to_hdf5(obs,
-                             self.hdf5file,
-                             root_name=hdf5_group)
-                add_group_attr(self.hdf5file, hdf5_group,
-                               {'type': 'single_point'})
+                dump_to_hdf5(obs, self.hdf5file, root_name=hdf5_group)
+                add_group_attr(self.hdf5file, hdf5_group, {"type": "single_point"})
 
         return obs
 

@@ -7,12 +7,11 @@ from qmctorch.wavefunction.orbitals.spherical_harmonics import Harmonics
 
 
 class TestSphericalHarmonics(unittest.TestCase):
-
     def setUp(self):
         bas_l = torch.Tensor([0, 1, 1, 1, 2, 2, 2, 2, 2])
         bas_m = torch.Tensor([0, -1, 0, 1, -2, -1, 0, 1, 2])
 
-        self.harmonics = Harmonics('sph', bas_l=bas_l, bas_m=bas_m)
+        self.harmonics = Harmonics("sph", bas_l=bas_l, bas_m=bas_m)
         self.pos = torch.rand(5, 4, 9, 3)
 
     def test_value(self):

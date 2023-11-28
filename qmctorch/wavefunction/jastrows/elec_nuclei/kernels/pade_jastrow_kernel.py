@@ -6,8 +6,7 @@ from .jastrow_kernel_electron_nuclei_base import JastrowKernelElectronNucleiBase
 
 
 class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
-
-    def __init__(self, nup, ndown, atomic_pos, cuda, w=1.):
+    def __init__(self, nup, ndown, atomic_pos, cuda, w=1.0):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -24,15 +23,16 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
 
         super().__init__(nup, ndown, atomic_pos, cuda)
 
-        self.weight = nn.Parameter(
-            torch.as_tensor([w]), requires_grad=True).to(self.device)
-        register_extra_attributes(self, ['weight'])
+        self.weight = nn.Parameter(torch.as_tensor([w]), requires_grad=True).to(
+            self.device
+        )
+        register_extra_attributes(self, ["weight"])
 
-        self.static_weight = torch.as_tensor([1.]).to(self.device)
+        self.static_weight = torch.as_tensor([1.0]).to(self.device)
         self.requires_autograd = True
 
     def forward(self, r):
-        """ Get the jastrow kernel.
+        """Get the jastrow kernel.
         .. math::
             B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
 
@@ -70,11 +70,11 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
         """
 
         r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
+        denom = 1.0 / (1.0 + self.weight * r_)
         a = self.static_weight * dr * denom
-        b = - self.static_weight * self.weight * r_ * dr * denom**2
+        b = -self.static_weight * self.weight * r_ * dr * denom**2
 
-        return (a + b)
+        return a + b
 
     def compute_second_derivative(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -100,13 +100,13 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
         """
 
         r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
+        denom = 1.0 / (1.0 + self.weight * r_)
         denom2 = denom**2
-        dr_square = dr*dr
+        dr_square = dr * dr
 
         a = self.static_weight * d2r * denom
         b = -2 * self.static_weight * self.weight * dr_square * denom2
-        c = - self.static_weight * self.weight * r_ * d2r * denom2
+        c = -self.static_weight * self.weight * r_ * d2r * denom2
         d = 2 * self.static_weight * self.weight**2 * r_ * dr_square * denom**3
 
         return a + b + c + d

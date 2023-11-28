@@ -13,7 +13,6 @@ from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowK
 
 
 class MyBackflow(BackFlowKernelBase):
-
     def __init__(self, mol, cuda, size=16):
         super().__init__(mol, cuda)
         self.fc1 = nn.Linear(1, size, bias=False)
@@ -27,20 +26,28 @@ class MyBackflow(BackFlowKernelBase):
 
 
 # define the molecule
-mol = Molecule(atom='Li 0. 0. 0.; H 3.14 0. 0.', unit='angs',
-               calculator='pyscf', basis='sto-3g', name='LiH')
+mol = Molecule(
+    atom="Li 0. 0. 0.; H 3.14 0. 0.",
+    unit="angs",
+    calculator="pyscf",
+    basis="sto-3g",
+    name="LiH",
+)
 
 # jastrow
 jastrow = JastrowFactor(mol, PadeJastrowKernel)
 
 # backflow
-backflow = BackFlowTransformation(mol, MyBackflow, {'size': 64})
+backflow = BackFlowTransformation(mol, MyBackflow, {"size": 64})
 
 # define the wave function
-wf = SlaterJastrow(mol, kinetic='jacobi',
-                   jastrow=jastrow,
-                   backflow=backflow,
-                   configs='single_double(2,2)')
+wf = SlaterJastrow(
+    mol,
+    kinetic="jacobi",
+    jastrow=jastrow,
+    backflow=backflow,
+    configs="single_double(2,2)",
+)
 
-pos = torch.rand(10, wf.nelec*3)
+pos = torch.rand(10, wf.nelec * 3)
 print(wf(pos))

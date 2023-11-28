@@ -9,16 +9,19 @@ from .. import log
 
 def print_insert_error(obj, obj_name):
     print(obj_name, obj)
-    log.critical('Issue inserting data {0} of type {type}',
-                 obj_name, type=str(type(obj)))
+    log.critical(
+        "Issue inserting data {0} of type {type}", obj_name, type=str(type(obj))
+    )
 
 
 def print_insert_type_error(obj, obj_name):
-    log.critical('Issue inserting type of data {0}} ({type}})' %
-                 obj_name, type=str(type(obj)))
-    
+    log.critical(
+        "Issue inserting type of data {0}} ({type}})" % obj_name, type=str(type(obj))
+    )
+
+
 def print_load_error(grp):
-    log.critical('Issue loading {grp}', grp=grp)
+    log.critical("Issue loading {grp}", grp=grp)
 
 
 def load_from_hdf5(obj, fname, obj_name):
@@ -30,7 +33,7 @@ def load_from_hdf5(obj, fname, obj_name):
         obj_name {str} -- name of the root group in the hdf5
     """
 
-    h5 = h5py.File(fname, 'r')
+    h5 = h5py.File(fname, "r")
     root_grp = h5[obj_name]
 
     load_object(root_grp, obj, obj_name)
@@ -47,7 +50,6 @@ def load_object(grp, parent_obj, grp_name):
     """
 
     for child_grp_name, child_grp in grp.items():
-
         if isgroup(child_grp):
             load_group(child_grp, parent_obj, child_grp_name)
         else:
@@ -64,12 +66,8 @@ def load_group(grp, parent_obj, grp_name):
     """
     try:
         if not hasattr(parent_obj, grp_name):
-            parent_obj.__setattr__(
-                grp_name, SimpleNamespace())
-        load_object(grp,
-                    parent_obj.__getattribute__(
-                        grp_name),
-                    grp_name)
+            parent_obj.__setattr__(grp_name, SimpleNamespace())
+        load_object(grp, parent_obj.__getattribute__(grp_name), grp_name)
     except:
         print_load_error(grp_name)
 
@@ -83,8 +81,7 @@ def load_data(grp, parent_obj, grp_name):
         grp_name {str} -- name of the group
     """
     try:
-        parent_obj.__setattr__(grp_name,
-                               cast_loaded_data(grp[()]))
+        parent_obj.__setattr__(grp_name, cast_loaded_data(grp[()]))
     except:
         print_load_error(grp_name)
 
@@ -103,17 +100,17 @@ def cast_loaded_data(data):
 def bytes2str(bstr):
     """Convert a bytes into string."""
     if type(bstr) is bytes:
-        return bstr.decode('utf-8')
+        return bstr.decode("utf-8")
     elif type(bstr) is str:
         return bstr
     else:
         raise TypeError(
-            bstr, ' should be a bytes or str but got ', type(bstr), ' instead')
+            bstr, " should be a bytes or str but got ", type(bstr), " instead"
+        )
 
 
 def lookup_cast(ori_type, current_type):
-    raise NotImplementedError(
-        "cast the data to the type contained in .attrs['type']")
+    raise NotImplementedError("cast the data to the type contained in .attrs['type']")
 
 
 def isgroup(grp):
@@ -140,23 +137,22 @@ def dump_to_hdf5(obj, fname, root_name=None):
         root_name {str} -- root group in the hdf5 file (default: {None})
     """
 
-    h5 = h5py.File(fname, 'a')
+    h5 = h5py.File(fname, "a")
 
     if root_name is None:
         root_name = obj.__class__.__name__
 
     # change root name if that name is already present in the file
     if root_name in h5:
-
-        log.info('')
-        log.info(' Warning : dump to hdf5')
+        log.info("")
+        log.info(" Warning : dump to hdf5")
         log.info(
-            ' Object {obj} already exists in {parent}', obj=root_name, parent=fname)
+            " Object {obj} already exists in {parent}", obj=root_name, parent=fname
+        )
         n = sum(1 for n in h5 if n.startswith(root_name)) + 1
-        root_name = root_name + '_' + str(n)
-        log.info(
-            ' Object name changed to {obj}', obj=root_name)
-        log.info('')
+        root_name = root_name + "_" + str(n)
+        log.info(" Object name changed to {obj}", obj=root_name)
+        log.info("")
 
     insert_object(obj, h5, root_name)
     h5.close()
@@ -189,35 +185,38 @@ def insert_group(obj, parent_grp, obj_name):
 
     # ignore object starting with underscore
     # a lot of pytorch internal are like that
-    if obj_name.startswith('_'):
+    if obj_name.startswith("_"):
         log.debug(
-            ' Warning : Object {obj} not stored in {parent}', obj=obj_name, parent=parent_grp)
-        log.debug(
-            '         : because object name starts with "_"')
+            " Warning : Object {obj} not stored in {parent}",
+            obj=obj_name,
+            parent=parent_grp,
+        )
+        log.debug('         : because object name starts with "_"')
         return
 
     # store if the object name is not in parent
     if obj_name not in parent_grp:
-
         try:
             own_grp = parent_grp.create_group(obj_name)
 
             for child_name in get_children_names(obj):
                 child_obj = get_child_object(obj, child_name)
-                insert_object(child_obj,  own_grp, child_name)
+                insert_object(child_obj, own_grp, child_name)
 
         except Exception as inst:
             print(type(inst))
             print(inst)
-            
+
             print_insert_error(obj, obj_name)
 
     # if something went wrong anyway
     else:
         log.critical(
-            ' Warning : Object {obj} already exists in {parent}', obj=obj_name, parent=parent_grp)
-        log.critical(
-            ' Warning : Keeping original version of the data')
+            " Warning : Object {obj} already exists in {parent}",
+            obj=obj_name,
+            parent=parent_grp,
+        )
+        log.critical(" Warning : Keeping original version of the data")
 
 
 def insert_data(obj, parent_grp, obj_name):
@@ -229,17 +228,19 @@ def insert_data(obj, parent_grp, obj_name):
         obj_name {str} -- name of the object
     """
 
-    if obj_name.startswith('_'):
+    if obj_name.startswith("_"):
         return
 
     try:
-        lookup_insert = {list: insert_list,
-                         tuple: insert_tuple,
-                         np.ndarray: insert_numpy,
-                         torch.Tensor: insert_torch_tensor,
-                         torch.nn.parameter.Parameter: insert_torch_parameter,
-                         torch.device: insert_none,
-                         type(None): insert_none}
+        lookup_insert = {
+            list: insert_list,
+            tuple: insert_tuple,
+            np.ndarray: insert_numpy,
+            torch.Tensor: insert_torch_tensor,
+            torch.nn.parameter.Parameter: insert_torch_parameter,
+            torch.device: insert_none,
+            type(None): insert_none,
+        }
 
         insert_fn = lookup_insert[type(obj)]
     except KeyError:
@@ -262,7 +263,7 @@ def insert_type(obj, parent_grp, obj_name):
         obj_name {str} -- name of the object
     """
     try:
-        parent_grp[obj_name].attrs['type'] = str(type(obj))
+        parent_grp[obj_name].attrs["type"] = str(type(obj))
     except:
         print_insert_type_error(obj, obj_name)
 
@@ -291,16 +292,15 @@ def insert_list(obj, parent_grp, obj_name):
         obj_name {str} -- name of the object
     """
 
-    
     try:
-        if np.all([isinstance(el,torch.Tensor) for el in obj]):
+        if np.all([isinstance(el, torch.Tensor) for el in obj]):
             obj = [el.numpy() for el in obj]
-            
+
         parent_grp.create_dataset(obj_name, data=np.array(obj))
     except:
         for il, l in enumerate(obj):
             try:
-                insert_object(l, parent_grp, obj_name+'_'+str(il))
+                insert_object(l, parent_grp, obj_name + "_" + str(il))
             except:
                 print_insert_error(obj, obj_name)
 
@@ -314,8 +314,7 @@ def insert_tuple(obj, parent_grp, obj_name):
         obj_name {str} -- name of the object
     """
     # fix for type torch.Tensor
-    obj = [o.numpy() if isinstance(
-        o, torch.Tensor) else o for o in obj]
+    obj = [o.numpy() if isinstance(o, torch.Tensor) else o for o in obj]
     insert_list(list(obj), parent_grp, obj_name)
 
 
@@ -327,8 +326,8 @@ def insert_numpy(obj, parent_grp, obj_name):
         parent_grp {hdf5 group} -- group where to dump
         obj_name {str} -- name of the object
     """
-    if obj.dtype.str.startswith('<U'):
-        obj = obj.astype('S')
+    if obj.dtype.str.startswith("<U"):
+        obj = obj.astype("S")
     insert_default(obj, parent_grp, obj_name)
 
 
@@ -378,7 +377,7 @@ def haschildren(obj):
     if type(obj) in ommit_type:
         return False
     else:
-        return hasattr(obj, '__dict__') or hasattr(obj, 'keys')
+        return hasattr(obj, "__dict__") or hasattr(obj, "keys")
 
 
 def children(obj):
@@ -391,10 +390,10 @@ def children(obj):
         dict -- items
     """
 
-    if hasattr(obj, '__dict__'):
+    if hasattr(obj, "__dict__"):
         return obj.__dict__.items()
 
-    elif hasattr(obj, 'keys'):
+    elif hasattr(obj, "keys"):
         return obj.items()
 
 
@@ -408,16 +407,16 @@ def get_children_names(obj):
         dict -- items
     """
 
-    if hasattr(obj, '__dict__'):
+    if hasattr(obj, "__dict__"):
         names = list(obj.__dict__.keys())
 
-    elif hasattr(obj, 'keys'):
+    elif hasattr(obj, "keys"):
         names = list(obj.keys())
 
-    if hasattr(obj, '__extra_attr__'):
+    if hasattr(obj, "__extra_attr__"):
         names += obj.__extra_attr__
 
-    if hasattr(obj, 'state_dict'):
+    if hasattr(obj, "state_dict"):
         names += list(obj.state_dict().keys())
 
     return list(set(names))
@@ -434,21 +433,21 @@ def get_child_object(obj, child_name):
         object -- child object
     """
 
-    if hasattr(obj, '__getattr__'):
+    if hasattr(obj, "__getattr__"):
         try:
             return obj.__getattr__(child_name)
 
         except AttributeError:
             pass
 
-    if hasattr(obj, '__getattribute__'):
+    if hasattr(obj, "__getattribute__"):
         try:
             return obj.__getattribute__(child_name)
 
         except AttributeError:
             pass
 
-    if hasattr(obj, '__getitem__'):
+    if hasattr(obj, "__getitem__"):
         try:
             return obj.__getitem__(child_name)
 
@@ -465,7 +464,7 @@ def add_group_attr(filename, grp_name, attr):
         attr {dict} -- attrivutes to add
     """
 
-    h5 = h5py.File(filename, 'a')
+    h5 = h5py.File(filename, "a")
     for k, v in attr.items():
         h5[grp_name].attrs[k] = v
     h5.close()
@@ -478,6 +477,6 @@ def register_extra_attributes(obj, attr_names):
         obj {object} -- the object where we want to add attr
         attr_names {list} -- a list of attr names
     """
-    if not hasattr(obj, '__extra_attr__'):
+    if not hasattr(obj, "__extra_attr__"):
         obj.__extra_attr__ = []
     obj.__extra_attr__ += attr_names

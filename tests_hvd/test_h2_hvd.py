@@ -10,14 +10,15 @@ from qmctorch.sampler import Metropolis
 from qmctorch.solver import SolverMPI
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
-from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import (
+    JastrowFactorElectronElectron,
+)
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 from qmctorch.utils import set_torch_double_precision
 
 
 class TestH2Hvd(unittest.TestCase):
-
     def setUp(self):
         hvd.init()
 
@@ -32,22 +33,21 @@ class TestH2Hvd(unittest.TestCase):
 
         # molecule
         self.mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
-            unit='bohr',
-            calculator='pyscf',
-            basis='sto-3g',
+            atom="H 0 0 -0.69; H 0 0 0.69",
+            unit="bohr",
+            calculator="pyscf",
+            basis="sto-3g",
             rank=hvd.local_rank(),
-            mpi_size=hvd.local_size())
+            mpi_size=hvd.local_size(),
+        )
 
         # define jastrow factor
-        jastrow = JastrowFactorElectronElectron(
-            self.mol, PadeJastrowKernel)
+        jastrow = JastrowFactorElectronElectron(self.mol, PadeJastrowKernel)
 
         # wave function
-        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='cas(2,2)',
-                                jastrow=jastrow,
-                                cuda=False)
+        self.wf = SlaterJastrow(
+            self.mol, kinetic="jacobi", configs="cas(2,2)", jastrow=jastrow, cuda=False
+        )
 
         # sampler
         self.sampler = Metropolis(
@@ -56,17 +56,17 @@ class TestH2Hvd(unittest.TestCase):
             step_size=0.2,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain('atomic'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+            init=self.mol.domain("atomic"),
+            move={"type": "all-elec", "proba": "normal"},
+        )
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = SolverMPI(wf=self.wf, sampler=self.sampler,
-                                                 optimizer=self.opt, rank=hvd.rank())
+        self.solver = SolverMPI(
+            wf=self.wf, sampler=self.sampler, optimizer=self.opt, rank=hvd.rank()
+        )
 
         # ground state energy
         self.ground_state_energy = -1.16
@@ -92,17 +92,20 @@ class TestH2Hvd(unittest.TestCase):
         self.solver.wf.ao.atom_coords[0, 2] = -self.ground_state_pos
         self.solver.wf.ao.atom_coords[1, 2] = self.ground_state_pos
 
-        self.solver.configure(track=['local_energy'], freeze=['ao', 'mo'],
-                              loss='energy', grad='auto',
-                              ortho_mo=False, clip_loss=False,
-                              resampling={'mode': 'update',
-                                          'resample_every': 1,
-                                          'nstep_update': 50})
+        self.solver.configure(
+            track=["local_energy"],
+            freeze=["ao", "mo"],
+            loss="energy",
+            grad="auto",
+            ortho_mo=False,
+            clip_loss=False,
+            resampling={"mode": "update", "resample_every": 1, "nstep_update": 50},
+        )
         self.solver.run(10)
 
         MPI.COMM_WORLD.barrier()
 
-        self.solver.wf.load(self.solver.hdf5file, 'wf_opt')
+        self.solver.wf.load(self.solver.hdf5file, "wf_opt")
         self.solver.wf.eval()
 
         obs = self.solver.single_point()
