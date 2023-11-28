@@ -34,8 +34,13 @@ class BaseTestCases:
 
         def setUp(self):
             """Init the base test"""
+
+            def wf_placeholder(pos):
+                """Callable for wf"""
+                return None
+            
             self.pos = None
-            self.wf = None
+            self.wf = wf_placeholder
             self.nbatch = None
 
         def test_forward(self):

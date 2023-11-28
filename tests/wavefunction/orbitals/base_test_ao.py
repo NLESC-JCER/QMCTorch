@@ -72,7 +72,11 @@ class BaseTestAO:
     class BaseTestAOderivatives(unittest.TestCase):
 
         def setUp(self):
-            self.ao = None
+
+            def ao_callable(pos):
+                """Callable for the AO"""
+                return None
+            self.ao = ao_callable
             self.pos = None
 
         def test_ao_deriv(self):
