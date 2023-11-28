@@ -55,6 +55,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         self.use_jastrow = True
 
         self.jastrow = JastrowFactorElectronElectron(
+            mol,
             jastrow_kernel,
             kernel_kwargs=jastrow_kernel_kwargs,
             orbital_dependent_kernel=True,
