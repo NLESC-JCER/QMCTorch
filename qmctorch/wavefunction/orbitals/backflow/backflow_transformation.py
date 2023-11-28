@@ -1,3 +1,4 @@
+import numpy
 import torch
 from torch import nn
 from .orbital_dependent_backflow_kernel import OrbitalDependentBackFlowKernel

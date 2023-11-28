@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from torch.autograd import grad
+from torch.autograd import grad, Variable
 
 
 class BackFlowKernelBase(nn.Module):

@@ -1,7 +1,9 @@
+from tqdm import tqdm
 import torch
 import pints
 from typing import Callable, Union, Dict
 from .sampler_base import SamplerBase
+from .. import log
 
 
 class torch_model(pints.LogPDF):
