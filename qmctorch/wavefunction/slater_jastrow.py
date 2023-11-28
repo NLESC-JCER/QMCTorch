@@ -206,6 +206,7 @@ class SlaterJastrow(WaveFunction):
         self.kinetic_method = kinetic
         if kinetic == "jacobi":
             if backflow is None:
+                self.gradients_jacobi = self.gradients_jacobi_no_backflow
                 self.kinetic_energy = self.kinetic_energy_jacobi
 
             else:
@@ -313,7 +314,7 @@ class SlaterJastrow(WaveFunction):
         out = self.fc(kin * psi) / self.fc(psi)
         return out
 
-    def gradients_jacobi(self, x, sum_grad=False, pdf=False):
+    def gradients_jacobi_no_backflow(self, x, sum_grad=False, pdf=False):
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
         C. Filippi, Simple Formalism for Efficient Derivatives.
 

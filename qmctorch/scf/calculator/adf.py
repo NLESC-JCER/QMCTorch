@@ -258,7 +258,7 @@ class CalculatorADF(CalculatorBase):
 class CalculatorADF2019(CalculatorADF):
     def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
         CalculatorADF.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, savefile
+            self, atoms, atom_coords, basis, scf, units, molname, 'adf', savefile
         )
 
         self.adf_version = "adf2019"
