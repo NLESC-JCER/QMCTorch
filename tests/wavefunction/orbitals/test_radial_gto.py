@@ -4,7 +4,6 @@ import numpy as np
 import torch
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
 from .second_derivative import second_derivative
 

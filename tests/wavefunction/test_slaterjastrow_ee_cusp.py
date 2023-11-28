@@ -9,7 +9,7 @@ from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel, PadeJastrowKernel
+from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 
 torch.set_default_tensor_type(torch.DoubleTensor)

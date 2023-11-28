@@ -1,7 +1,6 @@
 import unittest
 from torch.autograd import grad, gradcheck, Variable
 
-import numpy as np
 import torch
 
 

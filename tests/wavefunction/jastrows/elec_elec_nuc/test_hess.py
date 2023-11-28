@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 from torch.autograd import grad
 from torch.autograd.variable import Variable
 

@@ -1,7 +1,6 @@
 import unittest
 
 import torch
-from pyscf import gto
 from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.scf import Molecule

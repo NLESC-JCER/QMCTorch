@@ -1,6 +1,5 @@
 from ...path_utils import PATH_TEST
 import unittest
-import numpy as np
 import torch
 
 from .base_test_ao import BaseTestAO

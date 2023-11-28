@@ -1,11 +1,9 @@
 import unittest
 
 import torch
-from pyscf import gto
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.wavefunction.orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse

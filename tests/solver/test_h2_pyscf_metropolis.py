@@ -1,4 +1,3 @@
-from qmctorch.wavefunction import jastrows
 import unittest
 
 import numpy as np

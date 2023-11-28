@@ -1,5 +1,5 @@
 import torch
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 from qmctorch.wavefunction.jastrows.distance import ElectronElectronDistance
 import unittest
 

@@ -8,7 +8,6 @@ from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
 from ...path_utils import PATH_TEST
 from .second_derivative import second_derivative
 
-import matplotlib.pyplot as plt
 
 
 class TestRadialSlater(unittest.TestCase):

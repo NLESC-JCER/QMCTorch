@@ -1,4 +1,3 @@
-from tests.wavefunction.test_slaterjastrow import TestSlaterJastrow
 import unittest
 
 import numpy as np

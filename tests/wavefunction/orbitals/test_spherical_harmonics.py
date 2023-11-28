@@ -1,6 +1,5 @@
 import unittest
 
-import numpy as np
 import torch
 
 from qmctorch.wavefunction.orbitals.spherical_harmonics import Harmonics
