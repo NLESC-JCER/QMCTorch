@@ -2,7 +2,6 @@
 
 from .algebra_utils import bdet2, bproj, btrace
 from .hdf5_utils import (
-    add_group_attr,
     dump_to_hdf5,
     load_from_hdf5,
     register_extra_attributes,
@@ -16,11 +15,6 @@ from .interpolate import InterpolateAtomicOrbitals, InterpolateMolecularOrbitals
 #                         plot_integrated_autocorrelation_time,
 #                         plot_walkers_traj)
 
-from .stat_utils import (
-    blocking,
-    correlation_coefficient,
-    integrated_autocorrelation_time,
-)
 from .torch_utils import (
     DataSet,
     DataLoader,

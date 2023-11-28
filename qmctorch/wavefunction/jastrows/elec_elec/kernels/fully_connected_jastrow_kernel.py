@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import numpy as np
 from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 

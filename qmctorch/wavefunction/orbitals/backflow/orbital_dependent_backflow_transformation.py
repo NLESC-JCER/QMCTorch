@@ -1,4 +1,3 @@
-import numpy
 import torch
 from torch import nn
 from ...jastrows.distance.electron_electron_distance import ElectronElectronDistance

@@ -1,5 +1,4 @@
 import os
-import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace

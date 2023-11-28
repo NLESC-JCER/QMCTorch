@@ -1,4 +1,3 @@
-import torch
 from torch import nn
 from .backflow_kernel_base import BackFlowKernelBase
 
