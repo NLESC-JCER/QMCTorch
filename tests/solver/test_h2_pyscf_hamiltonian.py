@@ -17,9 +17,7 @@ __PLOT__ = True
 
 
 class TestH2SamplerHMC(BaseTestSolvers.BaseTestSolverMolecule):
-
     def setUp(self):
-
         torch.manual_seed(0)
         np.random.seed(0)
 
@@ -29,18 +27,19 @@ class TestH2SamplerHMC(BaseTestSolvers.BaseTestSolverMolecule):
 
         # molecule
         self.mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
-            unit='bohr',
-            calculator='pyscf',
-            basis='sto-3g')
+            atom="H 0 0 -0.69; H 0 0 0.69",
+            unit="bohr",
+            calculator="pyscf",
+            basis="sto-3g",
+        )
 
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # wave function
-        self.wf = SlaterJastrow(self.mol, kinetic='auto',
-                                configs='single(2,2)',
-                                jastrow=jastrow)
+        self.wf = SlaterJastrow(
+            self.mol, kinetic="auto", configs="single(2,2)", jastrow=jastrow
+        )
 
         self.sampler = Hamiltonian(
             nwalkers=100,
@@ -48,22 +47,20 @@ class TestH2SamplerHMC(BaseTestSolvers.BaseTestSolverMolecule):
             step_size=0.1,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain('normal'))
+            init=self.mol.domain("normal"),
+        )
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = Solver(wf=self.wf, sampler=self.sampler,
-                                          optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
 
         # values on different arch
-        self.expected_energy = [-1.0877732038497925,
-                                -1.088576]
+        self.expected_energy = [-1.0877732038497925, -1.088576]
 
         # values on different arch
-        self.expected_variance = [0.14341972768306732,
-                                  0.163771]
+        self.expected_variance = [0.14341972768306732, 0.163771]
 
 
 if __name__ == "__main__":

@@ -6,19 +6,20 @@ import torch.optim as optim
 
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import Solver
-from qmctorch.utils.plot_data import (plot_block, plot_blocking_energy,
-                                      plot_correlation_coefficient,
-                                      plot_integrated_autocorrelation_time,
-                                      plot_walkers_traj)
+from qmctorch.utils.plot_data import (
+    plot_block,
+    plot_blocking_energy,
+    plot_correlation_coefficient,
+    plot_integrated_autocorrelation_time,
+    plot_walkers_traj,
+)
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
 
 class TestH2Stat(unittest.TestCase):
-
     def setUp(self):
-
         torch.manual_seed(0)
         np.random.seed(0)
 
@@ -28,17 +29,19 @@ class TestH2Stat(unittest.TestCase):
 
         # molecule
         self.mol = Molecule(
-            atom='H 0 0 -0.69; H 0 0 0.69',
-            unit='bohr',
-            calculator='pyscf',
-            basis='sto-3g')
+            atom="H 0 0 -0.69; H 0 0 0.69",
+            unit="bohr",
+            calculator="pyscf",
+            basis="sto-3g",
+        )
 
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # wave function
-        self.wf = SlaterJastrow(self.mol, kinetic='jacobi',
-                                configs='single(2,2)', jastrow=jastrow)
+        self.wf = SlaterJastrow(
+            self.mol, kinetic="jacobi", configs="single(2,2)", jastrow=jastrow
+        )
 
         # sampler
         self.sampler = Metropolis(
@@ -49,20 +52,17 @@ class TestH2Stat(unittest.TestCase):
             nelec=self.wf.nelec,
             ntherm=0,
             ndecor=1,
-            init=self.mol.domain('normal'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+            init=self.mol.domain("normal"),
+            move={"type": "all-elec", "proba": "normal"},
+        )
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = Solver(wf=self.wf, sampler=self.sampler,
-                                          optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
 
     def test_sampling_traj(self):
-
         pos = self.solver.sampler(self.solver.wf.pdf)
         obs = self.solver.sampling_traj(pos)
 
@@ -70,7 +70,6 @@ class TestH2Stat(unittest.TestCase):
         plot_block(obs.local_energy)
 
     def test_stat(self):
-
         pos = self.solver.sampler(self.solver.wf.pdf)
         obs = self.solver.sampling_traj(pos)
 

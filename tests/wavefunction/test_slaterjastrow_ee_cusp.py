@@ -8,7 +8,9 @@ from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
 from qmctorch.utils import set_torch_double_precision
 
-from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import (
+    JastrowFactorElectronElectron,
+)
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 
@@ -16,9 +18,7 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 class TestSlaterJastrowElectronCusp(unittest.TestCase):
-
     def setUp(self):
-
         torch.manual_seed(101)
         np.random.seed(101)
 
@@ -26,38 +26,39 @@ class TestSlaterJastrowElectronCusp(unittest.TestCase):
 
         # molecule
         mol = Molecule(
-            atom='He 0.5 0 0; He -0.5 0 0',
-            unit='bohr',
-            calculator='pyscf',
-            basis='sto-3g',
-            redo_scf=True)
+            atom="He 0.5 0 0; He -0.5 0 0",
+            unit="bohr",
+            calculator="pyscf",
+            basis="sto-3g",
+            redo_scf=True,
+        )
 
-        jastrow = JastrowFactorElectronElectron(
-            mol, PadeJastrowKernel)
+        jastrow = JastrowFactorElectronElectron(mol, PadeJastrowKernel)
 
-        self.wf = SlaterJastrow(mol,
-                                jastrow=jastrow,
-                                kinetic='jacobi',
-                                include_all_mo=True,
-                                configs='ground_state')
+        self.wf = SlaterJastrow(
+            mol,
+            jastrow=jastrow,
+            kinetic="jacobi",
+            include_all_mo=True,
+            configs="ground_state",
+        )
 
         self.nbatch = 100
 
     def test_ee_cusp(self):
-
         import matplotlib.pyplot as plt
-        pos_x = torch.Tensor(np.random.rand(
-            self.nbatch,  self.wf.nelec, 3))
+
+        pos_x = torch.Tensor(np.random.rand(self.nbatch, self.wf.nelec, 3))
         x = torch.linspace(0, 2, self.nbatch)
-        pos_x[:, 0, :] = torch.as_tensor([0., 0., 0.]) + 1E-6
-        pos_x[:, 1, 0] = 0.
-        pos_x[:, 1, 1] = 0.
+        pos_x[:, 0, :] = torch.as_tensor([0.0, 0.0, 0.0]) + 1e-6
+        pos_x[:, 1, 0] = 0.0
+        pos_x[:, 1, 1] = 0.0
         pos_x[:, 1, 2] = x
 
-        pos_x[:, 2, :] = 0.5*torch.as_tensor([1., 1., 1.])
-        pos_x[:, 3, :] = -0.5*torch.as_tensor([1., 1., 1.])
+        pos_x[:, 2, :] = 0.5 * torch.as_tensor([1.0, 1.0, 1.0])
+        pos_x[:, 3, :] = -0.5 * torch.as_tensor([1.0, 1.0, 1.0])
 
-        pos_x = pos_x.reshape(self.nbatch, self.wf.nelec*3)
+        pos_x = pos_x.reshape(self.nbatch, self.wf.nelec * 3)
         pos_x.requires_grad = True
 
         x = x.detach().numpy()
@@ -65,10 +66,10 @@ class TestSlaterJastrowElectronCusp(unittest.TestCase):
         plt.plot(x, j)
         plt.show()
 
-        dx = x[1]-x[0]
-        dj = (j[1:]-j[0:-1])/dx
+        dx = x[1] - x[0]
+        dj = (j[1:] - j[0:-1]) / dx
 
-        plt.plot(x[:-1], dj/j[:-1])
+        plt.plot(x[:-1], dj / j[:-1])
         plt.show()
 
         epot = self.wf.electronic_potential(pos_x).detach().numpy()

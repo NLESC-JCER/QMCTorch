@@ -8,17 +8,16 @@ from torch.autograd import Variable
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
+
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 class TestAOderivativesADF(BaseTestAO.BaseTestAOderivatives):
-
     def setUp(self):
-
         # define the molecule
-        path_hdf5 = PATH_TEST / 'hdf5/C_adf_dzp.hdf5'
+        path_hdf5 = PATH_TEST / "hdf5/C_adf_dzp.hdf5"
         self.mol = Molecule(load=path_hdf5)
 
         # define the wave function
