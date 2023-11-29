@@ -74,7 +74,7 @@ class BaseTestAO:
             assert torch.allclose(dao.sum(), dao_grad.sum())
 
         def test_ao_grad_sum(self):
-            ao = self.ao(self.pos)
+            _ = self.ao(self.pos)
             dao_sum = self.ao(self.pos, derivative=1, sum_grad=True)
             dao = self.ao(self.pos, derivative=1, sum_grad=False)
 
@@ -87,7 +87,7 @@ class BaseTestAO:
             assert torch.allclose(d2ao.sum(), d2ao_grad.sum())
 
         def test_ao_hess_sum(self):
-            ao = self.ao(self.pos)
+            _ = self.ao(self.pos)
             d2ao_sum = self.ao(self.pos, derivative=2, sum_hess=True)
             d2ao = self.ao(self.pos, derivative=2, sum_hess=False)
             assert torch.allclose(d2ao_sum, d2ao.sum(-1))

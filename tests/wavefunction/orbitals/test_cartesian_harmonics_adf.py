@@ -52,7 +52,7 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 1] = torch.linspace(-4, 4, npts)
         self.dy = self.pos[1, 1] - self.pos[0, 1]
 
-        xyz, r = self.ao._process_position(self.pos)
+        xyz, _ = self.ao._process_position(self.pos)
         R, dR = self.ao.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()

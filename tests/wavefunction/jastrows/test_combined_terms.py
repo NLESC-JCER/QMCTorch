@@ -68,7 +68,7 @@ class TestJastrowCombinedTerms(unittest.TestCase):
         self.pos.requires_grad = True
 
     def test_jastrow(self):
-        val = self.jastrow(self.pos)
+        _ = self.jastrow(self.pos)
 
     def test_grad_jastrow(self):
         val = self.jastrow(self.pos)

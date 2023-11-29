@@ -38,7 +38,7 @@ class BaseTestJastrow:
 
         def test_jastrow(self):
             """simply checks that the values are not crashing."""
-            val = self.jastrow(self.pos)
+            _ = self.jastrow(self.pos)
 
         def test_permutation(self):
             jval = self.jastrow(self.pos)

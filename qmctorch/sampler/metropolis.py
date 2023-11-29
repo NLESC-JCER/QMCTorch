@@ -260,7 +260,6 @@ class Metropolis(SamplerBase):
                 (self.walkers.nwalkers, num_elec, self.ndim), device=self.device
             ).view(self.walkers.nwalkers, num_elec * self.ndim)
             out = self.step_size * (2.0 * d - 1.0)
-            return
 
         elif self.movedict["proba"] == "normal":
             displacement = self.multiVariate.sample(
