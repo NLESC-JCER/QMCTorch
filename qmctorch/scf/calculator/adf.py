@@ -256,7 +256,9 @@ class CalculatorADF(CalculatorBase):
 
 
 class CalculatorADF2019(CalculatorADF):
-    def __init__(self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile):
+    def __init__(
+        self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
+    ):
         CalculatorADF.__init__(
             self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
         )

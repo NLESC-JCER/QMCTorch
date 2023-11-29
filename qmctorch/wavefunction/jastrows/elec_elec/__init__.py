@@ -9,4 +9,5 @@ __all__ = [
     "JastrowFactor",
     "PadeJastrowKernel",
     "FullyConnectedJastrowKernel",
-    "PadeJastrowPolynomialKernel"]
+    "PadeJastrowPolynomialKernel",
+]

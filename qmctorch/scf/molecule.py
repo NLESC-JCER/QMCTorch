@@ -15,7 +15,6 @@ except ModuleNotFoundError:
     log.info("  MPI not found.")
 
 
-
 class Molecule:
     def __init__(
         self,

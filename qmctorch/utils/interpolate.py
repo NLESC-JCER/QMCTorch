@@ -17,13 +17,14 @@ class InterpolateMolecularOrbitals:
     def __call__(self, pos, method="irreg", orb="occupied", **kwargs):
         if method == "irreg":
             n = kwargs["n"] if "n" in kwargs else 6
-            out =  self.interpolate_mo_irreg_grid(pos, n=n, orb=orb)
+            out = self.interpolate_mo_irreg_grid(pos, n=n, orb=orb)
         elif method == "reg":
             rstr, bstr = "resolution", "border_length"
             res = kwargs[rstr] if rstr in kwargs else 0.1
             blength = kwargs[bstr] if bstr in kwargs else 2.0
-            out =  self.interpolate_mo_reg_grid(pos, res, blength, orb)
+            out = self.interpolate_mo_reg_grid(pos, res, blength, orb)
         return out
+
     def get_mo_max_index(self, orb):
         """Get the index of the highest MO to inlcude in the interpoaltion
 

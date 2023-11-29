@@ -5,7 +5,7 @@ from typing import Union, Dict
 from .. import log
 
 
-class Walkers():
+class Walkers:
     def __init__(
         self,
         nwalkers: int = 100,

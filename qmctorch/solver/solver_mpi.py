@@ -219,7 +219,7 @@ class SolverMPI(Solver):
         )
 
         if batchsize is not None:
-            log.info('  Batchsize not supported for MPI solver')
+            log.info("  Batchsize not supported for MPI solver")
 
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()

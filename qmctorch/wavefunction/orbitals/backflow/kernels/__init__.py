@@ -11,5 +11,5 @@ __all__ = [
     "BackFlowKernelFullyConnected",
     "BackFlowKernelInverse",
     "BackFlowKernelPowerSum",
-    "BackFlowKernelSquare"
+    "BackFlowKernelSquare",
 ]
