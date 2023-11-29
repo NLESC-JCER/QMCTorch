@@ -535,7 +535,7 @@ class SlaterJastrow(WaveFunction):
 
         return -0.5 * out.unsqueeze(-1)
 
-    def gradients_jacobi_backflow(self, x, sum_grad=True):
+    def gradients_jacobi_backflow(self, x, sum_grad=True, pdf=False):
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:

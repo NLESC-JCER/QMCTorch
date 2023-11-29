@@ -96,7 +96,7 @@ class TestCartesianHarmonics(unittest.TestCase):
         assert torch.allclose(val_grad.sum(), val_grad_auto.sum(), atol=1e-6)
 
     def test_jac(self):
-        xyz, r = self.process_position()
+        xyz, _ = self.process_position()
         val_jac = self.harmonics(xyz, derivative=1, sum_grad=True)
         val = self.harmonics(xyz)
         val_jac_auto = grad(val, self.pos, torch.ones_like(val))[0]
@@ -104,7 +104,7 @@ class TestCartesianHarmonics(unittest.TestCase):
         assert torch.allclose(val_jac.sum(), val_jac_auto.sum(), atol=1e-6)
 
     def test_lap(self):
-        xyz, r = self.process_position()
+        xyz, _ = self.process_position()
         val_hess = self.harmonics(xyz, derivative=2)
         val = self.harmonics(xyz)
         val_hess_auto = hess(val, self.pos)
@@ -112,7 +112,7 @@ class TestCartesianHarmonics(unittest.TestCase):
         assert torch.allclose(val_hess.sum(), val_hess_auto.sum(), atol=1e-6)
 
     def test_mixed_der(self):
-        xyz, r = self.process_position()
+        xyz, _ = self.process_position()
         val_hess = self.harmonics(xyz, derivative=3)
         val = self.harmonics(xyz)
         val_hess_auto = hess_mixed_terms(val, self.pos)

@@ -77,7 +77,7 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 2] = torch.linspace(-4, 4, npts)
         self.dz = self.pos[1, 2] - self.pos[0, 2]
 
-        xyz, r = self.ao._process_position(self.pos)
+        xyz, _ = self.ao._process_position(self.pos)
         R, dR = self.ao.harmonics(xyz, derivative=[0, 1], sum_grad=False)
 
         R = R.detach().numpy()
@@ -156,7 +156,7 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
     def test_lap_sum(self):
         npts = 100
         self.pos = torch.rand(npts, self.mol.nelec * 3)
-        xyz, r = self.ao._process_position(self.pos)
+        xyz, _ = self.ao._process_position(self.pos)
         d2R_sum = self.ao.harmonics(xyz, derivative=2, sum_hess=True)
 
         d2R = self.ao.harmonics(xyz, derivative=2, sum_hess=False)
