@@ -1,11 +1,9 @@
 import torch
 from torch import nn
 from torch.autograd import grad
-from torch import nn
 
 
 class JastrowKernelElectronElectronBase(nn.Module):
-
     def __init__(self, nup, ndown, cuda, **kwargs):
         r"""Base class for the elec-elec jastrow kernels
 
@@ -18,9 +16,9 @@ class JastrowKernelElectronElectronBase(nn.Module):
         super().__init__()
         self.nup, self.ndown = nup, ndown
         self.cuda = cuda
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
 
         self.requires_autograd = True
 
@@ -67,11 +65,10 @@ class JastrowKernelElectronElectronBase(nn.Module):
                           Nmo x Nbatch x Ndim x  Nelec_pair
         """
 
-        if r.requires_grad == False:
+        if r.requires_grad is False:
             r.requires_grad = True
 
         with torch.enable_grad():
-
             kernel = self.forward(r)
             ker_grad = self._grads(kernel, r)
 
@@ -101,12 +98,10 @@ class JastrowKernelElectronElectronBase(nn.Module):
             r.requires_grad = True
 
         with torch.enable_grad():
-
             kernel = self.forward(r)
             ker_hess, ker_grad = self._hess(kernel, r)
 
-            jhess = (ker_hess).unsqueeze(1) * \
-                dr2 + ker_grad.unsqueeze(1) * d2r
+            jhess = (ker_hess).unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
 
@@ -134,10 +129,7 @@ class JastrowKernelElectronElectronBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val,
-                    pos,
-                    grad_outputs=torch.ones_like(val),
-                    create_graph=True)[0]
+        gval = grad(val, pos, grad_outputs=torch.ones_like(val), create_graph=True)[0]
 
         hval = grad(gval, pos, grad_outputs=torch.ones_like(gval))[0]
 

@@ -5,7 +5,6 @@ from torch.autograd.variable import Variable
 
 
 class JastrowKernelElectronElectronNucleiBase(nn.Module):
-
     def __init__(self, nup, ndown, atomic_pos, cuda, **kwargs):
         r"""Base Class for the elec-elec-nuc jastrow kernel
 
@@ -26,9 +25,9 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         self.natoms = atomic_pos.shape[0]
         self.ndim = 3
 
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
         self.requires_autograd = True
 
     def forward(self, x):
@@ -58,16 +57,14 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         return out
 
     def compute_second_derivative(self, r, dr, d2r):
-        """Get the elements of the pure 2nd derivative of the jastrow kernels.
-        """
+        """Get the elements of the pure 2nd derivative of the jastrow kernels."""
 
         dr2 = dr * dr
 
         kernel = self.forward(r)
         ker_hess, ker_grad = self._hess(kernel, r, self.device)
 
-        jhess = ker_hess.unsqueeze(1) * \
-            dr2 + ker_grad.unsqueeze(1) * d2r
+        jhess = ker_hess.unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
 
@@ -92,20 +89,19 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val, pos,
-                    grad_outputs=torch.ones_like(val),
-                    create_graph=True)[0]
+        gval = grad(val, pos, grad_outputs=torch.ones_like(val), create_graph=True)[0]
 
-        grad_out = Variable(torch.ones(
-            *gval.shape[:-1])).to(device)
+        grad_out = Variable(torch.ones(*gval.shape[:-1])).to(device)
         hval = torch.zeros_like(gval).to(device)
 
         for idim in range(gval.shape[-1]):
-
-            tmp = grad(gval[..., idim], pos,
-                       grad_outputs=grad_out,
-                       only_inputs=True,
-                       create_graph=True)[0]
+            tmp = grad(
+                gval[..., idim],
+                pos,
+                grad_outputs=grad_out,
+                only_inputs=True,
+                create_graph=True,
+            )[0]
             hval[..., idim] = tmp[..., idim]
 
         return hval, gval

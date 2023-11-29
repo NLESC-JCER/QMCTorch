@@ -1,11 +1,10 @@
-
-
 import torch
 from scipy.optimize import curve_fit
 from copy import deepcopy
 import numpy as np
 from torch import nn
 import operator
+import matplotlib.pyplot as plt
 
 from .. import log
 
@@ -19,14 +18,16 @@ from ..utils import register_extra_attributes
 
 
 class SlaterJastrow(WaveFunction):
-
-    def __init__(self, mol,
-                 jastrow=None,
-                 backflow=None,
-                 configs='ground_state',
-                 kinetic='jacobi',
-                 cuda=False,
-                 include_all_mo=True):
+    def __init__(
+        self,
+        mol,
+        jastrow=None,
+        backflow=None,
+        configs="ground_state",
+        kinetic="jacobi",
+        cuda=False,
+        include_all_mo=True,
+    ):
         """Slater Jastrow wave function with electron-electron Jastrow factor
 
         .. math::
@@ -37,19 +38,19 @@ class SlaterJastrow(WaveFunction):
         .. math::
             J(r) = \\exp\\left( K_{ee}(r) \\right)
 
-        with K, a kernel function depending only on the electron-eletron distances 
+        with K, a kernel function depending only on the electron-eletron distances
 
         Args:
             mol (Molecule): a QMCTorch molecule object
-            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels        
-            backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation    
+            jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
+            backflow_kernel (BackFlowKernelBase, optional) : kernel function of the backflow transformation
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
                 - ground_state : only the ground state determinant in the wave function
-                - single(n,m) : only single excitation with n electrons and m orbitals 
+                - single(n,m) : only single excitation with n electrons and m orbitals
                 - single_double(n,m) : single and double excitation with n electrons and m orbitals
-                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
+                - cas(n, m) : all possible configuration using n eletrons and m orbitals
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-                - jacobi : use the Jacobi formula to compute the kinetic energy 
+                - jacobi : use the Jacobi formula to compute the kinetic energy
                 - auto : use automatic differentiation to compute the kinetic energy
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False..
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
@@ -61,16 +62,15 @@ class SlaterJastrow(WaveFunction):
             >>> wf = SlaterJastrow(mol, configs='cas(2,2)')
         """
 
-        super().__init__(mol.nelec, 3,  kinetic, cuda)
+        super().__init__(mol.nelec, 3, kinetic, cuda)
 
         # check for cuda
         if not torch.cuda.is_available and self.cuda:
-            raise ValueError('Cuda not available, use cuda=False')
+            raise ValueError("Cuda not available, use cuda=False")
 
         # check for conf/mo size
-        if not include_all_mo and configs.startswith('cas('):
-            raise ValueError(
-                'CAS calculation only possible with include_all_mo=True')
+        if not include_all_mo and configs.startswith("cas("):
+            raise ValueError("CAS calculation only possible with include_all_mo=True")
 
         # molecule/atoms
         self.mol = mol
@@ -102,10 +102,7 @@ class SlaterJastrow(WaveFunction):
         self.init_kinetic(kinetic, backflow)
 
         # register the callable for hdf5 dump
-        register_extra_attributes(self,
-                                  ['ao', 'mo_scf',
-                                   'mo', 'jastrow',
-                                   'pool', 'fc'])
+        register_extra_attributes(self, ["ao", "mo_scf", "mo", "jastrow", "pool", "fc"])
 
         self.log_data()
 
@@ -115,8 +112,7 @@ class SlaterJastrow(WaveFunction):
         if self.backflow is None:
             self.ao = AtomicOrbitals(self.mol, self.cuda)
         else:
-            self.ao = AtomicOrbitalsBackFlow(
-                self.mol, self.backflow, self.cuda)
+            self.ao = AtomicOrbitalsBackFlow(self.mol, self.backflow, self.cuda)
 
         if self.cuda:
             self.ao = self.ao.to(self.device)
@@ -129,8 +125,7 @@ class SlaterJastrow(WaveFunction):
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
 
         # scf layer
-        self.mo_scf = nn.Linear(
-            self.mol.basis.nao, self.nmo_opt, bias=False)
+        self.mo_scf = nn.Linear(self.mol.basis.nao, self.nmo_opt, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
         self.mo_scf.weight.requires_grad = False
 
@@ -145,8 +140,7 @@ class SlaterJastrow(WaveFunction):
         self.mo = nn.Linear(self.nmo_opt, self.nmo_opt, bias=False)
 
         # init the weight to idenity matrix
-        self.mo.weight = nn.Parameter(
-            torch.eye(self.nmo_opt, self.nmo_opt))
+        self.mo.weight = nn.Parameter(torch.eye(self.nmo_opt, self.nmo_opt))
 
         # put on the card if needed
         if self.cuda:
@@ -160,15 +154,15 @@ class SlaterJastrow(WaveFunction):
         self.configs_method = configs
         self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
-        self.highest_occ_mo = max(
-            self.configs[0].max(), self.configs[1].max())+1
+        self.highest_occ_mo = max(self.configs[0].max(), self.configs[1].max()) + 1
 
     def init_slater_det_calculator(self):
         """Initialize the calculator of the slater dets"""
 
         #  define the SD pooling layer
-        self.pool = SlaterPooling(self.configs_method,
-                                  self.configs, self.mol, self.cuda)
+        self.pool = SlaterPooling(
+            self.configs_method, self.configs, self.mol, self.cuda
+        )
 
     def init_fc_layer(self):
         """Init the fc layer"""
@@ -177,8 +171,8 @@ class SlaterJastrow(WaveFunction):
         self.fc = nn.Linear(self.nci, 1, bias=False)
 
         # set all weight to 0 except the groud state
-        self.fc.weight.data.fill_(0.)
-        self.fc.weight.data[0][0] = 1.
+        self.fc.weight.data.fill_(0.0)
+        self.fc.weight.data[0][0] = 1.0
 
         # port to card
         if self.cuda:
@@ -208,10 +202,10 @@ class SlaterJastrow(WaveFunction):
         self.jastrow = CombineJastrow(jastrow)
 
     def init_kinetic(self, kinetic, backflow):
-        """"Init the calculator of the kinetic energies"""
+        """ "Init the calculator of the kinetic energies"""
 
         self.kinetic_method = kinetic
-        if kinetic == 'jacobi':
+        if kinetic == "jacobi":
             if backflow is None:
                 self.kinetic_energy = self.kinetic_energy_jacobi
 
@@ -263,8 +257,8 @@ class SlaterJastrow(WaveFunction):
         if self.use_jastrow:
             return J * self.fc(x)
 
-        else:
-            return self.fc(x)
+        # if we do not have a Jastrow
+        return self.fc(x)
 
     def ao2mo(self, ao):
         """transforms AO values in to MO values."""
@@ -392,7 +386,6 @@ class SlaterJastrow(WaveFunction):
         out = out.transpose(0, 1).squeeze()
 
         if self.use_jastrow:
-
             nbatch = x.shape[0]
 
             # nbatch x 1
@@ -405,11 +398,10 @@ class SlaterJastrow(WaveFunction):
             grad_jast = grad_jast.permute(0, 2, 1)
 
             # compute J(R) (\nabla\Sigma)
-            out = jast*out
+            out = jast * out
 
             # add the product (\nabla J(R)) \Sigma
-            out = out + \
-                (grad_jast * self.fc(dets).unsqueeze(-1)).reshape(nbatch, -1)
+            out = out + (grad_jast * self.fc(dets).unsqueeze(-1)).reshape(nbatch, -1)
 
         # compute the gradient of the pdf (i.e. the square of the wave function)
         # \nabla f^2 = 2 (\nabla f) f
@@ -420,7 +412,7 @@ class SlaterJastrow(WaveFunction):
 
         return out
 
-    def get_kinetic_operator(self, x, ao, dao, d2ao,  mo):
+    def get_kinetic_operator(self, x, ao, dao, d2ao, mo):
         """Compute the Bkin matrix
 
         Args:
@@ -434,10 +426,7 @@ class SlaterJastrow(WaveFunction):
         bkin = self.ao2mo(d2ao)
 
         if self.use_jastrow:
-
-            jast, djast, d2jast = self.jastrow(x,
-                                               derivative=[0, 1, 2],
-                                               sum_grad=False)
+            jast, djast, d2jast = self.jastrow(x, derivative=[0, 1, 2], sum_grad=False)
 
             djast = djast.transpose(1, 2) / jast.unsqueeze(-1)
             d2jast = d2jast / jast
@@ -451,7 +440,7 @@ class SlaterJastrow(WaveFunction):
 
         return -0.5 * bkin
 
-    def kinetic_energy_jacobi_backflow(self, x,  **kwargs):
+    def kinetic_energy_jacobi_backflow(self, x, **kwargs):
         r"""Compute the value of the kinetic enery using the Jacobi Formula.
 
 
@@ -485,8 +474,7 @@ class SlaterJastrow(WaveFunction):
         """
 
         # get ao values
-        ao, dao, d2ao = self.ao(
-            x, derivative=[0, 1, 2], sum_grad=False)
+        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 
         # get the mo values
         mo = self.ao2mo(ao)
@@ -507,10 +495,12 @@ class SlaterJastrow(WaveFunction):
         grad2 = self.pool.operator(mo, dmo, op_squared=True)
 
         # assemble the total second derivative term
-        hess = (hess.sum(0)
-                + operator.add(*[(g**2).sum(0) for g in grad])
-                - grad2.sum(0)
-                + 2 * operator.mul(*grad).sum(0))
+        hess = (
+            hess.sum(0)
+            + operator.add(*[(g**2).sum(0) for g in grad])
+            - grad2.sum(0)
+            + 2 * operator.mul(*grad).sum(0)
+        )
 
         hess = self.fc(hess * slater_dets) / sum_slater_dets
 
@@ -518,9 +508,7 @@ class SlaterJastrow(WaveFunction):
             return -0.5 * hess
 
         # compute the Jastrow terms
-        jast, djast, d2jast = self.jastrow(x,
-                                           derivative=[0, 1, 2],
-                                           sum_grad=False)
+        jast, djast, d2jast = self.jastrow(x, derivative=[0, 1, 2], sum_grad=False)
 
         # prepare the second derivative term d2Jast/Jast
         # Nbatch x Nelec
@@ -537,61 +525,54 @@ class SlaterJastrow(WaveFunction):
 
         # prepare the grad of the dets
         # [Nelec*Ndim] x Nbatch x 1
-        grad_val = self.fc(operator.add(*grad) *
-                           slater_dets) / sum_slater_dets
+        grad_val = self.fc(operator.add(*grad) * slater_dets) / sum_slater_dets
 
         # [Nelec*Ndim] x Nbatch
         grad_val = grad_val.squeeze()
 
         # assemble the derivaite terms
-        out = d2jast.sum(-1) + 2*(grad_val * djast).sum(0) + \
-            hess.squeeze(-1)
+        out = d2jast.sum(-1) + 2 * (grad_val * djast).sum(0) + hess.squeeze(-1)
 
         return -0.5 * out.unsqueeze(-1)
 
-    def gradients_jacobi_backflow(self, x, sum_grad=True):
+    def gradients_jacobi_backflow(self, x, sum_grad=True, pdf=False):
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
             x ([type]): [description]
         """
         raise NotImplementedError(
-            'Gradient through Jacobi formulat not implemented for backflow orbitals')
+            "Gradient through Jacobi formula not implemented for backflow orbitals"
+        )
 
     def log_data(self):
         """Print information abut the wave function."""
-        log.info('')
-        log.info(' Wave Function')
-        log.info('  Jastrow factor      : {0}', self.use_jastrow)
+        log.info("")
+        log.info(" Wave Function")
+        log.info("  Jastrow factor      : {0}", self.use_jastrow)
         if self.use_jastrow:
-            log.info(
-                '  Jastrow kernel      : {0}', self.jastrow_type)
-        log.info('  Highest MO included : {0}', self.nmo_opt)
-        log.info('  Configurations      : {0}', self.configs_method)
-        log.info('  Number of confs     : {0}', self.nci)
+            log.info("  Jastrow kernel      : {0}", self.jastrow_type)
+        log.info("  Highest MO included : {0}", self.nmo_opt)
+        log.info("  Configurations      : {0}", self.configs_method)
+        log.info("  Number of confs     : {0}", self.nci)
 
-        log.debug('  Configurations      : ')
+        log.debug("  Configurations      : ")
         for ic in range(self.nci):
-            cstr = ' ' + ' '.join([str(i)
-                                   for i in self.configs[0][ic].tolist()])
-            cstr += ' | ' + ' '.join([str(i)
-                                      for i in self.configs[1][ic].tolist()])
+            cstr = " " + " ".join([str(i) for i in self.configs[0][ic].tolist()])
+            cstr += " | " + " ".join([str(i) for i in self.configs[1][ic].tolist()])
             log.debug(cstr)
 
-        log.info('  Kinetic energy      : {0}', self.kinetic_method)
-        log.info(
-            '  Number var  param   : {0}', self.get_number_parameters())
-        log.info('  Cuda support        : {0}', self.cuda)
+        log.info("  Kinetic energy      : {0}", self.kinetic_method)
+        log.info("  Number var  param   : {0}", self.get_number_parameters())
+        log.info("  Cuda support        : {0}", self.cuda)
         if self.cuda:
-            log.info(
-                '  GPU                 : {0}', torch.cuda.get_device_name(0))
+            log.info("  GPU                 : {0}", torch.cuda.get_device_name(0))
 
     def get_mo_coeffs(self):
         """Get the molecular orbital coefficients to init the mo layer."""
-        mo_coeff = torch.as_tensor(self.mol.basis.mos).type(
-            torch.get_default_dtype())
+        mo_coeff = torch.as_tensor(self.mol.basis.mos).type(torch.get_default_dtype())
         if not self.include_all_mo:
-            mo_coeff = mo_coeff[:, :self.highest_occ_mo]
+            mo_coeff = mo_coeff[:, : self.highest_occ_mo]
         return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
 
     def update_mo_coeffs(self):
@@ -610,20 +591,19 @@ class SlaterJastrow(WaveFunction):
         """
         d = []
         for iat in range(self.natom):
-            xyz = self.ao.atom_coords[iat,
-                                      :].cpu().detach().numpy().tolist()
+            xyz = self.ao.atom_coords[iat, :].cpu().detach().numpy().tolist()
             d.append(xyz)
         return d
 
     def gto2sto(self, plot=False):
         """Fits the AO GTO to AO STO.
-            The SZ sto that have only one basis function per ao
+        The SZ sto that have only one basis function per ao
         """
 
-        assert(self.ao.radial_type.startswith('gto'))
-        assert(self.ao.harmonics_type == 'cart')
+        assert self.ao.radial_type.startswith("gto")
+        assert self.ao.harmonics_type == "cart"
 
-        log.info('  Fit GTOs to STOs  : ')
+        log.info("  Fit GTOs to STOs  : ")
 
         def sto(x, norm, alpha):
             """Fitting function."""
@@ -637,7 +617,7 @@ class SlaterJastrow(WaveFunction):
         basis = deepcopy(self.mol.basis)
 
         # change basis to sto
-        basis.radial_type = 'sto_pure'
+        basis.radial_type = "sto_pure"
         basis.nshells = self.ao.nao_per_atom.detach().cpu().numpy()
 
         # reset basis data
@@ -655,34 +635,34 @@ class SlaterJastrow(WaveFunction):
 
         # compute the values of the current AOs using GTO BAS
         pos = x.reshape(-1, 1).repeat(1, self.ao.nbas).to(self.device)
-        gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp*pos**2)
+        gto = self.ao.norm_cst * torch.exp(-self.ao.bas_exp * pos**2)
         gto = gto.unsqueeze(1).repeat(1, self.nelec, 1)
-        ao = self.ao._contract(gto)[
-            :, 0, :].detach().cpu().numpy()
+        ao = self.ao._contract(gto)[:, 0, :].detach().cpu().numpy()
 
         # loop over AOs
         for iorb in range(self.ao.norb):
-
             # fit AO with STO
             xdata = x.numpy()
             ydata = ao[:, iorb]
-            popt, pcov = curve_fit(sto, xdata, ydata)
+            popt, _ = curve_fit(sto, xdata, ydata)
 
             # store new exp/norm
             basis.bas_norm[iorb] = popt[0]
             basis.bas_exp[iorb] = popt[1]
 
             # determine k values
-            basis.bas_kx[iorb] = self.ao.harmonics.bas_kx[self.ao.index_ctr == iorb].unique(
-            ).item()
-            basis.bas_ky[iorb] = self.ao.harmonics.bas_ky[self.ao.index_ctr == iorb].unique(
-            ).item()
-            basis.bas_kz[iorb] = self.ao.harmonics.bas_kz[self.ao.index_ctr == iorb].unique(
-            ).item()
+            basis.bas_kx[iorb] = (
+                self.ao.harmonics.bas_kx[self.ao.index_ctr == iorb].unique().item()
+            )
+            basis.bas_ky[iorb] = (
+                self.ao.harmonics.bas_ky[self.ao.index_ctr == iorb].unique().item()
+            )
+            basis.bas_kz[iorb] = (
+                self.ao.harmonics.bas_kz[self.ao.index_ctr == iorb].unique().item()
+            )
 
             # plot if necessary
             if plot:
-                import matplotlib.pyplot as plt
                 plt.plot(xdata, ydata)
                 plt.plot(xdata, sto(xdata, *popt))
                 plt.show()
@@ -691,8 +671,12 @@ class SlaterJastrow(WaveFunction):
         new_mol.basis = basis
 
         # returns new orbital instance
-        return self.__class__(new_mol, self.jastrow, backflow=self.backflow,
-                              configs=self.configs_method,
-                              kinetic=self.kinetic_method,
-                              cuda=self.cuda,
-                              include_all_mo=self.include_all_mo)
+        return self.__class__(
+            new_mol,
+            self.jastrow,
+            backflow=self.backflow,
+            configs=self.configs_method,
+            kinetic=self.kinetic_method,
+            cuda=self.cuda,
+            include_all_mo=self.include_all_mo,
+        )

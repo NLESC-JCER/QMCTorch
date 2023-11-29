@@ -4,7 +4,6 @@ from .backflow_kernel_base import BackFlowKernelBase
 
 
 class BackFlowKernelAutoInverse(BackFlowKernelBase):
-
     def __init__(self, mol, cuda, order=2):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
@@ -15,11 +14,10 @@ class BackFlowKernelAutoInverse(BackFlowKernelBase):
         super().__init__(mol, cuda)
         self.order = order
         self.fc = nn.Linear(order, 1, bias=False)
-        self.fc.weight.data *= 0.
-        self.fc.weight.data[0, 0] = 1.
+        self.fc.weight.data *= 0.0
+        self.fc.weight.data[0, 0] = 1.0
 
-        self.weight = nn.Parameter(
-            torch.as_tensor([1E-3]))
+        self.weight = nn.Parameter(torch.as_tensor([1e-3]))
 
     def _backflow_kernel(self, ree):
         """Computes the kernel via autodiff
@@ -32,4 +30,4 @@ class BackFlowKernelAutoInverse(BackFlowKernelBase):
         """
         eye = torch.eye(self.nelec, self.nelec).to(self.device)
         mask = torch.ones_like(ree) - eye
-        return self.weight * mask * (1./(ree+eye) - eye)
+        return self.weight * mask * (1.0 / (ree + eye) - eye)

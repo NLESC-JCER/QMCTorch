@@ -1,13 +1,10 @@
-from tqdm import tqdm
 import torch
 import pints
 from typing import Callable, Union, Dict
 from .sampler_base import SamplerBase
-from .. import log
 
 
 class torch_model(pints.LogPDF):
-
     def __init__(self, pdf, ndim):
         """Ancillary class tha wrap the wave function in a PINTS class
 
@@ -44,7 +41,7 @@ class torch_model(pints.LogPDF):
         pdf = self.pdf(x)
         log_pdf = torch.log(pdf)
         x.requires_grad = True
-        grad_log_pdf = 1./pdf * self.pdf(x, return_grad=True)
+        grad_log_pdf = 1.0 / pdf * self.pdf(x, return_grad=True)
         return (log_pdf.cpu().detach().numpy(), grad_log_pdf.cpu().detach().numpy())
 
     def n_parameters(self):
@@ -53,20 +50,21 @@ class torch_model(pints.LogPDF):
 
 
 class PintsSampler(SamplerBase):
-
-    def __init__(self,
-                 nwalkers: int = 100,
-                 method=pints.MetropolisRandomWalkMCMC,
-                 method_requires_grad=False,
-                 nstep: int = 1000,
-                 ntherm: int = -1,
-                 ndecor: int = 1,
-                 nelec: int = 1,
-                 ndim: int = 3,
-                 init: Dict = {'min': -5, 'max': 5},
-                 cuda: bool = False,
-                 log_to_screen=False,
-                 message_interval=20):
+    def __init__(
+        self,
+        nwalkers: int = 100,
+        method=pints.MetropolisRandomWalkMCMC,
+        method_requires_grad=False,
+        nstep: int = 1000,
+        ntherm: int = -1,
+        ndecor: int = 1,
+        nelec: int = 1,
+        ndim: int = 3,
+        init: Dict = {"min": -5, "max": 5},
+        cuda: bool = False,
+        log_to_screen=False,
+        message_interval=20,
+    ):
         """Interface to the PINTS Sampler generator
 
         Args:
@@ -97,9 +95,9 @@ class PintsSampler(SamplerBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep, None,
-                             ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+        SamplerBase.__init__(
+            self, nwalkers, nstep, None, ntherm, ndecor, nelec, ndim, init, cuda
+        )
 
         self.method = method
         self.method_requires_grad = method_requires_grad
@@ -125,8 +123,12 @@ class PintsSampler(SamplerBase):
 
         return lambda x: torch.log(func(torch.as_tensor(x)))
 
-    def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
-                 with_tqdm: bool = True) -> torch.Tensor:
+    def __call__(
+        self,
+        pdf: Callable,
+        pos: Union[None, torch.Tensor] = None,
+        with_tqdm: bool = True,
+    ) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
@@ -140,14 +142,13 @@ class PintsSampler(SamplerBase):
         """
 
         if self.ntherm >= self.nstep:
-            raise ValueError('Thermalisation longer than trajectory')
+            raise ValueError("Thermalisation longer than trajectory")
 
         grad_method = torch.no_grad()
         if self.method_requires_grad:
             grad_method = torch.enable_grad()
 
         with grad_method:
-
             if self.ntherm < 0:
                 self.ntherm = self.nstep + self.ntherm
 
@@ -155,12 +156,16 @@ class PintsSampler(SamplerBase):
             log_pdf = torch_model(pdf, self.walkers.pos.shape[1])
 
             mcmc = pints.MCMCController(
-                log_pdf, self.walkers.nwalkers, self.walkers.pos.cpu(), method=self.method)
+                log_pdf,
+                self.walkers.nwalkers,
+                self.walkers.pos.cpu(),
+                method=self.method,
+            )
             mcmc.set_max_iterations(self.nstep)
             mcmc._log_to_screen = self.log_to_screen
             mcmc._message_interval = self.message_interval
             chains = mcmc.run()
 
-        chains = chains[:, self.ntherm::self.ndecor, :]
-        chains = chains.reshape(-1, self.nelec*self.ndim)
+        chains = chains[:, self.ntherm :: self.ndecor, :]
+        chains = chains.reshape(-1, self.nelec * self.ndim)
         return torch.as_tensor(chains).requires_grad_()

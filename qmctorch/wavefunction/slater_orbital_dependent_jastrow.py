@@ -3,18 +3,22 @@ import operator
 
 from .slater_jastrow import SlaterJastrow
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
-from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from .jastrows.elec_elec.jastrow_factor_electron_electron import (
+    JastrowFactorElectronElectron,
+)
 
 
 class SlaterOrbitalDependentJastrow(SlaterJastrow):
-
-    def __init__(self, mol,
-                 configs='ground_state',
-                 kinetic='jacobi',
-                 jastrow_kernel=PadeJastrowKernel,
-                 jastrow_kernel_kwargs={},
-                 cuda=False,
-                 include_all_mo=True):
+    def __init__(
+        self,
+        mol,
+        configs="ground_state",
+        kinetic="jacobi",
+        jastrow_kernel=PadeJastrowKernel,
+        jastrow_kernel_kwargs={},
+        cuda=False,
+        include_all_mo=True,
+    ):
         """Slater Jastrow Wave function with an orbital dependent Electron-Electron Jastrow Factor
 
         .. math::
@@ -23,17 +27,17 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         where each molecular orbital of the determinants is multiplied with a different electron-electron Jastrow
 
         .. math::
-            \\phi_i(r) \\rightarrow J_i(r) \\phi_i(r) 
+            \\phi_i(r) \\rightarrow J_i(r) \\phi_i(r)
 
         Args:
             mol (Molecule): a QMCTorch molecule object
             configs (str, optional): defines the CI configurations to be used. Defaults to 'ground_state'.
                 - ground_state : only the ground state determinant in the wave function
-                - single(n,m) : only single excitation with n electrons and m orbitals 
+                - single(n,m) : only single excitation with n electrons and m orbitals
                 - single_double(n,m) : single and double excitation with n electrons and m orbitals
-                - cas(n, m) : all possible configuration using n eletrons and m orbitals                   
+                - cas(n, m) : all possible configuration using n eletrons and m orbitals
             kinetic (str, optional): method to compute the kinetic energy. Defaults to 'jacobi'.
-                - jacobi : use the Jacobi formula to compute the kinetic energy 
+                - jacobi : use the Jacobi formula to compute the kinetic energy
                 - auto : use automatic differentiation to compute the kinetic energy
             jastrow_kernel (JastrowKernelBase, optional) : Class that computes the jastrow kernels
             jastrow_kernel_kwargs (dict, optional) : keyword arguments for the jastrow kernel contructor
@@ -49,7 +53,8 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
 
         if jastrow_kernel is None:
             raise ValueError(
-                'Orbital dependent Jastrow factor requires a valid jastrow kernel.')
+                "Orbital dependent Jastrow factor requires a valid jastrow kernel."
+            )
 
         super().__init__(mol, None, None, configs, kinetic, cuda, include_all_mo)
         self.use_jastrow = True
@@ -60,7 +65,8 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             kernel_kwargs=jastrow_kernel_kwargs,
             orbital_dependent_kernel=True,
             number_of_orbitals=self.nmo_opt,
-            cuda=self.cuda)
+            cuda=self.cuda,
+        )
 
         if self.cuda:
             self.jastrow = self.jastrow.to(self.device)
@@ -176,21 +182,21 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             return jast * mo
 
         elif derivative == 1:
-
             mo = self.pos2mo(x)
             dmo = self.pos2mo(x, derivative=1, sum_grad=sum_grad)
 
             jast = self.ordered_jastrow(x)
-            djast = self.ordered_jastrow(
-                x, derivative=1, sum_grad=sum_grad)
+            djast = self.ordered_jastrow(x, derivative=1, sum_grad=sum_grad)
 
             if sum_grad:
                 return mo * djast.sum(1).unsqueeze(1) + jast * dmo
             else:
-                return mo.unsqueeze(-1) * djast.sum(1).unsqueeze(1) + jast.unsqueeze(-1) * dmo
+                return (
+                    mo.unsqueeze(-1) * djast.sum(1).unsqueeze(1)
+                    + jast.unsqueeze(-1) * dmo
+                )
 
         elif derivative == 2:
-
             # atomic orbital
             ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2])
 
@@ -200,10 +206,9 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             d2mo = self.ao2mo(d2ao)
 
             # jastrows
-            jast, djast, d2jast = self.ordered_jastrow(x,
-                                                       derivative=[
-                                                           0, 1, 2],
-                                                       sum_grad=False)
+            jast, djast, d2jast = self.ordered_jastrow(
+                x, derivative=[0, 1, 2], sum_grad=False
+            )
             # terms of the kin op
             jast_d2mo = d2mo * jast
             djast_dmo = (djast * dmo).sum(-1)
@@ -212,7 +217,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             # assemble kin op
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
 
-    def kinetic_energy_jacobi(self, x,  **kwargs):
+    def kinetic_energy_jacobi(self, x, **kwargs):
         """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -247,10 +252,12 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         grad2 = self.pool.operator(cmo, bgrad, op_squared=True)
 
         # assemble the total kinetic values
-        kin = - 0.5 * (hess
-                       + operator.add(*[(g**2).sum(0) for g in grad])
-                       - grad2.sum(0)
-                       + 2 * operator.mul(*grad).sum(0))
+        kin = -0.5 * (
+            hess
+            + operator.add(*[(g**2).sum(0) for g in grad])
+            - grad2.sum(0)
+            + 2 * operator.mul(*grad).sum(0)
+        )
 
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)
@@ -264,7 +271,8 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
 
         if pdf:
             raise NotImplementedError(
-                'Gradients of the pdf not implemented for ', self.__name__)
+                "Gradients of the pdf not implemented for ", self.__name__
+            )
 
         # get the CMO matrix
         cmo = self.pos2cmo(x)
@@ -303,8 +311,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         d2mo = self.pos2mo(x, derivative=2)
 
         jast = self.ordered_jastrow(x)
-        djast = self.ordered_jastrow(
-            x, derivative=1, sum_grad=False)
+        djast = self.ordered_jastrow(x, derivative=1, sum_grad=False)
         d2jast = self.ordered_jastrow(x, derivative=2)
 
         # \Delta_n J * MO
@@ -334,12 +341,12 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         djast = djast.permute(1, 3, 0, 2).unsqueeze(-2)
 
         # \nabla jast \nabla mo
-        djast_dmo = (djast * dmo)
+        djast_dmo = djast * dmo
 
         # sum over ndim -> Nelec, Nbatch, Nelec, Nmo
         djast_dmo = djast_dmo.sum(1)
 
-        return d2mo_jast + d2jast_mo + 2*djast_dmo
+        return d2mo_jast + d2jast_mo + 2 * djast_dmo
 
     def get_gradient_operator(self, x):
         """Compute the gradient operator
@@ -370,7 +377,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         dmo = dmo.permute(2, 0, 1, 3, 4)
 
         # assemble the derivative
-        out = (mo * djast + dmo * jast)
+        out = mo * djast + dmo * jast
 
         # collapse the first two dimensions
         out = out.reshape(-1, *(out.shape[2:]))

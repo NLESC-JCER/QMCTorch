@@ -1,3 +1,3 @@
-__all__ = ['Molecule']
+__all__ = ["Molecule"]
 
 from .molecule import Molecule

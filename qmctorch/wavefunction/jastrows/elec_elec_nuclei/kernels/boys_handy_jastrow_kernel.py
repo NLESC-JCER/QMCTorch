@@ -1,11 +1,14 @@
 import torch
 from torch import nn
-from .jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
+from .jastrow_kernel_electron_electron_nuclei_base import (
+    JastrowKernelElectronElectronNucleiBase,
+)
 
 
 class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
-
-    def __init__(self, nup, ndown, atomic_pos, cuda, nterm=5):
+    def __init__(
+        self, nup, ndown, atomic_pos, cuda, nterm=5
+    ):  # pylint: disable=too-many-arguments
         """Defines a Boys Handy jastrow factors.
 
         J.W. Moskowitz et. al
@@ -60,15 +63,13 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         # x[1] = (a r_{jA})/(1 + b r_{jA})
         # x[2] = (a r_{ij})/(1 + b r_{ij})
         # output shape : [N, 3, nterm]
-        wnum = self.weight_num.repeat_interleave(
-            self.repeat_dim, dim=1)
-        wdenom = self.weight_denom.repeat_interleave(
-            self.repeat_dim, dim=1)
-        x = (wnum * x) / (1. + wdenom * x)
+        wnum = self.weight_num.repeat_interleave(self.repeat_dim, dim=1)
+        wdenom = self.weight_denom.repeat_interleave(self.repeat_dim, dim=1)
+        x = (wnum * x) / (1.0 + wdenom * x)
 
         # comput the powers
         xp = self.exp.repeat_interleave(self.repeat_dim, dim=0)
-        x = x**(xp)
+        x = x ** (xp)
 
         # product over the r_{iA}, r_{jA}, r_{ij}
         # output shape : [N, nterm]

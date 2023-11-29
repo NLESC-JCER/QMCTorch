@@ -32,7 +32,8 @@ class SlaterPooling(nn.Module):
 
         self.excitation_index = get_excitation(configs)
         self.unique_excitation, self.index_unique_excitation = get_unique_excitation(
-            configs)
+            configs
+        )
 
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
@@ -40,14 +41,16 @@ class SlaterPooling(nn.Module):
         self.nelec = self.nup + self.ndown
 
         self.orb_proj = OrbitalProjector(configs, mol, cuda=cuda)
-        self.exc_mask = ExcitationMask(self.unique_excitation, mol,
-                                       (self.index_max_orb_up,
-                                        self.index_max_orb_down),
-                                       cuda=cuda)
+        self.exc_mask = ExcitationMask(
+            self.unique_excitation,
+            mol,
+            (self.index_max_orb_up, self.index_max_orb_down),
+            cuda=cuda,
+        )
 
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
 
     def forward(self, input):
         """Computes the values of the determinats
@@ -58,7 +61,7 @@ class SlaterPooling(nn.Module):
         Returns:
             torch.tensor: slater determinants
         """
-        if self.config_method.startswith('cas('):
+        if self.config_method.startswith("cas("):
             return self.det_explicit(input)
         else:
             return self.det_single_double(input)
@@ -99,12 +102,13 @@ class SlaterPooling(nn.Module):
         """
 
         # compute the determinant of the unique single excitation
-        det_unique_up, det_unique_down = self.det_unique_single_double(
-            input)
+        det_unique_up, det_unique_down = self.det_unique_single_double(input)
 
         # returns the product of spin up/down required by each excitation
-        return (det_unique_up[:, self.index_unique_excitation[0]] *
-                det_unique_down[:, self.index_unique_excitation[1]])
+        return (
+            det_unique_up[:, self.index_unique_excitation[0]]
+            * det_unique_down[:, self.index_unique_excitation[1]]
+        )
 
     def det_ground_state(self, input):
         """Computes the SD of the ground state
@@ -113,8 +117,10 @@ class SlaterPooling(nn.Module):
             input (torch.tensor): MO matrices nbatch x nelec x nmo
         """
 
-        return (torch.det(input[:, :self.nup, :self.nup]),
-                torch.det(input[:, self.nup:, :self.ndown]))
+        return (
+            torch.det(input[:, : self.nup, : self.nup]),
+            torch.det(input[:, self.nup :, : self.ndown]),
+        )
 
     def det_unique_single_double(self, input):
         """Computes the SD of single/double excitations
@@ -145,21 +151,21 @@ class SlaterPooling(nn.Module):
 
         nbatch = input.shape[0]
 
-        if not hasattr(self.exc_mask, 'index_unique_single_up'):
+        if not hasattr(self.exc_mask, "index_unique_single_up"):
             self.exc_mask.get_index_unique_single()
 
-        if not hasattr(self.exc_mask, 'index_unique_double_up'):
+        if not hasattr(self.exc_mask, "index_unique_double_up"):
             self.exc_mask.get_index_unique_double()
 
         do_single = len(self.exc_mask.index_unique_single_up) != 0
         do_double = len(self.exc_mask.index_unique_double_up) != 0
 
         # occupied orbital matrix + det and inv on spin up
-        Aup = input[:, :self.nup, :self.nup]
+        Aup = input[:, : self.nup, : self.nup]
         detAup = torch.det(Aup)
 
         # occupied orbital matrix + det and inv on spin down
-        Adown = input[:, self.nup:, :self.ndown]
+        Adown = input[:, self.nup :, : self.ndown]
         detAdown = torch.det(Adown)
 
         # store all the dets we need
@@ -167,7 +173,7 @@ class SlaterPooling(nn.Module):
         det_out_down = detAdown.unsqueeze(-1).clone()
 
         # return the ground state
-        if self.config_method == 'ground_state':
+        if self.config_method == "ground_state":
             return det_out_up, det_out_down
 
         # inverse of the
@@ -175,62 +181,57 @@ class SlaterPooling(nn.Module):
         invAdown = torch.inverse(Adown)
 
         # virtual orbital matrices spin up/down
-        Bup = input[:, :self.nup, self.nup:self.index_max_orb_up]
-        Bdown = input[:, self.nup:,
-                      self.ndown: self.index_max_orb_down]
+        Bup = input[:, : self.nup, self.nup : self.index_max_orb_up]
+        Bdown = input[:, self.nup :, self.ndown : self.index_max_orb_down]
 
         # compute the products of Ain and B
-        mat_exc_up = (invAup @ Bup)
-        mat_exc_down = (invAdown @ Bdown)
+        mat_exc_up = invAup @ Bup
+        mat_exc_down = invAdown @ Bdown
 
         if do_single:
-
             # determinant of the unique excitation spin up
-            det_single_up = mat_exc_up.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_single_up]
+            det_single_up = mat_exc_up.view(nbatch, -1)[
+                :, self.exc_mask.index_unique_single_up
+            ]
 
             # determinant of the unique excitation spin down
-            det_single_down = mat_exc_down.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_single_down]
+            det_single_down = mat_exc_down.view(nbatch, -1)[
+                :, self.exc_mask.index_unique_single_down
+            ]
 
             # multiply with ground state determinant
             # and account for permutation for deep excitation
-            det_single_up = detAup.unsqueeze(-1) * \
-                det_single_up.view(nbatch, -1)
+            det_single_up = detAup.unsqueeze(-1) * det_single_up.view(nbatch, -1)
 
             # multiply with ground state determinant
             # and account for permutation for deep excitation
-            det_single_down = detAdown.unsqueeze(-1) * \
-                det_single_down.view(nbatch, -1)
+            det_single_down = detAdown.unsqueeze(-1) * det_single_down.view(nbatch, -1)
 
             # accumulate the dets
             det_out_up = torch.cat((det_out_up, det_single_up), dim=1)
-            det_out_down = torch.cat(
-                (det_out_down, det_single_down), dim=1)
+            det_out_down = torch.cat((det_out_down, det_single_down), dim=1)
 
         if do_double:
-
             # det of unique spin up double exc
-            det_double_up = mat_exc_up.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_double_up]
+            det_double_up = mat_exc_up.view(nbatch, -1)[
+                :, self.exc_mask.index_unique_double_up
+            ]
 
-            det_double_up = bdet2(
-                det_double_up.view(nbatch, -1, 2, 2))
+            det_double_up = bdet2(det_double_up.view(nbatch, -1, 2, 2))
 
             det_double_up = detAup.unsqueeze(-1) * det_double_up
 
             # det of unique spin down double exc
-            det_double_down = mat_exc_down.view(
-                nbatch, -1)[:, self.exc_mask.index_unique_double_down]
+            det_double_down = mat_exc_down.view(nbatch, -1)[
+                :, self.exc_mask.index_unique_double_down
+            ]
 
-            det_double_down = bdet2(
-                det_double_down.view(nbatch, -1, 2, 2))
+            det_double_down = bdet2(det_double_down.view(nbatch, -1, 2, 2))
 
             det_double_down = detAdown.unsqueeze(-1) * det_double_down
 
             det_out_up = torch.cat((det_out_up, det_double_up), dim=1)
-            det_out_down = torch.cat(
-                (det_out_down, det_double_down), dim=1)
+            det_out_down = torch.cat((det_out_down, det_double_down), dim=1)
 
         return det_out_up, det_out_down
 
@@ -248,18 +249,17 @@ class SlaterPooling(nn.Module):
         """
 
         # get the values of the operator
-        if self.config_method == 'ground_state':
+        if self.config_method == "ground_state":
             op_vals = self.operator_ground_state(mo, bop, op_squared)
 
-        elif self.config_method.startswith('single'):
+        elif self.config_method.startswith("single"):
             op_vals = self.operator_single_double(mo, bop, op_squared)
 
-        elif self.config_method.startswith('cas('):
+        elif self.config_method.startswith("cas("):
             op_vals = self.operator_explicit(mo, bop, op_squared)
 
         else:
-            raise ValueError(
-                'Configuration %s not recognized' % self.config_method)
+            raise ValueError("Configuration %s not recognized" % self.config_method)
 
         # combine the values is necessary
         if op is not None:
@@ -280,18 +280,18 @@ class SlaterPooling(nn.Module):
         """
 
         # occupied orbital matrix + det and inv on spin up
-        Aocc_up = mo[:, :self.nup, :self.nup]
+        Aocc_up = mo[:, : self.nup, : self.nup]
 
         # occupied orbital matrix + det and inv on spin down
-        Aocc_down = mo[:, self.nup:, :self.ndown]
+        Aocc_down = mo[:, self.nup :, : self.ndown]
 
         # inverse of the
         invAup = torch.inverse(Aocc_up)
         invAdown = torch.inverse(Aocc_down)
 
         # precompute the product A^{-1} B
-        op_ground_up = invAup @ bop[..., :self.nup, :self.nup]
-        op_ground_down = invAdown @ bop[..., self.nup:, :self.ndown]
+        op_ground_up = invAup @ bop[..., : self.nup, : self.nup]
+        op_ground_down = invAdown @ bop[..., self.nup :, : self.ndown]
 
         if op_squared:
             op_ground_up = op_ground_up @ op_ground_up
@@ -328,7 +328,7 @@ class SlaterPooling(nn.Module):
         Bup, Bdown = self.orb_proj.split_orbitals(bkin)
 
         # check ifwe have 1 or multiple ops
-        multiple_op = (Bup.ndim == 5)
+        multiple_op = Bup.ndim == 5
 
         # inverse of MO matrices
         iAup = torch.inverse(Aup)
@@ -373,11 +373,12 @@ class SlaterPooling(nn.Module):
             torch.tensor: kinetic energy values
         """
 
-        op_up, op_down = self.operator_unique_single_double(
-            mo, bop, op_squared)
+        op_up, op_down = self.operator_unique_single_double(mo, bop, op_squared)
 
-        return (op_up[..., self.index_unique_excitation[0]],
-                op_down[..., self.index_unique_excitation[1]])
+        return (
+            op_up[..., self.index_unique_excitation[0]],
+            op_down[..., self.index_unique_excitation[1]],
+        )
 
     def operator_unique_single_double(self, mo, bop, op_squared):
         """Compute the operator value of the unique single/double conformation
@@ -390,33 +391,33 @@ class SlaterPooling(nn.Module):
 
         nbatch = mo.shape[0]
 
-        if not hasattr(self.exc_mask, 'index_unique_single_up'):
+        if not hasattr(self.exc_mask, "index_unique_single_up"):
             self.exc_mask.get_index_unique_single()
 
-        if not hasattr(self.exc_mask, 'index_unique_double_up'):
+        if not hasattr(self.exc_mask, "index_unique_double_up"):
             self.exc_mask.get_index_unique_double()
 
         do_single = len(self.exc_mask.index_unique_single_up) != 0
         do_double = len(self.exc_mask.index_unique_double_up) != 0
 
         # occupied orbital matrix + det and inv on spin up
-        Aocc_up = mo[:, :self.nup, :self.nup]
+        Aocc_up = mo[:, : self.nup, : self.nup]
 
         # occupied orbital matrix + det and inv on spin down
-        Aocc_down = mo[:, self.nup:, :self.ndown]
+        Aocc_down = mo[:, self.nup :, : self.ndown]
 
         # inverse of the
         invAup = torch.inverse(Aocc_up)
         invAdown = torch.inverse(Aocc_down)
 
         # precompute invA @ B
-        invAB_up = invAup @ bop[..., :self.nup, :self.nup]
-        invAB_down = invAdown @ bop[..., self.nup:, :self.ndown]
+        invAB_up = invAup @ bop[..., : self.nup, : self.nup]
+        invAB_down = invAdown @ bop[..., self.nup :, : self.ndown]
 
         # ground state operator
         if op_squared:
-            op_ground_up = btrace(invAB_up@invAB_up)
-            op_ground_down = btrace(invAB_down@invAB_down)
+            op_ground_up = btrace(invAB_up @ invAB_up)
+            op_ground_down = btrace(invAB_down @ invAB_down)
         else:
             op_ground_up = btrace(invAB_up)
             op_ground_down = btrace(invAB_down)
@@ -429,73 +430,85 @@ class SlaterPooling(nn.Module):
         op_out_down = op_ground_down.clone()
 
         # virtual orbital matrices spin up/down
-        Avirt_up = mo[:, :self.nup, self.nup:self.index_max_orb_up]
-        Avirt_down = mo[:, self.nup:,
-                        self.ndown: self.index_max_orb_down]
+        Avirt_up = mo[:, : self.nup, self.nup : self.index_max_orb_up]
+        Avirt_down = mo[:, self.nup :, self.ndown : self.index_max_orb_down]
 
         # compute the products of invA and Btilde
-        mat_exc_up = (invAup @ Avirt_up)
-        mat_exc_down = (invAdown @ Avirt_down)
+        mat_exc_up = invAup @ Avirt_up
+        mat_exc_down = invAdown @ Avirt_down
 
         # bop_up = bop[..., :self.nup, :self.index_max_orb_up]
-        bop_occ_up = bop[..., :self.nup, :self.nup]
-        bop_virt_up = bop[..., :self.nup,
-                          self.nup:self.index_max_orb_up]
+        bop_occ_up = bop[..., : self.nup, : self.nup]
+        bop_virt_up = bop[..., : self.nup, self.nup : self.index_max_orb_up]
 
         # bop_down = bop[:, self.nup:, :self.index_max_orb_down]
-        bop_occ_down = bop[..., self.nup:, :self.ndown]
-        bop_virt_down = bop[..., self.nup:,
-                            self.ndown:self.index_max_orb_down]
+        bop_occ_down = bop[..., self.nup :, : self.ndown]
+        bop_virt_down = bop[..., self.nup :, self.ndown : self.index_max_orb_down]
 
         Mup = invAup @ bop_virt_up - invAup @ bop_occ_up @ invAup @ Avirt_up
-        Mdown = invAdown @ bop_virt_down - \
-            invAdown @ bop_occ_down @ invAdown @ Avirt_down
+        Mdown = (
+            invAdown @ bop_virt_down - invAdown @ bop_occ_down @ invAdown @ Avirt_down
+        )
 
         # if we only want the normal value of the op and not its squared
         if not op_squared:
-
             # reshape the M matrices
             Mup = Mup.view(*Mup.shape[:-2], -1)
             Mdown = Mdown.view(*Mdown.shape[:-2], -1)
 
             if do_single:
-
                 # spin up
-                op_sin_up = self.op_single(op_ground_up, mat_exc_up, Mup,
-                                           self.exc_mask.index_unique_single_up, nbatch)
+                op_sin_up = self.op_single(
+                    op_ground_up,
+                    mat_exc_up,
+                    Mup,
+                    self.exc_mask.index_unique_single_up,
+                    nbatch,
+                )
 
                 # spin down
-                op_sin_down = self.op_single(op_ground_down, mat_exc_down, Mdown,
-                                             self.exc_mask.index_unique_single_down, nbatch)
+                op_sin_down = self.op_single(
+                    op_ground_down,
+                    mat_exc_down,
+                    Mdown,
+                    self.exc_mask.index_unique_single_down,
+                    nbatch,
+                )
 
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
-                op_out_down = torch.cat(
-                    (op_out_down, op_sin_down), dim=-1)
+                op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
 
             if do_double:
-
                 # spin up
-                op_dbl_up = self.op_multiexcitation(op_ground_up, mat_exc_up, Mup,
-                                                    self.exc_mask.index_unique_double_up,
-                                                    2, nbatch)
+                op_dbl_up = self.op_multiexcitation(
+                    op_ground_up,
+                    mat_exc_up,
+                    Mup,
+                    self.exc_mask.index_unique_double_up,
+                    2,
+                    nbatch,
+                )
 
                 # spin down
-                op_dbl_down = self.op_multiexcitation(op_ground_down, mat_exc_down, Mdown,
-                                                      self.exc_mask.index_unique_double_down,
-                                                      2, nbatch)
+                op_dbl_down = self.op_multiexcitation(
+                    op_ground_down,
+                    mat_exc_down,
+                    Mdown,
+                    self.exc_mask.index_unique_double_down,
+                    2,
+                    nbatch,
+                )
 
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
-                op_out_down = torch.cat(
-                    (op_out_down, op_dbl_down), dim=-1)
+                op_out_down = torch.cat((op_out_down, op_dbl_down), dim=-1)
 
             return op_out_up, op_out_down
 
         # if we watn the squre of the operatore
         # typically trace(ABAB)
         else:
-
             # compute A^-1 B M
             Yup = invAB_up @ Mup
             Ydown = invAB_down @ Mdown
@@ -509,42 +522,56 @@ class SlaterPooling(nn.Module):
             Ydown = Ydown.view(*Ydown.shape[:-2], -1)
 
             if do_single:
-
                 # spin up
-                op_sin_up = self.op_squared_single(op_ground_up, mat_exc_up,
-                                                   Mup, Yup,
-                                                   self.exc_mask.index_unique_single_up,
-                                                   nbatch)
+                op_sin_up = self.op_squared_single(
+                    op_ground_up,
+                    mat_exc_up,
+                    Mup,
+                    Yup,
+                    self.exc_mask.index_unique_single_up,
+                    nbatch,
+                )
 
                 # spin down
-                op_sin_down = self.op_squared_single(op_ground_down, mat_exc_down,
-                                                     Mdown, Ydown,
-                                                     self.exc_mask.index_unique_single_down,
-                                                     nbatch)
+                op_sin_down = self.op_squared_single(
+                    op_ground_down,
+                    mat_exc_down,
+                    Mdown,
+                    Ydown,
+                    self.exc_mask.index_unique_single_down,
+                    nbatch,
+                )
 
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
-                op_out_down = torch.cat(
-                    (op_out_down, op_sin_down), dim=-1)
+                op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
 
             if do_double:
-
                 # spin up values
-                op_dbl_up = self.op_squared_multiexcitation(op_ground_up, mat_exc_up,
-                                                            Mup, Yup,
-                                                            self.exc_mask.index_unique_double_down,
-                                                            2, nbatch)
+                op_dbl_up = self.op_squared_multiexcitation(
+                    op_ground_up,
+                    mat_exc_up,
+                    Mup,
+                    Yup,
+                    self.exc_mask.index_unique_double_down,
+                    2,
+                    nbatch,
+                )
 
                 # spin down values
-                op_dbl_down = self.op_squared_multiexcitation(op_ground_down, mat_exc_down,
-                                                              Mdown, Ydown,
-                                                              self.exc_mask.index_unique_double_down,
-                                                              2, nbatch)
+                op_dbl_down = self.op_squared_multiexcitation(
+                    op_ground_down,
+                    mat_exc_down,
+                    Mdown,
+                    Ydown,
+                    self.exc_mask.index_unique_double_down,
+                    2,
+                    nbatch,
+                )
 
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
-                op_out_down = torch.cat(
-                    (op_out_down, op_dbl_down), dim=-1)
+                op_out_down = torch.cat((op_out_down, op_dbl_down), dim=-1)
 
             return op_out_up, op_out_down
 
@@ -566,7 +593,7 @@ class SlaterPooling(nn.Module):
         """
 
         # compute the values of T
-        T = (1. / mat_exc.view(nbatch, -1)[:, index])
+        T = 1.0 / mat_exc.view(nbatch, -1)[:, index]
 
         # computes trace(T M)
         op_vals = T * M[..., index]
@@ -635,14 +662,14 @@ class SlaterPooling(nn.Module):
         """
 
         # get the values of the inverse excitation matrix
-        T = 1. / (mat_exc.view(nbatch, -1)[:, index])
+        T = 1.0 / (mat_exc.view(nbatch, -1)[:, index])
 
         # compute  trace(( T M )^2)
-        tmp = (T * M[..., index])
-        op_vals = tmp*tmp
+        tmp = T * M[..., index]
+        op_vals = tmp * tmp
 
         # trace(T Y)
-        tmp = (T * Y[..., index])
+        tmp = T * Y[..., index]
         op_vals += 2 * tmp
 
         # add the base term
@@ -691,7 +718,7 @@ class SlaterPooling(nn.Module):
         # compute trace( T Y )
         tmp = T @ (Y[..., index]).view(_y_shape)
         tmp = btrace(tmp)
-        op_vals += 2*tmp
+        op_vals += 2 * tmp
 
         # add the base term
         op_vals += baseterm

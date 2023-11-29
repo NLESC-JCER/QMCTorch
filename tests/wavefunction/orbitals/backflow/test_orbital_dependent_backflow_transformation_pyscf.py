@@ -1,12 +1,14 @@
 import unittest
 
 import torch
-from pyscf import gto
 from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import BackFlowTransformation
+from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
+    BackFlowTransformation,
+)
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
+
 torch.set_default_tensor_type(torch.DoubleTensor)
 
 torch.manual_seed(101)
@@ -14,24 +16,18 @@ np.random.seed(101)
 
 
 def hess(out, pos):
-
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos,
-                 grad_outputs=z,
-                 only_inputs=True,
-                 create_graph=True)[0]
+    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
 
     for idim in range(jacob.shape[1]):
-
-        tmp = grad(jacob[:, idim], pos,
-                   grad_outputs=z,
-                   only_inputs=True,
-                   create_graph=True)[0]
+        tmp = grad(
+            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
+        )[0]
 
         hess[:, idim] = tmp[:, idim]
 
@@ -39,43 +35,32 @@ def hess(out, pos):
 
 
 def hess_single_element(out, inp):
-
     shape = out.shape
     out = out.reshape(-1, 1)
 
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
-    jacob = grad(out, inp,
-                 grad_outputs=z,
-                 only_inputs=True,
-                 create_graph=True)[0]
+    jacob = grad(out, inp, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape))
 
-    hess = grad(jacob, inp,
-                grad_outputs=z,
-                only_inputs=True,
-                create_graph=True)[0]
+    hess = grad(jacob, inp, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
     return hess.reshape(*shape)
 
 
 class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
-
     def setUp(self):
-
         # define the molecule
-        at = 'C 0 0 0'
-        basis = 'dzp'
-        self.mol = Molecule(atom=at,
-                            calculator='pyscf',
-                            basis=basis,
-                            unit='bohr')
+        at = "C 0 0 0"
+        basis = "dzp"
+        self.mol = Molecule(atom=at, calculator="pyscf", basis=basis, unit="bohr")
 
         # define the backflow transformation
         self.backflow_trans = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse, orbital_dependent=True)
+            self.mol, BackFlowKernelInverse, orbital_dependent=True
+        )
 
         # set the weights to random
         for ker in self.backflow_trans.backflow_kernel.orbital_dependent_kernel:
@@ -104,21 +89,23 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
         for iq in range(nao):
             qao = q[:, iq, ...]
             dqao = grad(
-                qao, self.pos, grad_outputs=torch.ones_like(self.pos), retain_graph=True)[0]
+                qao, self.pos, grad_outputs=torch.ones_like(self.pos), retain_graph=True
+            )[0]
             if dq_grad is None:
                 dq_grad = dqao
             else:
                 dq_grad = torch.cat(
-                    (dq_grad, dqao), axis=self.backflow_trans.backflow_kernel.stack_axis)
+                    (dq_grad, dqao), axis=self.backflow_trans.backflow_kernel.stack_axis
+                )
         # checksum
-        assert(torch.allclose(dq.sum(), dq_grad.sum()))
+        assert torch.allclose(dq.sum(), dq_grad.sum())
 
         # permute and check elements
         dq = dq.sum([1, 3])
         dq = dq.permute(0, 3, 2, 1)
         dq_grad = dq_grad.reshape(self.npts, nao, self.mol.nelec, 3)
 
-        assert(torch.allclose(dq, dq_grad))
+        assert torch.allclose(dq, dq_grad)
 
     def test_backflow_second_derivative(self):
         """Test the derivative of the bf coordinate wrt the initial positions."""
@@ -141,18 +128,19 @@ class TestOrbitalDependentBackFlowTransformation(unittest.TestCase):
                 d2q_auto = d2qao
             else:
                 d2q_auto = torch.cat(
-                    (d2q_auto, d2qao), axis=self.backflow_trans.backflow_kernel.stack_axis)
+                    (d2q_auto, d2qao),
+                    axis=self.backflow_trans.backflow_kernel.stack_axis,
+                )
 
         # checksum
-        assert(torch.allclose(d2q.sum(), d2q_auto.sum()))
+        assert torch.allclose(d2q.sum(), d2q_auto.sum())
 
         # permute and check elements
         d2q = d2q.sum([1, 3])
         d2q = d2q.permute(0, 3, 2, 1)
-        d2q_auto = d2q_auto.reshape(
-            self.npts, nao,  self.mol.nelec, 3)
+        d2q_auto = d2q_auto.reshape(self.npts, nao, self.mol.nelec, 3)
 
-        assert(torch.allclose(d2q, d2q_auto))
+        assert torch.allclose(d2q, d2q_auto)
 
 
 if __name__ == "__main__":

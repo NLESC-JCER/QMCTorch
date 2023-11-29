@@ -16,21 +16,20 @@ def ElecNucGraph(natoms, atom_types, atomic_features, nelec, nup):
     edges = get_elec_nuc_edges(natoms, nelec)
     graph = dgl.graph(edges)
     graph.ndata["node_types"] = get_elec_nuc_ndata(
-        natoms, atom_types, atomic_features, nelec, nup)
+        natoms, atom_types, atomic_features, nelec, nup
+    )
     return graph
 
 
 def get_elec_nuc_edges(natoms, nelec):
-    """Compute the edge index of the electron-nuclei graph.
-    """
+    """Compute the edge index of the electron-nuclei graph."""
     en_edges = ([], [])
     for i in range(natoms):
         for j in range(nelec):
-
             en_edges[0].append(i)
-            en_edges[1].append(natoms+j)
+            en_edges[1].append(natoms + j)
 
-            en_edges[0].append(natoms+j)
+            en_edges[0].append(natoms + j)
             en_edges[1].append(i)
 
     # for i in range(natoms-1):
@@ -40,9 +39,8 @@ def get_elec_nuc_edges(natoms, nelec):
     return en_edges
 
 
-def get_elec_nuc_ndata(natoms, atom_types, atomic_features,  nelec, nup):
-    """Compute the node data of the elec-elec graph
-    """
+def get_elec_nuc_ndata(natoms, atom_types, atomic_features, nelec, nup):
+    """Compute the node data of the elec-elec graph"""
 
     en_ndata = []
     embed_number = 0
@@ -65,22 +63,20 @@ def get_elec_nuc_ndata(natoms, atom_types, atomic_features,  nelec, nup):
         if i < nup:
             en_ndata.append(embed_number)
         else:
-            en_ndata.append(embed_number+1)
+            en_ndata.append(embed_number + 1)
 
     return torch.LongTensor(en_ndata)
 
 
 def get_atomic_features(atom_type, atomic_features):
-    """Get the atomic features requested.
-    """
+    """Get the atomic features requested."""
     if atom_type is not None:
         data = element(atom_type)
-        feat = [getattr(data, feat)
-                for feat in atomic_features]
+        feat = [getattr(data, feat) for feat in atomic_features]
     else:
         feat = []
         for atf in atomic_features:
-            if atf == 'atomic_number':
+            if atf == "atomic_number":
                 feat.append(-1)
             else:
                 feat.append(0)

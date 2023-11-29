@@ -1,4 +1,3 @@
-from tests.wavefunction.test_slaterjastrow import TestSlaterJastrow
 import unittest
 
 import numpy as np
@@ -10,7 +9,10 @@ from qmctorch.solver import Solver
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
-from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
+from qmctorch.wavefunction.orbitals.backflow import (
+    BackFlowTransformation,
+    BackFlowKernelInverse,
+)
 from qmctorch.utils import set_torch_double_precision
 
 
@@ -20,49 +22,58 @@ def reset_generator():
 
 
 class TestCompareLiHBackFlowPySCF(unittest.TestCase):
-
     def setUp(self):
-
         set_torch_double_precision()
         reset_generator()
 
         # molecule
         self.mol = Molecule(
-            atom='Li 0 0 0; H 0 0 3.015',
-            unit='bohr',
-            calculator='pyscf',
-            basis='sto-3g')
+            atom="Li 0 0 0; H 0 0 3.015",
+            unit="bohr",
+            calculator="pyscf",
+            basis="sto-3g",
+        )
 
         # molecule
         self.mol_ref = Molecule(
-            atom='Li 0 0 0; H 0 0 3.015',
-            unit='bohr',
-            calculator='pyscf',
-            basis='sto-3g')
+            atom="Li 0 0 0; H 0 0 3.015",
+            unit="bohr",
+            calculator="pyscf",
+            basis="sto-3g",
+        )
 
         # jastrow
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # backflow
         backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse, orbital_dependent=False)
+            self.mol, BackFlowKernelInverse, orbital_dependent=False
+        )
 
         # backflow wave function
-        self.wf = SlaterJastrow(self.mol, jastrow=jastrow, backflow=backflow,
-                                kinetic='jacobi',
-                                configs='single_double(2,2)',
-                                include_all_mo=True)
-        self.wf.ao.backflow_trans.backflow_kernel.weight.data *= 0.
+        self.wf = SlaterJastrow(
+            self.mol,
+            jastrow=jastrow,
+            backflow=backflow,
+            kinetic="jacobi",
+            configs="single_double(2,2)",
+            include_all_mo=True,
+        )
+        self.wf.ao.backflow_trans.backflow_kernel.weight.data *= 0.0
         self.wf.ao.backflow_trans.backflow_kernel.weight.requires_grad = False
 
         # jastrow
         jastrow_ref = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # normal wave function
-        self.wf_ref = SlaterJastrow(self.mol_ref, jastrow=jastrow_ref, backflow=None,
-                                    kinetic='jacobi',
-                                    include_all_mo=True,
-                                    configs='single_double(2,2)')
+        self.wf_ref = SlaterJastrow(
+            self.mol_ref,
+            jastrow=jastrow_ref,
+            backflow=None,
+            kinetic="jacobi",
+            include_all_mo=True,
+            configs="single_double(2,2)",
+        )
 
         # fc weights
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
@@ -71,10 +82,13 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
 
         # jastrow weights
         self.random_jastrow_weight = torch.rand(
-            self.wf.jastrow.jastrow_kernel.weight.shape)
+            self.wf.jastrow.jastrow_kernel.weight.shape
+        )
 
         self.wf.jastrow.jastrow_kernel.weight.data = self.random_jastrow_weight.clone()
-        self.wf_ref.jastrow.jastrow_kernel.weight.data = self.random_jastrow_weight.clone()
+        self.wf_ref.jastrow.jastrow_kernel.weight.data = (
+            self.random_jastrow_weight.clone()
+        )
 
         reset_generator()
         # sampler
@@ -84,10 +98,9 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
             step_size=0.05,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain('normal'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+            init=self.mol.domain("normal"),
+            move={"type": "all-elec", "proba": "normal"},
+        )
 
         reset_generator()
         self.sampler_ref = Metropolis(
@@ -96,10 +109,9 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
             step_size=0.05,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain('normal'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+            init=self.mol.domain("normal"),
+            move={"type": "all-elec", "proba": "normal"},
+        )
 
         # optimizer
         reset_generator()
@@ -109,20 +121,18 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         self.opt_ref = optim.Adam(self.wf_ref.parameters(), lr=0.01)
 
         # solver
-        self.solver_ref = Solver(wf=self.wf_ref, sampler=self.sampler_ref,
-                                              optimizer=self.opt_ref)
+        self.solver_ref = Solver(
+            wf=self.wf_ref, sampler=self.sampler_ref, optimizer=self.opt_ref
+        )
 
-        self.solver = Solver(wf=self.wf, sampler=self.sampler,
-                                          optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
 
         # artificial pos
         self.nbatch = 10
-        self.pos = torch.as_tensor(np.random.rand(
-            self.nbatch, self.wf.nelec*3))
+        self.pos = torch.as_tensor(np.random.rand(self.nbatch, self.wf.nelec * 3))
         self.pos.requires_grad = True
 
     def test_0_wavefunction(self):
-
         # compute the kinetic energy using bf orb
         reset_generator()
         e_bf = self.wf.kinetic_energy_jacobi(self.pos)
@@ -132,11 +142,9 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         e_ref = self.wf_ref.kinetic_energy_jacobi(self.pos)
 
         print(torch.stack([e_bf, e_ref], axis=1).squeeze())
-        assert torch.allclose(
-            e_bf.data, e_ref.data, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(e_bf.data, e_ref.data, rtol=1e-4, atol=1e-4)
 
     def test1_single_point(self):
-
         # sample and compute observables
         reset_generator()
         obs = self.solver.single_point()
@@ -154,58 +162,52 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         e_ref, v_ref = obs_ref.energy, obs.variance
 
         # compare values
-        assert torch.allclose(
-            e_bf.data, e_ref.data, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(e_bf.data, e_ref.data, rtol=1e-4, atol=1e-4)
 
-        assert torch.allclose(
-            v_bf.data, v_ref.data, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(v_bf.data, v_ref.data, rtol=1e-4, atol=1e-4)
 
     def test2_wf_opt_grad_auto(self):
-
         nepoch = 5
 
         # optimize using backflow
-        self.solver.configure(track=['local_energy'],
-                              loss='energy', grad='auto')
-        self.solver.configure_resampling(mode='never')
+        self.solver.configure(track=["local_energy"], loss="energy", grad="auto")
+        self.solver.configure_resampling(mode="never")
 
         reset_generator()
         obs = self.solver.run(nepoch)
         e_bf = torch.as_tensor(np.array(obs.energy))
 
         # optimize using ref
-        self.solver_ref.configure(track=['local_energy'],
-                                  loss='energy', grad='auto')
-        self.solver_ref.configure_resampling(mode='never')
+        self.solver_ref.configure(track=["local_energy"], loss="energy", grad="auto")
+        self.solver_ref.configure_resampling(mode="never")
 
         reset_generator()
         obs_ref = self.solver_ref.run(nepoch)
         e_ref = torch.as_tensor(np.array(obs_ref.energy))
 
-        assert torch.allclose(
-            e_bf, e_ref, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(e_bf, e_ref, rtol=1e-4, atol=1e-4)
 
     def test3_wf_opt_grad_manual(self):
-
         nepoch = 5
 
         # optimize using backflow
         reset_generator()
-        self.solver.configure(track=['local_energy', 'parameters'],
-                              loss='energy', grad='manual')
+        self.solver.configure(
+            track=["local_energy", "parameters"], loss="energy", grad="manual"
+        )
         obs = self.solver.run(nepoch)
         e_bf = torch.as_tensor(np.array(obs.energy))
 
         # optimize using backflow
         reset_generator()
-        self.solver_ref.configure(track=['local_energy', 'parameters'],
-                                  loss='energy', grad='manual')
+        self.solver_ref.configure(
+            track=["local_energy", "parameters"], loss="energy", grad="manual"
+        )
         obs = self.solver_ref.run(nepoch)
         e_ref = torch.as_tensor(np.array(obs.energy))
 
         # compare values
-        assert torch.allclose(
-            e_bf, e_ref, rtol=1E-4, atol=1E-4)
+        assert torch.allclose(e_bf, e_ref, rtol=1e-4, atol=1e-4)
 
 
 if __name__ == "__main__":

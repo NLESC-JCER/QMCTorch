@@ -57,11 +57,11 @@ class EdgeEmbedding(nn.Module):
         dict
             Mapping 'type' to the computed edge types.
         """
-        node_type1 = edges.src['type']
-        node_type2 = edges.dst['type']
+        node_type1 = edges.src["type"]
+        node_type2 = edges.dst["type"]
         return {
-            'type': node_type1 * node_type2 +
-            (torch.abs(node_type1 - node_type2) - 1) ** 2 // 4
+            "type": node_type1 * node_type2
+            + (torch.abs(node_type1 - node_type2) - 1) ** 2 // 4
         }
 
     def forward(self, g, node_types):
@@ -80,9 +80,9 @@ class EdgeEmbedding(nn.Module):
             Edge representations.
         """
         g = g.local_var()
-        g.ndata['type'] = node_types
+        g.ndata["type"] = node_types
         g.apply_edges(self.get_edge_types)
-        return self.embed(g.edata['type'])
+        return self.embed(g.edata["type"])
 
 
 class VEConv(nn.Module):
@@ -109,7 +109,7 @@ class VEConv(nn.Module):
         self.update_dists = nn.Sequential(
             nn.Linear(dist_feats, feats),
             nn.Softplus(beta=0.5, threshold=14),
-            nn.Linear(feats, feats)
+            nn.Linear(feats, feats),
         )
         if update_edge:
             self.update_edge_feats = nn.Linear(feats, feats)
@@ -151,12 +151,11 @@ class VEConv(nn.Module):
             edge_feats = self.update_edge_feats(edge_feats)
 
         g = g.local_var()
-        g.ndata.update({'hv': node_feats})
-        g.edata.update({'dist': expanded_dists, 'he': edge_feats})
-        g.update_all(fn.u_mul_e('hv', 'dist', 'm_0'),
-                     fn.sum('m_0', 'hv_0'))
-        g.update_all(fn.copy_e('he', 'm_1'), fn.sum('m_1', 'hv_1'))
-        node_feats = g.ndata.pop('hv_0') + g.ndata.pop('hv_1')
+        g.ndata.update({"hv": node_feats})
+        g.edata.update({"dist": expanded_dists, "he": edge_feats})
+        g.update_all(fn.u_mul_e("hv", "dist", "m_0"), fn.sum("m_0", "hv_0"))
+        g.update_all(fn.copy_e("he", "m_1"), fn.sum("m_1", "hv_1"))
+        node_feats = g.ndata.pop("hv_0") + g.ndata.pop("hv_1")
 
         return node_feats, edge_feats
 
@@ -185,11 +184,10 @@ class MultiLevelInteraction(nn.Module):
         self.project_out_node_feats = nn.Sequential(
             nn.Linear(feats, feats),
             nn.Softplus(beta=0.5, threshold=14),
-            nn.Linear(feats, feats)
+            nn.Linear(feats, feats),
         )
         self.project_edge_feats = nn.Sequential(
-            nn.Linear(feats, feats),
-            nn.Softplus(beta=0.5, threshold=14)
+            nn.Linear(feats, feats), nn.Softplus(beta=0.5, threshold=14)
         )
 
     def reset_parameters(self):
@@ -224,7 +222,8 @@ class MultiLevelInteraction(nn.Module):
         """
         new_node_feats = self.project_in_node_feats(node_feats)
         new_node_feats, edge_feats = self.conv(
-            g, new_node_feats, edge_feats, expanded_dists)
+            g, new_node_feats, edge_feats, expanded_dists
+        )
         new_node_feats = self.project_out_node_feats(new_node_feats)
         node_feats = node_feats + new_node_feats
 
@@ -257,8 +256,15 @@ class MGCNGNN(nn.Module):
         Difference between two adjacent centers in RBF expansion. Default to 0.1.
     """
 
-    def __init__(self, feats=128, n_layers=3, num_node_types=100,
-                 num_edge_types=3000, cutoff=30., gap=0.1):
+    def __init__(  # pylint: disable=to-many-arguments
+        self,
+        feats=128,
+        n_layers=3,
+        num_node_types=100,
+        num_edge_types=3000,
+        cutoff=30.0,
+        gap=0.1,
+    ):
         super(MGCNGNN, self).__init__()
 
         self.node_embed = nn.Embedding(num_node_types, feats)
@@ -269,8 +275,7 @@ class MGCNGNN(nn.Module):
 
         self.gnn_layers = nn.ModuleList()
         for _ in range(n_layers):
-            self.gnn_layers.append(MultiLevelInteraction(
-                feats, len(self.rbf.centers)))
+            self.gnn_layers.append(MultiLevelInteraction(feats, len(self.rbf.centers)))
 
     def reset_parameters(self):
         """Reinitialize model parameters."""
@@ -305,7 +310,6 @@ class MGCNGNN(nn.Module):
 
         all_layer_node_feats = [node_feats]
         for gnn in self.gnn_layers:
-            node_feats, edge_feats = gnn(
-                g, node_feats, edge_feats, expanded_dists)
+            node_feats, edge_feats = gnn(g, node_feats, edge_feats, expanded_dists)
             all_layer_node_feats.append(node_feats)
         return torch.cat(all_layer_node_feats, dim=1)

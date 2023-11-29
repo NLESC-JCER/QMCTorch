@@ -1,10 +1,9 @@
 import os
-import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
 import h5py
-from mpi4py import MPI
+
 from .calculator import CalculatorADF, CalculatorPySCF, CalculatorADF2019
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
@@ -13,22 +12,32 @@ from .. import log
 try:
     from mpi4py import MPI
 except ModuleNotFoundError:
-    log.info('  MPI not found.')
+    log.info("  MPI not found.")
 
 
 class Molecule:
-
-    def __init__(self, atom=None, calculator='adf',
-                 scf='hf', basis='dzp', unit='bohr',
-                 charge=0, spin=0,
-                 name=None, load=None, save_scf_file=False,
-                 redo_scf=False, rank=0, mpi_size=0):
+    def __init__(  # pylint: disable=too-many-arguments
+        self,
+        atom=None,
+        calculator="adf",
+        scf="hf",
+        basis="dzp",
+        unit="bohr",
+        charge=0,
+        spin=0,
+        name=None,
+        load=None,
+        save_scf_file=False,
+        redo_scf=False,
+        rank=0,
+        mpi_size=0,
+    ):
         """Create a molecule in QMCTorch
 
         Args:
             atom (str or None, optional): defines the atoms and their positions. Defaults to None.
                 - At1 x y z; At2 x y z ... : Provide the atomic coordinate directly
-                - <file>.xyz : provide the path to an .xyz file containing the atomic coordinates 
+                - <file>.xyz : provide the path to an .xyz file containing the atomic coordinates
             calculator (str, optional): selet scf calculator. Defaults to 'adf'.
                 - pyscf : PySCF calculator
                 - adf : ADF2020+ calculator
@@ -75,91 +84,88 @@ class Molecule:
         self.scf_level = scf
 
         if rank == 0:
-            log.info('')
-            log.info(' SCF Calculation')
+            log.info("")
+            log.info(" SCF Calculation")
 
         # load an existing hdf5 file
         if load is not None:
-            log.info('  Loading data from {file}', file=load)
+            log.info("  Loading data from {file}", file=load)
             self._load_hdf5(load)
             self.hdf5file = load
 
         else:
-
             # extract the atom names/positions from
             # the atom kwargs
             self._process_atom_str()
 
             # name of the hdf5 file
-            self.hdf5file = '_'.join(
-                [self.name, calculator, basis]) + '.hdf5'
+            self.hdf5file = "_".join([self.name, calculator, basis]) + ".hdf5"
 
             if rank == 0:
-
-                if self.unit not in ['angs', 'bohr']:
-                    raise ValueError('unit should be angs or bohr')
+                if self.unit not in ["angs", "bohr"]:
+                    raise ValueError("unit should be angs or bohr")
 
                 # force a redo of the sc calculation
                 if os.path.isfile(self.hdf5file) and redo_scf:
-                    log.info('  Removing {file} and redo SCF calculations',
-                             file=self.hdf5file)
+                    log.info(
+                        "  Removing {file} and redo SCF calculations",
+                        file=self.hdf5file,
+                    )
                     os.remove(self.hdf5file)
 
                 # deals with existing files
                 if os.path.isfile(self.hdf5file):
-                    log.info('  Reusing scf results from {file}',
-                             file=self.hdf5file)
+                    log.info("  Reusing scf results from {file}", file=self.hdf5file)
                     self.basis = self._load_basis()
 
                 # perform the scf calculation
                 else:
-                    log.info('  Running scf  calculation')
+                    log.info("  Running scf  calculation")
 
-                    calc = {'adf2019': CalculatorADF2019,
-                            'adf': CalculatorADF,
-                            'pyscf': CalculatorPySCF}[calculator]
+                    calc = {
+                        "adf2019": CalculatorADF2019,
+                        "adf": CalculatorADF,
+                        "pyscf": CalculatorPySCF,
+                    }[calculator]
 
-                    self.calculator = calc(self.atoms,
-                                           self.atom_coords,
-                                           basis,
-                                           self.charge,
-                                           self.spin,
-                                           self.scf_level,
-                                           self.unit,
-                                           self.name,
-                                           self.save_scf_file)
+                    self.calculator = calc(
+                        self.atoms,
+                        self.atom_coords,
+                        basis,
+                        self.charge,
+                        self.spin,
+                        self.scf_level,
+                        self.unit,
+                        self.name,
+                        self.save_scf_file,
+                    )
 
                     self.basis = self.calculator.run()
                     self.save_scf_file = self.calculator.savefile
 
-                    dump_to_hdf5(self, self.hdf5file,
-                                 root_name='molecule')
+                    dump_to_hdf5(self, self.hdf5file, root_name="molecule")
 
                     self._check_basis()
                     self.log_data()
 
             if mpi_size != 0:
-
                 MPI.COMM_WORLD.barrier()
 
                 if rank != 0:
-                    log.info(
-                        '  Loading data from {file}', file=self.hdf5file)
+                    log.info("  Loading data from {file}", file=self.hdf5file)
                     self._load_hdf5(self.hdf5file)
 
     def log_data(self):
-
-        log.info('  Molecule name       : {0}', self.name)
-        log.info('  Number of electrons : {0}', self.nelec)
+        log.info("  Molecule name       : {0}", self.name)
+        log.info("  Number of electrons : {0}", self.nelec)
+        log.info("  SCF calculator      : {0}", self.calculator_name)
+        log.info("  Basis set           : {0}", self.basis_name)
+        log.info("  SCF                 : {0}", self.scf_level.upper())
+        log.info("  Number of AOs       : {0}", self.basis.nao)
+        log.info("  Number of MOs       : {0}", self.basis.nmo)
         log.info(
-            '  SCF calculator      : {0}', self.calculator_name)
-        log.info('  Basis set           : {0}', self.basis_name)
-        log.info(
-            '  SCF                 : {0}', self.scf_level.upper())
-        log.info('  Number of AOs       : {0}', self.basis.nao)
-        log.info('  Number of MOs       : {0}', self.basis.nmo)
-        log.info(
-            '  SCF Energy          : {:.3f} Hartree'.format(self.get_total_energy()))
+            "  SCF Energy          : {:.3f} Hartree".format(self.get_total_energy())
+        )
 
     def domain(self, method):
         """Returns information to initialize the walkers
@@ -178,42 +184,39 @@ class Molecule:
             >>> domain = mol.domain('atomic')
         """
         domain = dict()
-        domain['method'] = method
+        domain["method"] = method
 
-        if method == 'center':
-            domain['center'] = np.mean(self.atom_coords, 0)
+        if method == "center":
+            domain["center"] = np.mean(self.atom_coords, 0)
 
-        elif method == 'uniform':
-            domain['min'] = np.min(self.atom_coords) - 0.5
-            domain['max'] = np.max(self.atom_coords) + 0.5
+        elif method == "uniform":
+            domain["min"] = np.min(self.atom_coords) - 0.5
+            domain["max"] = np.max(self.atom_coords) + 0.5
 
-        elif method == 'normal':
-            domain['mean'] = np.mean(self.atom_coords, 0)
-            domain['sigma'] = np.diag(
-                np.std(self.atom_coords, 0) + 0.25)
+        elif method == "normal":
+            domain["mean"] = np.mean(self.atom_coords, 0)
+            domain["sigma"] = np.diag(np.std(self.atom_coords, 0) + 0.25)
 
-        elif method == 'atomic':
-            domain['atom_coords'] = self.atom_coords
-            domain['atom_num'] = self.atomic_number
-            domain['atom_nelec'] = self.atomic_nelec
+        elif method == "atomic":
+            domain["atom_coords"] = self.atom_coords
+            domain["atom_num"] = self.atomic_number
+            domain["atom_nelec"] = self.atomic_nelec
 
         else:
-            raise ValueError(
-                'Method to initialize the walkers not recognized')
+            raise ValueError("Method to initialize the walkers not recognized")
 
         return domain
 
     def _process_atom_str(self):
         """Process the atom description."""
 
-        if self.atoms_str.endswith('.xyz'):
+        if self.atoms_str.endswith(".xyz"):
             if os.path.isfile(self.atoms_str):
                 atoms = self._read_xyz_file()
             else:
-                raise FileNotFoundError(
-                    'File %s not  found' % self.atoms_str)
+                raise FileNotFoundError("File %s not  found" % self.atoms_str)
         else:
-            atoms = self.atoms_str.split(';')
+            atoms = self.atoms_str.split(";")
 
         self._get_atomic_properties(atoms)
 
@@ -228,17 +231,14 @@ class Molecule:
         for a in atoms:
             atom_data = a.split()
             self.atoms.append(atom_data[0])
-            x, y, z = float(atom_data[1]), float(
-                atom_data[2]), float(atom_data[3])
+            x, y, z = float(atom_data[1]), float(atom_data[2]), float(atom_data[3])
 
             conv2bohr = 1
-            if self.unit == 'angs':
+            if self.unit == "angs":
                 conv2bohr = 1.8897259886
-            self.atom_coords.append(
-                [x * conv2bohr, y * conv2bohr, z * conv2bohr])
+            self.atom_coords.append([x * conv2bohr, y * conv2bohr, z * conv2bohr])
 
-            self.atomic_number.append(
-                element(atom_data[0]).atomic_number)
+            self.atomic_number.append(element(atom_data[0]).atomic_number)
             self.atomic_nelec.append(element(atom_data[0]).electrons)
             self.nelec += element(atom_data[0]).electrons
 
@@ -247,11 +247,12 @@ class Molecule:
 
         # size of the system
         self.natom = len(self.atoms)
-        if (self.nelec-self.spin) % 2 != 0:
-            raise ValueError("%d electrons and spin %d doesn't make sense" % (
-                self.nelec, self.spin))
-        self.nup = int((self.nelec-self.spin) / 2) + self.spin
-        self.ndown = int((self.nelec-self.spin) / 2)
+        if (self.nelec - self.spin) % 2 != 0:
+            raise ValueError(
+                "%d electrons and spin %d doesn't make sense" % (self.nelec, self.spin)
+            )
+        self.nup = int((self.nelec - self.spin) / 2) + self.spin
+        self.ndown = int((self.nelec - self.spin) / 2)
 
         # name of the system
         if self.name is None:
@@ -264,20 +265,20 @@ class Molecule:
         Returns:
             list -- atoms and xyz position
         """
-        with open(self.atoms_str, 'r') as f:
+        with open(self.atoms_str, "r") as f:
             data = f.readlines()
 
         natom = int(data[0])
-        atoms = data[2:2+natom]
-        self.atoms_str = ''
+        atoms = data[2 : 2 + natom]
+        self.atoms_str = ""
         for a in atoms[:-1]:
-            self.atoms_str += a + '; '
+            self.atoms_str += a + "; "
         self.atoms_str += atoms[-1]
         return atoms
 
     @staticmethod
     def _get_mol_name(atoms):
-        mol_name = ''
+        mol_name = ""
         unique_atoms = list(set(atoms))
         for ua in unique_atoms:
             mol_name += ua
@@ -289,48 +290,46 @@ class Molecule:
     def _load_basis(self):
         """Get the basis information needed to compute the AO values."""
 
-        h5 = h5py.File(self.hdf5file, 'r')
-        basis_grp = h5['molecule']['basis']
+        h5 = h5py.File(self.hdf5file, "r")
+        basis_grp = h5["molecule"]["basis"]
         self.basis = SimpleNamespace()
 
-        self.basis.radial_type = bytes2str(
-            basis_grp['radial_type'][()])
-        self.basis.harmonics_type = bytes2str(
-            basis_grp['harmonics_type'][()])
+        self.basis.radial_type = bytes2str(basis_grp["radial_type"][()])
+        self.basis.harmonics_type = bytes2str(basis_grp["harmonics_type"][()])
 
-        self.basis.nao = int(basis_grp['nao'][()])
-        self.basis.nmo = int(basis_grp['nmo'][()])
+        self.basis.nao = int(basis_grp["nao"][()])
+        self.basis.nmo = int(basis_grp["nmo"][()])
 
-        self.basis.nshells = basis_grp['nshells'][()]
-        self.basis.nao_per_atom = basis_grp['nao_per_atom'][()]
-        self.basis.index_ctr = basis_grp['index_ctr'][()]
-        self.basis.nctr_per_ao = basis_grp['nctr_per_ao'][()]
+        self.basis.nshells = basis_grp["nshells"][()]
+        self.basis.nao_per_atom = basis_grp["nao_per_atom"][()]
+        self.basis.index_ctr = basis_grp["index_ctr"][()]
+        self.basis.nctr_per_ao = basis_grp["nctr_per_ao"][()]
 
-        self.basis.bas_exp = basis_grp['bas_exp'][()]
-        self.basis.bas_coeffs = basis_grp['bas_coeffs'][()]
+        self.basis.bas_exp = basis_grp["bas_exp"][()]
+        self.basis.bas_coeffs = basis_grp["bas_coeffs"][()]
 
-        self.basis.atom_coords_internal = basis_grp['atom_coords_internal'][(
-        )]
+        self.basis.atom_coords_internal = basis_grp["atom_coords_internal"][()]
 
-        self.basis.TotalEnergy = basis_grp['TotalEnergy'][()]
-        self.basis.mos = basis_grp['mos'][()]
+        self.basis.TotalEnergy = basis_grp["TotalEnergy"][()]
+        self.basis.mos = basis_grp["mos"][()]
 
-        if self.basis.harmonics_type == 'cart':
-            self.basis.bas_kr = basis_grp['bas_kr'][()]
-            self.basis.bas_kx = basis_grp['bas_kx'][()]
-            self.basis.bas_ky = basis_grp['bas_ky'][()]
-            self.basis.bas_kz = basis_grp['bas_kz'][()]
+        if self.basis.harmonics_type == "cart":
+            self.basis.bas_kr = basis_grp["bas_kr"][()]
+            self.basis.bas_kx = basis_grp["bas_kx"][()]
+            self.basis.bas_ky = basis_grp["bas_ky"][()]
+            self.basis.bas_kz = basis_grp["bas_kz"][()]
 
-        elif self.basis.harmonics_type == 'sph':
-            self.basis.bas_n = basis_grp['bas_n'][()]
-            self.basis.bas_l = basis_grp['bas_l'][()]
-            self.basis.bas_m = basis_grp['bas_m'][()]
+        elif self.basis.harmonics_type == "sph":
+            self.basis.bas_n = basis_grp["bas_n"][()]
+            self.basis.bas_l = basis_grp["bas_l"][()]
+            self.basis.bas_m = basis_grp["bas_m"][()]
 
         else:
             raise ValueError(
-                'Harmonics type should be cart or sph \
-                but %s was found in %s' % (self.basis.harmonics_type,
-                                           self.hdf5file))
+                "Harmonics type should be cart or sph \
+                but %s was found in %s"
+                % (self.basis.harmonics_type, self.hdf5file)
+            )
 
         h5.close()
         return self.basis
@@ -343,31 +342,39 @@ class Molecule:
             >>> mol.print_total_energy()
         """
         e = self.get_total_energy()
-        log.info('== SCF Energy : {e}', e=e)
+        log.info("== SCF Energy : {e}", e=e)
 
     def get_total_energy(self):
         """Get the value of the total energy."""
-        h5 = h5py.File(self.hdf5file, 'r')
-        e = h5['molecule']['basis']['TotalEnergy'][()]
+        h5 = h5py.File(self.hdf5file, "r")
+        e = h5["molecule"]["basis"]["TotalEnergy"][()]
         h5.close()
         return e
 
     def _check_basis(self):
         """Check if the basis contains all the necessary fields."""
 
-        names = ['bas_coeffs', 'bas_exp', 'nshells',
-                 'atom_coords_internal', 'nao', 'nmo',
-                 'index_ctr', 'mos', 'TotalEnergy']
+        names = [
+            "bas_coeffs",
+            "bas_exp",
+            "nshells",
+            "atom_coords_internal",
+            "nao",
+            "nmo",
+            "index_ctr",
+            "mos",
+            "TotalEnergy",
+        ]
 
-        if self.basis.harmonics_type == 'cart':
-            names += ['bas_kx', 'bas_ky', 'bas_kz', 'bas_kr']
+        if self.basis.harmonics_type == "cart":
+            names += ["bas_kx", "bas_ky", "bas_kz", "bas_kr"]
 
-        elif self.basis.harmonics_type == 'sph':
-            names += ['bas_n', 'bas_l', 'bas_m']
+        elif self.basis.harmonics_type == "sph":
+            names += ["bas_n", "bas_l", "bas_m"]
 
         for n in names:
             if not hasattr(self.basis, n):
-                raise ValueError(n, ' not in the basis namespace')
+                raise ValueError(n, " not in the basis namespace")
 
     def _load_hdf5(self, filename):
         """Load a molecule from hdf5
@@ -377,26 +384,26 @@ class Molecule:
         """
 
         # load the data
-        load_from_hdf5(self, filename, 'molecule')
+        load_from_hdf5(self, filename, "molecule")
 
         # cast some of the important data type
         # should be done by the hdf5_utils in the future
-        self.atoms = self.atoms.astype('U')
+        self.atoms = self.atoms.astype("U")
         self.basis.nao = int(self.basis.nao)
         self.basis.nmo = int(self.basis.nmo)
 
-        cast_fn = {'nelec': int,
-                   'nup': int,
-                   'ndown': int,
-                   'atoms': lambda x: x.astype('U'),
-                   'atomic_nelec': lambda x: [int(i) for i in x]}
+        cast_fn = {
+            "nelec": int,
+            "nup": int,
+            "ndown": int,
+            "atoms": lambda x: x.astype("U"),
+            "atomic_nelec": lambda x: [int(i) for i in x],
+        }
 
         for name, fn in cast_fn.items():
             self.__setattr__(name, fn(self.__getattribute__(name)))
 
-        cast_fn = {'nao': int,
-                   'nmo': int}
+        cast_fn = {"nao": int, "nmo": int}
 
         for name, fn in cast_fn.items():
-            self.basis.__setattr__(
-                name, fn(self.basis.__getattribute__(name)))
+            self.basis.__setattr__(name, fn(self.basis.__getattribute__(name)))

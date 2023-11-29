@@ -4,7 +4,6 @@ from torch.autograd import grad
 
 
 class JastrowKernelElectronNucleiBase(nn.Module):
-
     def __init__(self, nup, ndown, atomic_pos, cuda, **kwargs):
         r"""Base class for the elec-nuc jastrow factor
 
@@ -27,9 +26,9 @@ class JastrowKernelElectronNucleiBase(nn.Module):
         self.natoms = atomic_pos.shape[0]
         self.ndim = 3
 
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
         self.requires_autograd = True
 
     def forward(self, r):
@@ -73,7 +72,6 @@ class JastrowKernelElectronNucleiBase(nn.Module):
             r.requires_grad = True
 
         with torch.enable_grad():
-
             kernel = self.forward(r)
             ker_grad = self._grads(kernel, r)
 
@@ -108,13 +106,11 @@ class JastrowKernelElectronNucleiBase(nn.Module):
             r.requires_grad = True
 
         with torch.enable_grad():
-
             kernel = self.forward(r)
 
             ker_hess, ker_grad = self._hess(kernel, r)
 
-            jhess = (ker_hess).unsqueeze(1) * \
-                dr2 + ker_grad.unsqueeze(1) * d2r
+            jhess = (ker_hess).unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
 
@@ -142,10 +138,7 @@ class JastrowKernelElectronNucleiBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val,
-                    pos,
-                    grad_outputs=torch.ones_like(val),
-                    create_graph=True)[0]
+        gval = grad(val, pos, grad_outputs=torch.ones_like(val), create_graph=True)[0]
 
         hval = grad(gval, pos, grad_outputs=torch.ones_like(gval))[0]
 
