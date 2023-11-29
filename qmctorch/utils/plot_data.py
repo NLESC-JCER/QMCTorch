@@ -222,7 +222,7 @@ def plot_correlation_time(eloc):
         eloc (np.array): values of the local energy
     """
 
-    nstep, nwalkers = eloc.shape
+    nstep, _ = eloc.shape
     max_block_size = nstep // 2
 
     var = np.std(eloc, axis=0)

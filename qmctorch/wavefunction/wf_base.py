@@ -213,13 +213,12 @@ class WaveFunction(torch.nn.Module):
         """density of the wave function."""
         if return_grad:
             return self.gradients(pos, pdf=True)
-        else:
-            return (self.forward(pos) ** 2).reshape(-1)
+        return (self.forward(pos) ** 2).reshape(-1)
 
     def get_number_parameters(self):
         """Computes the total number of parameters."""
         nparam = 0
-        for name, param in self.named_parameters():
+        for _, param in self.named_parameters():
             if param.requires_grad:
                 nparam += param.data.numel()
         return nparam

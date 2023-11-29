@@ -198,7 +198,7 @@ class SolverMPI(Solver):
 
         return self.observable
 
-    def single_point(self, with_tqdm=True, hdf5_group="single_point"):
+    def single_point(self, with_tqdm=True, batchsize=None, hdf5_group="single_point"):
         """Performs a single point calculation
 
         Args:
@@ -218,6 +218,9 @@ class SolverMPI(Solver):
             ),
         )
 
+        if batchsize is not None:
+            log.info('  Batchsize not supported for MPI solver')
+
         # check if we have to compute and store the grads
         grad_mode = torch.no_grad()
         if self.wf.kinetic == "auto":
@@ -230,7 +233,7 @@ class SolverMPI(Solver):
 
         with grad_mode:
             # sample the wave function
-            pos = self.sampler(self.wf.pdf)
+            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
             if self.wf.cuda and pos.device.type == "cpu":
                 pos = pos.to(self.device)
 

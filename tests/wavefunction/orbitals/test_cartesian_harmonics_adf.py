@@ -31,7 +31,7 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 0] = torch.linspace(-4, 4, npts)
         self.dx = self.pos[1, 0] - self.pos[0, 0]
 
-        xyz, r = self.ao._process_position(self.pos)
+        xyz, _ = self.ao._process_position(self.pos)
         R, dR = self.ao.harmonics(
             xyz, derivative=[0, 1], sum_grad=False)
 
@@ -130,8 +130,8 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
         self.pos[:, 13] = -eps
         self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
-        xyz, r = self.ao._process_position(self.pos)
-        R, dR, d2R = self.ao.harmonics(
+        xyz, _ = self.ao._process_position(self.pos)
+        R, _, d2R = self.ao.harmonics(
             xyz, derivative=[0, 1, 2], sum_grad=False)
 
         for iorb in range(7):

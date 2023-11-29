@@ -50,7 +50,7 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
                                 include_all_mo=False,
                                 configs='single_double(2,2)',
                                 jastrow=jastrow,
-                                backflow=None)
+                                backflow=backflow)
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight

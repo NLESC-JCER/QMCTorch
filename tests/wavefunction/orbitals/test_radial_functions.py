@@ -101,7 +101,7 @@ class TestRadialFunctions(unittest.TestCase):
 
     def test_val(self):
         """Simply executes the kernel."""
-        xyz, r = self.process_position()
+        _, r = self.process_position()
         for fn in self.radfn:
             fn(r, self.bas_n, self.bas_exp)
 

@@ -91,7 +91,7 @@ class TestLiHCorrelated(unittest.TestCase):
 
         self.solver.configure(track=['local_energy'],
                               loss='energy', grad='manual')
-        obs = self.solver.run(5)
+        _ = self.solver.run(5)
 
 
 if __name__ == "__main__":

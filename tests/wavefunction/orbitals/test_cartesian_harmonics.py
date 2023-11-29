@@ -98,7 +98,7 @@ class TestCartesianHarmonics(unittest.TestCase):
         return xyz, r
 
     def test_value(self):
-        xyz, r = self.process_position()
+        xyz, _ = self.process_position()
         self.harmonics(xyz, derivative=0)
 
     def test_grad(self):

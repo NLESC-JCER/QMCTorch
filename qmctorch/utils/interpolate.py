@@ -17,14 +17,13 @@ class InterpolateMolecularOrbitals:
     def __call__(self, pos, method="irreg", orb="occupied", **kwargs):
         if method == "irreg":
             n = kwargs["n"] if "n" in kwargs else 6
-            return self.interpolate_mo_irreg_grid(pos, n=n, orb=orb)
-
+            out =  self.interpolate_mo_irreg_grid(pos, n=n, orb=orb)
         elif method == "reg":
             rstr, bstr = "resolution", "border_length"
             res = kwargs[rstr] if rstr in kwargs else 0.1
             blength = kwargs[bstr] if bstr in kwargs else 2.0
-            return self.interpolate_mo_reg_grid(pos, res, blength, orb)
-
+            out =  self.interpolate_mo_reg_grid(pos, res, blength, orb)
+        return out
     def get_mo_max_index(self, orb):
         """Get the index of the highest MO to inlcude in the interpoaltion
 
@@ -302,9 +301,8 @@ def logspace(n, length):
     if is_even(n):
         x = np.logspace(0.01, k, n // 2) - 1
         return np.concatenate((-x[::-1], x[1:]))
-    else:
-        x = np.logspace(0.0, k, n // 2 + 1) - 1
-        return np.concatenate((-x[::-1], x[1:]))
+    x = np.logspace(0.0, k, n // 2 + 1) - 1
+    return np.concatenate((-x[::-1], x[1:]))
 
 
 def get_log_grid(atomic_positions, n=6, length=2.0, border_length=2.0):

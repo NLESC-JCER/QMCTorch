@@ -73,7 +73,7 @@ class BaseTestAO:
 
         def setUp(self):
 
-            def ao_callable(pos):
+            def ao_callable(pos, derivative=0, sum_grad=False):
                 """Callable for the AO"""
                 return None
             self.ao = ao_callable

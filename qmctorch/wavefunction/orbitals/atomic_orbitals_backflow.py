@@ -12,7 +12,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         """
 
         super().__init__(mol, cuda)
-        dtype = torch.get_default_dtype()
+        # dtype = torch.get_default_dtype()
         self.backflow_trans = backflow
 
     def forward(

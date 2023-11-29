@@ -4,6 +4,7 @@ from copy import deepcopy
 import numpy as np
 from torch import nn
 import operator
+import matplotlib.pyplot as plt
 
 from .. import log
 
@@ -256,8 +257,8 @@ class SlaterJastrow(WaveFunction):
         if self.use_jastrow:
             return J * self.fc(x)
 
-        else:
-            return self.fc(x)
+        # if we do not have a Jastrow
+        return self.fc(x)
 
     def ao2mo(self, ao):
         """transforms AO values in to MO values."""
@@ -643,7 +644,7 @@ class SlaterJastrow(WaveFunction):
             # fit AO with STO
             xdata = x.numpy()
             ydata = ao[:, iorb]
-            popt, pcov = curve_fit(sto, xdata, ydata)
+            popt, _ = curve_fit(sto, xdata, ydata)
 
             # store new exp/norm
             basis.bas_norm[iorb] = popt[0]
@@ -662,8 +663,6 @@ class SlaterJastrow(WaveFunction):
 
             # plot if necessary
             if plot:
-                import matplotlib.pyplot as plt
-
                 plt.plot(xdata, ydata)
                 plt.plot(xdata, sto(xdata, *popt))
                 plt.show()

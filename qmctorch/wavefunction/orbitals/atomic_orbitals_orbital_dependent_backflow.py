@@ -16,7 +16,7 @@ class AtomicOrbitalsOrbitalDependentBackFlow(AtomicOrbitals):
         """
 
         super().__init__(mol, cuda)
-        dtype = torch.get_default_dtype()
+        # dtype = torch.get_default_dtype()
         self.backflow_trans = OrbitalDependentBackFlowTransformation(
             mol,
             backflow_kernel=backflow_kernel,

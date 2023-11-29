@@ -20,7 +20,7 @@ class BaseTestSolvers:
 
             # sample and compute observables
             obs = self.solver.single_point()
-            e, v = obs.energy, obs.variance
+            _, _ = obs.energy, obs.variance
 
             # if self.expected_energy is not None:
             #     assert(

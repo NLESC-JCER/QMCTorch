@@ -1,6 +1,5 @@
 import torch
 from torch import nn
-import torch
 from torch.autograd import Variable, grad
 
 from ..distance.electron_electron_distance import ElectronElectronDistance

@@ -1,10 +1,9 @@
 import os
-import math
 import numpy as np
 from mendeleev import element
 from types import SimpleNamespace
 import h5py
-from mpi4py import MPI
+
 from .calculator import CalculatorADF, CalculatorPySCF, CalculatorADF2019
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
@@ -14,6 +13,7 @@ try:
     from mpi4py import MPI
 except ModuleNotFoundError:
     log.info("  MPI not found.")
+
 
 
 class Molecule:

@@ -259,13 +259,16 @@ class Metropolis(SamplerBase):
             d = torch.rand(
                 (self.walkers.nwalkers, num_elec, self.ndim), device=self.device
             ).view(self.walkers.nwalkers, num_elec * self.ndim)
-            return self.step_size * (2.0 * d - 1.0)
+            out = self.step_size * (2.0 * d - 1.0)
+            return 
 
         elif self.movedict["proba"] == "normal":
             displacement = self.multiVariate.sample(
                 (self.walkers.nwalkers, num_elec)
             ).to(self.device)
-            return displacement.view(self.walkers.nwalkers, num_elec * self.ndim)
+            out = displacement.view(self.walkers.nwalkers, num_elec * self.ndim)
+        
+        return out
 
     def _accept(self, proba: torch.Tensor) -> torch.Tensor:
         """accept the move or not

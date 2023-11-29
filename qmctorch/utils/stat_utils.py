@@ -68,7 +68,7 @@ def fit_correlation_coefficient(coeff):
         def func(x, tau):
             return np.exp(-x / tau)
 
-        popt, pcov = curve_fit(func, x, y, p0=(1.0))
+        popt, _ = curve_fit(func, x, y, p0=(1.0))
         return popt[0], func(x, popt)
 
     return fit_exp(np.arange(len(coeff)), coeff)

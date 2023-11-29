@@ -13,7 +13,7 @@ class TestGeneralizeMetropolis(TestSamplerBase):
             nelec=self.wf.nelec, ndim=self.wf.ndim,
             init=self.mol.domain('normal'))
 
-        pos = sampler(self.wf.pdf)
+        _ = sampler(self.wf.pdf)
 
 
 if __name__ == "__main__":

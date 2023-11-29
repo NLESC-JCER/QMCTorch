@@ -1,11 +1,5 @@
-from tqdm import tqdm
-import torch
-from torch.distributions import MultivariateNormal
-from time import time
-from typing import Callable, Union, Dict
-from .sampler_base import SamplerBase
-from .. import log
 
+import torch
 
 class DensityVarianceKernel(object):
     def __init__(self, atomic_pos, sigma=1.0, scale_factor=1.0):

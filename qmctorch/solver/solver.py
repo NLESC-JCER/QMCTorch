@@ -142,7 +142,7 @@ class Solver(SolverBase):
                     opt_freeze = ["ci", "mo", "ao", "jastrow"]
                     raise ValueError("Valid arguments for freeze are :", opt_freeze)
 
-    def save_sampling_parameters(self, pos):
+    def save_sampling_parameters(self):
         """save the sampling params."""
         self.sampler._nstep_save = self.sampler.nstep
         self.sampler._ntherm_save = self.sampler.ntherm
@@ -284,7 +284,7 @@ class Solver(SolverBase):
             batchsize = len(pos)
 
         # change the number of steps/walker size
-        self.save_sampling_parameters(pos)
+        self.save_sampling_parameters()
 
         # create the data loader
         self.dataloader = DataLoader(pos, batch_size=batchsize, pin_memory=self.cuda)

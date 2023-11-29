@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 from torch.autograd import grad
-from torch import nn
 
 
 class JastrowKernelElectronElectronBase(nn.Module):
@@ -66,7 +65,7 @@ class JastrowKernelElectronElectronBase(nn.Module):
                           Nmo x Nbatch x Ndim x  Nelec_pair
         """
 
-        if r.requires_grad == False:
+        if r.requires_grad is False:
             r.requires_grad = True
 
         with torch.enable_grad():

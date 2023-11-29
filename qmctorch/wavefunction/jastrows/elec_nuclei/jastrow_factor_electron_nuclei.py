@@ -111,7 +111,6 @@ class JastrowFactorElectronNuclei(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Ndim x Nelec
         """
-        nbatch = r.shape[0]
         if sum_grad:
             djast = self.jastrow_kernel.compute_derivative(r, dr).sum((1, 3))
             return djast * jast
@@ -131,8 +130,6 @@ class JastrowFactorElectronNuclei(nn.Module):
             torch.tensor: diagonal hessian of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
-        nbatch = r.shape[0]
-
         # pure second derivative terms
         d2jast = self.jastrow_kernel.compute_second_derivative(r, dr, d2r).sum((1, 3))
 

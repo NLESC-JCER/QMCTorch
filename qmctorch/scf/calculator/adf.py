@@ -187,7 +187,7 @@ class CalculatorADF(CalculatorBase):
         basis_bas_kr = []
         basis_bas_exp, basis_bas_norm = [], []
 
-        for iat, at in enumerate(atom_type):
+        for iat, _ in enumerate(atom_type):
             number_copy = nqptr[iat + 1] - nqptr[iat]
             idx_bos = list(range(nbptr[iat] - 1, nbptr[iat + 1] - 1))
 

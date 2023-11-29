@@ -22,7 +22,7 @@ class TestMetropolis(TestSamplerBase):
             for p in ['normal', 'uniform']:
 
                 sampler.configure_move({'type': m, 'proba': p})
-                pos = sampler(self.wf.pdf)
+                _ = sampler(self.wf.pdf)
 
     def test_metropolis_logspace(self):
         """Test Metropolis sampling in logspace."""
@@ -40,7 +40,7 @@ class TestMetropolis(TestSamplerBase):
             for p in ['normal', 'uniform']:
 
                 sampler.configure_move({'type': m, 'proba': p})
-                pos = sampler(self.wf.pdf)
+                _ = sampler(self.wf.pdf)
 
 
 if __name__ == "__main__":

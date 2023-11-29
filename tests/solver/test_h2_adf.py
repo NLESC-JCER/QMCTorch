@@ -1,20 +1,14 @@
-from ..path_utils import PATH_TEST
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.scf import Molecule
 from qmctorch.sampler import Metropolis
+from qmctorch.solver import Solver
+
 import unittest
-
-
 import torch
 import torch.optim as optim
 
 from .test_base_solver import BaseTestSolvers
-from qmctorch.sampler import Metropolis
-from qmctorch.solver import Solver
-from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
-
 from ..path_utils import PATH_TEST
 
 

@@ -19,7 +19,7 @@ class TestMolecule(unittest.TestCase):
         mol.print_total_energy()
 
     def test2_load(self):
-        mol = Molecule(load='H2_pyscf_sto-3g.hdf5')
+        _ = Molecule(load='H2_pyscf_sto-3g.hdf5')
 
     def test3_domain(self):
         mol = Molecule(load='H2_pyscf_sto-3g.hdf5')

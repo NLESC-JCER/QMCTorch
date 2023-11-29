@@ -154,7 +154,7 @@ class Hamiltonian(SamplerBase):
         p -= 0.5 * epsilon * get_grad(U, q)
 
         # full steps in q and p space
-        for iL in range(L - 1):
+        for _ in range(L - 1):
             q += epsilon * p
             p -= epsilon * get_grad(U, q)
 

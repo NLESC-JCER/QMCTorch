@@ -140,7 +140,7 @@ class TestRadialSlater(unittest.TestCase):
         self.pos[:, 14] = torch.linspace(-4, 4, npts)
 
         xyz, r = self.ao._process_position(self.pos)
-        R, dR, d2R = self.ao.radial(r, self.ao.bas_n,
+        R, _, d2R = self.ao.radial(r, self.ao.bas_n,
                                     self.ao.bas_exp,
                                     xyz=xyz,
                                     derivative=[0, 1, 2],

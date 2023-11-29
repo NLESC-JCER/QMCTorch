@@ -48,7 +48,7 @@ class BatchDeterminant(torch.autograd.Function):
     def forward(ctx, input):
         # LUP decompose the matrices
         inp_lu, pivots = input.lu()
-        perm, inpl, inpu = torch.lu_unpack(inp_lu, pivots)
+        _, _, inpu = torch.lu_unpack(inp_lu, pivots)
 
         # get the number of permuations
         s = (
