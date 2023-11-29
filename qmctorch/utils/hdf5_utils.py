@@ -68,7 +68,8 @@ def load_group(grp, parent_obj, grp_name):
         if not hasattr(parent_obj, grp_name):
             parent_obj.__setattr__(grp_name, SimpleNamespace())
         load_object(grp, parent_obj.__getattribute__(grp_name), grp_name)
-    except:
+    except Exception as expt_message:
+        print(expt_message)
         print_load_error(grp_name)
 
 
