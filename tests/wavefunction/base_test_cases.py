@@ -135,7 +135,7 @@ class BaseTestCases:
 
         def test_gradients_wf(self):
 
-            grads = self.wf.gradients_jacobi(
+            grads = self.wf.gradients_jacobi_no_backflow(
                 self.pos, sum_grad=False).squeeze()
             grad_auto = self.wf.gradients_autograd(self.pos)
 
@@ -148,7 +148,7 @@ class BaseTestCases:
 
         def test_gradients_pdf(self):
 
-            grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
+            grads_pdf = self.wf.gradients_jacobi_no_backflow(self.pos, pdf=True)
             grads_auto = self.wf.gradients_autograd(
                 self.pos, pdf=True)
 
