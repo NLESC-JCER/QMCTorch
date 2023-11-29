@@ -35,7 +35,7 @@ class BaseTestJastrow:
         def setUp(self) -> None:
             """Init the test case"""
 
-            def jastrow_callable(pos):
+            def jastrow_callable(pos, derivative=0, sum_grad=False):
                 """Empty callable for jastrow"""
                 return None 
             

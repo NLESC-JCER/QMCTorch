@@ -35,7 +35,7 @@ class BaseTestCases:
         def setUp(self):
             """Init the base test"""
 
-            def wf_placeholder(pos):
+            def wf_placeholder(pos, **kwargs):
                 """Callable for wf"""
                 return None
             
