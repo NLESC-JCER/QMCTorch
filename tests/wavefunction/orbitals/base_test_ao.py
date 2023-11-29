@@ -58,7 +58,7 @@ def hess_mixed_terms(out, pos):
 class BaseTestAO:
     class BaseTestAOderivatives(unittest.TestCase):
         def setUp(self):
-            def ao_callable(pos, derivative=0, sum_grad=False):
+            def ao_callable(pos, derivative=0, sum_grad=False, sum_hess=False):
                 """Callable for the AO"""
                 return None
 
