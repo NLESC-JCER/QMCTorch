@@ -245,7 +245,7 @@ def plot_block(eloc):
         eloc (np.array): values of the local energy
     """
 
-    nstep, nwalkers = eloc.shape
+    nstep, _ = eloc.shape
     max_block_size = nstep // 2
 
     evar = []

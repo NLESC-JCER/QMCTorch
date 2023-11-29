@@ -316,6 +316,7 @@ class Solver(SolverBase):
 
         # init the loss in case we have nepoch=0
         cumulative_loss = 0
+        min_loss = torch.inf
 
         # loop over the epoch
         for n in range(nepoch):
