@@ -14,7 +14,6 @@ from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron i
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 
 
-
 from qmctorch.utils import set_torch_double_precision
 
 
