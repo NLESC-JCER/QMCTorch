@@ -10,17 +10,13 @@ from .hdf5_utils import (
 )
 from .interpolate import InterpolateAtomicOrbitals, InterpolateMolecularOrbitals
 
-# from .plot_data import (plot_block, plot_blocking_energy,
-#                         plot_correlation_coefficient, plot_correlation_time,
-#                         plot_data, plot_energy,
-#                         plot_integrated_autocorrelation_time,
-#                         plot_walkers_traj)
 
 from .stat_utils import (
     blocking,
     correlation_coefficient,
     integrated_autocorrelation_time,
 )
+
 from .torch_utils import (
     DataSet,
     DataLoader,
@@ -33,10 +29,6 @@ from .torch_utils import (
     gradients,
 )
 
-# __all__ = ['plot_energy', 'plot_data', 'plot_block',
-#            'plot_walkers_traj',
-#            'plot_correlation_time',
-#            'plot_autocorrelation',
 __all__ = [
     "set_torch_double_precision",
     "set_torch_single_precision",
@@ -44,6 +36,7 @@ __all__ = [
     "Loss",
     "OrthoReg",
     "DataLoader",
+    "add_group_attr",
     "dump_to_hdf5",
     "load_from_hdf5",
     "bytes2str",
@@ -56,4 +49,7 @@ __all__ = [
     "bproj",
     "diagonal_hessian",
     "gradients",
+    "blocking",
+    "correlation_coefficient",
+    "integrated_autocorrelation_time",
 ]

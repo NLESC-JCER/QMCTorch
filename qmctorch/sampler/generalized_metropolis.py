@@ -9,7 +9,7 @@ from .. import log
 
 
 class GeneralizedMetropolis(SamplerBase):
-    def __init__( #pylint: disable=dangerous-default-value
+    def __init__(  # pylint: disable=dangerous-default-value
         self,
         nwalkers=100,
         nstep=1000,

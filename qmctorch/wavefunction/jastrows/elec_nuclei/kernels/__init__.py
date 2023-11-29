@@ -5,5 +5,5 @@ from .pade_jastrow_kernel import PadeJastrowKernel
 __all__ = [
     "FullyConnectedJastrowKernel",
     "JastrowKernelElectronNucleiBase",
-    "PadeJastrowKernel"
+    "PadeJastrowKernel",
 ]

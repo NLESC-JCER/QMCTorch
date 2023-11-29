@@ -9,7 +9,7 @@ from .solver_base import SolverBase
 
 
 class Solver(SolverBase):
-    def __init__( #pylint: disable=too-many-arguments
+    def __init__(  # pylint: disable=too-many-arguments
         self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
     ):
         """Basic QMC solver
@@ -36,7 +36,7 @@ class Solver(SolverBase):
             resampling={"mode": "update", "resample_every": 1, "nstep_update": 25},
         )
 
-    def configure( #pylint: disable=too-many-arguments
+    def configure(  # pylint: disable=too-many-arguments
         self,
         track=None,
         freeze=None,
@@ -159,7 +159,7 @@ class Solver(SolverBase):
         self.sampler.ntherm = self.sampler._ntherm_save
         # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
-    def geo_opt( #pylint: disable=too-many-arguments
+    def geo_opt(  # pylint: disable=too-many-arguments
         self,
         nepoch,
         geo_lr=1e-2,
@@ -316,7 +316,7 @@ class Solver(SolverBase):
 
         # init the loss in case we have nepoch=0
         cumulative_loss = 0
-        min_loss = 0 # this is set at n=0
+        min_loss = 0  # this is set at n=0
 
         # loop over the epoch
         for n in range(nepoch):

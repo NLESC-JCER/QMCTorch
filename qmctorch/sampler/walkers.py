@@ -6,7 +6,7 @@ from .. import log
 
 
 class Walkers:
-    def __init__( #pylint: disable=too-many-arguments
+    def __init__(  # pylint: disable=too-many-arguments
         self,
         nwalkers: int = 100,
         nelec: int = 1,

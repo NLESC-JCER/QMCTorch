@@ -256,7 +256,7 @@ class MGCNGNN(nn.Module):
         Difference between two adjacent centers in RBF expansion. Default to 0.1.
     """
 
-    def __init__( # pylint: disable=to-many-arguments
+    def __init__(  # pylint: disable=to-many-arguments
         self,
         feats=128,
         n_layers=3,

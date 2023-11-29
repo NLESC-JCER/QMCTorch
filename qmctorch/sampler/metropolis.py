@@ -8,7 +8,7 @@ from .. import log
 
 
 class Metropolis(SamplerBase):
-    def __init__( #pylint: disable=dangerous-default-value
+    def __init__(  # pylint: disable=dangerous-default-value
         self,
         nwalkers: int = 100,
         nstep: int = 1000,
