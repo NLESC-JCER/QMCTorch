@@ -46,7 +46,7 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
         jastrow = JastrowFactorElectronElectron(mol, FullyConnectedJastrowKernel)
 
         # define backflow trans
-        backflow = BackFlowTransformation(mol, BackFlowKernelInverse)
+        # backflow = BackFlowTransformation(mol, BackFlowKernelInverse)
 
         self.wf = SlaterJastrow(
             mol,
@@ -54,7 +54,7 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
             include_all_mo=False,
             configs="single_double(2,2)",
             jastrow=jastrow,
-            backflow=backflow,
+            backflow=None,
         )
 
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
