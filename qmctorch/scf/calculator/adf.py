@@ -256,9 +256,9 @@ class CalculatorADF(CalculatorBase):
 
 
 class CalculatorADF2019(CalculatorADF):
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
+    def __init__(self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile):
         CalculatorADF.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'adf', savefile
+            self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
         )
 
         self.adf_version = "adf2019"
@@ -296,5 +296,8 @@ class CalculatorADF2019(CalculatorADF):
 
         # total energy
         sett.input.totalenergy = True
+
+        # charge info
+        sett.input.charge = "%d %d" % (self.charge, self.spin)
 
         return sett
