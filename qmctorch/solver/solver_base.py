@@ -9,7 +9,7 @@ from ..utils import add_group_attr, dump_to_hdf5
 
 
 class SolverBase:
-    def __init__(
+    def __init__( #pylint: disable=too-many-arguments
         self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
     ):
         """Base Class for QMC solver
@@ -60,7 +60,7 @@ class SolverBase:
 
         self.log_data()
 
-    def configure_resampling(
+    def configure_resampling( #pylint: disable=too-many-arguments
         self,
         mode="update",
         resample_every=1,

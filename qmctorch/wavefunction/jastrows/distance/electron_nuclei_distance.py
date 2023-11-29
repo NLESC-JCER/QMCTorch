@@ -59,7 +59,7 @@ class ElectronNucleiDistance(nn.Module):
         dist = self._get_distance_quadratic(input_, self.atoms)
         dist = torch.sqrt(dist)
 
-        if derivative == 0:
+        if derivative == 0: #pylint: disable=no-else-return
             if self.scale:
                 return get_scaled_distance(self.kappa, dist)
             else:

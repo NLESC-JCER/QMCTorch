@@ -15,7 +15,7 @@ except ModuleNotFoundError:
 
 
 class CalculatorADF(CalculatorBase):
-    def __init__(
+    def __init__( #pylint: disable=too-many-arguments
         self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
     ):
         CalculatorBase.__init__(

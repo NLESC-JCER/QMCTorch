@@ -16,8 +16,8 @@ except ModuleNotFoundError:
 
 
 class Molecule:
-    def __init__(
-        self,
+    def __init__( #pylint: disable=too-many-arguments
+        self, 
         atom=None,
         calculator="adf",
         scf="hf",

@@ -19,7 +19,7 @@ def logd(rank, *args):
 
 
 class SolverMPI(Solver):
-    def __init__(
+    def __init__( #pylint: disable=too-many-arguments
         self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
     ):
         """Distributed QMC solver
@@ -42,7 +42,7 @@ class SolverMPI(Solver):
 
         self.sampler.walkers.nwalkers //= hvd.size()
 
-    def run(
+    def run( #pylint: disable=too-many-arguments
         self,
         nepoch,
         batchsize=None,

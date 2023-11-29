@@ -8,7 +8,7 @@ from .. import log
 
 
 class Metropolis(SamplerBase):
-    def __init__(
+    def __init__( #pylint: disable=dangerous-default-value
         self,
         nwalkers: int = 100,
         nstep: int = 1000,
@@ -282,9 +282,10 @@ class Metropolis(SamplerBase):
             proba[proba > 0] = 0.0
             tau = torch.log(torch.rand_like(proba))
             index = (proba - tau >= 0).reshape(-1)
-            return index.type(torch.bool)
+            out = index.type(torch.bool)
         else:
             proba[proba > 1] = 1.0
             tau = torch.rand_like(proba)
             index = (proba - tau >= 0).reshape(-1)
-            return index.type(torch.bool)
+            out = index.type(torch.bool)
+        return out

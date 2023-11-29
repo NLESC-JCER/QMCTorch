@@ -138,23 +138,24 @@ class CombineJastrow(nn.Module):
         """
         if len(d2jast_vals) == 1:
             return d2jast_vals[0]
-        else:
-            out = 0.0
-            nterms = len(jast_vals)
-            for i in range(nterms):
-                # d2a * b * c
+
+        # otherwise
+        out = 0.0
+        nterms = len(jast_vals)
+        for i in range(nterms):
+            # d2a * b * c
+            tmp = jast_vals.copy()
+            tmp[i] = d2jast_vals[i]
+            out = out + reduce(lambda x, y: x * y, tmp)
+
+        for i in range(nterms - 1):
+            for j in range(i + 1, nterms):
+                # da * db * c
                 tmp = jast_vals.copy()
-                tmp[i] = d2jast_vals[i]
-                out = out + reduce(lambda x, y: x * y, tmp)
+                tmp = [j.unsqueeze(-1) for j in tmp]
+                tmp[i] = djast_vals[i]
+                tmp[j] = djast_vals[j]
 
-            for i in range(nterms - 1):
-                for j in range(i + 1, nterms):
-                    # da * db * c
-                    tmp = jast_vals.copy()
-                    tmp = [j.unsqueeze(-1) for j in tmp]
-                    tmp[i] = djast_vals[i]
-                    tmp[j] = djast_vals[j]
+                out = out + (2.0 * reduce(lambda x, y: x * y, tmp)).sum(1)
 
-                    out = out + (2.0 * reduce(lambda x, y: x * y, tmp)).sum(1)
-
-            return out
+        return out
