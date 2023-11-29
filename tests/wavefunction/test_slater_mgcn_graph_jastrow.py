@@ -156,7 +156,7 @@ class TestSlaterJastrowGraph(unittest.TestCase):
         assert torch.allclose(eauto.data, ejac.data, rtol=1e-4, atol=1e-4)
 
     def test_gradients_wf(self):
-        grads = self.wf.gradients_jacobi_no_backflow(self.pos, sum_grad=False).squeeze()
+        grads = self.wf.gradients_jacobi(self.pos, sum_grad=False).squeeze()
         grad_auto = self.wf.gradients_autograd(self.pos)
 
         assert torch.allclose(grads.sum(), grad_auto.sum())
@@ -166,7 +166,7 @@ class TestSlaterJastrowGraph(unittest.TestCase):
         assert torch.allclose(grads, grad_auto)
 
     def test_gradients_pdf(self):
-        grads_pdf = self.wf.gradients_jacobi_no_backflow(self.pos, pdf=True)
+        grads_pdf = self.wf.gradients_jacobi(self.pos, pdf=True)
         grads_auto = self.wf.gradients_autograd(self.pos, pdf=True)
 
         assert torch.allclose(grads_pdf.sum(), grads_auto.sum())
