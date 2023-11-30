@@ -29,7 +29,7 @@ class JastrowFactorElectronElectron(nn.Module):
             orbital_dependent_kernel (bool, optional): Make the kernel orbital dependent. Defaults to False.
             number_of_orbitals (int, optional): number of orbitals for orbital dependent kernels. Defaults to None.
             scale (bool, optional): use scaled electron-electron distance. Defaults to False.
-            scale_factor (float, optional): scaling factor. Defaults to 0.6.
+            scale_factor (float, optional): scaling factor for elec-elec distance. Defaults to 0.6.
             cuda (bool, optional): use cuda. Defaults to False.
         """
 
@@ -49,6 +49,10 @@ class JastrowFactorElectronElectron(nn.Module):
 
         # kernel function
         if orbital_dependent_kernel:
+            # default to all orbitals if number_of_orbitals is None
+            if number_of_orbitals is None:
+                number_of_orbitals = mol.nmo
+            # create the orbital dependent jastrow
             self.jastrow_kernel = OrbitalDependentJastrowKernel(
                 mol.nup,
                 mol.ndown,
