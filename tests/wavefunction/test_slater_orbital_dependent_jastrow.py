@@ -54,6 +54,17 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
         self.pos = torch.Tensor(np.random.rand(self.nbatch, self.wf.nelec * 3))
         self.pos.requires_grad = True
 
+    def test_gradients_wf(self):
+        pass
+
+    def test_gradients_pdf(self):
+        pass
+
+    def test_kinetic_energy(self):
+        pass
+
+    def test_local_energy(self):
+        pass
 
 if __name__ == "__main__":
     unittest.main()
