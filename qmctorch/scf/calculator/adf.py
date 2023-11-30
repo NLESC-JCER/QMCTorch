@@ -32,6 +32,12 @@ class CalculatorADF(CalculatorBase):
             savefile,
         )
 
+        if charge != 0:
+            raise ValueError("ADF calculator does not support charge yet, open an issue in the repo :)")
+        
+        if spin != 0:
+            raise ValueError("ADF calculator does not support spin polarization yet, open an issue in the repo :)")
+
         # basis from the emma paper
         self.additional_basis_type = ["VB1", "VB2", "VB3", "CVB1", "CVB2", "CVB3"]
 
@@ -128,7 +134,7 @@ class CalculatorADF(CalculatorBase):
         sett.input.adf.totalenergy = True
 
         # charge info
-        sett.input.charge = "%d %d" % (self.charge, self.spin)
+        # sett.input.adf.charge = "%d %d" % (self.charge, self.spin)
 
         # spin info
         sett.input.unrestricted = False
