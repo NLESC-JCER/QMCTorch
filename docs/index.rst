@@ -32,6 +32,7 @@ Quantum Monte Carlo with Pytorch
    notebooks/correlation
    notebooks/create_jastrow
    notebooks/create_backflow
+   notebooks/combining_jastrow
    notebooks/horovod
 
 
