@@ -51,7 +51,7 @@ class JastrowFactorElectronElectron(nn.Module):
         if orbital_dependent_kernel:
             # default to all orbitals if number_of_orbitals is None
             if number_of_orbitals is None:
-                number_of_orbitals = mol.calculator.basis.nmo
+                number_of_orbitals = mol.basis.nmo
             # create the orbital dependent jastrow
             self.jastrow_kernel = OrbitalDependentJastrowKernel(
                 mol.nup,
