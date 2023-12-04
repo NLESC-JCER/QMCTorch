@@ -66,6 +66,8 @@ jobs:
     - uses: ammaraskar/sphinx-action@master
       with:
         docs-folder: "docs/"
+      env:
+        CONDA_PREFIX: /usr/share/miniconda
     # Great extra actions to compose with:
     # Create an artifact of the html output.
     - uses: actions/upload-artifact@v1
