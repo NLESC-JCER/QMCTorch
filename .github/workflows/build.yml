@@ -51,9 +51,9 @@ jobs:
       run: coverage run -m pytest tests
 
     - name: Combine all coverage results
-      run: coverage combine
-
-    - run: coverage report
+      run: |
+        coverage combine
+        coverage report
 
     - name: Coveralls Parallel
       run: coveralls --service=github
