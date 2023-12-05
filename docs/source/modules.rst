@@ -1,9 +1,10 @@
 
-Subpackages
------------
+Python Interface
+-------------------
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 1
+   :hidden:
 
    qmctorch.sampler
    qmctorch.scf
@@ -11,7 +12,7 @@ Subpackages
    qmctorch.utils
    qmctorch.wavefunction
 
-Module contents
+Reference
 ---------------
 
 .. automodule:: qmctorch
