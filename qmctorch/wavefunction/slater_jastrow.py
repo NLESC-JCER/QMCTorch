@@ -341,7 +341,7 @@ class SlaterJastrow(WaveFunction):
         are computed following
 
         .. math::
-            \\nabla \\Psi(R) = \\left( \\nabla J(R) \\right) \\Sigma + J(R) \\left(\\nabla \Sigma \\right)
+            \\nabla \\Psi(R) = \\left( \\nabla J(R) \\right) \\Sigma + J(R) \\left(\\nabla \\Sigma \\right)
 
         with
 
@@ -453,11 +453,11 @@ class SlaterJastrow(WaveFunction):
         return -0.5 * bkin
 
     def kinetic_energy_jacobi_backflow(self, x, **kwargs):
-        r"""Compute the value of the kinetic enery using the Jacobi Formula.
+        """Compute the value of the kinetic enery using the Jacobi Formula.
 
 
         .. math::
-             \\frac{\Delta (J(R) \Psi(R))}{ J(R) \Psi(R)} = \\frac{\\Delta J(R)}{J(R}
+             \\frac{\\Delta (J(R) \\Psi(R))}{ J(R) \\Psi(R)} = \\frac{\\Delta J(R)}{J(R}
                                                           + 2 \\frac{\\nabla J(R)}{J(R)} \\frac{\\nabla \\Psi(R)}{\\Psi(R)}
                                                           + \\frac{\\Delta \\Psi(R)}{\\Psi(R)}
 

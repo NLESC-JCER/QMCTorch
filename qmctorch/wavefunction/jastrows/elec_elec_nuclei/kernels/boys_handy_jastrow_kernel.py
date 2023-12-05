@@ -9,7 +9,7 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
     def __init__(
         self, nup, ndown, atomic_pos, cuda, nterm=5
     ):  # pylint: disable=too-many-arguments
-        """Defines a Boys Handy jastrow factors.
+        r"""Defines a Boys Handy jastrow factors.
 
         J.W. Moskowitz et. al
         Correlated Monte Carlo Wave Functions for Some Cations and Anions of the First Row Atoms
