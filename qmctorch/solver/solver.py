@@ -106,8 +106,9 @@ class Solver(SolverBase):
         self.wf.fc.weight.requires_grad = wf_params
 
         if hasattr(self.wf, "jastrow"):
-            for param in self.wf.jastrow.parameters():
-                param.requires_grad = wf_params
+            if self.wf.jastrow is not None:
+                for param in self.wf.jastrow.parameters():
+                    param.requires_grad = wf_params
 
         # no opt the atom positions
         self.wf.ao.atom_coords.requires_grad = geo_params

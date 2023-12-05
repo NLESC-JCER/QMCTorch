@@ -41,7 +41,7 @@ class Molecule:
             calculator (str, optional): selet scf calculator. Defaults to 'adf'.
                 - pyscf : PySCF calculator
                 - adf : ADF2020+ calculator
-                - adf2019 : ADF2019 calculatori
+                - adf2019 : ADF2019 calculator
             scf (str, optional): select scf level of theory. Defaults to 'hf'.
                 - hf : perform a Hatree-Fock calculation to obtain the molecular orbital coefficients
                 - dft : perform a density functional theory using the local density approximation
