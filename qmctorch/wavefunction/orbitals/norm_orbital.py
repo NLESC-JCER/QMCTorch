@@ -75,7 +75,6 @@ def norm_gaussian_spherical(bas_n, bas_exp):
         torch.tensor: normalization factor
     """
 
-    from scipy.special import factorial2 as f2
 
     bas_n = torch.tensor(bas_n)
     bas_n = bas_n + 1.0
@@ -104,7 +103,6 @@ def norm_slater_cartesian(a, b, c, n, exp):
     Returns:
         torch.tensor: normalization factor
     """
-    from scipy.special import factorial2 as f2
 
     lvals = a + b + c + n + 1.0
 
