@@ -194,7 +194,9 @@ class SlaterJastrow(WaveFunction):
 
             # create a simple Pade Jastrow factor as default
             if jastrow == 'default':
-                self.jastrow = JastrowFactorElectronElectron(self.mol, PadeJastrowKernel)
+                self.jastrow = JastrowFactorElectronElectron(self.mol, 
+                                                             PadeJastrowKernel, 
+                                                             cuda=self.cuda)
 
             elif isinstance(jastrow, list):
                 self.jastrow = CombineJastrow(jastrow)
