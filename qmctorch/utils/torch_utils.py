@@ -2,6 +2,7 @@ import torch
 from torch import nn
 from torch.autograd import grad, Variable
 from torch.utils.data import Dataset
+from math import ceil
 
 
 def set_torch_double_precision():
@@ -30,7 +31,6 @@ def fast_power(x, k, mask0=None, mask2=None):
     """
     kmax = 3
     if k.max() < kmax:
-
         out = x.clone()
 
         if mask0 is None:
@@ -71,10 +71,7 @@ def diagonal_hessian(out, inp, return_grads=False):
     """
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
-    jacob = grad(out, inp,
-                 grad_outputs=z,
-                 only_inputs=True,
-                 create_graph=True)[0]
+    jacob = grad(out, inp, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
     if return_grads:
         grads = jacob.detach()
@@ -84,11 +81,9 @@ def diagonal_hessian(out, inp, return_grads=False):
     hess = torch.zeros(jacob.shape)
 
     for idim in range(jacob.shape[1]):
-
-        tmp = grad(jacob[:, idim], inp,
-                   grad_outputs=z,
-                   only_inputs=True,
-                   create_graph=True)[0]
+        tmp = grad(
+            jacob[:, idim], inp, grad_outputs=z, only_inputs=True, create_graph=True
+        )[0]
 
         hess[:, idim] = tmp[:, idim]
 
@@ -100,7 +95,6 @@ def diagonal_hessian(out, inp, return_grads=False):
 
 
 class DataSet(Dataset):
-
     def __init__(self, data):
         """Creates a torch data set
 
@@ -129,13 +123,47 @@ class DataSet(Dataset):
         return self.data[index, :]
 
 
-class Loss(nn.Module):
+class DataLoader:
+    def __init__(self, data, batch_size, pin_memory=False):
+        """Simple DataLoader to replace toch data loader
 
-    def __init__(
-            self,
-            wf,
-            method='energy',
-            clip=False):
+        Args:
+            data (torch.tensor): data to load [Nbatch,Nelec*3]
+            batch_size (int): size of the minibatch
+            pin_memory (bool, optional): copy the data to pinned memory. Defaults to False.
+        """
+
+        if pin_memory:
+            self.dataset = data.pin_memory()
+        else:
+            self.dataset = data
+
+        self.len = len(data)
+        self.nbatch = ceil(self.len / batch_size)
+        self.count = 0
+        self.batch_size = batch_size
+
+    def __iter__(self):
+        self.count = 0
+        return self
+
+    def __next__(self):
+        if self.count < self.nbatch - 1:
+            out = self.dataset[
+                self.count * self.batch_size : (self.count + 1) * self.batch_size
+            ]
+            self.count += 1
+            return out
+        elif self.count == self.nbatch - 1:
+            out = self.dataset[self.count * self.batch_size :]
+            self.count += 1
+            return out
+        else:
+            raise StopIteration
+
+
+class Loss(nn.Module):
+    def __init__(self, wf, method="energy", clip=False):
         """Defines the loss to use during the optimization
 
         Arguments:
@@ -165,11 +193,10 @@ class Loss(nn.Module):
         self.clip_num_std = 5
 
         # select loss function
-        self.loss_fn = {'energy': torch.mean,
-                        'variance': torch.var}[method]
+        self.loss_fn = {"energy": torch.mean, "variance": torch.var}[method]
 
         # init values of the weights
-        self.weight = {'psi': None, 'psi0': None}
+        self.weight = {"psi": None, "psi0": None}
 
     def forward(self, pos, no_grad=False, deactivate_weight=False):
         """Computes the loss
@@ -187,7 +214,6 @@ class Loss(nn.Module):
 
         # check if grads are requested
         with self.get_grad_mode(no_grad):
-
             # compute local eneergies
             local_energies = self.wf.local_energy(pos)
 
@@ -223,47 +249,41 @@ class Loss(nn.Module):
             std = torch.std(local_energies)
             emax = median + self.clip_num_std * std
             emin = median - self.clip_num_std * std
-            mask = (
-                local_energies < emax) & (
-                local_energies > emin)
+            mask = (local_energies < emax) & (local_energies > emin)
         else:
-            mask = torch.ones_like(
-                local_energies).type(torch.bool)
+            mask = torch.ones_like(local_energies).type(torch.bool)
 
         return mask
 
     def get_sampling_weights(self, pos, deactivate_weight):
         """Get the weight needed when resampling is not
-            done at every step
+        done at every step
         """
 
-        local_use_weight = self.use_weight * \
-            (not deactivate_weight)
+        local_use_weight = self.use_weight * (not deactivate_weight)
 
         if local_use_weight:
-
             # computes the weights
-            self.weight['psi'] = self.wf(pos)
+            self.weight["psi"] = self.wf(pos)
 
             # if we just resampled store psi and all w=1
-            if self.weight['psi0'] is None:
-                self.weight['psi0'] = self.weight['psi'].detach(
-                ).clone()
-                w = torch.ones_like(self.weight['psi'])
+            if self.weight["psi0"] is None:
+                self.weight["psi0"] = self.weight["psi"].detach().clone()
+                w = torch.ones_like(self.weight["psi"])
 
             # otherwise compute ration of psi
             else:
-                w = (self.weight['psi'] / self.weight['psi0'])**2
+                w = (self.weight["psi"] / self.weight["psi0"]) ** 2
                 w /= w.sum()  # should we multiply by the number of elements ?
 
             return w
 
         else:
-            return 1.
+            return 1.0
 
 
 class OrthoReg(nn.Module):
-    '''add a penalty to make matrice orthgonal.'''
+    """add a penalty to make matrice orthgonal."""
 
     def __init__(self, alpha=0.1):
         """Add a penalty loss to keep the MO orthogonalized
@@ -276,6 +296,4 @@ class OrthoReg(nn.Module):
 
     def forward(self, W):
         """Return the loss : |W x W^T - I|."""
-        return self.alpha * \
-            torch.norm(W.mm(W.transpose(0, 1)) -
-                       torch.eye(W.shape[0]))
+        return self.alpha * torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))

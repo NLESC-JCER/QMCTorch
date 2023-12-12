@@ -5,14 +5,17 @@ from .orbital_dependent_jastrow_kernel import OrbitalDependentJastrowKernel
 
 
 class JastrowFactorElectronElectron(nn.Module):
-
-    def __init__(self, nup, ndown,
-                 jastrow_kernel,
-                 kernel_kwargs={},
-                 orbital_dependent_kernel=False,
-                 number_of_orbitals=None,
-                 scale=False, scale_factor=0.6,
-                 cuda=False):
+    def __init__(
+        self,
+        mol,
+        jastrow_kernel,
+        kernel_kwargs={},
+        orbital_dependent_kernel=False,
+        number_of_orbitals=None,
+        scale=False,
+        scale_factor=0.6,
+        cuda=False,
+    ):
         """Electron-Electron Jastrow factor.
 
         .. math::
@@ -26,40 +29,55 @@ class JastrowFactorElectronElectron(nn.Module):
             orbital_dependent_kernel (bool, optional): Make the kernel orbital dependent. Defaults to False.
             number_of_orbitals (int, optional): number of orbitals for orbital dependent kernels. Defaults to None.
             scale (bool, optional): use scaled electron-electron distance. Defaults to False.
-            scale_factor (float, optional): scaling factor. Defaults to 0.6.
+            scale_factor (float, optional): scaling factor for elec-elec distance. Defaults to 0.6.
             cuda (bool, optional): use cuda. Defaults to False.
         """
 
         super().__init__()
 
-        self.nup = nup
-        self.ndown = ndown
-        self.nelec = nup + ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelec = mol.nup + mol.ndown
         self.ndim = 3
 
         self.cuda = cuda
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
 
         self.requires_autograd = True
 
         # kernel function
         if orbital_dependent_kernel:
+            # default to all orbitals if number_of_orbitals is None
+            if number_of_orbitals is None:
+                number_of_orbitals = mol.basis.nmo
+            # create the orbital dependent jastrow
             self.jastrow_kernel = OrbitalDependentJastrowKernel(
-                nup, ndown, number_of_orbitals, cuda, jastrow_kernel, kernel_kwargs)
+                mol.nup,
+                mol.ndown,
+                number_of_orbitals,
+                cuda,
+                jastrow_kernel,
+                kernel_kwargs,
+            )
         else:
             self.jastrow_kernel = jastrow_kernel(
-                nup, ndown, cuda, **kernel_kwargs)
+                mol.nup, mol.ndown, cuda, **kernel_kwargs
+            )
             self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # mask to extract the upper diag of the matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()
 
         # elec-elec distances
-        self.edist = ElectronElectronDistance(self.nelec, self.ndim,
-                                              scale=scale,
-                                              scale_factor=scale_factor)
+        self.edist = ElectronElectronDistance(
+            self.nelec, self.ndim, scale=scale, scale_factor=scale_factor
+        )
+
+    def __repr__(self):
+        """representation of the jastrow factor"""
+        return "ee -> " + self.jastrow_kernel.__class__.__name__
 
     def get_mask_tri_up(self):
         r"""Get the mask to select the triangular up matrix
@@ -67,11 +85,10 @@ class JastrowFactorElectronElectron(nn.Module):
         Returns:
             torch.tensor: mask of the tri up matrix
         """
-        mask = torch.zeros(self.nelec, self.nelec).type(
-            torch.bool).to(self.device)
+        mask = torch.zeros(self.nelec, self.nelec).type(torch.bool).to(self.device)
         index_col, index_row = [], []
-        for i in range(self.nelec-1):
-            for j in range(i+1, self.nelec):
+        for i in range(self.nelec - 1):
+            for j in range(i + 1, self.nelec):
                 index_row.append(i)
                 index_col.append(j)
                 mask[i, j] = True
@@ -108,13 +125,15 @@ class JastrowFactorElectronElectron(nn.Module):
 
         elif derivative == 1:
             nbatch = pos.shape[0]
-            return self.extract_tri_up(self.edist(
-                pos, derivative=1)).view(nbatch, 3, -1)
+            return self.extract_tri_up(self.edist(pos, derivative=1)).view(
+                nbatch, 3, -1
+            )
 
         elif derivative == 2:
             nbatch = pos.shape[0]
-            return self.extract_tri_up(self.edist(
-                pos, derivative=2)).view(nbatch, 3, -1)
+            return self.extract_tri_up(self.edist(pos, derivative=2)).view(
+                nbatch, 3, -1
+            )
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
@@ -152,21 +171,20 @@ class JastrowFactorElectronElectron(nn.Module):
             return self.jastrow_factor_derivative(r, dr, jast, sum_grad)
 
         elif derivative == 2:
-
             dr = self.get_edist_unique(pos, derivative=1)
             d2r = self.get_edist_unique(pos, derivative=2)
 
             return self.jastrow_factor_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
-
             dr = self.get_edist_unique(pos, derivative=1)
             d2r = self.get_edist_unique(pos, derivative=2)
 
-            return(jast,
-                   self.jastrow_factor_derivative(
-                       r, dr, jast, sum_grad),
-                   self.jastrow_factor_second_derivative(r, dr, d2r, jast))
+            return (
+                jast,
+                self.jastrow_factor_derivative(r, dr, jast, sum_grad),
+                self.jastrow_factor_second_derivative(r, dr, d2r, jast),
+            )
 
     def jastrow_factor_derivative(self, r, dr, jast, sum_grad):
         """Compute the value of the derivative of the Jastrow factor
@@ -184,9 +202,7 @@ class JastrowFactorElectronElectron(nn.Module):
         """
 
         if sum_grad:
-
-            djast = self.jastrow_kernel.compute_derivative(
-                r, dr).sum(-2)
+            djast = self.jastrow_kernel.compute_derivative(r, dr).sum(-2)
             djast = djast * jast
 
             # might cause problems with backward cause in place operation
@@ -196,9 +212,7 @@ class JastrowFactorElectronElectron(nn.Module):
             out.index_add_(-1, self.index_col, -djast)
 
         else:
-
-            djast = self.jastrow_kernel.compute_derivative(
-                r, dr)
+            djast = self.jastrow_kernel.compute_derivative(r, dr)
             djast = djast * jast.unsqueeze(-1)
 
             # might cause problems with backward cause in place operation
@@ -224,8 +238,7 @@ class JastrowFactorElectronElectron(nn.Module):
                           Nbatch x Nelec x Ndim
         """
 
-        d2jast = self.jastrow_kernel.compute_second_derivative(
-            r, dr, d2r).sum(-2)
+        d2jast = self.jastrow_kernel.compute_second_derivative(r, dr, d2r).sum(-2)
 
         # might cause problems with backward cause in place operation
         hess_shape = list(d2jast.shape[:-1]) + [self.nelec]

@@ -5,8 +5,7 @@ from .jastrow_kernel_electron_nuclei_base import JastrowKernelElectronNucleiBase
 
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronNucleiBase):
-
-    def __init__(self, nup, ndown, atomic_pos, cuda, w=1.):
+    def __init__(self, nup, ndown, atomic_pos, cuda, w=1.0):
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -31,7 +30,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronNucleiBase):
         self.requires_autograd = True
 
     def forward(self, x):
-        """ Get the jastrow kernel.
+        """Get the jastrow kernel.
 
         Args:
             x (torch.tensor): matrix of the e-e distances

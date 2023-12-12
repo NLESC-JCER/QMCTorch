@@ -4,11 +4,7 @@ from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 
 
 class JastrowFactorElectronNuclei(nn.Module):
-
-    def __init__(self, nup, ndown, atomic_pos,
-                 jastrow_kernel,
-                 kernel_kwargs={},
-                 cuda=False):
+    def __init__(self, mol, jastrow_kernel, kernel_kwargs={}, cuda=False):
         r"""Base class for two el-nuc jastrow of the form:
 
         .. math::
@@ -23,30 +19,34 @@ class JastrowFactorElectronNuclei(nn.Module):
 
         super().__init__()
 
-        self.nup = nup
-        self.ndown = ndown
-        self.nelec = nup + ndown
+        self.nup = mol.nup
+        self.ndown = mol.ndown
+        self.nelec = mol.nup + mol.ndown
 
         self.cuda = cuda
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
 
+        atomic_pos = torch.as_tensor(mol.atom_coords)
         self.atoms = atomic_pos.to(self.device)
-        self.natoms = atomic_pos.shape[0]
+        self.natoms = self.atoms.shape[0]
         self.ndim = 3
 
         # kernel function
-        self.jastrow_kernel = jastrow_kernel(nup, ndown,
-                                             atomic_pos, cuda,
-                                             **kernel_kwargs)
+        self.jastrow_kernel = jastrow_kernel(
+            mol.nup, mol.ndown, atomic_pos, cuda, **kernel_kwargs
+        )
 
         # requires autograd to compute derivatives
         self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # elec-nuc distances
-        self.edist = ElectronNucleiDistance(
-            self.nelec, self.atoms, self.ndim)
+        self.edist = ElectronNucleiDistance(self.nelec, self.atoms, self.ndim)
+
+    def __repr__(self):
+        """representation of the jastrow factor"""
+        return "en -> " + self.jastrow_kernel.__class__.__name__
 
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
@@ -84,21 +84,20 @@ class JastrowFactorElectronNuclei(nn.Module):
             return self.jastrow_factor_derivative(r, dr, jast, sum_grad)
 
         elif derivative == 2:
-
             dr = self.edist(pos, derivative=1)
             d2r = self.edist(pos, derivative=2)
 
             return self.jastrow_factor_second_derivative(r, dr, d2r, jast)
 
         elif derivative == [0, 1, 2]:
-
             dr = self.edist(pos, derivative=1)
             d2r = self.edist(pos, derivative=2)
 
-            return(jast,
-                   self.jastrow_factor_derivative(
-                       r, dr, jast, sum_grad),
-                   self.jastrow_factor_second_derivative(r, dr, d2r, jast))
+            return (
+                jast,
+                self.jastrow_factor_derivative(r, dr, jast, sum_grad),
+                self.jastrow_factor_second_derivative(r, dr, d2r, jast),
+            )
 
     def jastrow_factor_derivative(self, r, dr, jast, sum_grad):
         """Compute the value of the derivative of the Jastrow factor
@@ -112,16 +111,11 @@ class JastrowFactorElectronNuclei(nn.Module):
             torch.tensor: gradient of the jastrow factors
                           Nbatch x Ndim x Nelec
         """
-        nbatch = r.shape[0]
         if sum_grad:
-
-            djast = self.jastrow_kernel.compute_derivative(
-                r, dr).sum((1, 3))
+            djast = self.jastrow_kernel.compute_derivative(r, dr).sum((1, 3))
             return djast * jast
         else:
-
-            djast = self.jastrow_kernel.compute_derivative(
-                r, dr).sum(3)
+            djast = self.jastrow_kernel.compute_derivative(r, dr).sum(3)
             return djast * jast.unsqueeze(-1)
 
     def jastrow_factor_second_derivative(self, r, dr, d2r, jast):
@@ -136,15 +130,12 @@ class JastrowFactorElectronNuclei(nn.Module):
             torch.tensor: diagonal hessian of the jastrow factors
                           Nbatch x Nelec x Ndim
         """
-        nbatch = r.shape[0]
-
         # pure second derivative terms
-        d2jast = self.jastrow_kernel.compute_second_derivative(
-            r, dr, d2r).sum((1, 3))
+        d2jast = self.jastrow_kernel.compute_second_derivative(r, dr, d2r).sum((1, 3))
 
         # mixed terms
         djast = self.jastrow_kernel.compute_derivative(r, dr)
-        djast = ((djast.sum(3))**2).sum(1)
+        djast = ((djast.sum(3)) ** 2).sum(1)
 
         # add partial derivative
         hess_jast = d2jast + djast

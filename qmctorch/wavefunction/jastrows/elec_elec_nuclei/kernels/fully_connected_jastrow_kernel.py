@@ -1,9 +1,10 @@
 import torch
-from .jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
+from .jastrow_kernel_electron_electron_nuclei_base import (
+    JastrowKernelElectronElectronNucleiBase,
+)
 
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronNucleiBase):
-
     def __init__(self, nup, ndown, atomic_pos, cuda):
         """Defines a fully connected jastrow factors."""
 
@@ -17,9 +18,9 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         torch.nn.init.uniform_(self.fc2.weight)
         torch.nn.init.uniform_(self.fc2.weight)
 
-        self.fc1.weight.data *= 1E-3
-        self.fc2.weight.data *= 1E-3
-        self.fc3.weight.data *= 1E-3
+        self.fc1.weight.data *= 1e-3
+        self.fc2.weight.data *= 1e-3
+        self.fc3.weight.data *= 1e-3
 
         self.nl_func = torch.nn.Sigmoid()
 

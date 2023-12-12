@@ -1,5 +1,5 @@
 import torch
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 from qmctorch.wavefunction.jastrows.distance import ElectronElectronDistance
 import unittest
 
@@ -9,21 +9,16 @@ torch.set_default_tensor_type(torch.DoubleTensor)
 def hess(out, pos):
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos,
-                 grad_outputs=z,
-                 only_inputs=True,
-                 create_graph=True)[0]
+    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
     hess = torch.zeros(jacob.shape)
 
     for idim in range(jacob.shape[1]):
-
-        tmp = grad(jacob[:, idim], pos,
-                   grad_outputs=z,
-                   only_inputs=True,
-                   create_graph=True)[0]
+        tmp = grad(
+            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
+        )[0]
 
         hess[:, idim] = tmp[:, idim]
 
@@ -31,7 +26,6 @@ def hess(out, pos):
 
 
 class TestElecElecDistance(unittest.TestCase):
-
     def setUp(self):
         self.nup, self.ndown = 1, 1
         self.nelec = self.nup + self.ndown
@@ -72,15 +66,14 @@ class TestElecElecDistance(unittest.TestCase):
         dr = di_r + dj_r
 
         # compute the der with autograd
-        dr_grad = grad(r, self.pos,
-                       grad_outputs=torch.ones_like(r))[0]
+        dr_grad = grad(r, self.pos, grad_outputs=torch.ones_like(r))[0]
 
         # check sum
-        assert(torch.allclose(dr.sum(), dr_grad.sum(), atol=1E-5))
+        assert torch.allclose(dr.sum(), dr_grad.sum(), atol=1e-5)
 
         # see the notes for the explanation of the factor 2
         dr = dr.sum(-1).permute(0, 2, 1).reshape(5, -1)
-        assert(torch.allclose(dr, dr_grad))
+        assert torch.allclose(dr, dr_grad)
 
 
 if __name__ == "__main__":

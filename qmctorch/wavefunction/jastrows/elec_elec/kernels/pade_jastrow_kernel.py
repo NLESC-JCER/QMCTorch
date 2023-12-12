@@ -6,8 +6,7 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 
 
 class PadeJastrowKernel(JastrowKernelElectronElectronBase):
-
-    def __init__(self, nup, ndown, cuda, w=1.):
+    def __init__(self, nup, ndown, cuda, w=1.0):
         """Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -26,9 +25,8 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
         super().__init__(nup, ndown, cuda)
 
-        self.weight = nn.Parameter(torch.as_tensor([w]),
-                                   requires_grad=True)
-        register_extra_attributes(self, ['weight'])
+        self.weight = nn.Parameter(torch.as_tensor([w]), requires_grad=True)
+        register_extra_attributes(self, ["weight"])
 
         self.static_weight = self.get_static_weight()
         self.requires_autograd = False
@@ -40,22 +38,35 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
             torch.tensor: matrix of the static weights
         """
 
-        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
-                         torch.ones(self.nup, self.ndown)), dim=1)
+        bup = torch.cat(
+            (
+                0.25 * torch.ones(self.nup, self.nup),
+                0.5 * torch.ones(self.nup, self.ndown),
+            ),
+            dim=1,
+        )
 
-        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
-                           torch.ones(self.ndown, self.ndown)), dim=1)
+        bdown = torch.cat(
+            (
+                0.5 * torch.ones(self.ndown, self.nup),
+                0.25 * torch.ones(self.ndown, self.ndown),
+            ),
+            dim=1,
+        )
 
         static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
-        mask_tri_up = torch.triu(torch.ones_like(
-            static_weight), diagonal=1).type(torch.BoolTensor).to(self.device)
+        mask_tri_up = (
+            torch.triu(torch.ones_like(static_weight), diagonal=1)
+            .type(torch.BoolTensor)
+            .to(self.device)
+        )
         static_weight = static_weight.masked_select(mask_tri_up)
 
         return static_weight
 
     def forward(self, r):
-        """ Get the jastrow kernel.
+        """Get the jastrow kernel.
 
         .. math::
             B_{ij} = \\frac{w_0 r_{i,j}}{1+w r_{i,j}}
@@ -99,11 +110,11 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
         """
 
         r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
+        denom = 1.0 / (1.0 + self.weight * r_)
         a = self.static_weight * dr * denom
         b = -self.static_weight * self.weight * r_ * dr * denom**2
 
-        return (a + b)
+        return a + b
 
     def compute_second_derivative(self, r, dr, d2r):
         """Get the elements of the pure 2nd derivative of the jastrow kernels
@@ -128,7 +139,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
         """
 
         r_ = r.unsqueeze(1)
-        denom = 1. / (1.0 + self.weight * r_)
+        denom = 1.0 / (1.0 + self.weight * r_)
         denom2 = denom**2
         dr_square = dr * dr
 
