@@ -6,9 +6,10 @@ from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.utils import set_torch_double_precision
 from ...path_utils import PATH_TEST
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):

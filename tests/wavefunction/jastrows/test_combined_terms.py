@@ -8,8 +8,9 @@ from qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms import Jastrow
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowKernelElecElec
 from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import BoysHandyJastrowKernel, FullyConnectedJastrowKernel
+from qmctorch.utils import set_torch_double_precision
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):

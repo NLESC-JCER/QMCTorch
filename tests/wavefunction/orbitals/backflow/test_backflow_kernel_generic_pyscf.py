@@ -9,7 +9,8 @@ import numpy as np
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelBase
 from qmctorch.wavefunction.jastrows.distance.electron_electron_distance import ElectronElectronDistance
-torch.set_default_tensor_type(torch.DoubleTensor)
+from qmctorch.utils import set_torch_double_precision
+set_torch_double_precision()
 
 torch.manual_seed(101)
 np.random.seed(101)

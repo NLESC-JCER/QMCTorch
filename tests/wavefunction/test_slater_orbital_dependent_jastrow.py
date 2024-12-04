@@ -1,7 +1,7 @@
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
-from qmctorch.utils import set_torch_double_precision, btrace
+from qmctorch.utils import set_torch_double_precision
 
 from torch.autograd import grad, Variable
 

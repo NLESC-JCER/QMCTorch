@@ -9,8 +9,8 @@ import numpy as np
 import torch
 import unittest
 
-torch.set_default_tensor_type(torch.DoubleTensor)
-
+# set_torch_double_precision()
+set_torch_double_precision()
 
 def hess(out, pos):
     # compute the jacobian

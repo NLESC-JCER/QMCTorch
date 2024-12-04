@@ -4,7 +4,7 @@ from qmctorch.scf import Molecule
 calc = ['pyscf',            # pyscf  
         'adf',          # adf 2019 
         'adf2019'               # adf 2020+
-    ][1]
+    ][0]
 
 # select an appropriate basis
 basis = {
