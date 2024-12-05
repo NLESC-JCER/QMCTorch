@@ -1,16 +1,19 @@
-name: build
+name: build_OSX
 
 on: [push]
 
 jobs:
   build:
-    name: build and test
-    runs-on: ubuntu-latest
+    name: build and test on mac os
+    runs-on: macos-latest
 
     strategy:
       fail-fast: false
       matrix:
         version: [3.8, 3.10]
+      include:
+        - os: macos-latest
+          CONDA_OS: osx-64
 
     steps:
     - name: Cancel Previous Runs
@@ -19,15 +22,13 @@ jobs:
           access_token: ${{ github.token }}
     - uses: actions/checkout@v4
     - name: Setup conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v3
       with:
-        update-conda: true
+        miniconda-version: "latest"
+        auto-update-conda: true
         python-version: ${{ matrix.version }}
         conda-channels: anaconda
-    - name: Install essential
-      run: |
-        sudo apt update
-        sudo apt install build-essential
+
     - name: Install conda packages
       run: |
         conda install -c anaconda cmake
@@ -37,13 +38,7 @@ jobs:
 
     - name: Install the package
       run: python -m pip install .[test,hpc]
-      env:
-        CONDA_PREFIX: /usr/share/miniconda
 
-    - name: Test with multithreading
-      env:
-        CONDA_PREFIX: /usr/share/miniconda
-      run: mpirun -np 2 coverage run -m pytest tests_hvd
 
     - name: Test with single thread
       env:
