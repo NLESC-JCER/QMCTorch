@@ -1,5 +1,5 @@
 import torch
-
+from scipy.special import factorial2 as f2
 
 def btrace(M):
     """Computes the trace of batched matrices
@@ -41,6 +41,19 @@ def bdet2(M):
     """
 
     return M[..., 0, 0] * M[..., 1, 1] - M[..., 0, 1] * M[..., 1, 0]
+
+
+def double_factorial(input):
+    """Computes the double factorial of an array of int
+
+    Args:
+        input (List): input numbers
+
+    Returns:
+        List: values of the double factorial
+    """
+    output = f2(input)
+    return [1 if o==0 else o for o in output]
 
 
 class BatchDeterminant(torch.autograd.Function):
