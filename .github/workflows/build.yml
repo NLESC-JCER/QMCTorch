@@ -5,7 +5,7 @@ on: [push]
 jobs:
   build:
     name: build and test
-    runs-on: ubuntu-latest
+    runs-on: [ubuntu-latest, macos-latest]
 
     strategy:
       fail-fast: false
