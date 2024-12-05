@@ -20,17 +20,20 @@ jobs:
           access_token: ${{ github.token }}
     - uses: actions/checkout@v4
     - name: Setup conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/etup-miniconda@v3
       with:
-        update-conda: true
+        miniconda-version: "latest"
+        auto-update-conda: true
         python-version: ${{ matrix.python-version }}
-        conda-channels: anaconda
+        activate-environment: test
+        auto-activate-base: False
     - name: Install essential
       run: |
         sudo apt update
         sudo apt install build-essential
     - name: Install conda packages
       run: |
+        conda activate test
         conda install -c anaconda cmake
         conda install mpi4py h5py pytorch==2.0.0 torchvision==0.15.0 cpuonly -c pytorch -c conda-forge
         conda install -c conda-forge libstdcxx-ng
