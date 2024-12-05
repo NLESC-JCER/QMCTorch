@@ -4,13 +4,14 @@ on: [push]
 
 jobs:
   build:
-    name: build and test
-    runs-on: [ubuntu-latest, macos-latest]
+    name: build and test on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
 
     strategy:
       fail-fast: false
       matrix:
-        version: [3.8]
+        os: ['ubuntu-latest', 'macos-latest']
+        python-version: [3.8]
 
     steps:
     - name: Cancel Previous Runs
@@ -22,7 +23,7 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
         update-conda: true
-        python-version: ${{ matrix.version }}
+        python-version: ${{ matrix.python-version }}
         conda-channels: anaconda
     - name: Install essential
       run: |
@@ -59,7 +60,7 @@ jobs:
       run: coveralls --service=github
       env:
         GITHUB_TOKEN: ${{ secrets.github_token }}
-        COVERALLS_FLAG_NAME: python-${{ matrix.version }}
+        COVERALLS_FLAG_NAME: python-${{ matrix.python-version }}
         COVERALLS_PARALLEL: true
 
   finish:
