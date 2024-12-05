@@ -6,8 +6,9 @@ from torch.autograd import Variable, grad, gradcheck
 
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_polynomial_kernel import PadeJastrowPolynomialKernel
+from qmctorch.utils import set_torch_double_precision
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):

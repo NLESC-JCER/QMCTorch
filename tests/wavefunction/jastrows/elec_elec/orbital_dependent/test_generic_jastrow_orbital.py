@@ -6,12 +6,13 @@ import unittest
 
 import numpy as np
 import torch
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import Variable, grad
 
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
 from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
+from qmctorch.utils import set_torch_double_precision
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):
