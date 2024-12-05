@@ -31,10 +31,7 @@ jobs:
 
     - name: Install conda packages
       run: |
-        conda install -c anaconda cmake
-        conda install mpi4py h5py pytorch==2.0.0 torchvision==0.15.0 cpuonly -c pytorch -c conda-forge
-        conda install -c conda-forge libstdcxx-ng
-        conda install -c anaconda gxx_linux-64
+        conda install mpi4py h5py pytorch cpuonly -c pytorch -c conda-forge
 
     - name: Install the package
       run: python -m pip install .[test,hpc]
