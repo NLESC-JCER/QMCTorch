@@ -1,4 +1,5 @@
 import torch
+import numpy as np
 from scipy.special import factorial2 as f2
 
 def btrace(M):
@@ -53,7 +54,7 @@ def double_factorial(input):
         List: values of the double factorial
     """
     output = f2(input)
-    return [1 if o==0 else o for o in output]
+    return np.array([1 if o==0 else o for o in output])
 
 
 class BatchDeterminant(torch.autograd.Function):
