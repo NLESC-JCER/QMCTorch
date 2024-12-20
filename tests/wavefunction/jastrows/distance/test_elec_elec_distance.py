@@ -2,8 +2,9 @@ import torch
 from torch.autograd import Variable, grad
 from qmctorch.wavefunction.jastrows.distance import ElectronElectronDistance
 import unittest
+from qmctorch.utils import set_torch_double_precision
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):

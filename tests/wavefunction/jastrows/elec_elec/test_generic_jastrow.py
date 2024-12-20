@@ -6,14 +6,11 @@ import torch
 from .base_elec_elec_jastrow_test import BaseTestJastrow
 
 from types import SimpleNamespace
-from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import (
-    JastrowFactorElectronElectron,
-)
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import (
-    FullyConnectedJastrowKernel,
-)
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
+from qmctorch.utils import set_torch_double_precision
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestGenericJastrow(BaseTestJastrow.ElecElecJastrowBaseTest):

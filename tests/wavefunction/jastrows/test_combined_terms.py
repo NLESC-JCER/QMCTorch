@@ -16,8 +16,9 @@ from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import (
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import (
     BoysHandyJastrowKernel,
 )
+from qmctorch.utils import set_torch_double_precision
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):

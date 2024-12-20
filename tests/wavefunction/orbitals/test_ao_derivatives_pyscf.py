@@ -1,15 +1,13 @@
 import unittest
 import numpy as np
 import torch
-
-from .base_test_ao import BaseTestAO
-
 from torch.autograd import Variable
-
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.orbitals.atomic_orbitals import AtomicOrbitals
+from qmctorch.utils import set_torch_double_precision
+from .base_test_ao import BaseTestAO
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestAOderivativesPyscf(BaseTestAO.BaseTestAOderivatives):

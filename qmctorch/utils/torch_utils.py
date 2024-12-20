@@ -7,14 +7,14 @@ from math import ceil
 
 def set_torch_double_precision():
     """Set the default precision to double for all torch tensors."""
-    torch.set_default_dtype = torch.float64
-    torch.set_default_tensor_type(torch.DoubleTensor)
+    torch.set_default_dtype(torch.float64)
+    # torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 def set_torch_single_precision():
     """Set the default precision to single for all torch tensors."""
-    torch.set_default_dtype = torch.float32
-    torch.set_default_tensor_type(torch.FloatTensor)
+    torch.set_default_dtype(torch.float32)
+    # torch.set_default_tensor_type(torch.FloatTensor)
 
 
 def fast_power(x, k, mask0=None, mask2=None):
