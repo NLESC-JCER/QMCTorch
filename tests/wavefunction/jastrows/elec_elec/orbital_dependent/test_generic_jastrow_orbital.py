@@ -59,7 +59,7 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
     def test_jastrow(self):
         """simply checks that the values are not crashing."""
-        val = self.jastrow(self.pos)
+        _ = self.jastrow(self.pos)
 
     def test_grad_jastrow(self):
         """Checks the values of the gradients."""
