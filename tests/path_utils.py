@@ -6,7 +6,7 @@ import pkg_resources as pkg
 __all__ = ["PATH_QMCTORCH", "PATH_TEST"]
 
 # Environment data
-PATH_QMCTORCH = Path(pkg.resource_filename('qmctorch', ''))
+PATH_QMCTORCH = Path(pkg.resource_filename("qmctorch", ""))
 ROOT = PATH_QMCTORCH.parent
 
 PATH_TEST = ROOT / "tests"

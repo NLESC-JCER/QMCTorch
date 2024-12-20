@@ -1,5 +1,4 @@
 import torch
-from torch import nn
 from torch.autograd import grad
 from torch.autograd.variable import Variable
 
@@ -15,19 +14,19 @@ def _hess(val, pos):
     """
     print(pos.shape)
     print(val.shape)
-    gval = grad(val, pos,
-                grad_outputs=torch.ones_like(val),
-                create_graph=True)[0]
+    gval = grad(val, pos, grad_outputs=torch.ones_like(val), create_graph=True)[0]
 
     grad_out = Variable(torch.ones(*gval.shape[:-1]))
     hval = torch.zeros_like(gval)
 
     for idim in range(gval.shape[-1]):
-
-        tmp = grad(gval[..., idim], pos,
-                   grad_outputs=grad_out,
-                   only_inputs=True,
-                   create_graph=True)[0]
+        tmp = grad(
+            gval[..., idim],
+            pos,
+            grad_outputs=grad_out,
+            only_inputs=True,
+            create_graph=True,
+        )[0]
         hval[..., idim] = tmp[..., idim]
 
     return hval, gval

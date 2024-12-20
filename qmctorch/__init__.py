@@ -4,12 +4,13 @@
 from .__version__ import __version__
 
 __author__ = "Nicolas Renaud"
-__email__ = 'n.renaud@esciencecenter.nl'
+__email__ = "n.renaud@esciencecenter.nl"
 
 import twiggy
 import sys
+
 twiggy.quick_setup(file=sys.stdout)
-log = twiggy.log.name('QMCTorch')
+log = twiggy.log.name("QMCTorch")
 log.min_level = twiggy.levels.INFO
 
 log.info(r"  ____    __  ______________             _")

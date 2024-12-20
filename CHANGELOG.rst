@@ -2,6 +2,32 @@
 Change Log
 ##########
 
+
+0.4.0 [Unreleased]
+******************
+
+Change
+---------
+
+* Change sugnature of Jastrow and Baclflow modules (#174)
+* Limit testing to Python 3.8 (#174)
+
+
+0.3.3 [Released]
+******************
+
+Change
+-----------
+
+* Fig bug in the AO norm (#172)
+
+0.3.2 [Released]
+******************
+
+Change
+----------
+* Fix a minor OSX bug regarding torch type cast to int
+
 0.3.1 [Released]
 *****************
 

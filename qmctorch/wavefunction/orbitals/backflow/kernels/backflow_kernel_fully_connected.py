@@ -1,11 +1,9 @@
 import torch
 from torch import nn
-from torch.autograd import grad, Variable
 from .backflow_kernel_base import BackFlowKernelBase
 
 
 class BackFlowKernelFullyConnected(BackFlowKernelBase):
-
     def __init__(self, mol, cuda):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
@@ -18,7 +16,7 @@ class BackFlowKernelFullyConnected(BackFlowKernelBase):
         self.fc2 = nn.Linear(16, 1, bias=False)
         self.nl_func = torch.nn.Sigmoid()
 
-        eps = 1E-0
+        eps = 1e-0
         self.fc1.weight.data *= eps
         self.fc2.weight.data *= eps
 

@@ -1,9 +1,5 @@
-import torch
-from torch.autograd import grad
-
-
 import unittest
-
+from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import Variable, grad
@@ -48,9 +44,10 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
         self.nup, self.ndown = 2, 2
         self.nelec = self.nup + self.ndown
+        self.mol = SimpleNamespace(nup=self.nup, ndown=self.ndown)
         self.nmo = 10
         self.jastrow = JastrowFactorElectronElectron(
-            self.nup, self.ndown,
+            self.mol,
             FullyConnectedJastrowKernel,
             orbital_dependent_kernel=True,
             number_of_orbitals=self.nmo
@@ -62,7 +59,7 @@ class TestGenericJastrowOrbital(unittest.TestCase):
 
     def test_jastrow(self):
         """simply checks that the values are not crashing."""
-        val = self.jastrow(self.pos)
+        _ = self.jastrow(self.pos)
 
     def test_grad_jastrow(self):
         """Checks the values of the gradients."""

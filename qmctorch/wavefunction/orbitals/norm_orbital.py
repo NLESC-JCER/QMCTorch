@@ -17,34 +17,30 @@ def atomic_orbital_norm(basis):
     """
 
     # spherical
-    if basis.harmonics_type == 'sph':
-
-        if basis.radial_type.startswith('sto'):
+    if basis.harmonics_type == "sph":
+        if basis.radial_type.startswith("sto"):
             return norm_slater_spherical(basis.bas_n, basis.bas_exp)
 
-        elif basis.radial_type.startswith('gto'):
+        elif basis.radial_type.startswith("gto"):
             return norm_gaussian_spherical(basis.bas_n, basis.bas_exp)
 
         else:
-            raise ValueError('%s is not a valid radial_type')
+            raise ValueError("%s is not a valid radial_type")
 
     # cartesian
-    elif basis.harmonics_type == 'cart':
-
-        if basis.radial_type.startswith('sto'):
+    elif basis.harmonics_type == "cart":
+        if basis.radial_type.startswith("sto"):
             return norm_slater_cartesian(
-                basis.bas_kx,
-                basis.bas_ky,
-                basis.bas_kz,
-                basis.bas_kr,
-                basis.bas_exp)
+                basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_kr, basis.bas_exp
+            )
 
-        elif basis.radial_type.startswith('gto'):
+        elif basis.radial_type.startswith("gto"):
             return norm_gaussian_cartesian(
-                basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_exp)
+                basis.bas_kx, basis.bas_ky, basis.bas_kz, basis.bas_exp
+            )
 
         else:
-            raise ValueError('%s is not a valid radial_type')
+            raise ValueError("%s is not a valid radial_type")
 
 
 def norm_slater_spherical(bas_n, bas_exp):
@@ -60,9 +56,10 @@ def norm_slater_spherical(bas_n, bas_exp):
     Returns:
         torch.tensor: normalization factor
     """
-    nfact = torch.as_tensor([np.math.factorial(2 * n)
-                             for n in bas_n], dtype=torch.get_default_dtype())
-    return (2 * bas_exp)**bas_n * torch.sqrt(2 * bas_exp / nfact)
+    nfact = torch.as_tensor(
+        [np.math.factorial(2 * n) for n in bas_n], dtype=torch.get_default_dtype()
+    )
+    return (2 * bas_exp) ** bas_n * torch.sqrt(2 * bas_exp / nfact)
 
 
 def norm_gaussian_spherical(bas_n, bas_exp):
@@ -78,8 +75,8 @@ def norm_gaussian_spherical(bas_n, bas_exp):
         torch.tensor: normalization factor
     """
     bas_n = torch.tensor(bas_n)
-    bas_n = bas_n + 1.
-    exp1 = 0.25 * (2. * bas_n + 1.)
+    bas_n = bas_n + 1.0
+    exp1 = 0.25 * (2.0 * bas_n + 1.0)
 
     A = torch.tensor(bas_exp)**exp1
     B = 2**(2. * bas_n + 3. / 2)
@@ -105,10 +102,11 @@ def norm_slater_cartesian(a, b, c, n, exp):
     """
     lvals = a + b + c + n + 1.
 
-    lfact = torch.as_tensor([np.math.factorial(int(2 * i))
-                             for i in lvals]).type(torch.get_default_dtype())
+    lfact = torch.as_tensor([np.math.factorial(int(2 * i)) for i in lvals]).type(
+        torch.get_default_dtype()
+    )
 
-    prefact = 4 * np.pi * lfact / ((2 * exp)**(2 * lvals + 1))
+    prefact = 4 * np.pi * lfact / ((2 * exp) ** (2 * lvals + 1))
 
     num = torch.as_tensor(double_factorial(2 * a.astype('int') - 1) *
                           double_factorial(2 * b.astype('int') - 1) *
@@ -119,7 +117,7 @@ def norm_slater_cartesian(a, b, c, n, exp):
         double_factorial((2 * a + 2 * b + 2 * c + 1).astype('int')
            )).type(torch.get_default_dtype())
 
-    return torch.sqrt(1. / (prefact * num / denom))
+    return torch.sqrt(1.0 / (prefact * num / denom))
 
 
 def norm_gaussian_cartesian(a, b, c, exp):

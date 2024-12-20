@@ -5,7 +5,8 @@ from pyscf import gto
 from torch.autograd import Variable, grad
 
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 
 def btrace(M):
@@ -14,7 +15,8 @@ def btrace(M):
 
 class OrbitalTest(SlaterJastrow):
     def __init__(self, mol):
-        super(OrbitalTest, self).__init__(mol)
+        jastrow = JastrowFactor(mol, PadeJastrowKernel)
+        super(OrbitalTest, self).__init__(mol, jastrow)
 
     def first_der_autograd(self, x):
         """Compute the first derivative of the AO using autograd
@@ -28,10 +30,7 @@ class OrbitalTest(SlaterJastrow):
         out = self.ao(x)
 
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out, x,
-                     grad_outputs=z,
-                     only_inputs=True,
-                     create_graph=True)[0]
+        jacob = grad(out, x, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
         return jacob
 
@@ -62,21 +61,21 @@ class OrbitalTest(SlaterJastrow):
 
         # compute the jacobian
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out, pos,
-                     grad_outputs=z,
-                     only_inputs=True,
-                     create_graph=True)[0]
+        jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
 
         for idim in range(jacob.shape[1]):
-            tmp = grad(jacob[:, idim], pos,
-                       grad_outputs=z,
-                       retain_graph=True,
-                       only_inputs=True,
-                       allow_unused=True)[0]
+            tmp = grad(
+                jacob[:, idim],
+                pos,
+                grad_outputs=z,
+                retain_graph=True,
+                only_inputs=True,
+                allow_unused=True,
+            )[0]
 
             hess[:, idim] = tmp[:, idim]
 
@@ -96,21 +95,21 @@ class OrbitalTest(SlaterJastrow):
 
         # compute the jacobian
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out, pos,
-                     grad_outputs=z,
-                     only_inputs=True,
-                     create_graph=True)[0]
+        jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape)
 
         for idim in range(jacob.shape[1]):
-            tmp = grad(jacob[:, idim], pos,
-                       grad_outputs=z,
-                       retain_graph=True,
-                       only_inputs=True,
-                       allow_unused=True)[0]
+            tmp = grad(
+                jacob[:, idim],
+                pos,
+                grad_outputs=z,
+                retain_graph=True,
+                only_inputs=True,
+                allow_unused=True,
+            )[0]
 
             hess[:, idim] = tmp[:, idim]
 
@@ -132,7 +131,7 @@ class OrbitalTest(SlaterJastrow):
             dAO = self.ao(x, derivative=1)
         else:
             invAO = torch.inverse(AO)
-        return btrace(invAO@dAO)
+        return btrace(invAO @ dAO)
 
     def test_grad_autograd(self, pos):
         """Compute the jacobian of the AO block using autograd
@@ -148,10 +147,7 @@ class OrbitalTest(SlaterJastrow):
 
         # compute the jacobian
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out, pos,
-                     grad_outputs=z,
-                     only_inputs=True,
-                     create_graph=True)[0]
+        jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
         return jacob.sum(1).view(-1, 1)
 
@@ -168,21 +164,21 @@ class OrbitalTest(SlaterJastrow):
 
         # compute the jacobian
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out, pos,
-                     grad_outputs=z,
-                     only_inputs=True,
-                     create_graph=True)[0]
+        jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape[0])
 
         for idim in range(jacob.shape[1]):
-            tmp = grad(jacob[:, idim], pos,
-                       grad_outputs=z,
-                       retain_graph=True,
-                       only_inputs=True,
-                       allow_unused=True)[0]
+            tmp = grad(
+                jacob[:, idim],
+                pos,
+                grad_outputs=z,
+                retain_graph=True,
+                only_inputs=True,
+                allow_unused=True,
+            )[0]
 
             hess += tmp[:, idim]
 
@@ -205,21 +201,21 @@ class OrbitalTest(SlaterJastrow):
 
         # compute the jacobian
         z = Variable(torch.ones(out.shape))
-        jacob = grad(out, pos,
-                     grad_outputs=z,
-                     only_inputs=True,
-                     create_graph=True)[0]
+        jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
         # compute the diagonal element of the Hessian
         z = Variable(torch.ones(jacob.shape[0]))
         hess = torch.zeros(jacob.shape[0])
 
         for idim in range(jacob.shape[1]):
-            tmp = grad(jacob[:, idim], pos,
-                       grad_outputs=z,
-                       retain_graph=True,
-                       only_inputs=True,
-                       allow_unused=True)[0]
+            tmp = grad(
+                jacob[:, idim],
+                pos,
+                grad_outputs=z,
+                retain_graph=True,
+                only_inputs=True,
+                allow_unused=True,
+            )[0]
 
             hess += tmp[:, idim]
 
@@ -227,17 +223,16 @@ class OrbitalTest(SlaterJastrow):
 
 
 class TestTrace(unittest.TestCase):
-
     def setUp(self):
-
-        atom_str = 'O 0 0 -0.69; C 0 0 0.69'
-        self.m = gto.M(atom=atom_str, basis='sto-3g', unit='bohr')
-        self.mol = Molecule(atom=atom_str, calculator='pyscf',
-                            basis='sto-3g', unit='bohr')
+        atom_str = "O 0 0 -0.69; C 0 0 0.69"
+        self.m = gto.M(atom=atom_str, basis="sto-3g", unit="bohr")
+        self.mol = Molecule(
+            atom=atom_str, calculator="pyscf", basis="sto-3g", unit="bohr"
+        )
 
         # define the wave function
         self.wf = OrbitalTest(self.mol)
-        self.x = 2 * torch.rand(5, 3 * self.mol.nelec) - 1.
+        self.x = 2 * torch.rand(5, 3 * self.mol.nelec) - 1.0
         self.x.requires_grad = True
 
     def test_ao_der(self):
@@ -245,20 +240,20 @@ class TestTrace(unittest.TestCase):
         dAO = self.wf.ao(self.x, derivative=1).sum()
         dAO_auto = self.wf.first_der_autograd(self.x).sum()
         print(dAO, dAO_auto)
-        assert(torch.allclose(dAO, dAO_auto))
+        assert torch.allclose(dAO, dAO_auto)
 
     def test_ao_2der(self):
         """Test the values of the AO 2nd derivative."""
         d2AO = self.wf.ao(self.x, derivative=2).sum()
         d2AO_auto = self.wf.second_der_autograd(self.x).sum()
         print(d2AO, d2AO_auto)
-        assert(torch.allclose(d2AO, d2AO_auto))
+        assert torch.allclose(d2AO, d2AO_auto)
 
     def test_mo_2der(self):
         """Test the values of the MO 2nd derivative."""
         d2MO = self.wf.mo(self.wf.ao(self.x, derivative=2)).sum()
         d2MO_auto = self.wf.second_der_autograd_mo(self.x).sum()
-        assert(torch.allclose(d2MO, d2MO_auto))
+        assert torch.allclose(d2MO, d2MO_auto)
 
     def test_trace(self):
         """Test the values jacobian and hessian with autograd and
@@ -270,12 +265,12 @@ class TestTrace(unittest.TestCase):
         d2AO = self.wf.ao(self.x, derivative=2)
 
         jac_auto = self.wf.test_grad_autograd(self.x)
-        jac_trace = btrace(iAO@dAO[:, :4, :4]) * torch.det(AO)
-        assert(torch.allclose(jac_auto.sum(), jac_trace.sum()))
+        jac_trace = btrace(iAO @ dAO[:, :4, :4]) * torch.det(AO)
+        assert torch.allclose(jac_auto.sum(), jac_trace.sum())
 
         hess_auto = self.wf.test_hess_autograd(self.x)
-        hess_trace = btrace(iAO@d2AO[:, :4, :4]) * torch.det(AO)
-        assert(torch.allclose(hess_auto.sum(), hess_trace.sum()))
+        hess_trace = btrace(iAO @ d2AO[:, :4, :4]) * torch.det(AO)
+        assert torch.allclose(hess_auto.sum(), hess_trace.sum())
 
     def test_kinetic(self):
         """Test the values kinetic energy computed via autograd and
@@ -286,8 +281,7 @@ class TestTrace(unittest.TestCase):
         wfv = self.wf(self.x)
         kin_auto /= wfv
 
-        kin_trace = self.wf.kinetic_energy_jacobi(
-            self.x, return_local_energy=True)
+        kin_trace = self.wf.kinetic_energy_jacobi(self.x, return_local_energy=True)
 
         delta = kin_auto / kin_trace
         print(delta)
