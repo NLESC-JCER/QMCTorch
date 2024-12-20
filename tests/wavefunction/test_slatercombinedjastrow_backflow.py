@@ -2,7 +2,6 @@ import numpy as np
 import torch
 import unittest
 
-<<<<<<< HEAD
 from .base_test_cases import BaseTestCases
 
 from qmctorch.scf import Molecule
@@ -29,12 +28,7 @@ from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse imp
 )
 
 from qmctorch.utils import set_torch_double_precision
-
-
-torch.set_default_tensor_type(torch.DoubleTensor)
-=======
 set_torch_double_precision()
->>>>>>> master
 
 
 class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
