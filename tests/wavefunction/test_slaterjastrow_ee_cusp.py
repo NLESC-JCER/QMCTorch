@@ -14,7 +14,7 @@ from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron i
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestSlaterJastrowElectronCusp(unittest.TestCase):

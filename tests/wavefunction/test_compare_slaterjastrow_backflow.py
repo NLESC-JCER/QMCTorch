@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import unittest
 
+<<<<<<< HEAD
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
@@ -21,6 +22,10 @@ from qmctorch.utils import set_torch_double_precision
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
+=======
+# set_torch_double_precision()
+set_torch_double_precision()
+>>>>>>> master
 
 class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
     def setUp(self):

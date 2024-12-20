@@ -3,14 +3,20 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import Variable, grad
+<<<<<<< HEAD
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import (
     JastrowFactorElectronElectronNuclei,
 )
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.boys_handy_jastrow_kernel import (
     BoysHandyJastrowKernel,
 )
+=======
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import JastrowFactorElectronElectronNuclei
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.boys_handy_jastrow_kernel import BoysHandyJastrowKernel
+from qmctorch.utils import set_torch_double_precision
+>>>>>>> master
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 def hess(out, pos):

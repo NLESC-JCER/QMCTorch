@@ -21,7 +21,7 @@ from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import (
 )
 
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestSlaterCombinedJastrow(BaseTestCases.WaveFunctionBaseTest):

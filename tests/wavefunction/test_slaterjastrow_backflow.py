@@ -13,11 +13,8 @@ from qmctorch.wavefunction.orbitals.backflow import (
     BackFlowTransformation,
     BackFlowKernelInverse,
 )
-
 from qmctorch.utils import set_torch_double_precision
-
-
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):

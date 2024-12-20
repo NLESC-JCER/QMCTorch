@@ -18,11 +18,8 @@ from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
 from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse import (
     BackFlowKernelInverse,
 )
-
 from qmctorch.utils import set_torch_double_precision
-
-
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestSlaterJastrowOrbitalDependentBackFlow(

@@ -14,7 +14,7 @@ from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 from qmctorch.utils import set_torch_double_precision
 
 
-torch.set_default_tensor_type(torch.DoubleTensor)
+set_torch_double_precision()
 
 
 class TestSlaterJastrowCAS(BaseTestCases.WaveFunctionBaseTest):
