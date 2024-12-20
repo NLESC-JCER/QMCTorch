@@ -3,18 +3,9 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import Variable, grad
-<<<<<<< HEAD
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import (
-    JastrowFactorElectronElectronNuclei,
-)
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.fully_connected_jastrow_kernel import (
-    FullyConnectedJastrowKernel,
-)
-=======
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import JastrowFactorElectronElectronNuclei
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
 from qmctorch.utils import set_torch_double_precision
->>>>>>> master
 
 set_torch_double_precision()
 
