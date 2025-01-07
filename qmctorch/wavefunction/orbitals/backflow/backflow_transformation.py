@@ -518,3 +518,8 @@ class BackFlowTransformation(nn.Module):
         out = term1 + term2 + d2bf_delta_ee + term3
 
         return out.permute(0, 2, 3, 4, 5, 1)
+
+
+    def __repr__(self):
+        """representation of the backflow transformation"""
+        return self.backflow_kernel.__class__.__name__
