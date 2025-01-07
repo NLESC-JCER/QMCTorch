@@ -19,7 +19,7 @@ class MyBackflow(BackFlowKernelBase):
         self.fc1 = nn.Linear(1, size, bias=False)
         self.fc2 = nn.Linear(size, 1, bias=False)
 
-    def forward(self, x):
+    def _backflow_kernel(self, x):
         original_shape = x.shape
         x = x.reshape(-1, 1)
         x = self.fc2(self.fc1(x))

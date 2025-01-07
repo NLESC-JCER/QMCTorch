@@ -96,7 +96,7 @@ class BackFlowKernelBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        return grad(val, ree, grad_outputs=torch.ones_like(val))[0]
+        return grad(val, ree, grad_outputs=torch.ones_like(val), allow_unused=False)[0]
 
     @staticmethod
     def _hess(val, ree):
@@ -109,8 +109,11 @@ class BackFlowKernelBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val, ree, grad_outputs=torch.ones_like(val), create_graph=True)[0]
-
-        hval = grad(gval, ree, grad_outputs=torch.ones_like(gval))[0]
+        gval = grad(val, ree, grad_outputs=torch.ones_like(val), create_graph=True, allow_unused=False)[0]
+        hval = grad(gval, ree, grad_outputs=torch.ones_like(gval), allow_unused=True)[0]
+        
+        # if the kernel is linear, hval is None
+        if hval is None:
+            hval = torch.zeros_like(ree)
 
         return hval, gval
