@@ -31,12 +31,12 @@ jobs:
     - name: Install conda packages
       run: |
         conda install -c anaconda cmake
-        conda install rdkit mpi4py h5py pytorch==2.0.0 torchvision==0.15.0 cpuonly -c pytorch -c conda-forge
+        conda install rdkit mpi4py h5py pytorch==2.1.1 cpuonly -c pytorch -c conda-forge
         conda install -c conda-forge libstdcxx-ng
         conda install -c anaconda gxx_linux-64
 
     - name: Install the package
-      run: python -m pip install .[test,doc]
+      run: python -m pip install .[test,hpc,doc]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
