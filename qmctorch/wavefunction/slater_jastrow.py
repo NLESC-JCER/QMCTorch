@@ -112,8 +112,11 @@ class SlaterJastrow(WaveFunction):
         """Initialize the atomic orbital layer."""
         self.backflow = backflow
         if self.backflow is None:
+            self.use_backflow = False
             self.ao = AtomicOrbitals(self.mol, self.cuda)
         else:
+            self.use_backflow = True
+            self.backflow_type = self.backflow.__repr__()
             self.ao = AtomicOrbitalsBackFlow(self.mol, self.backflow, self.cuda)
 
         if self.cuda:
@@ -563,6 +566,9 @@ class SlaterJastrow(WaveFunction):
         """Print information abut the wave function."""
         log.info("")
         log.info(" Wave Function")
+        log.info("  Backflow            : {0}", self.use_backflow)
+        if self.use_backflow:
+            log.info("  Backflow kernel     : {0}", self.backflow_type)
         log.info("  Jastrow factor      : {0}", self.use_jastrow)
         if self.use_jastrow:
             log.info("  Jastrow kernel      : {0}", self.jastrow_type)

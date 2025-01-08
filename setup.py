@@ -47,7 +47,7 @@ setup(
                       'plams', 'mpi4py'],
 
     extras_require={
-        'hpc': ['horovod==0.27.0'],
+        'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme', 'nbsphinx','nbconvert','jupyter'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
