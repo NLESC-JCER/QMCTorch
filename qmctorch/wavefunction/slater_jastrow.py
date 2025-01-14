@@ -491,7 +491,7 @@ class SlaterJastrow(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
-        silent_timer = False
+        silent_timer = True
 
         # get ao values
         with CodeTimer('Get AOs', silent=silent_timer):

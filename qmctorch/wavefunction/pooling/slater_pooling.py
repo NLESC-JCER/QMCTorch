@@ -412,7 +412,6 @@ class SlaterPooling(nn.Module):
         Aocc_down = mo[:, self.nup :, : self.ndown]
 
         # inverse of the
-        
         invAup = torch.inverse(Aocc_up)
         invAdown = torch.inverse(Aocc_down)
         
