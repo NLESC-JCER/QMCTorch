@@ -20,49 +20,6 @@ class OrbitalProjector:
         if cuda:
             self.device = torch.device("cuda")
 
-    def get_projectors(self):
-        """Get the projectors of the conf in the CI expansion
-
-        Returns:
-            torch.tensor, torch.tensor : projectors
-        """
-
-        Pup = torch.zeros(self.nconfs, self.nmo, self.nup)
-        Pdown = torch.zeros(self.nconfs, self.nmo, self.ndown)
-
-        for ic, (cup, cdown) in enumerate(zip(self.configs[0], self.configs[1])):
-            for _id, imo in enumerate(cup):
-                Pup[ic][imo, _id] = 1.0
-
-            for _id, imo in enumerate(cdown):
-                Pdown[ic][imo, _id] = 1.0
-
-        return Pup.unsqueeze(1).to(self.device), Pdown.unsqueeze(1).to(self.device)
-
-    def split_orbitals_(self, mat):
-        """Split the orbital  matrix in multiple slater matrices
-
-        Args:
-            mat (torch.tensor): matrix to split
-
-        Returns:
-            torch.tensor: all slater matrices
-        """
-        if not hasattr(self, "Pup"):
-            self.Pup, self.Pdown = self.get_projectors()
-
-        if mat.ndim == 4:
-            # case for multiple operators
-            out_up = mat[..., : self.nup, :] @ self.Pup.unsqueeze(1)
-            out_down = mat[..., self.nup :, :] @ self.Pdown.unsqueeze(1)
-
-        else:
-            # case for single operator
-            out_up = mat[..., : self.nup, :] @ self.Pup
-            out_down = mat[..., self.nup :, :] @ self.Pdown
-
-        return out_up, out_down
-
     def split_orbitals(self, mat):
         """Split the orbital  matrix in multiple slater matrices
            This version does not store the projectors
