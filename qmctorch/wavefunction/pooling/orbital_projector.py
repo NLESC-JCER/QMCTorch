@@ -39,7 +39,7 @@ class OrbitalProjector:
 
         return Pup.unsqueeze(1).to(self.device), Pdown.unsqueeze(1).to(self.device)
 
-    def split_orbitals(self, mat):
+    def split_orbitals_(self, mat):
         """Split the orbital  matrix in multiple slater matrices
 
         Args:
@@ -63,7 +63,35 @@ class OrbitalProjector:
 
         return out_up, out_down
 
+    def split_orbitals(self, mat):
+        """Split the orbital  matrix in multiple slater matrices
+           This version does not store the projectors
 
+        Args:
+            mat (torch.tensor): matrix to split
+
+        Returns:
+            torch.tensor: all slater matrices
+        """
+        if mat.ndim == 3:
+            nbatch = mat.shape[0]
+            out_up = torch.zeros(0, nbatch, self.nup, self.nup)
+            out_down = torch.zeros(0, nbatch, self.ndown, self.ndown)
+
+        if mat.ndim == 4:
+            nbatch = mat.shape[1]
+            nop = mat.shape[0]
+            out_up = torch.zeros(0, nop, nbatch, self.nup, self.nup)
+            out_down = torch.zeros(0, nop, nbatch, self.ndown, self.ndown)
+        
+        for _, (cup, cdown) in enumerate(zip(self.configs[0], self.configs[1])):
+
+            # cat the tensors
+            out_up = torch.cat((out_up, mat[..., : self.nup, cup].unsqueeze(0)), dim=0)
+            out_down = torch.cat((out_down, mat[..., self.nup :, cdown].unsqueeze(0)), dim=0)
+
+        return out_up, out_down
+        
 class ExcitationMask:
     def __init__(self, unique_excitations, mol, max_orb, cuda=False):
         """Select the occupied MOs of Slater determinant using masks

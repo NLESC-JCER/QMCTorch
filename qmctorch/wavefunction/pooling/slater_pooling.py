@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 import operator as op
-
+from time import time
 from ...utils import bdet2, btrace
 from .orbital_configurations import get_excitation, get_unique_excitation
 from .orbital_projector import ExcitationMask, OrbitalProjector
@@ -39,6 +39,7 @@ class SlaterPooling(nn.Module):
         self.nup = mol.nup
         self.ndown = mol.ndown
         self.nelec = self.nup + self.ndown
+        self.use_explicit_operator = False
 
         self.orb_proj = OrbitalProjector(configs, mol, cuda=cuda)
         self.exc_mask = ExcitationMask(
@@ -132,7 +133,7 @@ class SlaterPooling(nn.Module):
         B.L. Hammond, appendix B1
 
 
-        Note : if the state on coonfigs are specified in order
+        Note : if the state on configs are specified in order
         we end up with excitations that comes from a deep orbital, the resulting
         slater matrix has one column changed (with the new orbital) and several
         permutation. We therefore need to multiply the slater determinant
@@ -252,8 +253,12 @@ class SlaterPooling(nn.Module):
         if self.config_method == "ground_state":
             op_vals = self.operator_ground_state(mo, bop, op_squared)
 
+
         elif self.config_method.startswith("single"):
-            op_vals = self.operator_single_double(mo, bop, op_squared)
+            if self.use_explicit_operator:
+                op_vals = self.operator_explicit(mo, bop, op_squared)
+            else:
+                op_vals = self.operator_single_double(mo, bop, op_squared)
 
         elif self.config_method.startswith("cas("):
             op_vals = self.operator_explicit(mo, bop, op_squared)
@@ -327,7 +332,7 @@ class SlaterPooling(nn.Module):
         Aup, Adown = self.orb_proj.split_orbitals(mo)
         Bup, Bdown = self.orb_proj.split_orbitals(bkin)
 
-        # check ifwe have 1 or multiple ops
+        # check if we have 1 or multiple ops
         multiple_op = Bup.ndim == 5
 
         # inverse of MO matrices
@@ -388,7 +393,7 @@ class SlaterPooling(nn.Module):
             bkin ([type]): [description]
             op_squared (bool) return the trace of the square of the product
         """
-
+        t0 = time()
         nbatch = mo.shape[0]
 
         if not hasattr(self.exc_mask, "index_unique_single_up"):
@@ -407,8 +412,10 @@ class SlaterPooling(nn.Module):
         Aocc_down = mo[:, self.nup :, : self.ndown]
 
         # inverse of the
+        
         invAup = torch.inverse(Aocc_up)
         invAdown = torch.inverse(Aocc_down)
+        
 
         # precompute invA @ B
         invAB_up = invAup @ bop[..., : self.nup, : self.nup]
@@ -450,8 +457,11 @@ class SlaterPooling(nn.Module):
             invAdown @ bop_virt_down - invAdown @ bop_occ_down @ invAdown @ Avirt_down
         )
 
+        # print('     Prep : ', time() - t0)
+        
         # if we only want the normal value of the op and not its squared
         if not op_squared:
+            # t0 = time()
             # reshape the M matrices
             Mup = Mup.view(*Mup.shape[:-2], -1)
             Mdown = Mdown.view(*Mdown.shape[:-2], -1)
@@ -478,7 +488,8 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
-
+                # print('     Calc single : ', time() - t0)
+            # t0 = time()
             if do_double:
                 # spin up
                 op_dbl_up = self.op_multiexcitation(
@@ -503,12 +514,13 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_dbl_down), dim=-1)
-
+            # print('     Calc double : ', time() - t0)
             return op_out_up, op_out_down
 
-        # if we watn the squre of the operatore
+        # if we want the squre of the operator
         # typically trace(ABAB)
         else:
+            # t0 = time()
             # compute A^-1 B M
             Yup = invAB_up @ Mup
             Ydown = invAB_down @ Mdown
@@ -545,8 +557,9 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
-
+                # print('     Calc single: ', time() - t0)
             if do_double:
+                # t0 = time()
                 # spin up values
                 op_dbl_up = self.op_squared_multiexcitation(
                     op_ground_up,
@@ -572,7 +585,7 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_dbl_down), dim=-1)
-
+                # print('     Calc double: ', time() - t0)
             return op_out_up, op_out_down
 
     @staticmethod
@@ -622,20 +635,34 @@ class SlaterPooling(nn.Module):
         """
 
         # get the values of the excitation matrix invA Abar
+        
         T = mat_exc.view(nbatch, -1)[:, index]
+        # print(T.shape, M.shape)
 
         # get the shapes of the size x size matrices
         _ext_shape = (*T.shape[:-1], -1, size, size)
         _m_shape = (*M.shape[:-1], -1, size, size)
 
         # computes the inverse of invA Abar
+        # t0 = time()
+        # print(T.view(_ext_shape).shape)
         T = torch.inverse(T.view(_ext_shape))
+        # print(T.shape)
+        # print('         Inverse T: ', time() - t0)
 
         # computes T @ M (after reshaping M as size x size matrices)
-        op_vals = T @ (M[..., index]).view(_m_shape)
+        # t0 = time()
+
+        m_tmp = M[..., index].view(_m_shape)
+        op_vals =  T @ m_tmp
+        # print(T.shape, m_tmp.shape)
+        # op_vals = T @ (M[..., index]).view(_m_shape)
+        # print('         Mat Mult: ', time() - t0)
 
         # compute the trace
+        # t0 = time()
         op_vals = btrace(op_vals)
+        # print('         Trace: ', time() - t0)
 
         # add the base term
         op_vals += baseterm
