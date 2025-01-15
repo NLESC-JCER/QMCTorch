@@ -236,14 +236,15 @@ class SlaterPooling(nn.Module):
 
         return det_out_up, det_out_down
 
-    def operator(self, mo, bop, op=op.add, op_squared=False):
+    def operator(self, mo, bop, op=op.add, op_squared=False, inv_mo=None):
         """Computes the values of an opearator applied to the procuts of determinant
 
         Args:
             mo (torch.tensor): matrix of MO vals(Nbatch, Nelec, Nmo)
             bkin (torch.tensor): kinetic operator (Nbatch, Nelec, Nmo)
             op (operator): how to combine the up/down contribution
-            op_squared (bool, optional) return the trace of the square of the product if True
+            op_squared (bool, optional): return the trace of the square of the product if True
+            inv_mo (tupe, optional): precomputed inverse of the mo up & down matrices
 
         Returns:
             torch.tensor: kinetic energy
@@ -258,7 +259,7 @@ class SlaterPooling(nn.Module):
             if self.use_explicit_operator:
                 op_vals = self.operator_explicit(mo, bop, op_squared)
             else:
-                op_vals = self.operator_single_double(mo, bop, op_squared)
+                op_vals = self.operator_single_double(mo, bop, op_squared, inv_mo)
 
         elif self.config_method.startswith("cas("):
             op_vals = self.operator_explicit(mo, bop, op_squared)
@@ -272,27 +273,22 @@ class SlaterPooling(nn.Module):
         else:
             return op_vals
 
-    def operator_ground_state(self, mo, bop, op_squared=False):
+    def operator_ground_state(self, mo, bop, op_squared=False, inv_mo=None):
         """Computes the values of any operator on gs only
 
         Args:
             mo (torch.tensor): matrix of molecular orbitals
             bkin (torch.tensor): matrix of kinetic operator
             op_squared (bool, optional) return the trace of the square of the product if True
+            inv_mo (tuple, optional): precomputed inverse of the up/down MO matrices
 
         Returns:
             torch.tensor: operator values
         """
-
-        # occupied orbital matrix + det and inv on spin up
-        Aocc_up = mo[:, : self.nup, : self.nup]
-
-        # occupied orbital matrix + det and inv on spin down
-        Aocc_down = mo[:, self.nup :, : self.ndown]
-
-        # inverse of the
-        invAup = torch.inverse(Aocc_up)
-        invAdown = torch.inverse(Aocc_down)
+        if inv_mo is None:
+            invAup, invAdown = self.compute_inverse_occupied_mo_matrix(mo)
+        else:
+            invAup, invAdown = inv_mo
 
         # precompute the product A^{-1} B
         op_ground_up = invAup @ bop[..., : self.nup, : self.nup]
@@ -366,34 +362,36 @@ class SlaterPooling(nn.Module):
 
         return (op_val_up, op_val_down)
 
-    def operator_single_double(self, mo, bop, op_squared=False):
+    def operator_single_double(self, mo, bop, op_squared=False, inv_mo=None):
         """Computes the value of any operator on gs + single + double
 
         Args:
             mo (torch.tensor): matrix of molecular orbitals
             bkin (torch.tensor): matrix of kinetic operator
             op_squared (bool, optional) return the trace of the square of the product if True
+            inv_mo (tuple, optional): precomputed inverse of the up/down MO matrices
 
         Returns:
             torch.tensor: kinetic energy values
         """
 
-        op_up, op_down = self.operator_unique_single_double(mo, bop, op_squared)
+        op_up, op_down = self.operator_unique_single_double(mo, bop, op_squared, inv_mo)
 
         return (
             op_up[..., self.index_unique_excitation[0]],
             op_down[..., self.index_unique_excitation[1]],
         )
 
-    def operator_unique_single_double(self, mo, bop, op_squared):
+    def operator_unique_single_double(self, mo, bop, op_squared, inv_mo):
         """Compute the operator value of the unique single/double conformation
 
         Args:
             mo ([type]): [description]
             bkin ([type]): [description]
             op_squared (bool) return the trace of the square of the product
+            inv_mo (tuple, optional): precomputed inverse of the up/down MO matrices
+
         """
-        t0 = time()
         nbatch = mo.shape[0]
 
         if not hasattr(self.exc_mask, "index_unique_single_up"):
@@ -405,15 +403,11 @@ class SlaterPooling(nn.Module):
         do_single = len(self.exc_mask.index_unique_single_up) != 0
         do_double = len(self.exc_mask.index_unique_double_up) != 0
 
-        # occupied orbital matrix + det and inv on spin up
-        Aocc_up = mo[:, : self.nup, : self.nup]
-
-        # occupied orbital matrix + det and inv on spin down
-        Aocc_down = mo[:, self.nup :, : self.ndown]
-
-        # inverse of the
-        invAup = torch.inverse(Aocc_up)
-        invAdown = torch.inverse(Aocc_down)
+        # compute or retrieve the inverse of the up/down MO matrices 
+        if inv_mo is None:
+            invAup, invAdown = self.compute_inverse_occupied_mo_matrix(mo)
+        else:
+            invAup, invAdown = inv_mo
         
 
         # precompute invA @ B
@@ -456,11 +450,10 @@ class SlaterPooling(nn.Module):
             invAdown @ bop_virt_down - invAdown @ bop_occ_down @ invAdown @ Avirt_down
         )
 
-        # print('     Prep : ', time() - t0)
         
         # if we only want the normal value of the op and not its squared
         if not op_squared:
-            # t0 = time()
+
             # reshape the M matrices
             Mup = Mup.view(*Mup.shape[:-2], -1)
             Mdown = Mdown.view(*Mdown.shape[:-2], -1)
@@ -487,8 +480,7 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
-                # print('     Calc single : ', time() - t0)
-            # t0 = time()
+
             if do_double:
                 # spin up
                 op_dbl_up = self.op_multiexcitation(
@@ -513,13 +505,13 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_dbl_down), dim=-1)
-            # print('     Calc double : ', time() - t0)
+
             return op_out_up, op_out_down
 
         # if we want the squre of the operator
         # typically trace(ABAB)
         else:
-            # t0 = time()
+
             # compute A^-1 B M
             Yup = invAB_up @ Mup
             Ydown = invAB_down @ Mdown
@@ -556,9 +548,9 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_sin_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
-                # print('     Calc single: ', time() - t0)
+
             if do_double:
-                # t0 = time()
+                
                 # spin up values
                 op_dbl_up = self.op_squared_multiexcitation(
                     op_ground_up,
@@ -584,7 +576,7 @@ class SlaterPooling(nn.Module):
                 # store the terms we need
                 op_out_up = torch.cat((op_out_up, op_dbl_up), dim=-1)
                 op_out_down = torch.cat((op_out_down, op_dbl_down), dim=-1)
-                # print('     Calc double: ', time() - t0)
+
             return op_out_up, op_out_down
 
     @staticmethod
@@ -634,34 +626,22 @@ class SlaterPooling(nn.Module):
         """
 
         # get the values of the excitation matrix invA Abar
-        
         T = mat_exc.view(nbatch, -1)[:, index]
-        # print(T.shape, M.shape)
 
         # get the shapes of the size x size matrices
         _ext_shape = (*T.shape[:-1], -1, size, size)
         _m_shape = (*M.shape[:-1], -1, size, size)
 
         # computes the inverse of invA Abar
-        # t0 = time()
-        # print(T.view(_ext_shape).shape)
         T = torch.inverse(T.view(_ext_shape))
-        # print(T.shape)
-        # print('         Inverse T: ', time() - t0)
 
         # computes T @ M (after reshaping M as size x size matrices)
-        # t0 = time()
-
+        # THIS IS SURPRSINGLY THE COMPUTATIONAL BOTTLENECK
         m_tmp = M[..., index].view(_m_shape)
         op_vals =  T @ m_tmp
-        # print(T.shape, m_tmp.shape)
-        # op_vals = T @ (M[..., index]).view(_m_shape)
-        # print('         Mat Mult: ', time() - t0)
 
         # compute the trace
-        # t0 = time()
         op_vals = btrace(op_vals)
-        # print('         Trace: ', time() - t0)
 
         # add the base term
         op_vals += baseterm
@@ -750,3 +730,24 @@ class SlaterPooling(nn.Module):
         op_vals += baseterm
 
         return op_vals
+    
+
+    def compute_inverse_occupied_mo_matrix(self, mo: torch.tensor) -> tuple:
+        """precompute the inverse of the occupied mo matrix
+
+        Args:
+            mo (torch.tensor): matrix of the molecular orbitals
+
+        Returns:
+            tuple: inverse of the spin up/down mo matrices
+        """
+        # return None if we use the explicit calculation of all dets
+        if self.config_method.startswith("cas("):
+            return None 
+        
+        if self.use_explicit_operator:
+            return None
+        
+        # return inverse of the mo matrices
+        return (torch.inverse(mo[:, : self.nup, : self.nup]), 
+                torch.inverse(mo[:, self.nup :, : self.ndown]))

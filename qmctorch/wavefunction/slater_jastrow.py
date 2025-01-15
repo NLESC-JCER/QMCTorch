@@ -502,6 +502,10 @@ class SlaterJastrow(WaveFunction):
             mo = self.ao2mo(ao)
             dmo = self.ao2mo(dao)
             d2mo = self.ao2mo(d2ao)
+
+        # precompute the inverse of the MOs
+        with CodeTimer('Get Inverse MOs', silent=silent_timer):
+            inv_mo = self.pool.compute_inverse_occupied_mo_matrix(mo)
         
         # compute the value of the slater det
         with CodeTimer('Get SDs', silent=silent_timer):
@@ -510,15 +514,15 @@ class SlaterJastrow(WaveFunction):
 
         # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
         with CodeTimer('Get Hess', silent=silent_timer):
-            hess = self.pool.operator(mo, d2mo)
+            hess = self.pool.operator(mo, d2mo, inv_mo=inv_mo)
 
         # compute (tr(A_u^-1\nabla A_u) and tr(A_d^-1\nabla A_d))
         with CodeTimer('Get Grad', silent=silent_timer):
-            grad = self.pool.operator(mo, dmo, op=None)
+            grad = self.pool.operator(mo, dmo, op=None, inv_mo=inv_mo)
 
         # compute (tr((A_u^-1\nabla A_u)^2) + tr((A_d^-1\nabla A_d))^2)
         with CodeTimer('Get Grad2', silent=silent_timer):
-            grad2 = self.pool.operator(mo, dmo, op_squared=True)
+            grad2 = self.pool.operator(mo, dmo, op_squared=True, inv_mo=inv_mo)
 
         # assemble the total second derivative term
         with CodeTimer('Get Total', silent=silent_timer):
