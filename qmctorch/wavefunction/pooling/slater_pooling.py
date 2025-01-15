@@ -77,7 +77,7 @@ class SlaterPooling(nn.Module):
         Returns:
             (torch.tensor, torch.tensor): slater matrices of spin up/down
         """
-        return self.orb_proj.split_orbitals(input)
+        return self.orb_proj.split_orbitals(input, unique_configs=True)
 
     def det_explicit(self, input):
         """Computes the values of the determinants from the slater matrices
@@ -88,9 +88,10 @@ class SlaterPooling(nn.Module):
         Returns:
             torch.tensor: slater determinants
         """
-
         mo_up, mo_down = self.get_slater_matrices(input)
-        return (torch.det(mo_up) * torch.det(mo_down)).transpose(0, 1)
+        det_up = torch.det(mo_up)
+        det_down = torch.det(mo_down) 
+        return (det_up[self.orb_proj.index_unique_configs[0], ...] * det_down[self.orb_proj.index_unique_configs[1], ...]).transpose(0, 1)
 
     def det_single_double(self, input):
         """Computes the determinant of ground state + single + double
@@ -325,8 +326,8 @@ class SlaterPooling(nn.Module):
         """
 
         # shortcut up/down matrices
-        Aup, Adown = self.orb_proj.split_orbitals(mo)
-        Bup, Bdown = self.orb_proj.split_orbitals(bkin)
+        Aup, Adown = self.orb_proj.split_orbitals(mo, unique_configs=True)
+        Bup, Bdown = self.orb_proj.split_orbitals(bkin, unique_configs=True)
 
         # check if we have 1 or multiple ops
         multiple_op = Bup.ndim == 5
@@ -360,7 +361,8 @@ class SlaterPooling(nn.Module):
             op_val_up = op_val_up.transpose(0, 1)
             op_val_down = op_val_down.transpose(0, 1)
 
-        return (op_val_up, op_val_down)
+        return (op_val_up[..., self.orb_proj.index_unique_configs[0]], 
+                op_val_down[..., self.orb_proj.index_unique_configs[1]])
 
     def operator_single_double(self, mo, bop, op_squared=False, inv_mo=None):
         """Computes the value of any operator on gs + single + double
