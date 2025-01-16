@@ -16,11 +16,11 @@ class OrbitalProjector:
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
         self.ndown = mol.ndown
-        self.unique_configs, self.index_unique_configs = self.get_unique_configs()
+        
         self.device = torch.device("cpu")
         if cuda:
             self.device = torch.device("cuda")
-
+        self.unique_configs, self.index_unique_configs = self.get_unique_configs()
     def get_unique_configs(self):
         """Get the unique configurations
         """
