@@ -42,14 +42,14 @@ class OrbitalProjector:
         """
         if mat.ndim == 3:
             nbatch = mat.shape[0]
-            out_up = torch.zeros(0, nbatch, self.nup, self.nup)
-            out_down = torch.zeros(0, nbatch, self.ndown, self.ndown)
+            out_up = torch.zeros(0, nbatch, self.nup, self.nup, device=self.device)
+            out_down = torch.zeros(0, nbatch, self.ndown, self.ndown, device=self.device)
 
         if mat.ndim == 4:
             nbatch = mat.shape[1]
             nop = mat.shape[0]
-            out_up = torch.zeros(0, nop, nbatch, self.nup, self.nup)
-            out_down = torch.zeros(0, nop, nbatch, self.ndown, self.ndown)
+            out_up = torch.zeros(0, nop, nbatch, self.nup, self.nup, device=self.device)
+            out_down = torch.zeros(0, nop, nbatch, self.ndown, self.ndown, device=self.device)
         
         if unique_configs :
             configs_up, configs_down = self.unique_configs
