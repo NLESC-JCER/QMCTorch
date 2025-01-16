@@ -26,7 +26,8 @@ class OrbitalProjector:
         """
         configs_up, index_unique_confs_up = torch.unique(self.configs[0], dim=0, return_inverse=True)
         configs_down, index_unique_confs_down = torch.unique(self.configs[1], dim=0, return_inverse=True)
-        return (configs_up, configs_down), (index_unique_confs_up, index_unique_confs_down)
+
+        return (configs_up.to(self.device), configs_down.to(self.device)), (index_unique_confs_up.to(self.device), index_unique_confs_down.to(self.device))
 
 
     def split_orbitals(self, mat, unique_configs=False):
