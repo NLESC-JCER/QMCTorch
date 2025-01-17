@@ -112,14 +112,14 @@ class SlaterJastrow(WaveFunction):
 
     def init_atomic_orb(self, backflow):
         """Initialize the atomic orbital layer."""
-        self.backflow = backflow
-        if self.backflow is None:
+        # self.backflow = backflow
+        if backflow is None:
             self.use_backflow = False
             self.ao = AtomicOrbitals(self.mol, self.cuda)
         else:
             self.use_backflow = True
-            self.backflow_type = self.backflow.__repr__()
-            self.ao = AtomicOrbitalsBackFlow(self.mol, self.backflow, self.cuda)
+            self.backflow_type = backflow.__repr__()
+            self.ao = AtomicOrbitalsBackFlow(self.mol, backflow, self.cuda)
 
         if self.cuda:
             self.ao = self.ao.to(self.device)
@@ -708,7 +708,7 @@ class SlaterJastrow(WaveFunction):
         return self.__class__(
             new_mol,
             self.jastrow,
-            backflow=self.backflow,
+            backflow=self.ao.backflow_trans,
             configs=self.configs_method,
             kinetic=self.kinetic_method,
             cuda=self.cuda,
