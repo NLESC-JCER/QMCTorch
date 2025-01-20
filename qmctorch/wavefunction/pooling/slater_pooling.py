@@ -65,6 +65,8 @@ class SlaterPooling(nn.Module):
         if self.config_method.startswith("cas("):
             return self.det_explicit(input)
         else:
+            if self.use_explicit_operator:
+                return self.det_explicit(input)
             return self.det_single_double(input)
 
     def get_slater_matrices(self, input):
