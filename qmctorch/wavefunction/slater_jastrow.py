@@ -3,6 +3,7 @@ from scipy.optimize import curve_fit
 from copy import deepcopy
 import numpy as np
 from torch import nn
+from torch.nn.utils.parametrizations import orthogonal 
 import operator
 import matplotlib.pyplot as plt
 
@@ -148,6 +149,9 @@ class SlaterJastrow(WaveFunction):
 
         # init the weight to idenity matrix
         self.mo.weight = nn.Parameter(torch.eye(self.nmo_opt, self.nmo_opt))
+
+        # orthogonalize it
+        self.mo = orthogonal(self.mo)
 
         # put on the card if needed
         if self.cuda:

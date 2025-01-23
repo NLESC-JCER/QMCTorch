@@ -140,7 +140,7 @@ class Solver(SolverBase):
                         param.requires_grad = False
 
                 elif name.lower() == "backflow":
-                    for param in self.wf.backflow.parameters():
+                    for param in self.wf.ao.backflow_trans.parameters():
                         param.requires_grad = False
 
                 else:
