@@ -1,5 +1,7 @@
 import torch
 from torch import nn
+
+from .....utils import register_extra_attributes
 from .backflow_kernel_base import BackFlowKernelBase
 
 
@@ -18,7 +20,8 @@ class BackFlowKernelInverse(BackFlowKernelBase):
         """
         super().__init__(mol, cuda)
         self.weight = nn.Parameter(torch.as_tensor([weight]))  # .to(self.device)
-
+        register_extra_attributes(self, ["weight"])
+        
     def _backflow_kernel(self, ree):
         """Computes the backflow kernel:
 
