@@ -4,7 +4,7 @@ from .backflow_kernel_base import BackFlowKernelBase
 
 
 class BackFlowKernelInverse(BackFlowKernelBase):
-    def __init__(self, mol, cuda=False):
+    def __init__(self, mol, cuda=False, weight=0.0):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
@@ -17,7 +17,7 @@ class BackFlowKernelInverse(BackFlowKernelBase):
             f(r_{ij) = \\frac{w}{r_{ij}
         """
         super().__init__(mol, cuda)
-        self.weight = nn.Parameter(torch.as_tensor([1e-3]))  # .to(self.device)
+        self.weight = nn.Parameter(torch.as_tensor([weight]))  # .to(self.device)
 
     def _backflow_kernel(self, ree):
         """Computes the backflow kernel:
