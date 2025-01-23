@@ -151,7 +151,7 @@ class SlaterJastrow(WaveFunction):
         self.mo.weight = nn.Parameter(torch.eye(self.nmo_opt, self.nmo_opt))
 
         # orthogonalize it
-        self.mo = orthogonal(self.mo)
+        # self.mo = orthogonal(self.mo)
 
         # put on the card if needed
         if self.cuda:
