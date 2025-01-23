@@ -139,8 +139,12 @@ class Solver(SolverBase):
                     for param in self.wf.jastrow.parameters():
                         param.requires_grad = False
 
+                elif name.lower() == "backflow":
+                    for param in self.wf.backflow.parameters():
+                        param.requires_grad = False
+
                 else:
-                    opt_freeze = ["ci", "mo", "ao", "jastrow"]
+                    opt_freeze = ["ci", "mo", "ao", "jastrow", "backflow"]
                     raise ValueError("Valid arguments for freeze are :", opt_freeze)
 
     def save_sampling_parameters(self):
