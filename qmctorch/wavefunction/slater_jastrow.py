@@ -32,6 +32,7 @@ class SlaterJastrow(WaveFunction):
         kinetic="jacobi",
         cuda=False,
         include_all_mo=True,
+        orthogonalize_mo=False
     ):
         """Slater Jastrow wave function with electron-electron Jastrow factor
 
@@ -60,6 +61,7 @@ class SlaterJastrow(WaveFunction):
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False..
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
+            orthogonalize_mo (bool, optional): orthogonalize the molecular orbitals. Defaults to False
         Examples::
             >>> from qmctorch.scf import Molecule
             >>> from qmctorch.wavefunction import SlaterJastrow
@@ -92,7 +94,7 @@ class SlaterJastrow(WaveFunction):
         self.init_molecular_orb(include_all_mo)
 
         # init the mo mixer layer
-        self.init_mo_mixer()
+        self.init_mo_mixer(orthogonalize_mo)
 
         # initialize the slater det calculator
         self.init_slater_det_calculator()
@@ -141,8 +143,17 @@ class SlaterJastrow(WaveFunction):
         if self.cuda:
             self.mo_scf.to(self.device)
 
-    def init_mo_mixer(self):
-        """Init the mo mixer layer"""
+    def init_mo_mixer(self, orthogonalize_mo):
+        """
+        Initialize the molecular orbital mixing layer.
+
+        Parameters
+        ----------
+        orthogonalize_mo : bool
+            whether to orthogonalize the mo mixer layer
+
+        """
+        self.orthogonalize_mo = orthogonalize_mo
 
         # mo mixer layer
         self.mo = nn.Linear(self.nmo_opt, self.nmo_opt, bias=False)
@@ -151,7 +162,8 @@ class SlaterJastrow(WaveFunction):
         self.mo.weight = nn.Parameter(torch.eye(self.nmo_opt, self.nmo_opt))
 
         # orthogonalize it
-        # self.mo = orthogonal(self.mo)
+        if self.orthogonalize_mo:
+            self.mo = orthogonal(self.mo)
 
         # put on the card if needed
         if self.cuda:
