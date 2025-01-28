@@ -89,9 +89,9 @@ class Solver(SolverBase):
             self.loss.use_weight = self.resampling_options.resample_every > 1
 
         # orthogonalization penalty for the MO coeffs
-        if ortho_mo is True:
+        self.ortho_mo = ortho_mo
+        if self.ortho_mo is True:
             log.warning("Orthogonalization of the MO coeffs is better done in the wave function")
-            self.ortho_mo = ortho_mo
             self.ortho_loss = OrthoReg()
 
     def set_params_requires_grad(self, wf_params=True, geo_params=False):
