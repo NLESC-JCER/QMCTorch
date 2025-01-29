@@ -142,12 +142,14 @@ class SolverBase:
 
         for k in obs_name:
             if k == "parameters":
-                for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                # for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                for key, p in self.wf.named_parameters():
                     if p.requires_grad:
                         self.observable.__setattr__(key, [])
 
             elif k == "gradients":
-                for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                # for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                for key, p in self.wf.named_parameters():
                     if p.requires_grad:
                         self.observable.__setattr__(key + ".grad", [])
 
