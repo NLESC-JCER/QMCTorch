@@ -6,7 +6,6 @@ import torch
 
 from .. import log
 
-
 def print_insert_error(obj, obj_name):
     print(obj_name, obj)
     log.critical(

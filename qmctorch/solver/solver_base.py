@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from .. import log
 from ..utils import add_group_attr, dump_to_hdf5
-
+from ..__tag__ import gittag
 
 class SolverBase:
     def __init__(  # pylint: disable=too-many-arguments
@@ -29,6 +29,7 @@ class SolverBase:
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device("cpu")
+        self.gittag = gittag
 
         # member defined in the child and or method
         self.dataloader = None
@@ -131,6 +132,7 @@ class SolverBase:
 
         # reset the Namesapce
         self.observable = SimpleNamespace()
+        self.observable.qmctorch_tag = gittag
 
         # add the energy of the sytem
         if "energy" not in obs_name:
