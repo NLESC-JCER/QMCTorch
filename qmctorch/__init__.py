@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """Documentation about QMCTorch"""
 from .__version__ import __version__
-from .__tag__ import gittag
+
+
 __author__ = "Nicolas Renaud"
 __email__ = "n.renaud@esciencecenter.nl"
 
@@ -17,4 +18,4 @@ log.info(r" / __ \  /  |/  / ___/_  __/__  ________/ /  ")
 log.info(r"/ /_/ / / /|_/ / /__  / / / _ \/ __/ __/ _ \ ")
 log.info(r"\___\_\/_/  /_/\___/ /_/  \___/_/  \__/_//_/ ")
 log.info("")
-log.info("{0}", gittag)
+log.info("{0}", __version__)
