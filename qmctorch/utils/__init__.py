@@ -1,6 +1,7 @@
 """Utils module API."""
 
 from .algebra_utils import bdet2, bproj, btrace
+from .provenance import get_git_tag
 from .hdf5_utils import (
     add_group_attr,
     dump_to_hdf5,
