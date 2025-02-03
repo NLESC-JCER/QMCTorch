@@ -91,11 +91,13 @@ class CalculatorADF(CalculatorBase):
         """Returns a plams molecule object."""
         mol = plams.Molecule()
         bohr2angs = 0.529177
-        scale = 1.0
-        if self.units == "bohr":
-            scale = bohr2angs
+        # scale = 1.0
+        # if self.units == "bohr":
+        #     scale = bohr2angs
+        scale = bohr2angs
         for at, xyz in zip(self.atoms, self.atom_coords):
             xyz = list(scale * np.array(xyz))
+            print(at, xyz)
             mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
         return mol
 
