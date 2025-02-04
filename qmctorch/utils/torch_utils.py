@@ -8,12 +8,16 @@ from math import ceil
 def set_torch_double_precision():
     """Set the default precision to double for all torch tensors."""
     torch.set_default_dtype(torch.float64)
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32  = False
     # torch.set_default_tensor_type(torch.DoubleTensor)
 
 
 def set_torch_single_precision():
     """Set the default precision to single for all torch tensors."""
     torch.set_default_dtype(torch.float32)
+    torch.backends.cuda.matmul.allow_tf32 = False
+    torch.backends.cudnn.allow_tf32  = False
     # torch.set_default_tensor_type(torch.FloatTensor)
 
 
