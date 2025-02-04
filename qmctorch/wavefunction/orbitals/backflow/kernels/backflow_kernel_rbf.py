@@ -5,9 +5,9 @@ from torch.nn import functional as F
 from .....utils import register_extra_attributes
 from .backflow_kernel_base import BackFlowKernelBase
 
-class RBFKernel(BackFlowKernelBase):
+class BackFlowKernelRBF(BackFlowKernelBase):
 
-    def __init__(self, mol, num_rbf, cuda):
+    def __init__(self, mol, cuda = False, num_rbf=10):
 
         """
         Initialize the RBF kernel
