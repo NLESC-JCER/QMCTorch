@@ -89,8 +89,9 @@ class Solver(SolverBase):
             self.loss.use_weight = self.resampling_options.resample_every > 1
 
         # orthogonalization penalty for the MO coeffs
-        if ortho_mo is not None:
-            self.ortho_mo = ortho_mo
+        self.ortho_mo = ortho_mo
+        if self.ortho_mo is True:
+            log.warning("Orthogonalization of the MO coeffs is better done in the wave function")
             self.ortho_loss = OrthoReg()
 
     def set_params_requires_grad(self, wf_params=True, geo_params=False):
@@ -139,8 +140,12 @@ class Solver(SolverBase):
                     for param in self.wf.jastrow.parameters():
                         param.requires_grad = False
 
+                elif name.lower() == "backflow":
+                    for param in self.wf.ao.backflow_trans.parameters():
+                        param.requires_grad = False
+
                 else:
-                    opt_freeze = ["ci", "mo", "ao", "jastrow"]
+                    opt_freeze = ["ci", "mo", "ao", "jastrow", "backflow"]
                     raise ValueError("Valid arguments for freeze are :", opt_freeze)
 
     def save_sampling_parameters(self):
@@ -253,7 +258,6 @@ class Solver(SolverBase):
             chkpt_every (int, optional): save a checkpoint every every iteration.
                                          Defaults to half the number of epoch
         """
-
         # prepare the optimization
         self.prepare_optimization(batchsize, chkpt_every, tqdm)
         self.log_data_opt(nepoch, "wave function optimization")
@@ -276,6 +280,8 @@ class Solver(SolverBase):
             batchsize (int or None): batchsize
             chkpt_every (int or none): save a chkpt file every
         """
+        log.info("  Initial Sampling    :")
+        tstart = time()
 
         # sample the wave function
         pos = self.sampler(self.wf.pdf, with_tqdm=tqdm)
@@ -295,6 +301,8 @@ class Solver(SolverBase):
 
         # chkpt
         self.chkpt_every = chkpt_every
+
+        log.info("  done in %1.2f sec." % (time() - tstart))
 
     def save_data(self, hdf5_group):
         """Save the data to hdf5.

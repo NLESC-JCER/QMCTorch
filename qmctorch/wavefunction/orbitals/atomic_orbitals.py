@@ -92,6 +92,9 @@ class AtomicOrbitals(nn.Module):
             with torch.no_grad():
                 self.norm_cst = atomic_orbital_norm(mol.basis).type(dtype)
 
+        # register a backflow_trans for consistency
+        self.backflow_trans = None
+
         self.cuda = cuda
         self.device = torch.device("cpu")
         if self.cuda:

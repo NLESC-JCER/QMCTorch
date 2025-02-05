@@ -16,54 +16,56 @@ class OrbitalProjector:
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
         self.ndown = mol.ndown
+        
         self.device = torch.device("cpu")
         if cuda:
             self.device = torch.device("cuda")
-
-    def get_projectors(self):
-        """Get the projectors of the conf in the CI expansion
-
-        Returns:
-            torch.tensor, torch.tensor : projectors
+        self.unique_configs, self.index_unique_configs = self.get_unique_configs()
+    def get_unique_configs(self):
+        """Get the unique configurations
         """
+        configs_up, index_unique_confs_up = torch.unique(self.configs[0], dim=0, return_inverse=True)
+        configs_down, index_unique_confs_down = torch.unique(self.configs[1], dim=0, return_inverse=True)
 
-        Pup = torch.zeros(self.nconfs, self.nmo, self.nup)
-        Pdown = torch.zeros(self.nconfs, self.nmo, self.ndown)
+        return (configs_up.to(self.device), configs_down.to(self.device)), (index_unique_confs_up.to(self.device), index_unique_confs_down.to(self.device))
 
-        for ic, (cup, cdown) in enumerate(zip(self.configs[0], self.configs[1])):
-            for _id, imo in enumerate(cup):
-                Pup[ic][imo, _id] = 1.0
 
-            for _id, imo in enumerate(cdown):
-                Pdown[ic][imo, _id] = 1.0
-
-        return Pup.unsqueeze(1).to(self.device), Pdown.unsqueeze(1).to(self.device)
-
-    def split_orbitals(self, mat):
+    def split_orbitals(self, mat, unique_configs=False):
         """Split the orbital  matrix in multiple slater matrices
+           This version does not store the projectors
 
         Args:
             mat (torch.tensor): matrix to split
+            unique_confgs (bool, optional): compute only the slater matrices of the unique conf if True (Defaulta False)
 
         Returns:
             torch.tensor: all slater matrices
         """
-        if not hasattr(self, "Pup"):
-            self.Pup, self.Pdown = self.get_projectors()
+        if mat.ndim == 3:
+            nbatch = mat.shape[0]
+            out_up = torch.zeros(0, nbatch, self.nup, self.nup, device=self.device)
+            out_down = torch.zeros(0, nbatch, self.ndown, self.ndown, device=self.device)
 
         if mat.ndim == 4:
-            # case for multiple operators
-            out_up = mat[..., : self.nup, :] @ self.Pup.unsqueeze(1)
-            out_down = mat[..., self.nup :, :] @ self.Pdown.unsqueeze(1)
-
+            nbatch = mat.shape[1]
+            nop = mat.shape[0]
+            out_up = torch.zeros(0, nop, nbatch, self.nup, self.nup, device=self.device)
+            out_down = torch.zeros(0, nop, nbatch, self.ndown, self.ndown, device=self.device)
+        
+        if unique_configs :
+            configs_up, configs_down = self.unique_configs
+            
         else:
-            # case for single operator
-            out_up = mat[..., : self.nup, :] @ self.Pup
-            out_down = mat[..., self.nup :, :] @ self.Pdown
+            configs_up, configs_down = self.configs
+            
+        for _, (cup, cdown) in enumerate(zip(configs_up, configs_down)):
+        
+            # cat the tensors
+            out_up = torch.cat((out_up, mat[..., : self.nup, cup].unsqueeze(0)), dim=0)
+            out_down = torch.cat((out_down, mat[..., self.nup :, cdown].unsqueeze(0)), dim=0)
 
         return out_up, out_down
-
-
+        
 class ExcitationMask:
     def __init__(self, unique_excitations, mol, max_orb, cuda=False):
         """Select the occupied MOs of Slater determinant using masks

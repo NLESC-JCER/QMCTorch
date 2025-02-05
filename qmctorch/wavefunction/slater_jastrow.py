@@ -3,8 +3,11 @@ from scipy.optimize import curve_fit
 from copy import deepcopy
 import numpy as np
 from torch import nn
+from torch.nn.utils.parametrizations import orthogonal 
 import operator
 import matplotlib.pyplot as plt
+
+from linetimer import CodeTimer
 
 from .. import log
 
@@ -29,6 +32,7 @@ class SlaterJastrow(WaveFunction):
         kinetic="jacobi",
         cuda=False,
         include_all_mo=True,
+        orthogonalize_mo=False
     ):
         """Slater Jastrow wave function with electron-electron Jastrow factor
 
@@ -57,6 +61,7 @@ class SlaterJastrow(WaveFunction):
             cuda (bool, optional): turns GPU ON/OFF  Defaults to False..
             include_all_mo (bool, optional): include either all molecular orbitals or only the ones that are
                                              popualted in the configs. Defaults to False
+            orthogonalize_mo (bool, optional): orthogonalize the molecular orbitals. Defaults to False
         Examples::
             >>> from qmctorch.scf import Molecule
             >>> from qmctorch.wavefunction import SlaterJastrow
@@ -89,7 +94,7 @@ class SlaterJastrow(WaveFunction):
         self.init_molecular_orb(include_all_mo)
 
         # init the mo mixer layer
-        self.init_mo_mixer()
+        self.init_mo_mixer(orthogonalize_mo)
 
         # initialize the slater det calculator
         self.init_slater_det_calculator()
@@ -110,14 +115,14 @@ class SlaterJastrow(WaveFunction):
 
     def init_atomic_orb(self, backflow):
         """Initialize the atomic orbital layer."""
-        self.backflow = backflow
-        if self.backflow is None:
+        # self.backflow = backflow
+        if backflow is None:
             self.use_backflow = False
             self.ao = AtomicOrbitals(self.mol, self.cuda)
         else:
             self.use_backflow = True
-            self.backflow_type = self.backflow.__repr__()
-            self.ao = AtomicOrbitalsBackFlow(self.mol, self.backflow, self.cuda)
+            self.backflow_type = backflow.__repr__()
+            self.ao = AtomicOrbitalsBackFlow(self.mol, backflow, self.cuda)
 
         if self.cuda:
             self.ao = self.ao.to(self.device)
@@ -138,14 +143,27 @@ class SlaterJastrow(WaveFunction):
         if self.cuda:
             self.mo_scf.to(self.device)
 
-    def init_mo_mixer(self):
-        """Init the mo mixer layer"""
+    def init_mo_mixer(self, orthogonalize_mo):
+        """
+        Initialize the molecular orbital mixing layer.
+
+        Parameters
+        ----------
+        orthogonalize_mo : bool
+            whether to orthogonalize the mo mixer layer
+
+        """
+        self.orthogonalize_mo = orthogonalize_mo
 
         # mo mixer layer
         self.mo = nn.Linear(self.nmo_opt, self.nmo_opt, bias=False)
 
         # init the weight to idenity matrix
         self.mo.weight = nn.Parameter(torch.eye(self.nmo_opt, self.nmo_opt))
+
+        # orthogonalize it
+        if self.orthogonalize_mo:
+            self.mo = orthogonal(self.mo)
 
         # put on the card if needed
         if self.cuda:
@@ -489,37 +507,49 @@ class SlaterJastrow(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
+        silent_timer = True
 
         # get ao values
-        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
+        with CodeTimer('Get AOs', silent=silent_timer):
+            ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 
         # get the mo values
-        mo = self.ao2mo(ao)
-        dmo = self.ao2mo(dao)
-        d2mo = self.ao2mo(d2ao)
+        with CodeTimer('Get MOs', silent=silent_timer):
+            mo = self.ao2mo(ao)
+            dmo = self.ao2mo(dao)
+            d2mo = self.ao2mo(d2ao)
 
+        # precompute the inverse of the MOs
+        with CodeTimer('Get Inverse MOs', silent=silent_timer):
+            inv_mo = self.pool.compute_inverse_occupied_mo_matrix(mo)
+        
         # compute the value of the slater det
-        slater_dets = self.pool(mo)
-        sum_slater_dets = self.fc(slater_dets)
+        with CodeTimer('Get SDs', silent=silent_timer):
+            slater_dets = self.pool(mo)
+            sum_slater_dets = self.fc(slater_dets)
 
         # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
-        hess = self.pool.operator(mo, d2mo)
+        with CodeTimer('Get Hess', silent=silent_timer):
+            hess = self.pool.operator(mo, d2mo, inv_mo=inv_mo)
 
         # compute (tr(A_u^-1\nabla A_u) and tr(A_d^-1\nabla A_d))
-        grad = self.pool.operator(mo, dmo, op=None)
+        with CodeTimer('Get Grad', silent=silent_timer):
+            grad = self.pool.operator(mo, dmo, op=None, inv_mo=inv_mo)
 
         # compute (tr((A_u^-1\nabla A_u)^2) + tr((A_d^-1\nabla A_d))^2)
-        grad2 = self.pool.operator(mo, dmo, op_squared=True)
+        with CodeTimer('Get Grad2', silent=silent_timer):
+            grad2 = self.pool.operator(mo, dmo, op_squared=True, inv_mo=inv_mo)
 
         # assemble the total second derivative term
-        hess = (
-            hess.sum(0)
-            + operator.add(*[(g**2).sum(0) for g in grad])
-            - grad2.sum(0)
-            + 2 * operator.mul(*grad).sum(0)
-        )
-
-        hess = self.fc(hess * slater_dets) / sum_slater_dets
+        with CodeTimer('Get Total', silent=silent_timer):
+            hess = (
+                hess.sum(0)
+                + operator.add(*[(g**2).sum(0) for g in grad])
+                - grad2.sum(0)
+                + 2 * operator.mul(*grad).sum(0)
+            )
+            
+            hess = self.fc(hess * slater_dets) / sum_slater_dets
 
         if self.use_jastrow is False:
             return -0.5 * hess
@@ -542,6 +572,7 @@ class SlaterJastrow(WaveFunction):
 
         # prepare the grad of the dets
         # [Nelec*Ndim] x Nbatch x 1
+
         grad_val = self.fc(operator.add(*grad) * slater_dets) / sum_slater_dets
 
         # [Nelec*Ndim] x Nbatch
@@ -549,7 +580,6 @@ class SlaterJastrow(WaveFunction):
 
         # assemble the derivaite terms
         out = d2jast.sum(-1) + 2 * (grad_val * djast).sum(0) + hess.squeeze(-1)
-
         return -0.5 * out.unsqueeze(-1)
 
     def gradients_jacobi_backflow(self, x, sum_grad=True, pdf=False):
@@ -694,7 +724,7 @@ class SlaterJastrow(WaveFunction):
         return self.__class__(
             new_mol,
             self.jastrow,
-            backflow=self.backflow,
+            backflow=self.ao.backflow_trans,
             configs=self.configs_method,
             kinetic=self.kinetic_method,
             cuda=self.cuda,

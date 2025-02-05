@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from .. import log
 from ..utils import add_group_attr, dump_to_hdf5
-
+from ..utils import get_git_tag
 
 class SolverBase:
     def __init__(  # pylint: disable=too-many-arguments
@@ -29,6 +29,7 @@ class SolverBase:
         self.scheduler = scheduler
         self.cuda = False
         self.device = torch.device("cpu")
+        self.qmctorch_version = get_git_tag()
 
         # member defined in the child and or method
         self.dataloader = None
@@ -131,7 +132,8 @@ class SolverBase:
 
         # reset the Namesapce
         self.observable = SimpleNamespace()
-
+        self.observable.qmctorch_version = self.qmctorch_version
+        
         # add the energy of the sytem
         if "energy" not in obs_name:
             obs_name += ["energy"]
@@ -142,12 +144,14 @@ class SolverBase:
 
         for k in obs_name:
             if k == "parameters":
-                for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                # for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                for key, p in self.wf.named_parameters():
                     if p.requires_grad:
                         self.observable.__setattr__(key, [])
 
             elif k == "gradients":
-                for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                # for key, p in zip(self.wf.state_dict().keys(), self.wf.parameters()):
+                for key, p in self.wf.named_parameters():
                     if p.requires_grad:
                         self.observable.__setattr__(key + ".grad", [])
 
