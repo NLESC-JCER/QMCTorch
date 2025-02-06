@@ -44,7 +44,7 @@ setup(
                       'scipy', 'tqdm', 'torch',
                       'plams', 'pints', 'linetimer',
                       'pyscf', 'mendeleev', 'twiggy',
-                      'plams', 'mpi4py'],
+                      'plams', 'mpi4py', 'ase'],
 
     extras_require={
         'hpc': ['horovod'],
