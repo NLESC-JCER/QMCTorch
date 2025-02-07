@@ -80,6 +80,30 @@ class QMCTorchCalculator(Calculator):
         self.atoms.write(filename) 
         self.molecule = Molecule(atom=filename, unit='angs', calculator='pyscf', basis='dzp')
 
+    def update_molecule(self, atoms):
+        """
+        Update the molecule object based on the current atoms object.
+
+        Parameters
+        ----------
+        atoms : ase.Atoms
+            The atoms object to be used to update the molecule object.
+
+        Returns
+        -------
+        None
+        """
+        if self.molecule is None:
+            raise ValueError('Molecule object not set')
+        
+        self.atoms = atoms
+        filename = 'ase_molecule.xyz'
+        self.atoms.write(filename) 
+        self.molecule = Molecule(atom=filename, unit=self.molecule.unit, 
+                                 calculator=self.molecule.calculator, basis=self.molecule.basis_name,
+                                 scf=self.molecule.scf_level, charge=self.molecule.charge, spin=self.molecule.spin,
+                                 name=self.molecule.name)
+
     def set_default_wf(self):
         """
         Set the default wave function for the QMCTorchCalculator.
@@ -97,14 +121,33 @@ class QMCTorchCalculator(Calculator):
             raise ValueError("Molecule object is not set")
         
         configs =  'single_double(2,2)'
-        jastrow = JastrowFactor(self.molecule, PadeJastrowKernel, kernel_kwargs={'w':1.00}, cuda=self.use_gpu)
+        jastrow = JastrowFactor(self.molecule, PadeJastrowKernel, kernel_kwargs={'w':1.00}, cuda=self.use_cuda)
         self.wf = SlaterJastrow(mol=self.molecule,
                                 kinetic='jacobi',
                                 configs=configs,
                                 backflow=None,
                                 jastrow=jastrow,
                                 orthogonalize_mo=True,
-                                cuda=self.use_gpu)
+                                cuda=self.use_cuda)
+        
+
+    def update_wf(self):
+        """
+        Updates the wave function using the current molecule and the
+        previously set wave function configuration parameters.
+
+        Raises:
+            ValueError: If the wave function object is not set yet.
+        """
+        if self.wf is None:
+            raise ValueError("Wave function object not set yet")
+        
+        self.wf(self.molecule, configs=self.wf.configs_method, 
+                kinetic=self.wf.kinetic_method,
+                backflow=None, jastrow=self.wf.jastrow,
+                orthogonalize_mo=self.wf.orthogonalize_mo,
+                cuda=self.use_cuda
+                )
         
     def set_default_sampler(self):
         """
@@ -119,13 +162,13 @@ class QMCTorchCalculator(Calculator):
         The default sampler object is a Metropolis object with 4000 walkers,
         2000 steps, a step size of 0.05, and one decorrelation step.
         The sampler is initialized with atomic positions.
-        If self.use_gpu is True, the sampler will use the GPU.
+        If self.use_cud is True, the sampler will use the GPU.
         """
         if self.wf is None:
             raise ValueError("Wave function object is not set")
         
         self.sampler = Metropolis(nwalkers=4000, nstep=2000, nelec=self.wf.nelec, ntherm=-1, ndecor=1,
-                    step_size=0.05, init=self.mol.domain('atomic'), cuda=self.use_gpu)
+                    step_size=0.05, init=self.mol.domain('atomic'), cuda=self.use_cuda)
         
     def set_default_optimizer(self):
         if self.wf is None:
@@ -137,6 +180,25 @@ class QMCTorchCalculator(Calculator):
         self.optimizer = optim.Adam(lr_dict, lr=1E-2)
 
     def set_default_solver(self):
+        """
+        Set the default solver object for the QMCTorchCalculator.
+
+        This method initializes the default Solver object for the QMCTorchCalculator.
+        It first checks if the wave function, sampler, and optimizer objects are set,
+        and if not, it initializes them with default values. It then sets up the Solver
+        object with those defaults. The method also sets the parameters that require
+        gradient computation and the configuration for the solver.
+
+        Parameters
+        ----------
+        None
+
+        Notes
+        -----
+        The default configuration for the solver is set to track the local energy and
+        the parameters of the wave function, with no frozen parameters. The gradient
+        computation is set to manual, and the resampling is set to update every step.
+        """
         if self.wf is None:
             self.set_default_wf()
         
@@ -192,19 +254,13 @@ class QMCTorchCalculator(Calculator):
         self.optimizer = optimizer
 
     def set_solver(self, solver):
-        """
-        Set the solver object.
+        """_summary_
 
-        Parameters
-        ----------
-        solver : qmctorch.Solver
-            The solver object to be set.
+        Args:
+            atoms (_type_): _description_
         """
         self.solver = solver
-        self.set_wf(self.solver.wf)
-        self.set_sampler(self.solver.sampler)
-        self.set_optimizer(self.solver.optimizer)
-        
+         
 
     def set_atoms(self, atoms):
         """
@@ -247,45 +303,6 @@ class QMCTorchCalculator(Calculator):
                 self.calculate_forces(atoms=atoms)
 
 
-    def set_solver(self, atoms):
-        """_summary_
-
-        Args:
-            atoms (_type_): _description_
-        """
-        xyz_filename = './mol.xyz'
-        atoms.write(xyz_filename)
-
-        mol = Molecule(atom=xyz_filename, unit='angs', calculator='adf', basis='dzp')
-        jastrow = JastrowFactor(mol, PadeJastrowKernel, kernel_kwargs={'w':1.00}, cuda=self.use_gpu)
-        configs =  'single_double(2,2)'
-
-        wf = SlaterJastrow(mol, kinetic='jacobi',
-                    configs=configs,
-                    backflow=None,
-                    jastrow=jastrow,
-                    orthogonalize_mo=True,
-                    cuda=self.use_gpu)
-        
-        sampler = Metropolis(nwalkers=4000, nstep=2000, nelec=wf.nelec, ntherm=-1, ndecor=1,
-                    step_size=0.05, init=mol.domain('atomic'), cuda=self.use_gpu)
-
-        lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
-                {'params': wf.ao.parameters(), 'lr': 1E-2},
-                {'params': wf.mo.parameters(), 'lr': 1E-2},
-                {'params': wf.fc.parameters(), 'lr': 1E-2}]
-        opt = optim.Adam(lr_dict, lr=1E-2)
-
-
-        solver = Solver(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
-        solver.set_params_requires_grad(wf_params=True, geo_params=False)
-
-        solver.configure(track=['local_energy', 'parameters'], freeze=[],
-                loss='energy', grad='manual',
-                ortho_mo=False, clip_loss=False,
-                resampling={'mode': 'update','resample_every':1, 'nstep_update':50, 'ntherm_update':-1}
-                )
-        return solver
 
     def calculate_energy(self, atoms=None):
         """_summary_
@@ -293,7 +310,17 @@ class QMCTorchCalculator(Calculator):
         Args:
             atoms (_type_, optional): _description_. Defaults to None.
         """
-        Calculator.calculate(self, atoms)
+        if atoms is not None:
+            self.atoms = atoms
+            if self.molecule is None:
+                self.set_default_molecule()
+            else:
+                self.update_molecule()
+
+            if self.wf is None:
+                self.set_default_wf()
+            else:
+                self.update_wf()
         atoms = self.atoms
         solver = self.set_solver(atoms)
         solver.run(5, tqdm=True)
