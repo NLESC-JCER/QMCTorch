@@ -1,4 +1,5 @@
 from ase.calculators.calculator import Calculator, all_changes
+from ase import Atoms
 import torch
 from torch import optim
 
@@ -18,7 +19,6 @@ class QMCTorchCalculator(Calculator):
                  *,
                  labels=None,
                  atoms=None,
-                 solver=None,
                  **kwargs):
         
         Calculator.__init__(self, restart=restart, labels=labels, atoms=atoms)
@@ -26,7 +26,185 @@ class QMCTorchCalculator(Calculator):
         set_torch_double_precision()
 
     def set(self, **kwargs):
-        raise NotImplementedError("Not done yet")
+        recpognized_options = ['molecule','wf','sampler','optimizer','solver']
+        for k, _ in kwargs.items():
+            if k.lower() not in recpognized_options:
+                raise ValueError("Unknown option %s" % k)
+            
+            if k.lower() == 'molecule':
+                self.set_molecule(kwargs[k])
+            if k.lower() == 'wf':
+                self.set_wf(kwargs[k])
+            if k.lower() == 'sampler':
+                self.set_sampler(kwargs[k])
+            if k.lower() == 'solver':
+                self.set_solver(kwargs[k])
+            if k.lower() == 'optimizer':
+                self.set_optimizer(kwargs[k])
+
+    def set_molecule(self, molecule):
+        """
+        Set molecule object.
+
+        Parameters
+        ----------
+        molecule : qmctorch.Molecule
+            The molecule object to be set. The atoms object will be set
+            accordingly.
+        """
+        self.molecule = molecule
+        if molecule is not None:
+            atom_names = ''.join(molecule.atoms)
+            self.set_atoms(Atoms(atom_names, positions=molecule.atom_coords))
+
+    def set_default_molecule(self):
+        """
+        Set a default molecule object. If the atoms object is not set, it raises
+        a ValueError.
+
+        The default molecule is created by writing the atoms object to a file
+        named 'ase_molecule.xyz' and then loading this file into a Molecule
+        object.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
+        if self.atoms is None:
+            raise ValueError("Atoms object is not set")
+        filename = 'ase_molecule.xyz'
+        self.atoms.write(filename) 
+        self.molecule = Molecule(atom=filename, unit='angs', calculator='pyscf', basis='dzp')
+
+    def set_default_wf(self):
+        """
+        Set the default wave function for the QMCTorchCalculator.
+
+        This method initializes a Slater-Jastrow wave function for the current molecule.
+        It uses a specific configuration for the wave function and sets up a Jastrow
+        factor with a PadeJastrowKernel. The method requires that a molecule object
+        is already set; otherwise, it raises a ValueError.
+
+        Raises:
+            ValueError: If the molecule object is not set.
+        """
+
+        if self.molecule is None:
+            raise ValueError("Molecule object is not set")
+        
+        configs =  'single_double(2,2)'
+        jastrow = JastrowFactor(self.molecule, PadeJastrowKernel, kernel_kwargs={'w':1.00}, cuda=self.use_gpu)
+        self.wf = SlaterJastrow(mol=self.molecule,
+                                kinetic='jacobi',
+                                configs=configs,
+                                backflow=None,
+                                jastrow=jastrow,
+                                orthogonalize_mo=True,
+                                cuda=self.use_gpu)
+        
+    def set_default_sampler(self):
+        """
+        Set default sampler object.
+
+        Parameters
+        ----------
+        None
+
+        Notes
+        -----
+        The default sampler object is a Metropolis object with 4000 walkers,
+        2000 steps, a step size of 0.05, and one decorrelation step.
+        The sampler is initialized with atomic positions.
+        If self.use_gpu is True, the sampler will use the GPU.
+        """
+        if self.wf is None:
+            raise ValueError("Wave function object is not set")
+        
+        self.sampler = Metropolis(nwalkers=4000, nstep=2000, nelec=self.wf.nelec, ntherm=-1, ndecor=1,
+                    step_size=0.05, init=self.mol.domain('atomic'), cuda=self.use_gpu)
+        
+    def set_default_optimizer(self):
+        if self.wf is None:
+            raise ValueError("Wave function object is not set")
+        lr_dict = [{'params': self.wf.jastrow.parameters(), 'lr': 1E-2},
+                {'params': self.wf.ao.parameters(), 'lr': 1E-2},
+                {'params': self.wf.mo.parameters(), 'lr': 1E-2},
+                {'params': self.wf.fc.parameters(), 'lr': 1E-2}]
+        self.optimizer = optim.Adam(lr_dict, lr=1E-2)
+
+    def set_default_solver(self):
+        if self.wf is None:
+            self.set_default_wf()
+        
+        if self.sampler is None:
+            self.set_default_sampler()
+
+        if self.optimizer is None:
+            self.set_default_optimizer()
+        
+
+        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.optimizer, scheduler=None)
+        self.solver.set_params_requires_grad(wf_params=True, geo_params=False)
+
+        self.solver.configure(track=['local_energy', 'parameters'], freeze=[],
+                loss='energy', grad='manual',
+                ortho_mo=False, clip_loss=False,
+                resampling={'mode': 'update','resample_every':1, 'nstep_update':50, 'ntherm_update':-1}
+                )
+
+
+    def set_wf(self, wf):
+        """
+        Set the wave function object.
+
+        Parameters
+        ----------
+        wf : qmctorch.WaveFunction
+            The wave function object to be set.
+        """
+        self.wf = wf
+        self.set_molecule(self.wf.molecule)
+
+    def set_sampler(self, sampler):
+        """
+        Set the sampler object.
+
+        Parameters
+        ----------
+        sampler : qmctorch.Sampler
+            The sampler object to be set.
+        """
+        self.sampler = sampler
+
+    def set_optimizer(self, optimizer):
+        """
+        Set optimizer object.
+
+        Parameters
+        ----------
+        optimizer : torch.optim.Optimizer
+            The optimizer object to be set.
+        """
+        self.optimizer = optimizer
+
+    def set_solver(self, solver):
+        """
+        Set the solver object.
+
+        Parameters
+        ----------
+        solver : qmctorch.Solver
+            The solver object to be set.
+        """
+        self.solver = solver
+        self.set_wf(self.solver.wf)
+        self.set_sampler(self.solver.sampler)
+        self.set_optimizer(self.solver.optimizer)
+        
 
     def set_atoms(self, atoms):
         """
@@ -63,9 +241,9 @@ class QMCTorchCalculator(Calculator):
             raise ValueError('property not recognized')
         
         for p in properties:
-            if p is 'energy':
+            if p == 'energy':
                 self.calculate_energy(atoms=atoms)
-            if p is 'froces':
+            if p == 'froces':
                 self.calculate_forces(atoms=atoms)
 
 
