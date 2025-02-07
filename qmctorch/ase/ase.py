@@ -321,6 +321,7 @@ class QMCTorchCalculator(Calculator):
                 self.set_default_wf()
             else:
                 self.update_wf()
+               
         atoms = self.atoms
         solver = self.set_solver(atoms)
         solver.run(5, tqdm=True)
