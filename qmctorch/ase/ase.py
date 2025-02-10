@@ -256,6 +256,10 @@ class QMCTorchCalculator(Calculator):
                     self.set_atoms(atoms)
                     self.set_solver()
 
+        self.reset()
+        self.set_atoms(atoms)
+        self.set_solver()
+
     def calculate(self, atoms=None, properties=['energy']):
         """_summary_
 
@@ -308,6 +312,7 @@ class QMCTorchCalculator(Calculator):
             atoms (_type_, optional): _description_. Defaults to None.
             d (float, optional): _description_. Defaults to 0.001.
         """
+        print('+++++++++++++++++++COMPUTE FORCE++++++++++++++++++++++++++++')
         # check if reset is necessary
         self.reset_solver(atoms=atoms)
 
@@ -356,6 +361,8 @@ class QMCTorchCalculator(Calculator):
         forces : array
             The total forces on the atoms.
         """
+        print(atoms.get_positions())
+        print(self.atoms.get_positions())
         # if self.check_forces():
         #     return self.results['forces']
         # else:
