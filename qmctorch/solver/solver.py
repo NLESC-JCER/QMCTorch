@@ -437,7 +437,7 @@ class Solver(SolverBase):
             # evaluate the prefactor of the grads
             weight = eloc.clone()
             weight -= torch.mean(eloc)
-            weight /= psi
+            weight /= psi.clone()
             weight *= 2.0
             weight *= norm
 

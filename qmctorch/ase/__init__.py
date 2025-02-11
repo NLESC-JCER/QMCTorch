@@ -1,1 +1,1 @@
-from .ase import QMCTorchCalculator 
+from .ase import QMCTorch 

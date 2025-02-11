@@ -350,6 +350,7 @@ class SolverBase:
                 "  Energy   : %f +/- %f" % (e.detach().item(), err.detach().item())
             )
             log.options(style="percent").info("  Variance : %f" % s.detach().item())
+            log.options(style="percent").info("  Size     : %d" % len(eloc))
 
             # dump data to hdf5
             obs = SimpleNamespace(
