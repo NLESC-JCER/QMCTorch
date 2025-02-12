@@ -8,6 +8,7 @@ from ..utils import set_torch_double_precision
 from ..scf.molecule import Molecule as SCF
 from ..wavefunction.slater_jastrow import SlaterJastrow
 from ..wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from ..wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
 from ..solver import Solver
 from ..sampler import Metropolis
 from .. import log
@@ -51,6 +52,7 @@ class QMCTorch(Calculator):
         self.scf_options = SimpleNamespace(calculator='pyscf',
                                            basis='dzp',
                                            scf='hf')
+        self.recognized_scf_options = list(self.scf_options.__dict__.keys())
         
         
         # default options for the WF
@@ -64,14 +66,24 @@ class QMCTorch(Calculator):
                                               kernel=PadeJastrowKernel,
                                               kernel_kwargs={'w':1.00},
                                           ),
-                                          backflow=None,
+                                          backflow=SimpleNamespace(
+                                              kernel=BackFlowKernelInverse,
+                                              kernel_kwargs={'weight':1.00},
+                                          ),
                                           gto2sto=False)
+
+        self.recognized_wf_options = list(self.wf_options.__dict__.keys())  
+        self.recognized_jastrow_options = list(self.wf_options.jastrow.__dict__.keys())
+        self.recognized_backflow_options = list(self.wf_options.backflow.__dict__.keys())
+        self.wf_options.backflow = None
 
         # default option for the sampler
         self.sampler = None
         self.sampler_options = SimpleNamespace(nwalkers=4000, nstep=2000, 
                                                ntherm=-1, ndecor=1, step_size=0.05)
+        self.recognized_sampler_options = list(self.sampler_options.__dict__.keys())
         
+        # optimizer .... 
         self.optimizer = None
 
         # default option for the solver
@@ -84,13 +96,9 @@ class QMCTorch(Calculator):
                                                                          nstep_update=50, 
                                                                          ntherm_update=-1),
                                               niter=100, tqdm=False)
-        
-        # get the dict of the recognized options for validation
-        self.recognized_scf_options = list(self.scf_options.__dict__.keys())
-        self.recognized_wf_options = list(self.wf_options.__dict__.keys())  
-        self.recognized_jastrow_options = list(self.wf_options.jastrow.__dict__.keys())
-        self.recognized_sampler_options = list(self.sampler_options.__dict__.keys())
         self.recognized_solver_options = list(self.solver_options.__dict__.keys())
+        self.recognized_resampling_options = list(self.solver_options.resampling.__dict__.keys())
+        
     @staticmethod
     def validate_options(options, recognized_options, name=""):
         """
@@ -155,10 +163,11 @@ class QMCTorch(Calculator):
         Raises:
             ValueError: If the molecule object is not set.
         """
-
+        # check if molecuyle is set
         if self.molecule is None:
             raise ValueError("Molecule object is not set")
         
+        # check jastrow and set it
         if self.wf_options.jastrow is not None:
             self.validate_options(self.wf_options.jastrow, self.recognized_jastrow_options, 'Jastrow')
             jastrow = JastrowFactor(self.molecule, self.wf_options.jastrow.kernel, 
@@ -166,11 +175,15 @@ class QMCTorch(Calculator):
         else:
             jastrow = None
 
+        # check backflow and set it
         if self.wf_options.backflow is not None:
-            raise ValueError("Backflow is not supported yet via the ASE calculator")
+            self.validate_options(self.wf_options.backflow, self.recognized_backflow_options, 'Backflow')
+            backflow = BackFlowTransformation(self.molecule, self.wf_options.backflow.kernel, 
+                                              self.wf_options.backflow.kernel_kwargs, cuda=self.use_cuda)
         else:
             backflow = None
 
+        #checlk wf options and set wf
         self.validate_options(self.wf_options, self.recognized_wf_options, 'WF')
         self.wf = SlaterJastrow(mol=self.molecule,
                                 kinetic=self.wf_options.kinetic,
@@ -181,6 +194,7 @@ class QMCTorch(Calculator):
                                 include_all_mo=self.wf_options.include_all_mo,
                                 cuda=self.use_cuda)
         
+        # in case we want a sto transform
         if self.wf_options.gto2sto:
             if self.scf_options.calculator != 'pyscf':
                 raise ValueError("gto2sto is only supported for pyscf")
@@ -277,8 +291,9 @@ class QMCTorch(Calculator):
             self.set_default_optimizer()
         
         self.validate_options(self.solver_options, self.recognized_solver_options, 'Solver')
+        self.validate_options(self.solver_options.resampling, self.recognized_resampling_options, 'Resampling')
+        
         self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.optimizer, scheduler=None)
-
         self.set_resampling_options()
 
         self.solver.configure(track=self.solver_options.track, freeze=self.solver_options.freeze,
