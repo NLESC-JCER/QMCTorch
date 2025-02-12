@@ -406,6 +406,11 @@ class Solver(SolverBase):
 
     def evaluate_grad_manual(self, lpos):
         """Evaluate the gradient using low variance expression
+        WARNING : This method is not valid to compute forces
+        as it does not include derivative of the hamiltonian 
+        wrt atomic positions 
+ 
+        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
 
         Args:
             lpos ([type]): [description]
@@ -443,6 +448,53 @@ class Solver(SolverBase):
 
             # compute the gradients
             psi.backward(weight)
+
+            return torch.mean(eloc), eloc
+
+        else:
+            raise ValueError("Manual gradient only for energy minimization")
+        
+    def evaluate_grad_manual_2(self, lpos):
+        """Evaluate the gradient using low variance expression
+        WARNING : This method is not valid to compute forces
+        as it does not include derivative of the hamiltonian 
+        wrt atomic positions
+
+        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
+
+        Args:
+            lpos ([type]): [description]
+
+        Args:
+            lpos (torch.tensor): sampling points
+
+        Returns:
+            tuple: loss values and local energies
+        """
+
+        # determine if we need the grad of eloc
+        no_grad_eloc = True
+        if self.wf.kinetic_method == "auto":
+            no_grad_eloc = False
+
+        if self.wf.jastrow.requires_autograd:
+            no_grad_eloc = False
+
+        if self.loss.method in ["energy", "weighted-energy"]:
+            # Get the gradient of the total energy
+            # dE/dk = 2 [ < (dpsi/dk) E_L/psi >  - < (dpsi/dk) / psi > <E_L > ]
+            # https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
+
+            # compute local energy and wf values
+            eloc_mean, eloc = self.loss(lpos, no_grad=no_grad_eloc)
+            psi = self.wf(lpos)
+            norm = 2.0 / len(psi)
+
+            weight1 = norm * eloc/psi.detach().clone()
+            weight2 = -norm * eloc_mean/psi.detach().clone()
+
+            psi.backward(weight1,retain_graph=True) 
+            psi.backward(weight2)
 
             return torch.mean(eloc), eloc
 

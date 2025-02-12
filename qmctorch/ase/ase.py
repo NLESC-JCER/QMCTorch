@@ -52,6 +52,7 @@ class QMCTorch(Calculator):
                                            basis='dzp',
                                            scf='hf')
         
+        
         # default options for the WF
         self.wf = None
         self.wf_options = SimpleNamespace(kinetic='jacobi',
@@ -65,7 +66,6 @@ class QMCTorch(Calculator):
                                           ),
                                           backflow=None,
                                           gto2sto=False)
-
 
         # default option for the sampler
         self.sampler = None
@@ -84,6 +84,35 @@ class QMCTorch(Calculator):
                                                                          nstep_update=50, 
                                                                          ntherm_update=-1),
                                               niter=100, tqdm=False)
+        
+        # get the dict of the recognized options for validation
+        self.recognized_scf_options = list(self.scf_options.__dict__.keys())
+        self.recognized_wf_options = list(self.wf_options.__dict__.keys())  
+        self.recognized_jastrow_options = list(self.wf_options.jastrow.__dict__.keys())
+        self.recognized_sampler_options = list(self.sampler_options.__dict__.keys())
+        self.recognized_solver_options = list(self.solver_options.__dict__.keys())
+    @staticmethod
+    def validate_options(options, recognized_options, name=""):
+        """
+        Validate that the options provided are valid.
+
+        Parameters
+        ----------
+        options : SimpleNamespace
+            The options to be validated.
+        recognized_options : list
+            The recognized options.
+        name : str, optional
+            The name of the options to be validated.
+
+        Raises
+        ------
+        ValueError
+            If the options contain invalid options.
+        """
+        for opt in list(options.__dict__.keys()):
+            if opt not in recognized_options:
+                raise ValueError("Invalid %s options: %s. Recognized options are %s" % (name, opt,recognized_options))
 
     def run_scf(self):
         """
@@ -102,6 +131,8 @@ class QMCTorch(Calculator):
         -------
         None
         """
+        self.validate_options(self.scf_options, self.recognized_scf_options, 'SCF')
+
         if self.atoms is None:
             raise ValueError("Atoms object is not set")
         filename = self.atoms.get_chemical_formula() + '.xyz'
@@ -129,6 +160,7 @@ class QMCTorch(Calculator):
             raise ValueError("Molecule object is not set")
         
         if self.wf_options.jastrow is not None:
+            self.validate_options(self.wf_options.jastrow, self.recognized_jastrow_options, 'Jastrow')
             jastrow = JastrowFactor(self.molecule, self.wf_options.jastrow.kernel, 
                                     self.wf_options.jastrow.kernel_kwargs, cuda=self.use_cuda)
         else:
@@ -139,6 +171,7 @@ class QMCTorch(Calculator):
         else:
             backflow = None
 
+        self.validate_options(self.wf_options, self.recognized_wf_options, 'WF')
         self.wf = SlaterJastrow(mol=self.molecule,
                                 kinetic=self.wf_options.kinetic,
                                 configs=self.wf_options.configs,
@@ -170,7 +203,7 @@ class QMCTorch(Calculator):
         """
         if self.wf is None:
             raise ValueError("Wave function object is not set")
-        
+        self.validate_options(self.sampler_options, self.recognized_sampler_options, 'Sampler')
         self.sampler = Metropolis(nwalkers=self.sampler_options.nwalkers, nstep=self.sampler_options.nstep, 
                                   nelec=self.wf.nelec, ntherm=self.sampler_options.ntherm, ndecor=self.sampler_options.ndecor,
                                   step_size=self.sampler_options.step_size, init=self.molecule.domain('atomic'), cuda=self.use_cuda)
@@ -206,12 +239,9 @@ class QMCTorch(Calculator):
         if (self.sampler_options.ntherm != -1) and (self.solver_options.resampling.mode == 'update'):
             nsample = self.sampler_options.nstep - self.sampler_options.ntherm
             self.solver_options.resampling.nstep_update = self.solver_options.resampling.ntherm_update + nsample
-            # log.options(style="percent").info("Warning : Resampling option nstep_update adjusted to %d to match sampling size" \
-                                            #   %self.solver_options.resampling.nstep_update)
 
         elif (self.sampler_options.ntherm == -1) and (self.solver_options.resampling.mode == 'update'):
             if self.solver_options.resampling.ntherm_update != -1:
-                # log.options(style="percent").info(" Warning : Resampling option ntherm_update adjusted to -1 to match ntherm")
                 self.solver_options.resampling.ntherm_update = -1
 
     def set_solver(self):
@@ -246,7 +276,7 @@ class QMCTorch(Calculator):
         if self.optimizer is None:
             self.set_default_optimizer()
         
-
+        self.validate_options(self.solver_options, self.recognized_solver_options, 'Solver')
         self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.optimizer, scheduler=None)
 
         self.set_resampling_options()
@@ -445,9 +475,11 @@ class QMCTorch(Calculator):
         # resample
         observable = self.solver.single_point()
 
-        # compute the forces
+        # compute the forces 
+        # we use evaluate_grad_auto as evaluate_grad_manual is not
+        # valid for forces  
         self.solver.set_params_requires_grad(wf_params=False, geo_params=True)
-        _, _ = self.solver.evaluate_gradient(observable.pos)
+        _, _ = self.solver.evaluate_grad_auto(observable.pos)
 
         # store and output
         self.results['energy'] = observable.energy.cpu().numpy()
