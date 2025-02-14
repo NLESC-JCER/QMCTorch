@@ -7,6 +7,7 @@ import h5py
 from .calculator import CalculatorADF, CalculatorPySCF, CalculatorADF2019
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
+from ..utils.constants import ANGS2BOHR
 from .. import log
 
 try:
@@ -235,7 +236,7 @@ class Molecule:
 
             conv2bohr = 1
             if self.unit == "angs":
-                conv2bohr = 1.8897259886
+                conv2bohr = ANGS2BOHR
             self.atom_coords.append([x * conv2bohr, y * conv2bohr, z * conv2bohr])
 
             self.atomic_number.append(element(atom_data[0]).atomic_number)

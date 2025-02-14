@@ -171,7 +171,7 @@ class Solver(SolverBase):
         geo_lr=1e-2,
         batchsize=None,
         nepoch_wf_init=100,
-        nepoch_wf_update=50,
+        nepoch_wf_update=10,
         hdf5_group="geo_opt",
         chkpt_every=None,
         tqdm=False,
@@ -217,7 +217,7 @@ class Solver(SolverBase):
             # make one step geo optim
             self.set_params_requires_grad(wf_params=False, geo_params=True)
             self.opt = opt_geo
-            self.evaluate_gradient = self.evaluate_grad_auto
+            self.evaluate_gradient = self.evaluate_grad_auto # evaluate_grad_manual not valid for forces
             self.run_epochs(1)
             xyz.append(self.wf.geometry(None))
 

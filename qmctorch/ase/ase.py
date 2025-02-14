@@ -1,10 +1,12 @@
 from ase.calculators.calculator import Calculator, all_changes
 from ase import Atoms
+import numpy as np
 import torch
 from torch import optim
 from types import SimpleNamespace
 
 from ..utils import set_torch_double_precision
+from ..utils.constants import ANGS2BOHR
 from ..scf.molecule import Molecule as SCF
 from ..wavefunction.slater_jastrow import SlaterJastrow
 from ..wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
@@ -361,25 +363,15 @@ class QMCTorch(Calculator):
         -----
         This method is typically called before calculating a quantity.
         """
-        # if we don't have defined a solver yet
-        if not force:
-            if self.solver is None:
-                if atoms is not None:
-                    self.set_atoms(atoms)
+        if atoms is not None:
+            # if any((self.atoms.get_positions() != np.array(self.molecule.atom_coords)).flatten().tolist()):
+            if not np.allclose(self.atoms.get_positions()*ANGS2BOHR, np.array(self.molecule.atom_coords)):
                 self.reset()
+                self.set_atoms(atoms)
                 self.set_solver()
-
-            # if we do have a solver in place
-            else:
-                if atoms is not None:
-                    if (self.atoms.get_positions() !=  atoms.get_positions()).any():
-                        self.reset()
-                        self.set_atoms(atoms)
-                        self.set_solver()
         else:
-            self.reset()
-            self.set_atoms(atoms)
-            self.set_solver()
+            if self.solver is None:
+                self.set_solver()
 
     def calculate(self, atoms=None, properties=['energy'], system_changes=None):
         """
@@ -449,6 +441,8 @@ class QMCTorch(Calculator):
         energy of the system. The result is stored in the calculator's results dictionary and
         returned.
         """
+        self.reset_solver(atoms=atoms)
+
         # optimize the wave function
         if self.solver_options.niter > 0:
             self.solver.set_params_requires_grad(wf_params=True, geo_params=False)
@@ -482,6 +476,9 @@ class QMCTorch(Calculator):
         -----
         The forces are computed by optimizing the wave function using the atomic positions as variational parameters.
         """
+
+        self.reset_solver(atoms=atoms)
+
         # optimize the wave function
         if self.solver_options.niter > 0:
             self.solver.set_params_requires_grad(wf_params=True, geo_params=False)
@@ -499,6 +496,8 @@ class QMCTorch(Calculator):
         # store and output
         self.results['energy'] = observable.energy.cpu().numpy()
         self.results['forces'] = -self.solver.wf.ao.atom_coords.grad.cpu().numpy()
+        self.solver.wf.zero_grad()
+
         self.has_forces = True
         return self.results['forces']
 
@@ -533,8 +532,8 @@ class QMCTorch(Calculator):
         if self.check_forces():
             return self.results['forces']
         else:
-            return self.calculate(atoms=atoms, properties=['forces'])
-        
+            return self._calculate_forces(atoms=atoms)
+    
     def get_total_energy(self, atoms=None):
         """
         Return the total energy.
@@ -552,4 +551,4 @@ class QMCTorch(Calculator):
         if 'energy' in self.results:
             return self.results['energy']
         else:
-            return self.calculate(atoms=atoms, properties=['energy'])
+            return self._calculate_energy(atoms=atoms)
