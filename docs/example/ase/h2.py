@@ -27,9 +27,9 @@ h2.calc.wf_options.jastrow.kernel_kwargs = {'w':1.0}
 
 # sampler options
 h2.calc.sampler_options.nwalkers = 100
-h2.calc.sampler_options.nstep  = 5000
+h2.calc.sampler_options.nstep  = 500
 h2.calc.sampler_options.step_size = 0.5
-h2.calc.sampler_options.ntherm = 4000
+h2.calc.sampler_options.ntherm = 400
 h2.calc.sampler_options.ndecor = 10
 
 # solver options

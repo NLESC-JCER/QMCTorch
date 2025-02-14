@@ -412,10 +412,10 @@ class QMCTorch(Calculator):
         # compute
         for p in properties:
             if p == 'forces':
-                self._calculate_forces(atoms=atoms)
+                return self._calculate_forces(atoms=atoms)
 
             elif p == 'energy':
-                self._calculate_energy(atoms=atoms)
+                return self._calculate_energy(atoms=atoms)
 
     def _calculate_energy(self, atoms=None):
         # check if reset is necessary 
@@ -441,8 +441,6 @@ class QMCTorch(Calculator):
         energy of the system. The result is stored in the calculator's results dictionary and
         returned.
         """
-        self.reset_solver(atoms=atoms)
-
         # optimize the wave function
         if self.solver_options.niter > 0:
             self.solver.set_params_requires_grad(wf_params=True, geo_params=False)
@@ -476,8 +474,6 @@ class QMCTorch(Calculator):
         -----
         The forces are computed by optimizing the wave function using the atomic positions as variational parameters.
         """
-
-        self.reset_solver(atoms=atoms)
 
         # optimize the wave function
         if self.solver_options.niter > 0:
@@ -529,6 +525,8 @@ class QMCTorch(Calculator):
         forces : array
             The total forces on the atoms.
         """
+        
+        self.reset_solver(atoms=atoms)
         if self.check_forces():
             return self.results['forces']
         else:
@@ -548,6 +546,7 @@ class QMCTorch(Calculator):
         energy : float
             The total energy of the system.
         """
+        self.reset_solver(atoms=atoms)
         if 'energy' in self.results:
             return self.results['energy']
         else:
