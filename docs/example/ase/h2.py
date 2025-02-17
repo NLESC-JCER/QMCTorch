@@ -48,8 +48,10 @@ h2.calc.solver_options.resampling.ntherm_update = 100
 h2.calc.set_solver()
 
 # use torch optim for the optimization
-dyn = TorchOptimizer(h2, trajectory='traj.xyz', 
-                     nepoch_wf_init=10, nepoch_wf_update=5, 
+dyn = TorchOptimizer(h2, 
+                     trajectory='traj.xyz', 
+                     nepoch_wf_init=10, 
+                     nepoch_wf_update=5, 
                      tqdm=True)
 dyn.run(fmax=0.005, steps=5)
 write('final.xyz',h2)

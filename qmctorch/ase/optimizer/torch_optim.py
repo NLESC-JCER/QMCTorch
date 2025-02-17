@@ -64,7 +64,7 @@ class TorchOptimizer(Optimizer):
             msg = "%s:  %3d %02d:%02d:%02d %15.6f %15.6f\n" % args
             self.logfile.write(msg)
             self.logfile.flush()
-
+        return fmax
     
     def run(self, fmax, steps=10, hdf5_group="geo_opt"):
         """
@@ -137,8 +137,11 @@ class TorchOptimizer(Optimizer):
 
             # update the geometry
             self.optimizable.set_positions(solver.wf.geometry(None))
-            self.log(cumulative_loss, forces)
+            current_fmax = self.log(cumulative_loss, forces)
             self.call_observers()
+
+            if current_fmax < fmax:
+                break
 
         # restore the sampler number of step
         solver.restore_sampling_parameters()
