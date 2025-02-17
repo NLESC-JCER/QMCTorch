@@ -644,6 +644,17 @@ class SlaterJastrow(WaveFunction):
             xyz = self.ao.atom_coords[iat, :].cpu().detach().numpy().tolist()
             d.append(xyz)
         return d
+    
+    def forces(self):
+        """
+        Returns the gradient of the atomic coordinates with respect to the wave function.
+
+        Returns
+        -------
+        torch.Tensor
+            The gradient of the atomic coordinates as a PyTorch tensor.
+        """
+        return self.ao.atom_coords.grad
 
     def gto2sto(self, plot=False):
         """Fits the AO GTO to AO STO.

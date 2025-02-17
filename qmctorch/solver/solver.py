@@ -1,6 +1,6 @@
 from copy import deepcopy
 from time import time
-
+from tqdm import tqdm
 import torch
 from qmctorch.utils import Loss, OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
 
@@ -316,24 +316,36 @@ class Solver(SolverBase):
 
         add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
-    def run_epochs(self, nepoch):
+    def run_epochs(self, nepoch, with_tqdm=False, verbose=True):
         """Run a certain number of epochs
 
         Args:
             nepoch (int): number of epoch to run
         """
 
+        if with_tqdm and verbose:
+            raise ValueError("tqdm and verbose are mutually exclusive")
+
         # init the loss in case we have nepoch=0
         cumulative_loss = 0
         min_loss = 0  # this is set at n=0
+        
+        # the range 
+        rng = tqdm(
+            range(nepoch),
+            desc="INFO:QMCTorch|  Optimization",
+            disable=not with_tqdm,
+        )
 
         # loop over the epoch
-        for n in range(nepoch):
-            tstart = time()
-            log.info("")
-            log.info(
-                "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
-            )
+        for n in rng:
+
+            if verbose:
+                tstart = time()
+                log.info("")
+                log.info(
+                    "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
+                )
 
             cumulative_loss = 0
 
@@ -369,7 +381,8 @@ class Solver(SolverBase):
                 if (n > 0) and (n % self.chkpt_every == 0):
                     self.save_checkpoint(n, cumulative_loss)
 
-            self.print_observable(cumulative_loss, verbose=False)
+            if verbose:
+                self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
             self.dataloader.dataset = self.resample(n, self.dataloader.dataset)
@@ -378,7 +391,8 @@ class Solver(SolverBase):
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            log.info("  epoch done in %1.2f sec." % (time() - tstart))
+            if verbose:
+                log.info("  epoch done in %1.2f sec." % (time() - tstart))
 
         return cumulative_loss
 

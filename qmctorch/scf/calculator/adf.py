@@ -78,7 +78,10 @@ class CalculatorADF(CalculatorBase):
         if self.savefile:
             shutil.copyfile(outputdir_path, self.output_file)
             self.savefile = self.output_file
-        shutil.rmtree(plams_wd)
+        # shutil.rmtree(plams_wd)
+
+        # fnalize plams
+        self.finish_plams()
 
         return basis
 
@@ -88,6 +91,10 @@ class CalculatorADF(CalculatorBase):
         plams.config.log.stdout = -1
         plams.config.log.file = -1
         plams.config.erase_workdir = True
+
+    def finish_plams(self):
+        """Finish PLAMS."""
+        plams.finish()
 
     def get_plams_molecule(self):
         """Returns a plams molecule object."""
