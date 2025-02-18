@@ -260,7 +260,7 @@ class QMCTorch(Calculator):
             if self.solver_options.resampling.ntherm_update != -1:
                 self.solver_options.resampling.ntherm_update = -1
 
-    def set_solver(self):
+    def initialize(self):
         """
         Set the default solver object for the QMCTorchCalculator.
 

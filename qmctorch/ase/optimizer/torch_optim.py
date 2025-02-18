@@ -8,7 +8,7 @@ from copy import deepcopy
 from ase import Atoms
 from ase.optimize.optimize import Optimizer
 from ase.utils import deprecated
-
+from ...utils.constants import BOHR2ANGS 
 class TorchOptimizer(Optimizer):
 
     def __init__(self, 
@@ -123,9 +123,10 @@ class TorchOptimizer(Optimizer):
             solver.set_params_requires_grad(wf_params=False, geo_params=True)
             solver.opt = self.opt_geo
             solver.evaluate_gradient = solver.evaluate_grad_auto # evaluate_grad_manual not valid for forces
-            solver.run_epochs(1)
+            solver.run_epochs(1, verbose=False)
             forces = solver.wf.forces()
-            self.xyz_trajectory.append(solver.wf.geometry(None))
+            print(solver.wf.geometry(None,convert_to_angs=True))
+            self.xyz_trajectory.append(solver.wf.geometry(None,convert_to_angs=True))
 
             # make a few wf optim
             solver.set_params_requires_grad(wf_params=True, geo_params=False)
@@ -136,7 +137,7 @@ class TorchOptimizer(Optimizer):
                                                 with_tqdm=self.tqdm, verbose=False)
 
             # update the geometry
-            self.optimizable.set_positions(solver.wf.geometry(None))
+            self.optimizable.set_positions(solver.wf.geometry(None,convert_to_angs=True))
             current_fmax = self.log(cumulative_loss, forces)
             self.call_observers()
 

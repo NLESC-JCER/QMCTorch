@@ -28,9 +28,9 @@ h2.calc.wf_options.jastrow.kernel_kwargs = {'w':1.0}
 
 # sampler options
 h2.calc.sampler_options.nwalkers = 100
-h2.calc.sampler_options.nstep  = 500
+h2.calc.sampler_options.nstep  = 5000
 h2.calc.sampler_options.step_size = 0.5
-h2.calc.sampler_options.ntherm = 400
+h2.calc.sampler_options.ntherm = 4000
 h2.calc.sampler_options.ndecor = 10
 
 # solver options
@@ -45,13 +45,13 @@ h2.calc.solver_options.resampling.resample_every = 1
 h2.calc.solver_options.resampling.ntherm_update = 100
 
 # Optimize the wave function
-h2.calc.set_solver()
+h2.calc.initialize()
 
 # use torch optim for the optimization
 dyn = TorchOptimizer(h2, 
                      trajectory='traj.xyz', 
-                     nepoch_wf_init=10, 
-                     nepoch_wf_update=5, 
+                     nepoch_wf_init=50, 
+                     nepoch_wf_update=15, 
                      tqdm=True)
 dyn.run(fmax=0.005, steps=5)
 write('final.xyz',h2)

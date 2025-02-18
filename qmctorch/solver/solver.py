@@ -165,83 +165,6 @@ class Solver(SolverBase):
         self.sampler.ntherm = self.sampler._ntherm_save
         # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
-    def geo_opt(  # pylint: disable=too-many-arguments
-        self,
-        nepoch,
-        geo_lr=1e-2,
-        batchsize=None,
-        nepoch_wf_init=100,
-        nepoch_wf_update=10,
-        hdf5_group="geo_opt",
-        chkpt_every=None,
-        tqdm=False,
-    ):
-        """optimize the geometry of the molecule
-
-        Args:
-            nepoch (int): Number of optimziation step
-            batchsize (int, optional): Number of sample in a mini batch.
-                                       If None, all samples are used.
-                                       Defaults to Never.
-            hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                        Defaults to 'geo_opt'.
-            chkpt_every (int, optional): save a checkpoint every every iteration.
-                                         Defaults to half the number of epoch
-        """
-
-        # save the optimizer used for the wf params
-        opt_wf = deepcopy(self.opt)
-        opt_wf.lpos_needed = self.opt.lpos_needed
-
-        # create the optmizier for the geo opt
-        opt_geo = torch.optim.SGD(self.wf.parameters(), lr=geo_lr)
-        opt_geo.lpos_needed = False
-
-        # save the grad method
-        eval_grad_wf = self.evaluate_gradient
-
-        # log data
-        self.prepare_optimization(batchsize, None, tqdm)
-        self.log_data_opt(nepoch, "geometry optimization")
-
-        # init the traj
-        xyz = [self.wf.geometry(None)]
-
-        # initial wf optimization
-        self.set_params_requires_grad(wf_params=True, geo_params=False)
-        self.freeze_parameters(self.freeze_params_list)
-        self.run_epochs(nepoch_wf_init)
-
-        # iterations over geo optim
-        for n in range(nepoch):
-            # make one step geo optim
-            self.set_params_requires_grad(wf_params=False, geo_params=True)
-            self.opt = opt_geo
-            self.evaluate_gradient = self.evaluate_grad_auto # evaluate_grad_manual not valid for forces
-            self.run_epochs(1)
-            xyz.append(self.wf.geometry(None))
-
-            # make a few wf optim
-            self.set_params_requires_grad(wf_params=True, geo_params=False)
-            self.freeze_parameters(self.freeze_params_list)
-            self.opt = opt_wf
-            self.evaluate_gradient = eval_grad_wf
-
-            cumulative_loss = self.run_epochs(nepoch_wf_update)
-
-            # save checkpoint file
-            if chkpt_every is not None:
-                if (n > 0) and (n % chkpt_every == 0):
-                    self.save_checkpoint(n, cumulative_loss)
-
-        # restore the sampler number of step
-        self.restore_sampling_parameters()
-
-        # dump
-        self.observable.geometry = xyz
-        self.save_data(hdf5_group)
-
-        return self.observable
 
     def run(
         self, nepoch, batchsize=None, hdf5_group="wf_opt", chkpt_every=None, tqdm=False
@@ -347,9 +270,10 @@ class Solver(SolverBase):
                     "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
                 )
 
+            # reset the gradients and loss
             cumulative_loss = 0
-
             self.opt.zero_grad()
+            self.wf.zero_grad()
 
             # loop over the batches
             for ibatch, data in enumerate(self.dataloader):
