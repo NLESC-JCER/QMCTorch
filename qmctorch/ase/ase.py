@@ -368,10 +368,10 @@ class QMCTorch(Calculator):
             if not np.allclose(self.atoms.get_positions()*ANGS2BOHR, np.array(self.molecule.atom_coords)):
                 self.reset()
                 self.set_atoms(atoms)
-                self.set_solver()
+                self.initialize()
         else:
             if self.solver is None:
-                self.set_solver()
+                self.initialize()
 
     def calculate(self, atoms=None, properties=['energy'], system_changes=None):
         """
