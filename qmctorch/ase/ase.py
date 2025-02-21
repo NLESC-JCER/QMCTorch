@@ -102,7 +102,7 @@ class QMCTorch(Calculator):
         self.recognized_resampling_options = list(self.solver_options.resampling.__dict__.keys())
         
     @staticmethod
-    def validate_options(options, recognized_options, name=""):
+    def validate_options(options: SimpleNamespace, recognized_options: list, name: str = "") -> None:
         """
         Validate that the options provided are valid.
 
@@ -119,10 +119,16 @@ class QMCTorch(Calculator):
         ------
         ValueError
             If the options contain invalid options.
+
+        Returns
+        -------
+        None
         """
         for opt in list(options.__dict__.keys()):
             if opt not in recognized_options:
-                raise ValueError("Invalid %s options: %s. Recognized options are %s" % (name, opt,recognized_options))
+                raise ValueError(
+                    "Invalid %s options: %s. Recognized options are %s" % (name, opt, recognized_options)
+                )
 
     def run_scf(self):
         """
