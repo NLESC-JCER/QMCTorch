@@ -21,12 +21,11 @@ class TorchOptimizer(Optimizer):
                  restart: Optional[str] = None,
                  logfile: Union[IO, str] = '-',
                  trajectory: Optional[str] = None,
-                 master: Optional[bool] = None,
-                 force_consistent=Optimizer._deprecated):
+                 master: Optional[bool] = None):
         
 
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master, force_consistent=force_consistent)
+                           master)
         
         self.opt_geo = optimizer
         self.batchsize = batchsize
