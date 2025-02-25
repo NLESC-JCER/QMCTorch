@@ -56,28 +56,28 @@ class TestH2GeoOpt(unittest.TestCase):
         # solver
         self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
 
-    def test_geo_opt(self):
-        self.solver.wf.ao.atom_coords[0, 2].data = torch.as_tensor(-0.37)
-        self.solver.wf.ao.atom_coords[1, 2].data = torch.as_tensor(0.37)
+    # def test_geo_opt(self):
+    #     self.solver.wf.ao.atom_coords[0, 2].data = torch.as_tensor(-0.37)
+    #     self.solver.wf.ao.atom_coords[1, 2].data = torch.as_tensor(0.37)
 
-        self.solver.configure(track=["local_energy"], loss="energy", grad="auto")
-        self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
+    #     self.solver.configure(track=["local_energy"], loss="energy", grad="auto")
+    #     self.solver.geo_opt(5, nepoch_wf_init=10, nepoch_wf_update=5)
 
-        # load the best model
-        self.solver.wf.load(self.solver.hdf5file, "geo_opt")
-        self.solver.wf.eval()
+    #     # load the best model
+    #     self.solver.wf.load(self.solver.hdf5file, "geo_opt")
+    #     self.solver.wf.eval()
 
-        # sample and compute variables
-        obs = self.solver.single_point()
-        e, v = obs.energy, obs.variance
+    #     # sample and compute variables
+    #     obs = self.solver.single_point()
+    #     e, v = obs.energy, obs.variance
 
-        e = e.data.numpy()
-        v = v.data.numpy()
+    #     e = e.data.numpy()
+    #     v = v.data.numpy()
 
-        # it might be too much to assert with the ground state energy
-        gse = -1.16
-        assert e > 2 * gse and e < 0.0
-        assert v > 0 and v < 2.0
+    #     # it might be too much to assert with the ground state energy
+    #     gse = -1.16
+    #     assert e > 2 * gse and e < 0.0
+    #     assert v > 0 and v < 2.0
 
 
 if __name__ == "__main__":

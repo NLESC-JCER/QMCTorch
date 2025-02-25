@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import math
 from ...utils.algebra_utils import double_factorial
 
 def atomic_orbital_norm(basis):
@@ -57,7 +58,7 @@ def norm_slater_spherical(bas_n, bas_exp):
         torch.tensor: normalization factor
     """
     nfact = torch.as_tensor(
-        [np.math.factorial(2 * n) for n in bas_n], dtype=torch.get_default_dtype()
+        [math.factorial(2 * n) for n in bas_n], dtype=torch.get_default_dtype()
     )
     return (2 * bas_exp) ** bas_n * torch.sqrt(2 * bas_exp / nfact)
 
@@ -102,7 +103,7 @@ def norm_slater_cartesian(a, b, c, n, exp):
     """
     lvals = a + b + c + n + 1.
 
-    lfact = torch.as_tensor([np.math.factorial(int(2 * i)) for i in lvals]).type(
+    lfact = torch.as_tensor([math.factorial(int(2 * i)) for i in lvals]).type(
         torch.get_default_dtype()
     )
 
