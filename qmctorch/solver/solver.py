@@ -1,6 +1,6 @@
 from copy import deepcopy
 from time import time
-
+from tqdm import tqdm
 import torch
 from qmctorch.utils import Loss, OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
 
@@ -165,83 +165,6 @@ class Solver(SolverBase):
         self.sampler.ntherm = self.sampler._ntherm_save
         # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
-    def geo_opt(  # pylint: disable=too-many-arguments
-        self,
-        nepoch,
-        geo_lr=1e-2,
-        batchsize=None,
-        nepoch_wf_init=100,
-        nepoch_wf_update=50,
-        hdf5_group="geo_opt",
-        chkpt_every=None,
-        tqdm=False,
-    ):
-        """optimize the geometry of the molecule
-
-        Args:
-            nepoch (int): Number of optimziation step
-            batchsize (int, optional): Number of sample in a mini batch.
-                                       If None, all samples are used.
-                                       Defaults to Never.
-            hdf5_group (str, optional): name of the hdf5 group where to store the data.
-                                        Defaults to 'geo_opt'.
-            chkpt_every (int, optional): save a checkpoint every every iteration.
-                                         Defaults to half the number of epoch
-        """
-
-        # save the optimizer used for the wf params
-        opt_wf = deepcopy(self.opt)
-        opt_wf.lpos_needed = self.opt.lpos_needed
-
-        # create the optmizier for the geo opt
-        opt_geo = torch.optim.SGD(self.wf.parameters(), lr=geo_lr)
-        opt_geo.lpos_needed = False
-
-        # save the grad method
-        eval_grad_wf = self.evaluate_gradient
-
-        # log data
-        self.prepare_optimization(batchsize, None, tqdm)
-        self.log_data_opt(nepoch, "geometry optimization")
-
-        # init the traj
-        xyz = [self.wf.geometry(None)]
-
-        # initial wf optimization
-        self.set_params_requires_grad(wf_params=True, geo_params=False)
-        self.freeze_parameters(self.freeze_params_list)
-        self.run_epochs(nepoch_wf_init)
-
-        # iterations over geo optim
-        for n in range(nepoch):
-            # make one step geo optim
-            self.set_params_requires_grad(wf_params=False, geo_params=True)
-            self.opt = opt_geo
-            self.evaluate_gradient = self.evaluate_grad_auto
-            self.run_epochs(1)
-            xyz.append(self.wf.geometry(None))
-
-            # make a few wf optim
-            self.set_params_requires_grad(wf_params=True, geo_params=False)
-            self.freeze_parameters(self.freeze_params_list)
-            self.opt = opt_wf
-            self.evaluate_gradient = eval_grad_wf
-
-            cumulative_loss = self.run_epochs(nepoch_wf_update)
-
-            # save checkpoint file
-            if chkpt_every is not None:
-                if (n > 0) and (n % chkpt_every == 0):
-                    self.save_checkpoint(n, cumulative_loss)
-
-        # restore the sampler number of step
-        self.restore_sampling_parameters()
-
-        # dump
-        self.observable.geometry = xyz
-        self.save_data(hdf5_group)
-
-        return self.observable
 
     def run(
         self, nepoch, batchsize=None, hdf5_group="wf_opt", chkpt_every=None, tqdm=False
@@ -316,28 +239,41 @@ class Solver(SolverBase):
 
         add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
-    def run_epochs(self, nepoch):
+    def run_epochs(self, nepoch, with_tqdm=False, verbose=True):
         """Run a certain number of epochs
 
         Args:
             nepoch (int): number of epoch to run
         """
 
+        if with_tqdm and verbose:
+            raise ValueError("tqdm and verbose are mutually exclusive")
+
         # init the loss in case we have nepoch=0
         cumulative_loss = 0
         min_loss = 0  # this is set at n=0
+        
+        # the range 
+        rng = tqdm(
+            range(nepoch),
+            desc="INFO:QMCTorch|  Optimization",
+            disable=not with_tqdm,
+        )
 
         # loop over the epoch
-        for n in range(nepoch):
-            tstart = time()
-            log.info("")
-            log.info(
-                "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
-            )
+        for n in rng:
 
+            if verbose:
+                tstart = time()
+                log.info("")
+                log.info(
+                    "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
+                )
+
+            # reset the gradients and loss
             cumulative_loss = 0
-
             self.opt.zero_grad()
+            self.wf.zero_grad()
 
             # loop over the batches
             for ibatch, data in enumerate(self.dataloader):
@@ -369,7 +305,8 @@ class Solver(SolverBase):
                 if (n > 0) and (n % self.chkpt_every == 0):
                     self.save_checkpoint(n, cumulative_loss)
 
-            self.print_observable(cumulative_loss, verbose=False)
+            if verbose:
+                self.print_observable(cumulative_loss, verbose=False)
 
             # resample the data
             self.dataloader.dataset = self.resample(n, self.dataloader.dataset)
@@ -378,7 +315,8 @@ class Solver(SolverBase):
             if self.scheduler is not None:
                 self.scheduler.step()
 
-            log.info("  epoch done in %1.2f sec." % (time() - tstart))
+            if verbose:
+                log.info("  epoch done in %1.2f sec." % (time() - tstart))
 
         return cumulative_loss
 
@@ -406,6 +344,11 @@ class Solver(SolverBase):
 
     def evaluate_grad_manual(self, lpos):
         """Evaluate the gradient using low variance expression
+        WARNING : This method is not valid to compute forces
+        as it does not include derivative of the hamiltonian 
+        wrt atomic positions 
+ 
+        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
 
         Args:
             lpos ([type]): [description]
@@ -437,12 +380,59 @@ class Solver(SolverBase):
             # evaluate the prefactor of the grads
             weight = eloc.clone()
             weight -= torch.mean(eloc)
-            weight /= psi
+            weight /= psi.clone()
             weight *= 2.0
             weight *= norm
 
             # compute the gradients
             psi.backward(weight)
+
+            return torch.mean(eloc), eloc
+
+        else:
+            raise ValueError("Manual gradient only for energy minimization")
+        
+    def evaluate_grad_manual_2(self, lpos):
+        """Evaluate the gradient using low variance expression
+        WARNING : This method is not valid to compute forces
+        as it does not include derivative of the hamiltonian 
+        wrt atomic positions
+
+        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
+
+        Args:
+            lpos ([type]): [description]
+
+        Args:
+            lpos (torch.tensor): sampling points
+
+        Returns:
+            tuple: loss values and local energies
+        """
+
+        # determine if we need the grad of eloc
+        no_grad_eloc = True
+        if self.wf.kinetic_method == "auto":
+            no_grad_eloc = False
+
+        if self.wf.jastrow.requires_autograd:
+            no_grad_eloc = False
+
+        if self.loss.method in ["energy", "weighted-energy"]:
+            # Get the gradient of the total energy
+            # dE/dk = 2 [ < (dpsi/dk) E_L/psi >  - < (dpsi/dk) / psi > <E_L > ]
+            # https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
+
+            # compute local energy and wf values
+            eloc_mean, eloc = self.loss(lpos, no_grad=no_grad_eloc)
+            psi = self.wf(lpos)
+            norm = 2.0 / len(psi)
+
+            weight1 = norm * eloc/psi.detach().clone()
+            weight2 = -norm * eloc_mean/psi.detach().clone()
+
+            psi.backward(weight1,retain_graph=True) 
+            psi.backward(weight2)
 
             return torch.mean(eloc), eloc
 

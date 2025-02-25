@@ -20,6 +20,7 @@ from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .pooling.slater_pooling import SlaterPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from ..utils import register_extra_attributes
+from ..utils.constants import BOHR2ANGS 
 
 
 class SlaterJastrow(WaveFunction):
@@ -630,7 +631,7 @@ class SlaterJastrow(WaveFunction):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
-    def geometry(self, pos):
+    def geometry(self, pos, convert_to_angs=False):
         """Returns the gemoetry of the system in xyz format
 
         Args:
@@ -640,10 +641,24 @@ class SlaterJastrow(WaveFunction):
             list: list where each element is one line of the xyz file
         """
         d = []
+        convert = 1
+        if convert_to_angs:
+            convert = BOHR2ANGS
         for iat in range(self.natom):
-            xyz = self.ao.atom_coords[iat, :].cpu().detach().numpy().tolist()
-            d.append(xyz)
+            xyz = self.ao.atom_coords[iat, :].cpu().detach().numpy() * convert
+            d.append(xyz.tolist())
         return d
+    
+    def forces(self):
+        """
+        Returns the gradient of the atomic coordinates with respect to the wave function.
+
+        Returns
+        -------
+        torch.Tensor
+            The gradient of the atomic coordinates as a PyTorch tensor.
+        """
+        return self.ao.atom_coords.grad
 
     def gto2sto(self, plot=False):
         """Fits the AO GTO to AO STO.

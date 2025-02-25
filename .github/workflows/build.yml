@@ -16,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        version: ['3.8']
+        version: ['3.9']
 
     steps:
     - name: Cancel Previous Runs
@@ -26,23 +26,10 @@ jobs:
       with:
           access_token: ${{ github.token }}
     - uses: actions/checkout@v4
-    - name: Setup conda
-      uses: s-weigand/setup-conda@v1
-      with:
-        update-conda: true
-        python-version: ${{ matrix.version }}
-        conda-channels: anaconda
     - name: Install essential
       run: |
         sudo apt update
         sudo apt install build-essential pandoc
-    - name: Install conda packages
-      run: |
-        conda install -c anaconda cmake
-        conda install rdkit mpi4py h5py pytorch==2.1.1 cpuonly -c pytorch -c conda-forge
-        conda install -c conda-forge libstdcxx-ng
-        conda install -c anaconda gxx_linux-64
-
     - name: Install the package
       run: python -m pip install .[test,doc]
       env:

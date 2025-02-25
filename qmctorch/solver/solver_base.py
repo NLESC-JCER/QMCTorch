@@ -56,7 +56,10 @@ class SolverBase:
             basename = os.path.basename(self.wf.mol.hdf5file).split(".")[0]
             self.hdf5file = basename + "_QMCTorch.hdf5"
 
+
         if rank == 0:
+            if os.path.isfile(self.hdf5file):
+                os.remove(self.hdf5file)
             dump_to_hdf5(self, self.hdf5file)
 
         self.log_data()
@@ -350,6 +353,7 @@ class SolverBase:
                 "  Energy   : %f +/- %f" % (e.detach().item(), err.detach().item())
             )
             log.options(style="percent").info("  Variance : %f" % s.detach().item())
+            log.options(style="percent").info("  Size     : %d" % len(eloc))
 
             # dump data to hdf5
             obs = SimpleNamespace(
