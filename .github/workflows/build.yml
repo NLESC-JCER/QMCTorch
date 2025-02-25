@@ -26,22 +26,22 @@ jobs:
       with:
           access_token: ${{ github.token }}
     - uses: actions/checkout@v4
-    - name: Setup conda
-      uses: conda-incubator/setup-miniconda@v3
-      with:
-        auto-update-conda: true
-        python-version: ${{ matrix.version }}
-        channels: anaconda
+    # - name: Setup conda
+    #   uses: conda-incubator/setup-miniconda@v3
+    #   with:
+    #     auto-update-conda: true
+    #     python-version: ${{ matrix.version }}
+    #     channels: anaconda
     - name: Install essential
       run: |
         sudo apt update
         sudo apt install build-essential pandoc
-    - name: Install conda packages
-      run: |
-        conda install -c anaconda cmake
-        conda install rdkit mpi4py h5py pytorch==2.1.1 cpuonly -c pytorch -c conda-forge
-        conda install -c conda-forge libstdcxx-ng
-        conda install -c anaconda gxx_linux-64
+    # - name: Install conda packages
+    #   run: |
+    #     conda install -c anaconda cmake
+    #     conda install rdkit mpi4py h5py pytorch==2.1.1 cpuonly -c pytorch -c conda-forge
+    #     conda install -c conda-forge libstdcxx-ng
+    #     conda install -c anaconda gxx_linux-64
 
     - name: Install the package
       run: python -m pip install .[test,doc]

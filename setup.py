@@ -41,10 +41,10 @@ setup(
     ],
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
-                      'scipy', 'tqdm', 'torch',
+                      'scipy', 'tqdm', 'torch', 'h5py',
                       'plams', 'pints', 'linetimer',
                       'pyscf', 'mendeleev', 'twiggy',
-                      'plams', 'mpi4py', 'ase'],
+                      'plams', 'ase'],
 
     extras_require={
         'hpc': ['horovod'],
