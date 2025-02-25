@@ -27,11 +27,11 @@ jobs:
           access_token: ${{ github.token }}
     - uses: actions/checkout@v4
     - name: Setup conda
-      uses: s-weigand/setup-conda@v1
+      uses: conda-incubator/setup-miniconda@v3
       with:
-        update-conda: true
+        auto-update-conda: true
         python-version: ${{ matrix.version }}
-        conda-channels: anaconda
+        channels: anaconda
     - name: Install essential
       run: |
         sudo apt update
