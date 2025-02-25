@@ -1,5 +1,0 @@
-[25.02|13:05:17] Running PLAMS located in /home/nico/anaconda3/envs/qmctorch/lib/python3.8/site-packages/scm/plams
-[25.02|13:05:17] Using Python 3.8.0 located in /home/nico/anaconda3/envs/qmctorch/bin/python
-[25.02|13:05:17] PLAMS defaults were loaded from /home/nico/anaconda3/envs/qmctorch/lib/python3.8/site-packages/scm/plams/plams_defaults
-[25.02|13:05:17] PLAMS environment initialized
-[25.02|13:05:17] PLAMS working folder: /home/nico/QMCTorch/docs/example/ase/plams_workdir

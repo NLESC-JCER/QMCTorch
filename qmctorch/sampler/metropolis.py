@@ -166,7 +166,7 @@ class Metropolis(SamplerBase):
                     self.nstep / (time() - tstart),
                 )
                 log.info("   Total Time          : {:1.2f} sec.", (time() - tstart))
-                
+
         return torch.cat(pos).requires_grad_()
 
     def configure_move(self, move: Dict):
