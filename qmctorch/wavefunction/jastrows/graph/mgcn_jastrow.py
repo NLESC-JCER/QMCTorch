@@ -78,6 +78,10 @@ class MGCNJastrowFactor(nn.Module):
             self.natoms, self.atom_types, self.atomic_features, self.nelec, self.nup
         )
 
+    def __repr__(self):
+        """representation of the jastrow factor"""
+        return "ee, en graph -> " + self.__class__.__name__
+
     def forward(self, pos, derivative=0, sum_grad=True):
         """Compute the Jastrow factors.
 

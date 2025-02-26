@@ -323,6 +323,9 @@ class SolverBase:
         if self.wf.kinetic == "auto":
             grad_mode = torch.enable_grad()
 
+        if self.wf.jastrow.requires_autograd:
+            grad_mode = torch.enable_grad()
+
         with grad_mode:
             #  get the position and put to gpu if necessary
             pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
