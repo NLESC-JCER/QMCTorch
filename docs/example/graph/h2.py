@@ -14,10 +14,14 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                calculator='pyscf', basis='dzp', unit='bohr')
 
 # jastrow
-jastrow = MGCNJastrowFactor(
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
+
+# jastrow
+_jastrow = MGCNJastrowFactor(
             mol,
-            ee_model_kwargs={"n_layers": 2, "feats": 8, "classifier_hidden_feats": 4, "cutoff": 15.0, "gap": 1.0},
-            en_model_kwargs={"n_layers": 2, "feats": 8, "classifier_hidden_feats": 4, "cutoff": 15.0, "gap": 1.0},
+            ee_model_kwargs={"n_layers": 2, "feats": 4, "predictor_hidden_feats": 2, "cutoff": 5.0, "gap": 1.0},
+            en_model_kwargs={"n_layers": 2, "feats": 4, "predictor_hidden_feats": 2, "cutoff": 5.0, "gap": 1.0},
         )
 
 
@@ -31,7 +35,7 @@ sampler = Metropolis(nwalkers=100, nstep=10, step_size=0.25,
                      nelec=wf.nelec, ndim=wf.ndim, init=mol.domain('atomic'))
 
 # optimizer
-lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
+lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-3},
            {'params': wf.ao.parameters(), 'lr': 1E-6},
            {'params': wf.mo.parameters(), 'lr': 2E-3},
            {'params': wf.fc.parameters(), 'lr': 2E-3}]

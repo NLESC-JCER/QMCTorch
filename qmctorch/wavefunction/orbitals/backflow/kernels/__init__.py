@@ -5,6 +5,7 @@ from .backflow_kernel_inverse import BackFlowKernelInverse
 from .backflow_kernel_power_sum import BackFlowKernelPowerSum
 from .backflow_kernel_square import BackFlowKernelSquare
 from .backflow_kernel_rbf import BackFlowKernelRBF
+from .backflow_kernel_exp import BackFlowKernelExp
 
 __all__ = [
     "BackFlowKernelBase",
@@ -14,4 +15,5 @@ __all__ = [
     "BackFlowKernelPowerSum",
     "BackFlowKernelSquare",
     "BackFlowKernelRBF",
+    "BackFlowKernelExp"
 ]
