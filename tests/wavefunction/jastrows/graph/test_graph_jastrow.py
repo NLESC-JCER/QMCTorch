@@ -3,8 +3,7 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad
 from types import SimpleNamespace
-from qmctorch.wavefunction.jastrows.graph.jastrow_graph import JastrowFactorGraph
-from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
+from qmctorch.wavefunction.jastrows.graph.mgcn_jastrow import MGCNJastrowFactor
 
 torch.set_default_tensor_type(torch.DoubleTensor)
 
@@ -45,11 +44,9 @@ class TestGraphJastrow(unittest.TestCase):
             atoms=self.atom_types,
         )
 
-        self.jastrow = JastrowFactorGraph(
+        self.jastrow = MGCNJastrowFactor(
             self.mol,
-            ee_model=MGCNPredictor,
             ee_model_kwargs={"n_layers": 3, "feats": 32, "cutoff": 5.0, "gap": 1.0},
-            en_model=MGCNPredictor,
             en_model_kwargs={"n_layers": 3, "feats": 32, "cutoff": 5.0, "gap": 1.0},
         )
 

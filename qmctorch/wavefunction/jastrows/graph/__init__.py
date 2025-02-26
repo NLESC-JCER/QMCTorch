@@ -1,4 +1,3 @@
-from .jastrow_graph import JastrowFactorGraph as JastrowFactor
-from .mgcn.mgcn_predictor import MGCNPredictor
+from .mgcn_jastrow import MGCNJastrowFactor
 
-__all__ = ["JastrowFactor", "MGCNPredictor"]
+__all__ = ["MGCNJastrowFactor"]

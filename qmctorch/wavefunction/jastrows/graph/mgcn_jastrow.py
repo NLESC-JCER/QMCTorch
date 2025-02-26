@@ -3,20 +3,18 @@ from torch import nn
 from torch.autograd import grad
 import dgl
 
-from .mgcn.mgcn_predictor import MGCNPredictor
+from dgllife.model.model_zoo.mgcn_predictor import MGCNPredictor
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from .elec_elec_graph import ElecElecGraph
 from .elec_nuc_graph import ElecNucGraph
 
 
-class JastrowFactorGraph(nn.Module):
+class MGCNJastrowFactor(nn.Module):
     def __init__(
         self,
         mol,
-        ee_model=MGCNPredictor,
         ee_model_kwargs={},
-        en_model=MGCNPredictor,
         en_model_kwargs={},
         atomic_features=["atomic_number"],
         cuda=False,
@@ -65,12 +63,12 @@ class JastrowFactorGraph(nn.Module):
         # instantiate the ee mode; to use
         ee_model_kwargs["num_node_types"] = 2
         ee_model_kwargs["num_edge_types"] = 3
-        self.ee_model = ee_model(**ee_model_kwargs)
+        self.ee_model = MGCNPredictor(**ee_model_kwargs)
 
         # instantiate the en model
         en_model_kwargs["num_node_types"] = 2 + self.natoms
         en_model_kwargs["num_edge_types"] = 2 * self.natoms
-        self.en_model = en_model(**en_model_kwargs)
+        self.en_model = MGCNPredictor(**en_model_kwargs)
 
         # compute the elec-elec graph
         self.ee_graph = ElecElecGraph(self.nelec, self.nup)
