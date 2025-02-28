@@ -2,7 +2,7 @@ from copy import deepcopy
 from time import time
 from tqdm import tqdm
 from types import SimpleNamespace
-from typing import Optional, Dict, Union, List, bool, Tuple, Any
+from typing import Optional, Dict, Union, List, Tuple, Any
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
 import torch
@@ -340,7 +340,7 @@ class Solver(SolverBase):
 
         return cumulative_loss
 
-    def evaluate_grad_auto(self, lpos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
+    def evaluate_grad_auto(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using automatic differentiation
 
         Args:
@@ -362,7 +362,7 @@ class Solver(SolverBase):
 
         return loss, eloc
 
-    def evaluate_grad_manual(self, lpos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
+    def evaluate_grad_manual(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian 
@@ -412,7 +412,7 @@ class Solver(SolverBase):
         else:
             raise ValueError("Manual gradient only for energy minimization")
         
-    def evaluate_grad_manual_2(self, lpos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
+    def evaluate_grad_manual_2(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian 

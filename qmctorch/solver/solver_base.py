@@ -1,5 +1,5 @@
 from types import SimpleNamespace
-from typing import Optional, Dict, Union, List, bool, Tuple, Any
+from typing import Optional, Dict, Union, List, Tuple, Any
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
 import os
@@ -398,7 +398,7 @@ class SolverBase:
             filename,
         )
 
-    def load_checkpoint(self, filename: str) -> Tuple(int, float):
+    def load_checkpoint(self, filename: str) -> Tuple[int, float]:
         """load a model/optmizer
 
         Args:

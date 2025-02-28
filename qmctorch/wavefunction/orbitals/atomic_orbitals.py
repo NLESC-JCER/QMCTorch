@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from typing import Optional, List
+from typing import Optional, List, Tuple
 from .norm_orbital import atomic_orbital_norm
 from .radial_functions import (
     radial_gaussian,
@@ -627,7 +627,7 @@ class AtomicOrbitals(nn.Module):
             r.repeat_interleave(self.nshells, dim=2),
         )
 
-    def _elec_atom_dist(self, pos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
+    def _elec_atom_dist(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/atoms
 
         Args:

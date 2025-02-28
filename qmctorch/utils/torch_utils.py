@@ -5,8 +5,6 @@ from torch.autograd import grad, Variable
 from torch.utils.data import Dataset
 from math import ceil
 
-from ..wavefunction import Wavefunction
-
 
 def set_torch_double_precision() -> None:
     """Set the default precision to double for all torch tensors."""
@@ -204,7 +202,7 @@ class DataLoader:
 
 class Loss(nn.Module):
     def __init__(self, 
-                 wf: Wavefunction, 
+                 wf, 
                  method: str = "energy", 
                  clip: bool = False):
         """Defines the loss to use during the optimization

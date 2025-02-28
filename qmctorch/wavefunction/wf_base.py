@@ -1,6 +1,6 @@
 import h5py
 import torch
-from typing import Optional, bool
+from typing import Optional
 from torch.autograd import Variable, grad
 
 
