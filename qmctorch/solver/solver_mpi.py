@@ -5,8 +5,8 @@ from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
 
 import torch
-from qmctorch.utils import DataLoader, Loss, OrthoReg, add_group_attr, dump_to_hdf5
-
+from ..utils import DataLoader, OrthoReg, add_group_attr, dump_to_hdf5
+from .loss import Loss
 from .. import log
 from .solver import Solver
 

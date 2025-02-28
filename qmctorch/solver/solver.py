@@ -3,14 +3,13 @@ from time import time
 from tqdm import tqdm
 from types import SimpleNamespace
 from typing import Optional, Dict, Union, List, Tuple, Any
+import torch
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
-import torch
-from qmctorch.utils import Loss, OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
-
+from ..utils import  OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
 from .. import log
 from .solver_base import SolverBase
-
+from .loss import Loss
 
 class Solver(SolverBase):
     def __init__(  # pylint: disable=too-many-arguments
