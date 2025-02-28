@@ -2,7 +2,7 @@ import unittest
 
 import torch
 from torch import nn
-from torch.autograd import Variable, grad
+from torch.autograd import Variable
 import numpy as np
 
 from qmctorch.scf import Molecule

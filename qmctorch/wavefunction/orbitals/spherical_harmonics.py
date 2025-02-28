@@ -519,7 +519,11 @@ def _spherical_harmonics_l2(xyz: torch.Tensor, m: int) -> torch.Tensor:
         c0 = 0.31539156525252005
         return (
             c0
-            * (-xyz[:, :, :, 0] ** 2 - xyz[:, :, :, 1] ** 2 + 2 * xyz[:, :, :, 2] ** 2)
+            * (
+                -(xyz[:, :, :, 0] ** 2)
+                - xyz[:, :, :, 1] ** 2
+                + 2 * xyz[:, :, :, 2] ** 2
+            )
             / r2
         )
     if m == 2:
@@ -554,7 +558,11 @@ def _nabla_spherical_harmonics_l2(xyz: torch.Tensor, m: int) -> torch.Tensor:
         return c0 * (
             (-2 * xyz[:, :, :, 0] - 2 * xyz[:, :, :, 1] + 4 * xyz[:, :, :, 2]) / r2
             - 2
-            * (-xyz[:, :, :, 0] ** 2 - xyz[:, :, :, 1] ** 2 + 2 * xyz[:, :, :, 2] ** 2)
+            * (
+                -(xyz[:, :, :, 0] ** 2)
+                - xyz[:, :, :, 1] ** 2
+                + 2 * xyz[:, :, :, 2] ** 2
+            )
             * xyz.sum(3)
             / r3
         )

@@ -19,7 +19,6 @@
 #
 import os
 import sys
-from unittest.mock import MagicMock
 
 
 # MOCK_CLASSES = ['torch.nn.Module']

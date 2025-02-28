@@ -1,4 +1,3 @@
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import FullyConnectedJastrowKernel
 import torch
 from torch import nn
 

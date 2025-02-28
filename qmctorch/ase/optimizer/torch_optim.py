@@ -1,4 +1,4 @@
-from typing import IO, Any, Callable, Dict, List, Optional, Union
+from typing import IO, Optional, Union
 from types import SimpleNamespace
 from torch.optim import SGD
 from torch.optim import Optimizer as torch_optimizer
@@ -8,8 +8,6 @@ from math import sqrt
 from copy import deepcopy
 from ase import Atoms
 from ase.optimize.optimize import Optimizer
-from ase.utils import deprecated
-from ...utils.constants import BOHR2ANGS
 
 
 class TorchOptimizer(Optimizer):

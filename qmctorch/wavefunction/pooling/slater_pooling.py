@@ -1,7 +1,6 @@
 import torch
 from torch import nn
 import operator as op
-from time import time
 from typing import Tuple, Callable, Optional, List, Union
 from ...scf import Molecule
 from ...utils import bdet2, btrace
@@ -10,7 +9,6 @@ from .orbital_projector import ExcitationMask, OrbitalProjector
 
 
 class SlaterPooling(nn.Module):
-
     """Applies a slater determinant pooling in the active space."""
 
     def __init__(

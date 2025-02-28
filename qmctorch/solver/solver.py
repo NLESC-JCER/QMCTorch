@@ -1,8 +1,7 @@
-from copy import deepcopy
 from time import time
 from tqdm import tqdm
 from types import SimpleNamespace
-from typing import Optional, Dict, Union, List, Tuple, Any
+from typing import Optional, Dict, List, Tuple, Any
 import torch
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase

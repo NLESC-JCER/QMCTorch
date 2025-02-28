@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import grad
-from typing import Tuple, List, Union
+from typing import Tuple, Union
 from .....scf import Molecule
 
 

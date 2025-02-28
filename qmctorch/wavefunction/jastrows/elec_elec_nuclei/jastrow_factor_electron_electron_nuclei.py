@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import Variable, grad
-from typing import Dict, Tuple, Optional, List, Union
+from typing import Dict, Tuple, Union
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from ....scf import Molecule

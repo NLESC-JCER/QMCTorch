@@ -177,7 +177,7 @@ class SolverBase:
         pos: torch.tensor,
         local_energy: Optional[torch.tensor] = None,
         ibatch: Optional[int] = None,
-        **kwargs
+        **kwargs,
     ):
         """store observale in the dictionary
 
