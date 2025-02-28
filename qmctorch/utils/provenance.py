@@ -3,7 +3,7 @@ import os
 from ..__version__ import __version__
 
 
-def get_git_tag():
+def get_git_tag() -> str:
     """
     Retrieves the current Git tag for the repository.
 
