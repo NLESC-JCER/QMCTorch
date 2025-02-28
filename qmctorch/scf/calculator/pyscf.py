@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import List
 import itertools
 import numpy as np
 from pyscf import gto, scf, dft
@@ -9,8 +10,34 @@ from ... import log
 
 class CalculatorPySCF(CalculatorBase):
     def __init__(
-        self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
-    ):
+        self,
+        atoms: List[str],
+        atom_coords: List[np.ndarray],
+        basis: str,
+        charge: int,
+        spin: int,
+        scf: str,
+        units: str,
+        molname: str,
+        savefile: str,
+    ) -> None:
+        """
+        Initialize the PySCF calculator.
+
+        Args:
+            atoms (list): List of atom symbols.
+            atom_coords (list): List of atomic coordinates.
+            basis (str): Basis set name.
+            charge (int): Molecular charge.
+            spin (int): Spin multiplicity.
+            scf (str): Self-consistent field method.
+            units (str): Units of the coordinates; 'bohr' or 'angs'.
+            molname (str): Molecule name.
+            savefile (str): File name to save results.
+
+        Returns:
+            None
+        """
         CalculatorBase.__init__(
             self,
             atoms,
@@ -25,8 +52,13 @@ class CalculatorPySCF(CalculatorBase):
             savefile,
         )
 
-    def run(self):
-        """Run the scf calculation using PySCF."""
+    def run(self) -> SimpleNamespace:
+        """
+        Run the scf calculation using PySCF.
+
+        Returns:
+            SimpleNamespace: Contains the basis set data.
+        """
 
         # refresh the atom positions if necessary
         atom_str = self.get_atoms_str()
@@ -58,12 +90,15 @@ class CalculatorPySCF(CalculatorBase):
         basis = self.get_basis_data(mol, pyscf_data)
         return basis
 
-    def get_basis_data(self, mol, rhf):
-        """Save the data to HDF5
+    def get_basis_data(self, mol: gto.M, rhf: scf.RHF) -> SimpleNamespace:
+        """Get the information about the basis
 
         Arguments:
             mol {pyscf.gto.M} -- psycf Molecule
             rhf {pyscf.scf} -- scf object
+
+        Returns:
+            SimpleNamespace -- basis data
         """
 
         # sphereical quantum nummbers
@@ -205,7 +240,7 @@ class CalculatorPySCF(CalculatorBase):
 
         return basis
 
-    def get_atoms_str(self):
+    def get_atoms_str(self) -> str:
         """Refresh the atom string (use after atom move)."""
         atoms_str = ""
         natom = len(self.atoms)
@@ -217,7 +252,7 @@ class CalculatorPySCF(CalculatorBase):
         return atoms_str
 
     @staticmethod
-    def get_bas_n(mol):
+    def get_bas_n(mol: gto.M) -> List[str]:
         recognized_labels = ["s", "p", "d"]
 
         label2int = {"s": 1, "p": 2, "d": 3}

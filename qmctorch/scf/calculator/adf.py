@@ -2,7 +2,7 @@ import os
 import shutil
 import warnings
 from types import SimpleNamespace
-
+from typing import BinaryIO, List
 import numpy as np
 
 from ... import log
@@ -17,8 +17,37 @@ except ModuleNotFoundError:
 
 class CalculatorADF(CalculatorBase):
     def __init__(  # pylint: disable=too-many-arguments
-        self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
-    ):
+        self,
+        atoms: list,
+        atom_coords: list,
+        basis: str,
+        charge: int,
+        spin: int,
+        scf: str,
+        units: str,
+        molname: str,
+        savefile: str,
+    ) -> None:
+        """
+        Initialize the ADF calculator.
+
+        Args:
+            atoms (list): List of atom symbols.
+            atom_coords (list): List of atomic coordinates.
+            basis (str): Basis set name.
+            charge (int): Molecular charge.
+            spin (int): Spin multiplicity.
+            scf (str): Self-consistent field method.
+            units (str): Units for atomic coordinates.
+            molname (str): Molecule name.
+            savefile (str): File name to save results.
+
+        Raises:
+            ValueError: If charge or spin is not supported.
+
+        Returns:
+            None
+        """
         CalculatorBase.__init__(
             self,
             atoms,
@@ -50,7 +79,7 @@ class CalculatorADF(CalculatorBase):
         self.job_name = "".join(self.atoms) + "_" + self.basis_name
         self.output_file = "adf.rkf"
 
-    def run(self):
+    def run(self) -> SimpleNamespace:
         """Run the calculation using ADF."""
 
         # path needed for the calculation
@@ -85,18 +114,18 @@ class CalculatorADF(CalculatorBase):
 
         return basis
 
-    def init_plams(self):
+    def init_plams(self) -> None:
         """Init PLAMS."""
         plams.init()
         plams.config.log.stdout = -1
         plams.config.log.file = -1
         plams.config.erase_workdir = True
 
-    def finish_plams(self):
+    def finish_plams(self) -> None:
         """Finish PLAMS."""
         plams.finish()
 
-    def get_plams_molecule(self):
+    def get_plams_molecule(self) -> plams.Molecule:
         """Returns a plams molecule object."""
         mol = plams.Molecule()
         bohr2angs = BOHR2ANGS # the coordinate are always in bohr
@@ -105,8 +134,13 @@ class CalculatorADF(CalculatorBase):
             mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
         return mol
 
-    def get_plams_settings(self):
-        """Returns a plams setting object."""
+    def get_plams_settings(self) -> plams.Settings:
+        """
+        Returns a plams setting object.
+
+        Returns:
+            plams.Settings: A plams setting object.
+        """
 
         sett = plams.Settings()
         sett.input.ams.Task = "SinglePoint"
@@ -148,9 +182,16 @@ class CalculatorADF(CalculatorBase):
 
         return sett
 
-    def get_basis_data(self, kffile):
-        """Save the basis information needed to compute the AO values."""
+    def get_basis_data(self, kffile: str) -> SimpleNamespace:
+        """
+        Save the basis information needed to compute the AO values.
 
+        Args:
+            kffile (str): Path to the KF file.
+
+        Returns:
+            SimpleNamespace: A namespace containing the basis information.
+        """
         if not os.path.isfile(kffile):
             raise FileNotFoundError(
                 "File %s not found, ADF may have crashed, look into the plams_workdir directory"
@@ -250,16 +291,16 @@ class CalculatorADF(CalculatorBase):
         return basis
 
     @staticmethod
-    def read_array(kf, section, name):
+    def read_array(kf: BinaryIO , section: str, name: str) -> np.ndarray:
         """read a data from the kf file
 
         Args:
-            kf (file handle): kf file
+            kf (BinaryIO): kf file
             section (str): name of the section
             name (str): name of the property
 
         Returns:
-            np.data: data
+            np.ndarray: data
         """
         data = np.array(kf.read(section, name))
         if data.shape == ():
@@ -269,8 +310,34 @@ class CalculatorADF(CalculatorBase):
 
 class CalculatorADF2019(CalculatorADF):
     def __init__(
-        self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
+        self,
+        atoms: List[str],
+        atom_coords: List[np.ndarray],
+        basis: str,
+        charge: int,
+        spin: int,
+        scf: str,
+        units: str,
+        molname: str,
+        savefile: str,
     ):
+        """
+        Initialize the ADF2019 calculator.
+
+        Args:
+            atoms (list): List of atom symbols.
+            atom_coords (list): List of atomic coordinates.
+            basis (str): Basis set name.
+            charge (int): Molecular charge.
+            spin (int): Spin multiplicity.
+            scf (str): Self-consistent field method.
+            units (str): Units of the coordinates; 'bohr' or 'angs'.
+            molname (str): Molecule name.
+            savefile (str): File name to save results.
+
+        Returns:
+            None
+        """
         CalculatorADF.__init__(
             self, atoms, atom_coords, basis, charge, spin, scf, units, molname, savefile
         )
@@ -279,15 +346,23 @@ class CalculatorADF2019(CalculatorADF):
         self.job_name = "".join(self.atoms) + "_" + self.basis_name
         self.output_file = self.job_name + ".t21"
 
-    def get_plams_molecule(self):
-        """Returns a plams molecule object."""
+    def get_plams_molecule(self) -> plams.Molecule:
+        """Returns a plams molecule object.
+
+        Returns:
+            plams.Molecule: A plams molecule object.
+        """
         mol = plams.Molecule()
         for at, xyz in zip(self.atoms, self.atom_coords):
             mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
         return mol
 
-    def get_plams_settings(self):
-        """Returns a plams setting object."""
+    def get_plams_settings(self) -> plams.Settings:
+        """Returns a plams setting object.
+
+        Returns:
+            plams.Settings: A plams setting object.
+        """
 
         sett = plams.Settings()
         sett.input.basis.type = self.basis_name.upper()
