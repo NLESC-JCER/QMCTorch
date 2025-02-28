@@ -1,24 +1,24 @@
 import torch
-
+from typing import Tuple, List
+from ...scf import Molecule
 
 class OrbitalConfigurations:
-    def __init__(self, mol):
+    def __init__(self, mol: Molecule) -> None:
         self.nup = mol.nup
         self.ndown = mol.ndown
         self.nelec = self.nup + self.ndown
         self.spin = mol.spin
         self.norb = mol.basis.nmo
 
-    def get_configs(self, configs):
-        """Get the configurations in the CI expansion
+    def get_configs(self, configs: str) -> Tuple[torch.LongTensor, torch.LongTensor]:
+        """Get the configurations in the CI expansion.
 
         Args:
-            configs (str): name of the configs we want
-            mol (mol object): molecule object
+            configs (str): Name of the configs we want.
 
         Returns:
-            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
-            electronic confs
+            Tuple[torch.LongTensor, torch.LongTensor]: The spin up/spin down
+            electronic configurations.
         """
 
         if isinstance(configs, str):
@@ -56,14 +56,13 @@ class OrbitalConfigurations:
             print("              cas(nelec,norb)")
             raise ValueError("Config error")
 
-    def sanity_check(self, nelec, norb):
+    def sanity_check(self, nelec: int, norb: int) -> None:
         """Check if the number of elec/orb is consistent with the
            properties of the molecule
 
         Args:
             nelec (int): required number of electrons in config
             norb (int): required number of orb in config
-
         """
         if nelec > self.nelec:
             raise ValueError("required number of electron in config too large")
@@ -71,28 +70,31 @@ class OrbitalConfigurations:
         if norb > self.norb:
             raise ValueError("required number of orbitals in config too large")
 
-    def _get_ground_state_config(self):
-        """Return only the ground state configuration
-
-        Args:
-            mol (mol): mol object
+    def _get_ground_state_config(self) -> Tuple[torch.LongTensor, torch.LongTensor]:
+        """Return only the ground state configuration.
 
         Returns:
-            tuple(torch.LongTensor,torch.LongTensor): the spin up/spin down
-            electronic confs
+            Tuple[torch.LongTensor, torch.LongTensor]: The spin up/spin down
+            electronic configurations.
         """
         _gs_up = list(range(self.nup))
         _gs_down = list(range(self.ndown))
         cup, cdown = [_gs_up], [_gs_down]
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_single_config(self, nocc, nvirt):
+    def _get_single_config(self, 
+                           nocc: Tuple[int, int], 
+                           nvirt: Tuple[int, int]
+                           ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """Get the confs of the singlet conformations
 
         Args:
-            mol (mol): mol object
-            nocc (int): number of occupied orbitals in the active space
-            nvirt (int): number of virtual orbitals in the active space
+            nocc (Tuple[int,int]): number of occupied orbitals in the active space
+            nvirt (Tuple[int,int]): number of virtual orbitals in the active space
+
+        Returns:
+            Tuple[torch.LongTensor, torch.LongTensor]: The spin up/spin down
+            electronic configurations.
         """
 
         _gs_up = list(range(self.nup))
@@ -117,7 +119,10 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_single_double_config(self, nocc, nvirt):
+    def _get_single_double_config(self, 
+                           nocc: Tuple[int, int], 
+                           nvirt: Tuple[int, int]
+                           ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """Get the confs of the single + double
 
         Args:
@@ -168,7 +173,11 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_cas_config(self, nocc, nvirt, nelec):
+    def _get_cas_config(self, 
+                        nocc: Tuple[int, int], 
+                        nvirt: Tuple[int, int], 
+                        nelec: int
+                        ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """get confs of the CAS
 
         Args:
@@ -202,7 +211,7 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_orb_number(self, nelec, norb):
+    def _get_orb_number(self, nelec: int, norb: int) -> Tuple[Tuple[int, int], Tuple[int,int]]:
         """compute the number of occupied and virtual orbital
         __ PER SPIN __
         __ ONLY VALID For spin up/down ___
@@ -224,11 +233,7 @@ class OrbitalConfigurations:
         nvirt = (norb - nocc[0], norb - nocc[1])
         return nocc, nvirt
 
-    def _create_excitation(self, conf, iocc, ivirt):
-        return self._create_excitation_replace(conf, iocc, ivirt)
-
-    @staticmethod
-    def _create_excitation_ordered(conf, iocc, ivirt):
+    def _create_excitation(self, conf: List[int], iocc: int, ivirt: int) -> List[int]:
         """promote an electron from iocc to ivirt
 
         Args:
@@ -237,8 +242,23 @@ class OrbitalConfigurations:
             ivirt (int): index of the virtual orbital
 
         Returns:
-            list: new configuration by increasing order
-                  e.g: 4->6 leads to : [0,1,2,3,5,6]
+            list: new configuration by replacing the iocc index with ivirt
+        """
+        return self._create_excitation_replace(conf, iocc, ivirt)
+
+    @staticmethod
+    def _create_excitation_ordered(conf: List[int], iocc: int, ivirt: int) -> List[int]:
+        """promote an electron from iocc to ivirt
+
+        Args:
+            conf (List[int]): index of the occupied orbitals
+            iocc (int): index of the occupied orbital
+            ivirt (int): index of the virtual orbital
+
+        Returns:
+            List[int]: new configuration by increasing order
+                       e.g: 4->6 leads to : [0,1,2,3,5,6]
+
         Note:
             if that method is used to define the exciation index
             permutation must be accounted for when  computing
@@ -247,51 +267,58 @@ class OrbitalConfigurations:
             see : ExcitationMask.get_index_unique_single()
                   in oribtal_projector.py
         """
-        conf.pop(iocc)
-        conf += [ivirt]
-        return conf
 
     @staticmethod
-    def _create_excitation_replace(conf, iocc, ivirt):
+    def _create_excitation_replace(conf: List[int], iocc: int, ivirt: int) -> List[int]:
         """promote an electron from iocc to ivirt
 
         Args:
-            conf (list): index of the occupied orbitals
+            conf (List[int]): index of the occupied orbitals
             iocc (int): index of the occupied orbital
             ivirt (int): index of the virtual orbital
 
         Returns:
-            list: new configuration not ordered
+            List[int]: new configuration not ordered
                 e.g.: 4->6 leads tpo : [0,1,2,3,6,5]
         """
         conf[iocc] = ivirt
         return conf
 
     @staticmethod
-    def _append_excitations(cup, cdown, new_cup, new_cdown):
+    def _append_excitations(
+        cup: List[List[int]], cdown: List[List[int]], new_cup: List[int], new_cdown: List[int]
+    ) -> Tuple[List[List[int]], List[List[int]]]:
         """Append new excitations
 
         Args:
-            cup (list): configurations of spin up
-            cdown (list): configurations of spin down
-            new_cup (list): new spin up confs
-            new_cdown (list): new spin down confs
-        """
+            cup: configurations of spin up
+            cdown: configurations of spin down
+            new_cup: new spin up confs
+            new_cdown: new spin down confs
 
+        Returns:
+            cup: updated list of spin up confs
+            cdown: updated list of spin down confs
+        """
         cup.append(new_cup)
         cdown.append(new_cdown)
         return cup, cdown
 
 
-def get_excitation(configs):
-    """get the excitation data
+def get_excitation(
+    configs: Tuple[torch.LongTensor, torch.LongTensor]
+) -> Tuple[List[List[List[int]]], List[List[List[int]]]]:
+    """Get the excitation data
 
     Args:
-        configs (tuple): configuratin of the electrons
+        configs: tuple of two tensors of shape (nconfig, norb)
+            configuratin of the electrons
 
     Returns:
-        exc_up, exc_down : index of the obitals in the excitaitons
-                            [i,j],[l,m] : excitation i -> l, j -> l
+        exc_up, exc_down : two lists of lists of lists of integers
+            excitation i -> l, j -> l
+            exc_up[i][0] : occupied orbital, exc_up[i][1] : virtual orbital
+            exc_down[i][0] : occupied orbital, exc_down[i][1] : virtual orbital
     """
     exc_up, exc_down = [], []
     for ic, (cup, cdown) in enumerate(zip(configs[0], configs[1])):
@@ -320,21 +347,21 @@ def get_excitation(configs):
     return (exc_up, exc_down)
 
 
-def get_unique_excitation(configs):
+def get_unique_excitation(
+    configs: Tuple[torch.LongTensor, torch.LongTensor]
+) -> Tuple[Tuple[List[List[int]], List[List[int]]], Tuple[List[int], List[int]]]:
     """get the unique excitation data
 
     Args:
         configs (tuple): configuratin of the electrons
 
     Returns:
-        exc_up, exc_down : index of the obitals in the excitaitons
-                            [i,j],[l,m] : excitation i -> l, j -> l
-        index_up, index_down : index map for the unique exc
-                                [0,0,...], [0,1,...] means that
-                                1st : excitation is composed of unique_up[0]*unique_down[0]
-                                2nd : excitation is composed of unique_up[0]*unique_down[1]
-                                ....
-
+        uniq_exc (tuple): unique excitation data
+            uniq_exc[0] (list): unique excitation of spin up
+            uniq_exc[1] (list): unique excitation of spin down
+        index_uniq_exc (tuple): index map for the unique exc
+            index_uniq_exc[0] (list): index of the unique excitation of spin up
+            index_uniq_exc[1] (list): index of the unique excitation of spin down
     """
     uniq_exc_up, uniq_exc_down = [], []
     index_uniq_exc_up, index_uniq_exc_down = [], []
@@ -365,4 +392,4 @@ def get_unique_excitation(configs):
         index_uniq_exc_up.append(uniq_exc_up.index(exc_up))
         index_uniq_exc_down.append(uniq_exc_down.index(exc_down))
 
-    return (uniq_exc_up, uniq_exc_down), (index_uniq_exc_up, index_uniq_exc_down)
+    return ((uniq_exc_up, uniq_exc_down), (index_uniq_exc_up, index_uniq_exc_down))
