@@ -1,7 +1,7 @@
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy.signal import fftconvolve
-
+from typing import Tuple
 
 def blocking(
     x: np.ndarray,

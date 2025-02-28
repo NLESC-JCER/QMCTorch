@@ -3,14 +3,14 @@ from typing import Union, Tuple, List, Callable
 import numpy as np
 import torch
 from scipy.interpolate import LinearNDInterpolator, RegularGridInterpolator
-from ..wavefunction import WaveFunction
+
 #################################################################################
 # TO DO : Remove this features as they are never used anywhere
 #################################################################################
 
 
 class InterpolateMolecularOrbitals:
-    def __init__(self, wf: WaveFunction):
+    def __init__(self, wf):
         """Interpolation of the AO using a log grid centered on each atom."""
         self.wf = wf
 
@@ -126,7 +126,7 @@ class InterpolateMolecularOrbitals:
 
 
 class InterpolateAtomicOrbitals:
-    def __init__(self, wf: WaveFunction):
+    def __init__(self, wf):
         """Interpolation of the AO using a log grid centered on each atom."""
         self.wf = wf
 

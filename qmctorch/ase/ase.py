@@ -4,7 +4,6 @@ import numpy as np
 import torch
 from torch import optim
 from types import SimpleNamespace
-from typing import bool
 from ..utils import set_torch_double_precision
 from ..utils.constants import ANGS2BOHR
 from ..scf.molecule import Molecule as SCF

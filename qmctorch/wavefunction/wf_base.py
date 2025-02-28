@@ -1,10 +1,23 @@
 import h5py
 import torch
+from typing import Optional, bool
 from torch.autograd import Variable, grad
 
 
 class WaveFunction(torch.nn.Module):
-    def __init__(self, nelec, ndim, kinetic="auto", cuda=False):
+    def __init__(self, nelec: int, ndim: int, kinetic: str = "auto", cuda: bool = False):
+        """
+        Base class for wave functions.
+
+        Args:
+            nelec (int): number of electrons
+            ndim (int): number of dimensions
+            kinetic (str): kinetic energy type. Defaults to "auto".
+            cuda (bool): move the model to GPU. Defaults to False.
+
+        Returns:
+            None
+        """
         super(WaveFunction, self).__init__()
 
         self.ndim = ndim
@@ -18,7 +31,7 @@ class WaveFunction(torch.nn.Module):
         self.kinetic_energy = self.kinetic_energy_autograd
         self.gradients = self.gradients_autograd
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor):
         """Compute the value of the wave function.
         for a multiple conformation of the electrons
 
@@ -31,7 +44,7 @@ class WaveFunction(torch.nn.Module):
 
         raise NotImplementedError()
 
-    def electronic_potential(self, pos):
+    def electronic_potential(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the electron-electron term
 
         .. math:
@@ -54,7 +67,7 @@ class WaveFunction(torch.nn.Module):
                 pot += 1.0 / r
         return pot.view(-1, 1)
 
-    def nuclear_potential(self, pos):
+    def nuclear_potential(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the electron-nuclear term
 
         .. math:
@@ -79,7 +92,7 @@ class WaveFunction(torch.nn.Module):
                 p += -Z / r
         return p.view(-1, 1)
 
-    def nuclear_repulsion(self):
+    def nuclear_repulsion(self) -> torch.Tensor:
         r"""Computes the nuclear-nuclear repulsion term
 
         .. math:
@@ -100,7 +113,10 @@ class WaveFunction(torch.nn.Module):
                 vnn += Z0 * Z1 / rnn
         return vnn
 
-    def gradients_autograd(self, pos, pdf=False):
+    def gradients_autograd(self, 
+                           pos: torch.Tensor, 
+                           pdf: Optional[bool] = False
+                           ) -> torch.Tensor:
         """Computes the gradients of the wavefunction (or density)
         w.r.t the values of the pos.
 
@@ -122,7 +138,7 @@ class WaveFunction(torch.nn.Module):
 
         return grads
 
-    def kinetic_energy_autograd(self, pos):
+    def kinetic_energy_autograd(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the kinetic energy through the 2nd derivative
         w.r.t the value of the pos.
 
@@ -152,7 +168,7 @@ class WaveFunction(torch.nn.Module):
 
         return -0.5 * hess.view(-1, 1) / out
 
-    def local_energy(self, pos):
+    def local_energy(self, pos: torch.Tensor) -> torch.Tensor:
         """Computes the local energy
 
         .. math::
@@ -185,37 +201,37 @@ class WaveFunction(torch.nn.Module):
             + self.nuclear_repulsion()
         )
 
-    def energy(self, pos):
+    def energy(self, pos:torch.Tensor) -> torch.Tensor:
         """Total energy for the sampling points."""
         return torch.mean(self.local_energy(pos))
 
-    def variance(self, pos):
+    def variance(self, pos: torch.Tensor) -> torch.Tensor:
         """Variance of the energy at the sampling points."""
         return torch.var(self.local_energy(pos))
 
-    def sampling_error(self, eloc):
+    def sampling_error(self, eloc: torch.Tensor) -> torch.Tensor:
         """Compute the statistical uncertainty.
         Assuming the samples are uncorrelated."""
         Npts = eloc.shape[0]
         return torch.sqrt(eloc.var() / Npts)
 
-    def _energy_variance(self, pos):
+    def _energy_variance(self, pos: torch.Tensor) -> torch.Tensor:
         """Return energy and variance."""
         el = self.local_energy(pos)
         return torch.mean(el), torch.var(el)
 
-    def _energy_variance_error(self, pos):
+    def _energy_variance_error(self, pos: torch.Tensor) -> torch.Tensor:
         """Return energy variance and sampling error."""
         el = self.local_energy(pos)
         return torch.mean(el), torch.var(el), self.sampling_error(el)
 
-    def pdf(self, pos, return_grad=False):
+    def pdf(self, pos: torch.Tensor, return_grad: Optional[bool]=False) -> torch.Tensor:
         """density of the wave function."""
         if return_grad:
             return self.gradients(pos, pdf=True)
         return (self.forward(pos) ** 2).reshape(-1)
 
-    def get_number_parameters(self):
+    def get_number_parameters(self) -> int:
         """Computes the total number of parameters."""
         nparam = 0
         for _, param in self.named_parameters():
@@ -223,7 +239,10 @@ class WaveFunction(torch.nn.Module):
                 nparam += param.data.numel()
         return nparam
 
-    def load(self, filename, group="wf_opt", model="best"):
+    def load(self, 
+             filename: str, 
+             group: Optional[str] = "wf_opt", 
+             model: Optional[str] = "best"):
         """Load trained parameters
 
         Args:

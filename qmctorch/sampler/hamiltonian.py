@@ -140,7 +140,7 @@ class Hamiltonian(SamplerBase):
               get_grad: Callable[[Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor], 
               epsilon: float, 
               L: int, 
-              q_init: torch.Tensor) -> Tuple(torch.Tensor, float):
+              q_init: torch.Tensor) -> Tuple[torch.Tensor, float]:
         """Take one step of the sampler
 
         Args:
