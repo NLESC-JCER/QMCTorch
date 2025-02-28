@@ -138,7 +138,7 @@ class SlaterPooling(nn.Module):
             torch.det(input[:, self.nup :, : self.ndown]),
         )
 
-    def det_unique_single_double(self, input: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
+    def det_unique_single_double(self, input: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the SD of single/double excitations
 
         The determinants of the single excitations
