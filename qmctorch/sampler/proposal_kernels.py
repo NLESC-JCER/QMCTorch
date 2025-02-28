@@ -1,7 +1,11 @@
 import torch
 
 
-class DensityVarianceKernel(object):
+class BaseProposalKernel(object):
+    def __call__(self, x):
+        raise NotImplementedError   
+
+class DensityVarianceKernel(BaseProposalKernel):
     def __init__(self, atomic_pos, sigma=1.0, scale_factor=1.0):
         self.atomic_pos = atomic_pos.unsqueeze(0).unsqueeze(1)
         self.sigma = sigma
@@ -26,7 +30,7 @@ class DensityVarianceKernel(object):
         return d
 
 
-class CenterVarianceKernel(object):
+class CenterVarianceKernel(BaseProposalKernel):
     def __init__(self, sigma=1.0, scale_factor=1.0):
         self.sigma = sigma
         self.scale_factor = scale_factor
@@ -46,7 +50,7 @@ class CenterVarianceKernel(object):
         return d
 
 
-class ConstantVarianceKernel(object):
+class ConstantVarianceKernel(BaseProposalKernel):
     def __init__(self, sigma=0.2):
         self.sigma = sigma
 

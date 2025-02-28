@@ -21,7 +21,7 @@ class Metropolis(SamplerBase):
         move: Dict = {"type": "all-elec", "proba": "normal"},
         logspace: bool = False,
         cuda: bool = False,
-    ):
+    ) -> None:
         """Metropolis Hasting generator
 
         Args:
@@ -60,7 +60,7 @@ class Metropolis(SamplerBase):
         self.configure_move(move)
         self.log_data()
 
-    def log_data(self):
+    def log_data(self) -> None:
         """log data about the sampler."""
         log.info("  Move type           : {0}", self.movedict["type"])
         log.info("  Move proba          : {0}", self.movedict["proba"])
@@ -169,7 +169,7 @@ class Metropolis(SamplerBase):
 
         return torch.cat(pos).requires_grad_()
 
-    def configure_move(self, move: Dict):
+    def configure_move(self, move: Dict) -> None:
         """Configure the electron moves
 
         Args:

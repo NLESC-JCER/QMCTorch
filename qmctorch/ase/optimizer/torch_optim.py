@@ -1,4 +1,5 @@
 from typing import IO, Any, Callable, Dict, List, Optional, Union
+from types import SimpleNamespace
 from torch.optim import SGD
 from torch.optim import Optimizer as torch_optimizer
 import numpy as np
@@ -34,7 +35,7 @@ class TorchOptimizer(Optimizer):
         self.nepoch_wf_update = nepoch_wf_update
         self.xyz_trajectory = None
 
-    def log(self, e, forces):
+    def log(self, e: float, forces: np.ndarray) -> float:
         """
         Write to the log file.
 
@@ -42,13 +43,18 @@ class TorchOptimizer(Optimizer):
         ----------
         e : float
             Energy of the system.
-        forces : array
+        forces : np.ndarray
             Forces on the atoms.
+
+        Returns
+        -------
+        fmax : float
+            Maximum force on any atom.
 
         Notes
         -----
         This function is called by the optimizer at each step. It writes the
-        energy, forces and time to the log file.
+        energy, forces, and time to the log file.
         """
         fmax = sqrt((forces ** 2).sum(axis=1).max())
         T = time.localtime()
@@ -65,7 +71,7 @@ class TorchOptimizer(Optimizer):
             self.logfile.flush()
         return fmax
     
-    def run(self, fmax, steps=10, hdf5_group="geo_opt"):
+    def run(self, fmax: float, steps: int = 10, hdf5_group: str = "geo_opt") -> SimpleNamespace:
         """
         Run a geometry optimization.
 
@@ -80,7 +86,7 @@ class TorchOptimizer(Optimizer):
 
         Returns
         -------
-        observable
+        observable : Observable
             The observable instance containing the optimized geometry.
 
         Notes

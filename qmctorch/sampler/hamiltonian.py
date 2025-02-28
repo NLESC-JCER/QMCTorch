@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Callable, Optional, Tuple
 
 import torch
 from tqdm import tqdm
@@ -42,15 +42,16 @@ class Hamiltonian(SamplerBase):
         self.traj_length = L
 
     @staticmethod
-    def get_grad(func, inp):
+    def get_grad(func: Callable[[torch.Tensor], torch.Tensor],
+                 inp: torch.Tensor) -> torch.Tensor:
         """get the gradient of the pdf using autograd
 
         Args:
-            func (callable): function to compute the pdf
-            inp (torch.tensor): input of the function
+            func: function to compute the pdf
+            inp: input of the function
 
         Returns:
-            torch.tensor: gradients of the wavefunction
+            gradient of the wavefunction
         """
         with torch.enable_grad():
             if inp.grad is not None:
@@ -64,7 +65,7 @@ class Hamiltonian(SamplerBase):
         return inp.grad
 
     @staticmethod
-    def log_func(func):
+    def log_func(func: Callable[[torch.Tensor], torch.Tensor]):
         """Compute the negative log of  a function
 
         Args:
@@ -75,16 +76,21 @@ class Hamiltonian(SamplerBase):
         """
         return lambda x: -torch.log(func(x))
 
-    def __call__(self, pdf, pos=None, with_tqdm=True):
+    def __call__(self, pdf: Callable[[torch.Tensor], torch.Tensor],
+                 pos: Optional[torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate walkers following HMC
 
-        Arguments:
-            pdf {callable} -- density to sample
-            pos (torch.tensor): precalculated position to start with
+        Generates a series of walkers following the HMC algorithm
+
+        Args:
+            pdf (callable): density to sample
+            pos (torch.tensor, optional): precalculated position to start with.
+                                          Defaults to None.
             with_tqdm (bool, optional): use tqdm progress bar. Defaults to True.
 
         Returns:
-            torch.tensor -- sampling points
+            torch.tensor: sampling points
         """
 
         if self.ntherm < 0:
@@ -101,7 +107,9 @@ class Hamiltonian(SamplerBase):
         idecor = 0
 
         rng = tqdm(
-            range(self.nstep), desc="INFO:QMCTorch|  Sampling", disable=not with_tqdm
+            range(self.nstep),
+            desc="INFO:QMCTorch|  Sampling",
+            disable=not with_tqdm,
         )
 
         for istep in rng:
@@ -128,54 +136,58 @@ class Hamiltonian(SamplerBase):
         return torch.cat(pos).requires_grad_()
 
     @staticmethod
-    def _step(U, get_grad, epsilon, L, q_init):
+    def _step(U: Callable[[torch.Tensor], torch.Tensor], 
+              get_grad: Callable[[Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor], 
+              epsilon: float, 
+              L: int, 
+              q_init: torch.Tensor) -> Tuple(torch.Tensor, float):
         """Take one step of the sampler
 
         Args:
-            U (callable): the target pdf
-            get_grad (callable) : get the value of the target dist gradient
-            epsilon (float) : step size
-            L (int) : number of steps in the traj
-            q_init (torch.Tensor) : initial positon of the walkers
+            U (Callable[[torch.Tensor], torch.Tensor]): The target pdf
+            get_grad (Callable[[Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor]): Function to get the gradient of the target distribution
+            epsilon (float): Step size
+            L (int): Number of steps in the trajectory
+            q_init (torch.Tensor): Initial position of the walkers
 
         Returns:
-            torch.tensor, float:
+            Tuple[torch.Tensor, float]: Updated positions and acceptance rate
         """
 
         q = q_init.clone()
 
-        # init the momentum
+        # Initialize the momentum
         p = torch.randn(q.shape)
 
-        # initial energy terms
+        # Initial energy terms
         E_init = U(q) + 0.5 * (p * p).sum(1)
 
-        # half step in momentum space
+        # Half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)
 
-        # full steps in q and p space
+        # Full steps in q and p space
         for _ in range(L - 1):
             q += epsilon * p
             p -= epsilon * get_grad(U, q)
 
-        # last full step in pos space
+        # Last full step in position space
         q += epsilon * p
 
-        # half step in momentum space
+        # Half step in momentum space
         p -= 0.5 * epsilon * get_grad(U, q)
 
-        # negate momentum
+        # Negate momentum
         p = -p
 
-        # current energy term
+        # Current energy term
         E_new = U(q) + 0.5 * (p * p).sum(1)
 
-        # metropolis accept/reject
+        # Metropolis accept/reject
         eps = torch.rand(E_new.shape)
         rejected = torch.exp(E_init - E_new) < eps
         q[rejected] = q_init[rejected]
 
-        # compute the accept rate
+        # Compute the acceptance rate
         rate = 1 - rejected.sum().float() / rejected.shape[0]
 
         return q, rate

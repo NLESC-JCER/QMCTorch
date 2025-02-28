@@ -69,20 +69,21 @@ class Metropolis(SamplerBase):
 
         self.log_data()
 
-    def log_data(self):
+    def log_data(self) -> None:
         """log data about the sampler."""
         log.info("  Move type           : {0}", "all-elec")
         log.info("  Move proba          : {0}", self.movedict["proba"])
 
     @staticmethod
-    def log_func(func):
-        """Compute the negative log of  a function
+    def log_func(func: Callable[[torch.Tensor], torch.Tensor]
+                 ) -> Callable[[torch.Tensor], torch.Tensor]:
+        """Compute the log of a function
 
         Args:
-            func (callable): input function
+            func (Callable[[torch.Tensor], torch.Tensor]): input function
 
         Returns:
-            callable: negative log of the function
+            Callable[[torch.Tensor], torch.Tensor]: log of the function
         """
         return lambda x: torch.log(func(x))
 

@@ -1,13 +1,22 @@
 import torch
-
+from typing import Dict, Callable
 from .. import log
 from .walkers import Walkers
 
 
 class SamplerBase:
     def __init__(
-        self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
-    ):
+        self,
+        nwalkers: int,
+        nstep: int,
+        step_size: float,
+        ntherm: int,
+        ndecor: int,
+        nelec: int,
+        ndim: int,
+        init: Dict,
+        cuda: bool,
+    ) -> None:
         """Base class for the sampler
 
         Args:
@@ -15,11 +24,11 @@ class SamplerBase:
             nstep (int): number of MC steps
             step_size (float): size of the steps in bohr
             ntherm (int): number of MC steps to thermalize
-            ndecor (int): unmber of MC steps to decorellate
+            ndecor (int): number of MC steps to decorellate
             nelec (int): number of electrons in the system
             ndim (int): number of cartesian dimension
             init (dict): method to initialize the walkers
-            cuda ([type]): [description]
+            cuda (bool): turn CUDA ON/OFF
         """
 
         # self.nwalkers = nwalkers
@@ -36,7 +45,11 @@ class SamplerBase:
             self.device = torch.device("cpu")
 
         self.walkers = Walkers(
-            nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init, cuda=cuda
+            nwalkers=nwalkers,
+            nelec=nelec,
+            ndim=ndim,
+            init=init,
+            cuda=cuda,
         )
 
         log.info("")
@@ -48,16 +61,27 @@ class SamplerBase:
         log.info("  Decorelation steps  : {0}", self.ndecor)
         log.info("  Walkers init pos    : {0}", init["method"])
 
-    def __call__(self, pdf, *args, **kwargs):
+    def __call__(self, pdf: Callable[[torch.Tensor], torch.Tensor], *args, **kwargs) -> torch.Tensor:
+        """
+        Evaluate the sampling algorithm.
+
+        Args:
+            pdf (Callable[[torch.Tensor], torch.Tensor]): the function to sample
+            *args: additional positional arguments
+            **kwargs: additional keyword arguments
+
+        Returns:
+            torch.Tensor: the samples
+        """
         raise NotImplementedError("Sampler must have a __call__ method")
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return (
             self.__class__.__name__
             + " sampler with  %d walkers" % self.walkers.nwalkers
         )
 
-    def get_sampling_size(self):
+    def get_sampling_size(self) -> int:
         """evaluate the number of sampling point we'll have."""
         if self.ntherm == -1:
             return self.walkers.nwalkers
