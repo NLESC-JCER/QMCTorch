@@ -10,7 +10,7 @@ from .stat_utils import (
 )
 
 
-def plot_energy(local_energy, e0=None, show_variance=False):
+def plot_energy(local_energy, e0=None, show_variance=False, clip=False, q=0.15):
     """Plot the evolution of the energy
 
     Args:
@@ -18,7 +18,16 @@ def plot_energy(local_energy, e0=None, show_variance=False):
         e0 (float, optional): Target value for the energy. Defaults to None.
         show_variance (bool, optional): show the variance if True. Defaults to False.
     """
-
+    def clip_values(values, std_factor=5):
+        if clip:
+            values = values.flatten()
+            mean = np.median(values)
+            std = values.std()
+            up = values < mean + std_factor * std
+            down =  values > mean - std_factor * std
+            return values[up * down]
+        return values
+    
     fig = plt.figure()
     ax = fig.add_subplot(111)
 
@@ -26,12 +35,15 @@ def plot_energy(local_energy, e0=None, show_variance=False):
     epoch = np.arange(n)
 
     # get the variance
-    energy = np.array([np.mean(e) for e in local_energy])
-    variance = np.array([np.var(e) for e in local_energy])
+    
+    energy = np.array([np.mean(clip_values(e)) for e in local_energy])
+    variance = np.array([np.var(clip_values(e)) for e in local_energy])
+    q75 = np.array([np.quantile(clip_values(e),0.5+q) for e in local_energy])
+    q25 = np.array([np.quantile(clip_values(e),0.5-q) for e in local_energy])
 
     # plot
     ax.fill_between(
-        epoch, energy - variance, energy + variance, alpha=0.5, color="#4298f4"
+        epoch, q25, q75, alpha=0.5, color="#4298f4"
     )
     ax.plot(epoch, energy, color="#144477")
     if e0 is not None:
