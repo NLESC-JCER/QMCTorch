@@ -6,15 +6,25 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
     def __init__(
         self,
-        nup,
-        ndown,
-        cuda,
-        size1=16,
-        size2=8,
-        activation=torch.nn.Sigmoid(),
-        include_cusp_weight=True,
-    ):
-        """Defines a fully connected jastrow factors."""
+        nup: int,
+        ndown: int,
+        cuda: bool,
+        size1: int = 16,
+        size2: int = 8,
+        activation: torch.nn.Module = torch.nn.Sigmoid(),
+        include_cusp_weight: bool = True,
+    ) -> None:
+        """Defines a fully connected jastrow factors.
+
+        Args:
+            nup (int): Number of spin up electrons.
+            ndown (int): Number of spin down electrons.
+            cuda (bool): Whether to use the GPU or not.
+            size1 (int, optional): Number of neurons in the first hidden layer. Defaults to 16.
+            size2 (int, optional): Number of neurons in the second hidden layer. Defaults to 8.
+            activation (torch.nn.Module, optional): Activation function. Defaults to torch.nn.Sigmoid.
+            include_cusp_weight (bool, optional): Whether to include the cusp weights or not. Defaults to True.
+        """
 
         super().__init__(nup, ndown, cuda)
 
@@ -40,7 +50,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
         self.include_cusp_weight = include_cusp_weight
 
-    def get_var_weight(self):
+    def get_var_weight(self) -> None:
         """define the variational weight."""
 
         nelec = self.nup + self.ndown
@@ -59,7 +69,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
                     idx_pair.append(1)
         self.idx_pair = torch.as_tensor(idx_pair).to(self.device)
 
-    def get_static_weight(self):
+    def get_static_weight(self) -> torch.Tensor:
         """Get the matrix of static weights
 
         Returns:
@@ -93,7 +103,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
         return static_weight
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the kernel values
 
         Args:

@@ -1,10 +1,17 @@
 import torch
 from torch import nn
+from typing import Dict, Union, Tuple
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
-
+from ....scf import Molecule
+from .kernels.jastrow_kernel_electron_nuclei_base import JastrowKernelElectronNucleiBase
 
 class JastrowFactorElectronNuclei(nn.Module):
-    def __init__(self, mol, jastrow_kernel, kernel_kwargs={}, cuda=False):
+    def __init__(self, 
+                 mol: Molecule, 
+                 jastrow_kernel: JastrowKernelElectronNucleiBase, 
+                 kernel_kwargs: Dict = {}, 
+                 cuda: bool = False
+                 ) -> None:
         r"""Base class for two el-nuc jastrow of the form:
 
         .. math::
@@ -44,11 +51,15 @@ class JastrowFactorElectronNuclei(nn.Module):
         # elec-nuc distances
         self.edist = ElectronNucleiDistance(self.nelec, self.atoms, self.ndim)
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """representation of the jastrow factor"""
         return "en -> " + self.jastrow_kernel.__class__.__name__
 
-    def forward(self, pos, derivative=0, sum_grad=True):
+    def forward(self, 
+                pos: torch.Tensor, 
+                derivative: Union[int, Tuple[int]] = 0 , 
+                sum_grad: bool = True
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor]]:
         """Compute the Jastrow factors.
 
         Args:
@@ -99,7 +110,7 @@ class JastrowFactorElectronNuclei(nn.Module):
                 self.jastrow_factor_second_derivative(r, dr, d2r, jast),
             )
 
-    def jastrow_factor_derivative(self, r, dr, jast, sum_grad):
+    def jastrow_factor_derivative(self, r: torch.Tensor, dr: torch.Tensor, jast: torch.Tensor, sum_grad: bool) -> torch.Tensor:
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -118,7 +129,12 @@ class JastrowFactorElectronNuclei(nn.Module):
             djast = self.jastrow_kernel.compute_derivative(r, dr).sum(3)
             return djast * jast.unsqueeze(-1)
 
-    def jastrow_factor_second_derivative(self, r, dr, d2r, jast):
+    def jastrow_factor_second_derivative(self, 
+                                         r: torch.Tensor, 
+                                         dr: torch.Tensor, 
+                                         d2r: torch.Tensor, 
+                                         jast: torch.Tensor
+                                         ) -> torch.Tensor:
         """Compute the value of the pure 2nd derivative of the Jastrow factor
 
         Args:

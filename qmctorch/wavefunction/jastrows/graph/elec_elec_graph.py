@@ -2,7 +2,7 @@ import dgl
 import torch
 
 
-def ElecElecGraph(nelec, nup):
+def ElecElecGraph(nelec: int, nup: int) -> dgl.DGLGraph:
     """Create the elec-elec graph
 
     Args:
@@ -18,7 +18,7 @@ def ElecElecGraph(nelec, nup):
     return graph
 
 
-def get_elec_elec_edges(nelec):
+def get_elec_elec_edges(nelec: int) -> list:
     """Compute the edge index of the electron-electron graph."""
     ee_edges = ([], [])
     for i in range(nelec - 1):
@@ -32,7 +32,7 @@ def get_elec_elec_edges(nelec):
     return ee_edges
 
 
-def get_elec_elec_ndata(nelec, nup):
+def get_elec_elec_ndata(nelec:int , nup: int) -> torch.Tensor:
     """Compute the node data of the elec-elec graph"""
 
     ee_ndata = []

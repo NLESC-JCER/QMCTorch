@@ -1,5 +1,6 @@
 import torch
 from torch import nn
+from typing import Optional, Tuple, Union
 from .scaling import (
     get_scaled_distance,
     get_der_scaled_distance,
@@ -8,7 +9,14 @@ from .scaling import (
 
 
 class ElectronNucleiDistance(nn.Module):
-    def __init__(self, nelec, atomic_pos, ndim=3, scale=False, scale_factor=0.6):
+    def __init__(
+        self,
+        nelec: int,
+        atomic_pos: torch.Tensor,
+        ndim: int = 3,
+        scale: bool = False,
+        scale_factor: float = 0.6,
+    ) -> None:
         """Computes the electron-nuclei distances
 
         .. math::
@@ -16,7 +24,7 @@ class ElectronNucleiDistance(nn.Module):
 
         Args:
             nelec (int): number of electrons
-            atomic_pos (tensor): positions of the atoms
+            atomic_pos (torch.tensor): positions of the atoms
             ndim (int): number of spatial dimensions
             scale(bool, optional): return scaled values, Defaults to False
             scale_factor(float, optional): value of the scale factor,
@@ -29,28 +37,30 @@ class ElectronNucleiDistance(nn.Module):
             >>> dr = edist(pos,derivative=1)
 
         """
-
         super().__init__()
-        self.nelec = nelec
-        self.atoms = atomic_pos
-        self.ndim = ndim
-        self.scale = scale
-        self.kappa = scale_factor
+        self.nelec: int = nelec
+        self.atoms: torch.Tensor = atomic_pos
+        self.ndim: int = ndim
+        self.scale: bool = scale
+        self.kappa: float = scale_factor
 
-    def forward(self, input, derivative=0):
+    def forward(
+        self, input: torch.Tensor, derivative: int = 0
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """Compute the pairwise distances between electrons and atoms
         or their derivative.
 
         Args:
-            input (torch.tesnor): position of the electron \n
+            input (torch.Tensor): position of the electron \n
                                   size : Nbatch x [Nelec x Ndim]
             derivative (int, optional): degre of the derivative. \n
                                         Defaults to 0.
 
         Returns:
-            torch.tensor: distance (or derivative) matrix \n
-                          Nbatch x Nelec x Natom if derivative = 0 \n
-                          Nbatch x Ndim x  Nelec x Natom if derivative = 1,2
+            Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
+                distance (or derivative) matrix \n
+                Nbatch x Nelec x Natom if derivative = 0 \n
+                Nbatch x Ndim x  Nelec x Natom if derivative = 1,2
 
         """
 
@@ -83,7 +93,7 @@ class ElectronNucleiDistance(nn.Module):
             else:
                 return d2_dist
 
-    def get_der_distance(self, pos, dist):
+    def get_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
         """Get the derivative of the electron-nuclei distance matrix
 
         .. math::
@@ -103,7 +113,7 @@ class ElectronNucleiDistance(nn.Module):
         diff_axis = (pos.unsqueeze(-1) - self.atoms.T).transpose(2, 3)
         return (diff_axis * invr).permute(0, 3, 1, 2)
 
-    def get_second_der_distance(self, pos, dist):
+    def get_second_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
         """Get the derivative of the electron-nuclei distance matrix
 
         .. math::
@@ -127,7 +137,7 @@ class ElectronNucleiDistance(nn.Module):
         return diff_axis * invr3
 
     @staticmethod
-    def _get_distance_quadratic(elec_pos, atom_pos):
+    def _get_distance_quadratic(elec_pos: torch.Tensor, atom_pos: torch.Tensor) -> torch.Tensor:
         """Compute the distance following a quadratic expansion
 
         Arguments:

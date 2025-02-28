@@ -3,7 +3,7 @@ import torch
 from mendeleev import element
 
 
-def ElecNucGraph(natoms, atom_types, atomic_features, nelec, nup):
+def ElecNucGraph(natoms:int, atom_types:list, atomic_features:list, nelec:int, nup:int) -> dgl.DGLGraph:
     """Create the elec-nuc graph
 
     Args:
@@ -21,7 +21,7 @@ def ElecNucGraph(natoms, atom_types, atomic_features, nelec, nup):
     return graph
 
 
-def get_elec_nuc_edges(natoms, nelec):
+def get_elec_nuc_edges(natoms: int, nelec: int) -> tuple:
     """Compute the edge index of the electron-nuclei graph."""
     en_edges = ([], [])
     for i in range(natoms):
@@ -39,7 +39,7 @@ def get_elec_nuc_edges(natoms, nelec):
     return en_edges
 
 
-def get_elec_nuc_ndata(natoms, atom_types, atomic_features, nelec, nup):
+def get_elec_nuc_ndata(natoms: int, atom_types: list, atomic_features: list, nelec: int, nup: int) -> torch.Tensor:
     """Compute the node data of the elec-elec graph"""
 
     en_ndata = []
@@ -68,7 +68,7 @@ def get_elec_nuc_ndata(natoms, atom_types, atomic_features, nelec, nup):
     return torch.LongTensor(en_ndata)
 
 
-def get_atomic_features(atom_type, atomic_features):
+def get_atomic_features(atom_type: list, atomic_features: list) -> list:
     """Get the atomic features requested."""
     if atom_type is not None:
         data = element(atom_type)
