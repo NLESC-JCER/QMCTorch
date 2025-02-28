@@ -1,9 +1,10 @@
 import torch
+from typing import Union, List
 from ...utils import fast_power
 
 
 class Harmonics:
-    def __init__(self, type, **kwargs):
+    def __init__(self, type: str, **kwargs) -> None:
         """Compute spherical or cartesian harmonics and their derivatives
 
         Args:
@@ -55,25 +56,29 @@ class Harmonics:
             self.mask_bas_k0 = self.bas_k == 0
             self.mask_bas_k2 = self.bas_k == 2
 
-    def __call__(self, xyz, derivative=[0], sum_grad=True, sum_hess=True):
+    def __call__(
+        self,
+        xyz: torch.Tensor,
+        derivative: list = [0],
+        sum_grad: bool = True,
+        sum_hess: bool = True,
+    ) -> torch.Tensor:
         """Computes the cartesian or spherical harmonics
 
-        Arguments:
-            xyz {torch.tensor} -- coordinate of each electrons from each BAS
-                                  center (Nbatch, Nelec, Nbas, Ndim)
-
-        Keyword Arguments:
-            derivative {int} -- order of the derivative (default: {0})
-            sum_grad {bool} -- return the sum of th derivative if true and
-                               grad if False (default: {True})
-            sum_hess {bool} -- return the sum of the 2nd derivative if true and
-                               grad if False (default: {True})
+        Args:
+            xyz (torch.tensor): Coordinates of each electron from each BAS center
+                                shape (Nbatch, Nelec, Nbas, Ndim)
+            derivative (list, optional): Orders of the derivative. Defaults to [0].
+            sum_grad (bool, optional): Return the sum of the derivative if True and
+                                       individual gradients if False. Defaults to True.
+            sum_hess (bool, optional): Return the sum of the 2nd derivative if True and
+                                       individual Hessians if False. Defaults to True.
 
         Raises:
-            ValueError: of type is unrecognized
+            ValueError: If type is unrecognized
 
         Returns:
-            torch.tensor -- Values or gradient of the spherical harmonics
+            torch.tensor: Values or gradient of the harmonics
         """
 
         if self.type == "cart":
@@ -91,37 +96,44 @@ class Harmonics:
                 xyz, self.bas_l, self.bas_m, derivative, sum_grad, sum_hess
             )
         else:
-            raise ValueError("Harmonics type should be cart or sph")
+            raise ValueError("Harmonics type should be 'cart' or 'sph'")
 
 
 def CartesianHarmonics(
-    xyz, k, mask0, mask2, derivative=[0], sum_grad=True, sum_hess=True
-):
+    xyz: torch.Tensor,
+    k: torch.Tensor,
+    mask0: torch.Tensor,
+    mask2: torch.Tensor,
+    derivative: list = [0],
+    sum_grad: bool = True,
+    sum_hess: bool = True
+) -> torch.Tensor:
     r"""Computes Real Cartesian Harmonics
 
     .. math::
         Y = x^{k_x} \\times y^{k_y} \\times z^{k_z}
 
     Args:
-        xyz (torch.tensor): distance between sampling points and orbital centers \n
+        xyz (torch.Tensor): Distance between sampling points and orbital centers
                             size : (Nbatch, Nelec, Nbas, Ndim)
-        k (torch.tensor): (kx,ky,kz) exponents
-        mask0 (torch.tensor): precomputed mask of k=0
-        mask2 (torch.tensor): precomputed mask of k=2
-        derivative (int, optional): degree of the derivative. Defaults to 0.
-        sum_grad (bool, optional): returns the sum of the derivative if True. Defaults to True.
-        sum_hess (bool, optional): returns the sum of the 2nd derivative if True. Defaults to True.
+        k (torch.Tensor): (kx,ky,kz) exponents
+        mask0 (torch.Tensor): Precomputed mask of k=0
+        mask2 (torch.Tensor): Precomputed mask of k=2
+        derivative (list, optional): Orders of the derivative. Defaults to [0].
+        sum_grad (bool, optional): Returns the sum of the derivative if True. Defaults to True.
+        sum_hess (bool, optional): Returns the sum of the 2nd derivative if True. Defaults to True.
+
     Returns:
-        torch.tensor: values of the harmonics at the sampling points
+        torch.Tensor: Values of the harmonics at the sampling points
     """
 
     if not isinstance(derivative, list):
         derivative = [derivative]
 
-    def _kernel():
+    def _kernel() -> torch.Tensor:
         return xyz_k.prod(-1)
 
-    def _first_derivative_kernel():
+    def _first_derivative_kernel() -> torch.Tensor:
         km1 = k - 1
         km1[km1 < 0] = 0
 
@@ -137,8 +149,7 @@ def CartesianHarmonics(
         else:
             return torch.stack((dx, dy, dz), dim=-1)
 
-    def _second_derivative_kernel():
-        # prepare the exponets
+    def _second_derivative_kernel() -> torch.Tensor:
         km2 = k - 2
         km2[km2 < 0] = 0
 
@@ -155,7 +166,7 @@ def CartesianHarmonics(
         else:
             return torch.stack((d2x, d2y, d2z), dim=-1)
 
-    def _mixed_second_derivative_kernel():
+    def _mixed_second_derivative_kernel() -> torch.Tensor:
         km1 = k - 1
         km1[km1 < 0] = 0
 
@@ -169,10 +180,8 @@ def CartesianHarmonics(
 
         return torch.stack((dxdy, dxdz, dydz), dim=-1)
 
-    # computes the power of the xyz
     xyz_k = fast_power(xyz, k, mask0, mask2)
 
-    # compute the outputs
     fns = [
         _kernel,
         _first_derivative_kernel,
@@ -190,19 +199,29 @@ def CartesianHarmonics(
         return output
 
 
-def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True, sum_hess=True):
+def SphericalHarmonics(
+    xyz: torch.Tensor,
+    l: torch.Tensor,
+    m: torch.Tensor,
+    derivative: Union[int, List[int]] = 0,
+    sum_grad: bool = True,
+    sum_hess: bool = True,
+) -> Union[torch.Tensor, List[torch.Tensor]]:
     r"""Compute the Real Spherical Harmonics of the AO.
 
     Args:
-        xyz (torch.tensor): distance between sampling points and orbital centers \n
+        xyz (torch.Tensor): distance between sampling points and orbital centers
                             size : (Nbatch, Nelec, Nbas, Ndim)
-        l (torch.tensor):  l quantum number
-        m (torch.tensor):  m quantum number
+        l (torch.Tensor):  l quantum number
+        m (torch.Tensor):  m quantum number
+        derivative (Union[int, List[int]], optional): order of the derivative. Defaults to 0.
+        sum_grad (bool, optional): Return the sum of the derivative if True and individual components if False. Defaults to True.
+        sum_hess (bool, optional): Not used. Defaults to True.
 
     Returns:
-        Y (torch.tensor): value of each harmonics at each points (or derivative) \n
-                          size : (Nbatch,Nelec,Nrbf) for sum_grad=True \n
-                          size : (Nbatch,Nelec,Nrbf, Ndim) for sum_grad=False
+        Y (Union[torch.Tensor, List[torch.Tensor]]): value of each harmonics at each points (or derivative)
+                                                    size : (Nbatch,Nelec,Nrbf) if sum_grad=True
+                                                    size : (Nbatch,Nelec,Nrbf, Ndim) if sum_grad=False
     """
     if not sum_hess:
         raise NotImplementedError(
@@ -225,7 +244,7 @@ def SphericalHarmonics(xyz, l, m, derivative=0, sum_grad=True, sum_hess=True):
         return get_grad_spherical_harmonics(xyz, l, m)
 
 
-def get_spherical_harmonics(xyz, lval, m, derivative):
+def get_spherical_harmonics(xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tensor, derivative: int):
     r"""Compute the Real Spherical Harmonics of the AO.
 
     Args:
@@ -233,6 +252,7 @@ def get_spherical_harmonics(xyz, lval, m, derivative):
                             size : (Nbatch, Nelec, Nbas, Ndim)
         l (torch.tensor): l quantum number
         m (torch.tensor): m quantum number
+        derivative (int): order of the derivative
 
     Returns:
         Y (torch.tensor): value of each harmonics at each points (or derivative) \n
@@ -283,13 +303,13 @@ def get_spherical_harmonics(xyz, lval, m, derivative):
     return Y
 
 
-def get_grad_spherical_harmonics(xyz, lval, m):
+def get_grad_spherical_harmonics(xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
     r"""Compute the gradient of the Real Spherical Harmonics of the AO.
 
     Args:
         xyz (torch.tensor): distance between sampling points and orbital centers \n
                             size : (Nbatch, Nelec, Nbas, Ndim)
-        l (torch.tensor): l quantum number
+        lval (torch.tensor): l quantum number
         m (torch.tensor): m quantum number
 
     Returns:
@@ -328,7 +348,7 @@ def get_grad_spherical_harmonics(xyz, lval, m):
 # =============== L0
 
 
-def _spherical_harmonics_l0(xyz):
+def _spherical_harmonics_l0(xyz: torch.Tensor) -> torch.Tensor:
     r"""Compute the l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -339,7 +359,7 @@ def _spherical_harmonics_l0(xyz):
     return 0.2820948 * torch.ones_like(xyz[..., 0])
 
 
-def _nabla_spherical_harmonics_l0(xyz):
+def _nabla_spherical_harmonics_l0(xyz: torch.Tensor) -> torch.Tensor:
     r"""Compute the nabla of l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -349,7 +369,7 @@ def _nabla_spherical_harmonics_l0(xyz):
     return torch.zeros_like(xyz[..., 0])
 
 
-def _grad_spherical_harmonics_l0(xyz):
+def _grad_spherical_harmonics_l0(xyz: torch.Tensor) -> torch.Tensor:
     r"""Compute the nabla of l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -359,7 +379,7 @@ def _grad_spherical_harmonics_l0(xyz):
     return torch.zeros_like(xyz)
 
 
-def _lap_spherical_harmonics_l0(xyz):
+def _lap_spherical_harmonics_l0(xyz: torch.Tensor) -> torch.Tensor:
     r"""Compute the laplacian of l=0 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -372,7 +392,7 @@ def _lap_spherical_harmonics_l0(xyz):
 # =============== L1
 
 
-def _spherical_harmonics_l1(xyz, m):
+def _spherical_harmonics_l1(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -388,7 +408,7 @@ def _spherical_harmonics_l1(xyz, m):
     return c * xyz[:, :, :, index[m]] / r
 
 
-def _nabla_spherical_harmonics_l1(xyz, m):
+def _nabla_spherical_harmonics_l1(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the nabla of 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -405,7 +425,7 @@ def _nabla_spherical_harmonics_l1(xyz, m):
     return c * (1.0 / r - xyz[:, :, :, index[m]] * xyz.sum(3) / r3)
 
 
-def _grad_spherical_harmonics_l1(xyz, m):
+def _grad_spherical_harmonics_l1(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the nabla of 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -456,7 +476,7 @@ def _grad_spherical_harmonics_l1(xyz, m):
         )
 
 
-def _lap_spherical_harmonics_l1(xyz, m):
+def _lap_spherical_harmonics_l1(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the laplacian of 1-1 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -476,7 +496,7 @@ def _lap_spherical_harmonics_l1(xyz, m):
 # =============== L2
 
 
-def _spherical_harmonics_l2(xyz, m):
+def _spherical_harmonics_l2(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -507,7 +527,7 @@ def _spherical_harmonics_l2(xyz, m):
         return cm * xyz[:, :, :, index[m][0]] * xyz[:, :, :, index[m][1]] / r2
 
 
-def _nabla_spherical_harmonics_l2(xyz, m):
+def _nabla_spherical_harmonics_l2(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the nabla of l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -553,7 +573,7 @@ def _nabla_spherical_harmonics_l2(xyz, m):
         )
 
 
-def _grad_spherical_harmonics_l2(xyz, m):
+def _grad_spherical_harmonics_l2(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the nabla of l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)
@@ -637,7 +657,7 @@ def _grad_spherical_harmonics_l2(xyz, m):
         )
 
 
-def _lap_spherical_harmonics_l2(xyz, m):
+def _lap_spherical_harmonics_l2(xyz: torch.Tensor, m: int) -> torch.Tensor:
     r"""Compute the nabla of l=2 Spherical Harmonics
     Args:
         xyz : array (Nbatch,Nelec,Nrbf,Ndim) x,y,z, of (Point - Center)

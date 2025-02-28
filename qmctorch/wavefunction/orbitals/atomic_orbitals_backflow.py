@@ -1,13 +1,19 @@
 import torch
+from typing import Optional, List, Union, Tuple
 from .atomic_orbitals import AtomicOrbitals
-
+from ...scf import Molecule
+from .backflow.backflow_transformation import BackFlowTransformation
 
 class AtomicOrbitalsBackFlow(AtomicOrbitals):
-    def __init__(self, mol, backflow, cuda=False):
+    def __init__(self, 
+                 mol: Molecule, 
+                 backflow: BackFlowTransformation, 
+                 cuda: Optional[bool] = False) -> None:
         """Computes the value of atomic orbitals
 
         Args:
             mol (Molecule): Molecule object
+            backflow (BackFlowTransformation): Backflow transformation
             cuda (bool, optional): Turn GPU ON/OFF Defaults to False.
         """
 
@@ -16,8 +22,13 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         self.backflow_trans = backflow
 
     def forward(
-        self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False
-    ):
+        self, 
+        pos: torch.Tensor, 
+        derivative: Optional[List[int]]=[0], 
+        sum_grad: Optional[bool] = True, 
+        sum_hess: Optional[bool] = True, 
+        one_elec: Optional[bool] = False
+    ) -> torch.Tensor:
         """Computes the values of the atomic orbitals.
 
         .. math::
@@ -103,7 +114,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return ao
 
-    def _compute_first_derivative_ao_values(self, pos, sum_grad):
+    def _compute_first_derivative_ao_values(self, pos: torch.Tensor, sum_grad: bool) -> torch.Tensor:
         """Compute the value of the derivative of the ao from the xyx and r tensor
 
         Args:
@@ -123,7 +134,10 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad
 
-    def _compute_gradient_backflow_ao_values(self, pos, grad_ao=None):
+    def _compute_gradient_backflow_ao_values(self, 
+                                             pos: torch.Tensor, 
+                                             grad_ao: Optional[Union[None, torch.Tensor]] = None
+                                             ) -> torch.Tensor:
         """Compute the jacobian of the backflow ao fromn xyz tensor
 
         Args:
@@ -159,7 +173,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad_ao
 
-    def _compute_second_derivative_ao_values(self, pos, sum_hess):
+    def _compute_second_derivative_ao_values(self, pos: torch.Tensor, sum_hess: bool) -> torch.Tensor:
         """Compute the value of the 2nd derivative of the ao from the xyx and r tensor
 
         Args:
@@ -180,8 +194,12 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         return hess
 
     def _compute_diag_hessian_backflow_ao_values(
-        self, pos, hess_ao=None, mixed_ao=None, grad_ao=None
-    ):
+        self, 
+        pos: torch.Tensor, 
+        hess_ao: Optional[Union[None, torch.Tensor]] = None, 
+        mixed_ao: Optional[Union[None, torch.Tensor]] = None, 
+        grad_ao: Optional[Union[None, torch.Tensor]] = None
+    ) -> torch.Tensor:
         """Compute the laplacian of the backflow ao fromn xyz tensor
 
         Args:
@@ -238,7 +256,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return hess_ao
 
-    def _compute_all_backflow_ao_values(self, pos):
+    def _compute_all_backflow_ao_values(self, pos: torch.Tensor
+                                        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor] :
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
 
         Args:
@@ -287,7 +306,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return (ao, grad_ao, hess_ao)
 
-    def _process_position(self, pos):
+    def _process_position(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/orb
 
         Args:
@@ -321,7 +340,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                 r.repeat_interleave(self.nshells, dim=2),
             )
 
-    def _elec_atom_dist(self, pos):
+    def _elec_atom_dist(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/atoms
 
         Args:
@@ -345,7 +364,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return xyz, r
 
-    def _elec_ao_dist(self, pos):
+    def _elec_ao_dist(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/atoms
 
         Args:

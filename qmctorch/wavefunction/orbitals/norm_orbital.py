@@ -1,9 +1,10 @@
 import torch
 import numpy as np
 import math
+from types import SimpleNamespace
 from ...utils.algebra_utils import double_factorial
 
-def atomic_orbital_norm(basis):
+def atomic_orbital_norm(basis : SimpleNamespace) -> torch.Tensor:
     """Computes the norm of the atomic orbitals
 
     Args:
@@ -44,18 +45,20 @@ def atomic_orbital_norm(basis):
             raise ValueError("%s is not a valid radial_type")
 
 
-def norm_slater_spherical(bas_n, bas_exp):
-    """Normalization of STOs with Sphecrical Harmonics. \n
-     * www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital \n
-     * C Filippi,  JCP 105, 213 1996 \n
-     * Monte Carlo Methods in Ab Inition Quantum Chemistry, B.L. Hammond
+def norm_slater_spherical(bas_n: torch.Tensor, bas_exp: torch.Tensor) -> torch.Tensor:
+    """Normalization of STOs with Spherical Harmonics.
+
+    References:
+        * www.theochem.ru.nl/~pwormer/Knowino/knowino.org/wiki/Slater_orbital
+        * C Filippi, JCP 105, 213 1996
+        * Monte Carlo Methods in Ab Initio Quantum Chemistry, B.L. Hammond
 
     Args:
-        bas_n (torch.tensor): prinicpal quantum number
-        bas_exp (torch.tensor): slater exponents
+        bas_n (torch.Tensor): Principal quantum number
+        bas_exp (torch.Tensor): Slater exponents
 
     Returns:
-        torch.tensor: normalization factor
+        torch.Tensor: Normalization factor
     """
     nfact = torch.as_tensor(
         [math.factorial(2 * n) for n in bas_n], dtype=torch.get_default_dtype()
@@ -63,7 +66,7 @@ def norm_slater_spherical(bas_n, bas_exp):
     return (2 * bas_exp) ** bas_n * torch.sqrt(2 * bas_exp / nfact)
 
 
-def norm_gaussian_spherical(bas_n, bas_exp):
+def norm_gaussian_spherical(bas_n: torch.Tensor, bas_exp: torch.Tensor) -> torch.Tensor:
     """Normlization of GTOs with spherical harmonics. \n
      * Computational Quantum Chemistry: An interactive Intrduction to basis set theory \n
         eq : 1.14 page 23.
@@ -87,7 +90,12 @@ def norm_gaussian_spherical(bas_n, bas_exp):
     return torch.sqrt(B / C) * A
 
 
-def norm_slater_cartesian(a, b, c, n, exp):
+def norm_slater_cartesian(a: torch.Tensor, 
+                          b: torch.Tensor, 
+                          c: torch.Tensor, 
+                          n: torch.Tensor, 
+                          exp: torch.Tensor
+                          ) -> torch.Tensor:
     """Normaliation of STos with cartesian harmonics. \n
      * Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 
@@ -121,7 +129,11 @@ def norm_slater_cartesian(a, b, c, n, exp):
     return torch.sqrt(1.0 / (prefact * num / denom))
 
 
-def norm_gaussian_cartesian(a, b, c, exp):
+def norm_gaussian_cartesian(a: torch.Tensor, 
+                            b: torch.Tensor, 
+                            c: torch.Tensor, 
+                            exp: torch.Tensor
+                            ) -> torch.Tensor:
     """Normaliation of GTOs with cartesian harmonics. \n
      * Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 

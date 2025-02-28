@@ -1,10 +1,10 @@
 import torch
 from torch import nn
 from .backflow_kernel_base import BackFlowKernelBase
-
+from .....scf import Molecule
 
 class BackFlowKernelAutoInverse(BackFlowKernelBase):
-    def __init__(self, mol, cuda, order=2):
+    def __init__(self, mol: Molecule, cuda: bool, order: int = 2) -> None:
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
@@ -19,7 +19,7 @@ class BackFlowKernelAutoInverse(BackFlowKernelBase):
 
         self.weight = nn.Parameter(torch.as_tensor([1e-3]))
 
-    def _backflow_kernel(self, ree):
+    def _backflow_kernel(self, ree:torch.Tensor) -> torch.Tensor:
         """Computes the kernel via autodiff
 
         Args:

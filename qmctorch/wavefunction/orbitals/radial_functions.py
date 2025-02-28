@@ -1,10 +1,17 @@
 import torch
+from typing import Union, List, Callable
 from ...utils import fast_power
 
 
 def radial_slater(
-    R, bas_n, bas_exp, xyz=None, derivative=0, sum_grad=True, sum_hess=True
-):
+    R: torch.Tensor,  # distance between each electron and each atom
+    bas_n: torch.Tensor,  # principal quantum number
+    bas_exp: torch.Tensor,  # exponents of the exponential
+    xyz: torch.Tensor = None,  # positions of the electrons
+    derivative: int = 0,  # degree of the derivative
+    sum_grad: bool = True,  # return the sum_grad, i.e the sum of the gradients
+    sum_hess: bool = True,  # return the sum_hess, i.e the sum of the diag hessian
+) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Compute the radial part of STOs (or its derivative).
 
     .. math:
@@ -27,9 +34,6 @@ def radial_slater(
                            (default: {True})
         sum_hess (bool): return the sum_hess, i.e the sum of the diag hessian
                            (default: {False})
-        mixed_hess (bool): return the full hessian for each electron
-                            i.e. dxdy dxdz dydz ... mixed derivatives
-                           (default: {False})
 
     Returns:
         torch.tensor: values of each orbital radial part at each position
@@ -38,11 +42,11 @@ def radial_slater(
     if not isinstance(derivative, list):
         derivative = [derivative]
 
-    def _kernel():
+    def _kernel() -> torch.Tensor:
         """Return the kernel."""
         return rn * er
 
-    def _first_derivative_kernel():
+    def _first_derivative_kernel() -> torch.Tensor:
         """Return the first derivative."""
         if sum_grad:
             nabla_rn_sum = nabla_rn.sum(3)
@@ -51,7 +55,7 @@ def radial_slater(
         else:
             return nabla_rn * er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    def _second_derivative_kernel():
+    def _second_derivative_kernel() -> torch.Tensor:
         """Return the pure second derivative i.e. d^2/dx^2"""
         if sum_hess:
             lap_rn = nRnm2 * (bas_n + 1)
@@ -74,7 +78,7 @@ def radial_slater(
                 + rn.unsqueeze(-1) * lap_er
             )
 
-    def _mixed_second_derivative_kernel():
+    def _mixed_second_derivative_kernel() -> torch.Tensor:
         """Returns the mixed second derivative i.e. d^2/dxdy.
         where x and y are coordinate of the same electron."""
 
@@ -120,36 +124,46 @@ def radial_slater(
 
 
 def radial_gaussian(
-    R, bas_n, bas_exp, xyz=None, derivative=[0], sum_grad=True, sum_hess=True
-):
+    R: torch.Tensor,  # distance between each electron and each atom
+    bas_n: torch.Tensor,  # principal quantum number
+    bas_exp: torch.Tensor,  # exponents of the exponential
+    xyz: torch.Tensor = None,  # positions of the electrons
+    derivative: list = [0],  # degree of the derivative
+    sum_grad: bool = True,  # return the sum of the gradients
+    sum_hess: bool = True,  # return the sum of the hessian
+) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Compute the radial part of GTOs (or its derivative).
 
-    .. math:
-        gto = r ^ n exp(-\alpha r ^ 2)
+    .. math::
+        gto = r^n exp(-\alpha r^2)
 
     Args:
-        R(torch.tensor): distance between each electron and each atom
-        bas_n(torch.tensor): principal quantum number
-        bas_exp(torch.tensor): exponents of the exponential
+        R (torch.Tensor): distance between each electron and each atom
+        bas_n (torch.Tensor): principal quantum number
+        bas_exp (torch.Tensor): exponents of the exponential
 
-    Keyword Arguments:
-        xyz(torch.tensor): positions of the electrons
-                            (needed for derivative)(default: {None})
-        derivative(int): degree of the derivative(default: {0})
-        sum_grad(bool): return the sum_grad, i.e the sum of the gradients
-                           (default: {True})
+    Keyword Args:
+        xyz (torch.Tensor): positions of the electrons
+                            (needed for derivative) (default: {None})
+        derivative (list): degree of the derivative (default: {[0]})
+                           0: value of the function
+                           1: first derivative
+                           2: pure second derivative
+                           3: mixed second derivative
+        sum_grad (bool): return the sum of the gradients (default: {True})
+        sum_hess (bool): return the sum of the hessian (default: {True})
 
     Returns:
-        torch.tensor: values of each orbital radial part at each position
+        torch.Tensor: values of each orbital radial part at each position
     """
 
     if not isinstance(derivative, list):
         derivative = [derivative]
 
-    def _kernel():
+    def _kernel() -> torch.Tensor:
         return rn * er
 
-    def _first_derivative_kernel():
+    def _first_derivative_kernel() -> torch.Tensor:
         if sum_grad:
             nabla_rn_sum = nabla_rn.sum(3)
             nabla_er_sum = nabla_er.sum(3)
@@ -157,7 +171,7 @@ def radial_gaussian(
         else:
             return nabla_rn * er.unsqueeze(-1) + rn.unsqueeze(-1) * nabla_er
 
-    def _second_derivative_kernel():
+    def _second_derivative_kernel() -> torch.Tensor:
         if sum_hess:
             lap_rn = nRnm2 * (bas_n + 1)
             lap_er = bas_exp * er * (4 * bas_exp * R2 - 6)
@@ -181,7 +195,7 @@ def radial_gaussian(
                 + rn.unsqueeze(-1) * lap_er
             )
 
-    def _mixed_second_derivative_kernel():
+    def _mixed_second_derivative_kernel() -> torch.Tensor:
         """Returns the mixed second derivative i.e. d^2/dxdy.
         where x and y are coordinate of the same electron."""
 
@@ -201,7 +215,7 @@ def radial_gaussian(
             + rn.unsqueeze(-1) * lap_er
         )
 
-    # computes the basic  quantities
+    # computes the basic quantities
     R2 = R * R
     rn = fast_power(R, bas_n)
     er = torch.exp(-bas_exp * R2)
@@ -225,20 +239,26 @@ def radial_gaussian(
 
 
 def radial_gaussian_pure(
-    R, bas_n, bas_exp, xyz=None, derivative=[0], sum_grad=True, sum_hess=True
-):
+    R: torch.Tensor,  # distance between each electron and each atom
+    bas_n: torch.Tensor,  # principal quantum number
+    bas_exp: torch.Tensor,  # exponents of the exponential
+    xyz: torch.Tensor = None,  # positions of the electrons
+    derivative: List[int] = [0],  # degree of the derivative
+    sum_grad: bool = True,  # return the sum_grad, i.e the sum of the gradients
+    sum_hess: bool = True  # return the sum_hess, i.e the sum of the lapacian
+) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Compute the radial part of GTOs (or its derivative).
 
     .. math:
         gto = exp(-\alpha r ^ 2)
 
     Args:
-        R(torch.tensor): distance between each electron and each atom
-        bas_n(torch.tensor): principal quantum number
-        bas_exp(torch.tensor): exponents of the exponential
+        R(torch.Tensor): distance between each electron and each atom
+        bas_n(torch.Tensor): principal quantum number (not relevant here but kept for consistency)
+        bas_exp(torch.Tensor): exponents of the exponential
 
     Keyword Arguments:
-        xyz(torch.tensor): positions of the electrons
+        xyz(torch.Tensor): positions of the electrons
                             (needed for derivative)(default: {None})
         derivative(int): degree of the derivative(default: {0})
         sum_grad(bool): return the sum_grad, i.e the sum of the gradients
@@ -247,7 +267,7 @@ def radial_gaussian_pure(
                            (default: {True})
 
     Returns:
-        torch.tensor: values of each orbital radial part at each position
+        torch.Tensor: values of each orbital radial part at each position
     """
 
     if not isinstance(derivative, list):
@@ -301,44 +321,50 @@ def radial_gaussian_pure(
 
 
 def radial_slater_pure(
-    R, bas_n, bas_exp, xyz=None, derivative=0, sum_grad=True, sum_hess=True
-):
+    R: torch.Tensor,  # distance between each electron and each atom
+    bas_n: torch.Tensor,  # principal quantum number
+    bas_exp: torch.Tensor,  # exponents of the exponential
+    xyz: torch.Tensor = None,  # positions of the electrons
+    derivative: Union[int, List[int]] = 0,  # degree of the derivative
+    sum_grad: bool = True,  # return the sum_grad, i.e the sum of the gradients
+    sum_hess: bool = True  # return the sum_hess, i.e the sum of the laplacian
+) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Compute the radial part of STOs (or its derivative).
 
-    .. math:
+    .. math::
         sto = exp(-\alpha | r |)
 
     Args:
-        R(torch.tensor): distance between each electron and each atom
-        bas_n(torch.tensor): principal quantum number
-        bas_exp(torch.tensor): exponents of the exponential
+        R (torch.Tensor): distance between each electron and each atom
+        bas_n (torch.Tensor): principal quantum number (not relevant here but kept for consistency)
+        bas_exp (torch.Tensor): exponents of the exponential
 
     Keyword Arguments:
-        xyz(torch.tensor): positions of the electrons
+        xyz (torch.Tensor): positions of the electrons
                             (needed for derivative)(default: {None})
-        derivative(int): degree of the derivative(default: {0})
-        sum_grad(bool): return the sum_grad, i.e the sum of the gradients
+        derivative (Union[int, List[int]]): degree of the derivative(default: {0})
+        sum_grad (bool): return the sum_grad, i.e the sum of the gradients
                            (default: {True})
-        sum_hess(bool): return the sum_hess, i.e the sum of the laplacian
+        sum_hess (bool): return the sum_hess, i.e the sum of the laplacian
                            (default: {True})
 
     Returns:
-        torch.tensor: values of each orbital radial part at each position
+        torch.Tensor: values of each orbital radial part at each position
     """
 
     if not isinstance(derivative, list):
         derivative = [derivative]
 
-    def _kernel():
+    def _kernel() -> torch.Tensor:
         return er
 
-    def _first_derivative_kernel():
+    def _first_derivative_kernel() -> torch.Tensor:
         if sum_grad:
             return nabla_er.sum(3)
         else:
             return nabla_er
 
-    def _second_derivative_kernel():
+    def _second_derivative_kernel() -> torch.Tensor:
         if sum_hess:
             return bexp_er * (bas_exp - 2.0 / R)
 
@@ -349,7 +375,7 @@ def radial_slater_pure(
             )
             return lap_er
 
-    def _mixed_second_derivative_kernel():
+    def _mixed_second_derivative_kernel() -> torch.Tensor:
         """Returns the mixed second derivative i.e. d^2/dxdy.
         where x and y are coordinate of the same electron."""
 
@@ -381,27 +407,27 @@ def radial_slater_pure(
 
 
 def return_required_data(
-    derivative,
-    _kernel,
-    _first_derivative_kernel,
-    _second_derivative_kernel,
-    _mixed_second_derivative_kernel,
-):
+    derivative: List[int],
+    _kernel: Callable,
+    _first_derivative_kernel: Callable,
+    _second_derivative_kernel: Callable,
+    _mixed_second_derivative_kernel: Callable,
+) -> Union[List, torch.Tensor]:
     """Returns the data contained in derivative
 
     Args:
-        derivative(list): list of the derivatives required
-        _kernel(callable): kernel of the values
-        _first_derivative_kernel(callable): kernel for 1st der
-        _second_derivative_kernel(callable): kernel for 2nd der
+        derivative (List[int]): list of the derivatives required
+        _kernel (Callable): kernel of the values
+        _first_derivative_kernel (Callable): kernel for 1st der
+        _second_derivative_kernel (Callable): kernel for 2nd der
 
     Returns:
-        list: values of the different der requried
+        Union[List, torch.Tensor]: values of the different der required
     """
 
     # prepare the output/kernel
-    output = []
-    fns = [
+    output: List = []
+    fns: List[Callable] = [
         _kernel,
         _first_derivative_kernel,
         _second_derivative_kernel,
