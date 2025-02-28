@@ -1,4 +1,7 @@
 from types import SimpleNamespace
+from typing import Optional, Dict, Union, List, bool, Tuple, Any
+from ..wavefunction import WaveFunction
+from ..sampler import SamplerBase
 import os
 import numpy as np
 import torch
@@ -10,15 +13,21 @@ from ..utils import get_git_tag
 
 class SolverBase:
     def __init__(  # pylint: disable=too-many-arguments
-        self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
-    ):
+        self,
+        wf: Optional[WaveFunction] = None,
+        sampler: Optional[SamplerBase] = None,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+        output: Optional[str] = None,
+        rank: int = 0,
+    ) -> None:
         """Base Class for QMC solver
 
         Args:
             wf (qmctorch.WaveFunction, optional): wave function. Defaults to None.
             sampler (qmctorch.sampler, optional): Sampler. Defaults to None.
-            optimizer (torch.optim, optional): optimizer. Defaults to None.
-            scheduler (torch.optim, optional): scheduler. Defaults to None.
+            optimizer (torch.optim.Optimizer, optional): optimizer. Defaults to None.
+            scheduler (torch.optim.lr_scheduler._LRScheduler, optional): scheduler. Defaults to None.
             output (str, optional): hdf5 filename. Defaults to None.
             rank (int, optional): rank of he process. Defaults to 0.
         """
@@ -28,8 +37,8 @@ class SolverBase:
         self.opt = optimizer
         self.scheduler = scheduler
         self.cuda = False
-        self.device = torch.device("cpu")
-        self.qmctorch_version = get_git_tag()
+        self.device: torch.device = torch.device("cpu")
+        self.qmctorch_version: str = get_git_tag()
 
         # member defined in the child and or method
         self.dataloader = None
@@ -41,7 +50,7 @@ class SolverBase:
             self.opt.lpos_needed = False
 
         # distributed model
-        self.save_model = "model.pth"
+        self.save_model: str = "model.pth"
 
         # handles GPU availability
         if self.wf.cuda:
@@ -51,9 +60,9 @@ class SolverBase:
         else:
             self.device = torch.device("cpu")
 
-        self.hdf5file = output
+        self.hdf5file: str = output
         if output is None:
-            basename = os.path.basename(self.wf.mol.hdf5file).split(".")[0]
+            basename: str = os.path.basename(self.wf.mol.hdf5file).split(".")[0]
             self.hdf5file = basename + "_QMCTorch.hdf5"
 
 
@@ -66,22 +75,22 @@ class SolverBase:
 
     def configure_resampling(  # pylint: disable=too-many-arguments
         self,
-        mode="update",
-        resample_every=1,
-        nstep_update=25,
-        ntherm_update=-1,
-        increment={"every": None, "factor": None},
+        mode: str ="update",
+        resample_every: int =1,
+        nstep_update: int = 25,
+        ntherm_update: int = -1,
+        increment: Dict = {"every": None, "factor": None},
     ):
         """Configure the resampling
 
         Args:
             mode (str, optional): method to resample : 'full', 'update', 'never'
-                                  Defaults to 'update'.
+                                  Defaultsr to 'update'.
             resample_every (int, optional): Number of optimization steps between resampling
                                  Defaults to 1.
             nstep_update (int, optional): Number of MC steps in update mode.
                                           Defaults to 25.
-            ntherm_update (int, optional): Number of MC steps to thermalize the new sampling.
+            ntherm_update (int, oprrtional): Number of MC steps to thermalize the new sampling.
                                           Defaults to -1.
             increment (dict, optional): dict containing the option to increase the sampling space
                                         every (int) : increment the sampling space every n optimization step
@@ -100,7 +109,7 @@ class SolverBase:
         self.resampling_options.nstep_update = nstep_update
         self.resampling_options.increment = increment
 
-    def track_observable(self, obs_name):
+    def track_observable(self, obs_name: Union[str, List[str]]):
         """define the observalbe we want to track
 
         Args:
@@ -163,11 +172,13 @@ class SolverBase:
 
         self.observable.models = SimpleNamespace()
 
-    def store_observable(self, pos, local_energy=None, ibatch=None, **kwargs):
+    def store_observable(self, pos: torch.tensor, 
+                         local_energy: Optional[torch.tensor] = None, 
+                         ibatch: Optional[int] = None, 
+                         **kwargs):
         """store observale in the dictionary
 
         Args:
-            obs_dict (dict): dictionary of the observalbe
             pos (torch.tensor): positions of th walkers
             local_energy (torch.tensor, optional): precomputed values of the local
                                            energy. Defaults to None
@@ -233,7 +244,7 @@ class SolverBase:
                         self.observable.__getattribute__(obs)[-1], data
                     )
 
-    def print_observable(self, cumulative_loss, verbose=False):
+    def print_observable(self, cumulative_loss: float, verbose: bool = False):
         """Print the observalbe to csreen
 
         Args:
@@ -256,7 +267,7 @@ class SolverBase:
                 )
                 log.options(style="percent").info("loss %f" % (cumulative_loss))
 
-    def resample(self, n, pos):
+    def resample(self, n : int, pos: torch.tensor) -> torch.tensor:
         """Resample the wave function
 
         Args:
@@ -299,8 +310,10 @@ class SolverBase:
 
         return pos
 
-    def single_point(self, with_tqdm=True, batchsize=None, hdf5_group="single_point"):
-        """Performs a single point calculatin
+    def single_point(self, with_tqdm: Optional[bool] = True, 
+                     batchsize: Optional[int] = None, 
+                     hdf5_group: str = "single_point"):
+        """Performs a single point calculation
 
         Args:
             with_tqdm (bool, optional): use tqdm for samplig. Defaults to True.
@@ -367,13 +380,12 @@ class SolverBase:
 
         return obs
 
-    def save_checkpoint(self, epoch, loss):
+    def save_checkpoint(self, epoch: int , loss: float):
         """save the model and optimizer state
 
         Args:
             epoch (int): epoch
             loss (float): current value of the loss
-            filename (str): name to save the file
         """
         filename = "checkpoint_epoch%d.pth" % epoch
         torch.save(
@@ -386,7 +398,7 @@ class SolverBase:
             filename,
         )
 
-    def load_checkpoint(self, filename):
+    def load_checkpoint(self, filename: str) -> Tuple(int, float):
         """load a model/optmizer
 
         Args:
@@ -402,7 +414,7 @@ class SolverBase:
         loss = data["loss"]
         return epoch, loss
 
-    def _append_observable(self, key, data):
+    def _append_observable(self, key : str, data: Any):
         """Append a new data point to observable key.
 
         Arguments:
@@ -414,7 +426,10 @@ class SolverBase:
             self.obs_dict[key] = []
         self.obs_dict[key].append(data)
 
-    def sampling_traj(self, pos=None, with_tqdm=True, hdf5_group="sampling_trajectory"):
+    def sampling_traj(self, pos: Optional[torch.tensor] = None, 
+                      with_tqdm: Optional[bool] = True, 
+                      hdf5_group: Optional[str] = "sampling_trajectory"
+                      ) -> torch.tensor:
         """Compute the local energy along a sampling trajectory
 
         Args:
@@ -444,7 +459,7 @@ class SolverBase:
         add_group_attr(self.hdf5file, hdf5_group, {"type": "sampling_traj"})
         return obs
 
-    def print_parameters(self, grad=False):
+    def print_parameters(self, grad: Optional[bool]=False) -> None:
         """print parameter values
 
         Args:
@@ -457,7 +472,7 @@ class SolverBase:
                 else:
                     print(p)
 
-    def optimization_step(self, lpos):
+    def optimization_step(self, lpos: torch.tensor) -> None:
         """Performs one optimization step
 
         Arguments:
@@ -469,7 +484,7 @@ class SolverBase:
         else:
             self.opt.step()
 
-    def save_traj(self, fname, obs):
+    def save_traj(self, fname: str, obs: SimpleNamespace):
         """Save trajectory of geo_opt
 
         Args:
@@ -490,10 +505,10 @@ class SolverBase:
             f.write("\n")
         f.close()
 
-    def run(self, nepoch, batchsize=None, loss="variance"):
+    def run(self, nepoch: int, batchsize: Optional[int] = None, loss: str = "variance"):
         raise NotImplementedError()
 
-    def log_data(self):
+    def log_data(self) -> None:
         """Log basic information about the sampler."""
 
         log.info("")

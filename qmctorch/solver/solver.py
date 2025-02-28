@@ -1,6 +1,10 @@
 from copy import deepcopy
 from time import time
 from tqdm import tqdm
+from types import SimpleNamespace
+from typing import Optional, Dict, Union, List, bool, Tuple, Any
+from ..wavefunction import WaveFunction
+from ..sampler import SamplerBase
 import torch
 from qmctorch.utils import Loss, OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
 
@@ -10,8 +14,14 @@ from .solver_base import SolverBase
 
 class Solver(SolverBase):
     def __init__(  # pylint: disable=too-many-arguments
-        self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
-    ):
+        self,
+        wf: Optional[WaveFunction] = None,
+        sampler: Optional[SamplerBase] = None,
+        optimizer: Optional[torch.optim.Optimizer] = None,
+        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+        output: Optional[str] = None,
+        rank: int = 0,
+    ) -> None:
         """Basic QMC solver
 
         Args:
@@ -36,22 +46,22 @@ class Solver(SolverBase):
             resampling={"mode": "update", "resample_every": 1, "nstep_update": 25},
         )
 
-    def configure(  # pylint: disable=too-many-arguments
+    def configure(
         self,
-        track=None,
-        freeze=None,
-        loss=None,
-        grad=None,
-        ortho_mo=None,
-        clip_loss=False,
-        resampling=None,
-    ):
+        track: Optional[List[str]] = None,
+        freeze: Optional[List[torch.nn.Parameter]] = None,
+        loss: Optional[str] = None,
+        grad: Optional[str] = None,
+        ortho_mo: Optional[bool] = None,
+        clip_loss: bool = False,
+        resampling: Optional[Dict[str, Any]] = None,
+    ) -> None:
         """Configure the solver
 
         Args:
             track (list, optional): list of observable to track. Defaults to ['local_energy'].
-            freeze ([type], optional): list of parameters to freeze. Defaults to None.
-            loss(str, optional): merhod to compute the loss: variance or energy.
+            freeze (list, optional): list of parameters to freeze. Defaults to None.
+            loss (str, optional): method to compute the loss: variance or energy.
                                   Defaults to 'energy'.
             grad (str, optional): method to compute the gradients: 'auto' or 'manual'.
                                   Defaults to 'auto'.
@@ -60,6 +70,7 @@ class Solver(SolverBase):
             clip_loss (bool, optional): Clip the loss values at +/- X std. X defined in Loss
                                         as clip_num_std (default 5)
                                         Defaults to False.
+            resampling (dict, optional): resampling options.
         """
 
         # set the parameters we want to optimize/freeze
@@ -94,7 +105,9 @@ class Solver(SolverBase):
             log.warning("Orthogonalization of the MO coeffs is better done in the wave function")
             self.ortho_loss = OrthoReg()
 
-    def set_params_requires_grad(self, wf_params=True, geo_params=False):
+    def set_params_requires_grad(self, 
+                                 wf_params: Optional[bool] = True, 
+                                 geo_params: Optional[bool] = False):
         """Configure parameters for wf opt."""
 
         # opt all wf parameters
@@ -114,7 +127,7 @@ class Solver(SolverBase):
         # no opt the atom positions
         self.wf.ao.atom_coords.requires_grad = geo_params
 
-    def freeze_parameters(self, freeze):
+    def freeze_parameters(self, freeze: List[str]) -> None:
         """Freeze the optimization of specified params.
 
         Args:
@@ -148,7 +161,7 @@ class Solver(SolverBase):
                     opt_freeze = ["ci", "mo", "ao", "jastrow", "backflow"]
                     raise ValueError("Valid arguments for freeze are :", opt_freeze)
 
-    def save_sampling_parameters(self):
+    def save_sampling_parameters(self) -> None:
         """save the sampling params."""
         self.sampler._nstep_save = self.sampler.nstep
         self.sampler._ntherm_save = self.sampler.ntherm
@@ -159,7 +172,7 @@ class Solver(SolverBase):
             self.sampler.nstep = self.resampling_options.nstep_update
             # self.sampler.walkers.nwalkers = pos.shape[0]
 
-    def restore_sampling_parameters(self):
+    def restore_sampling_parameters(self) -> None:
         """restore sampling params to their original values."""
         self.sampler.nstep = self.sampler._nstep_save
         self.sampler.ntherm = self.sampler._ntherm_save
@@ -167,8 +180,13 @@ class Solver(SolverBase):
 
 
     def run(
-        self, nepoch, batchsize=None, hdf5_group="wf_opt", chkpt_every=None, tqdm=False
-    ):
+        self, 
+        nepoch: int, 
+        batchsize : Optional[int] = None, 
+        hdf5_group: Optional[str] = "wf_opt", 
+        chkpt_every: Optional[int] = None, 
+        tqdm: Optional[bool] = False
+    ) -> SimpleNamespace:
         """Run a wave function optimization
 
         Args:
@@ -196,7 +214,7 @@ class Solver(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize, chkpt_every, tqdm=False):
+    def prepare_optimization(self, batchsize: int, chkpt_every: int , tqdm: Optional[bool] = False):
         """Prepare the optimization process
 
         Args:
@@ -227,7 +245,7 @@ class Solver(SolverBase):
 
         log.info("  done in %1.2f sec." % (time() - tstart))
 
-    def save_data(self, hdf5_group):
+    def save_data(self, hdf5_group: str):
         """Save the data to hdf5.
 
         Args:
@@ -239,7 +257,9 @@ class Solver(SolverBase):
 
         add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
-    def run_epochs(self, nepoch, with_tqdm=False, verbose=True):
+    def run_epochs(self, nepoch: int, 
+                   with_tqdm: Optional[bool] = False, 
+                   verbose: Optional[bool] = True) -> float :
         """Run a certain number of epochs
 
         Args:
@@ -320,7 +340,7 @@ class Solver(SolverBase):
 
         return cumulative_loss
 
-    def evaluate_grad_auto(self, lpos):
+    def evaluate_grad_auto(self, lpos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
         """Evaluate the gradient using automatic differentiation
 
         Args:
@@ -342,7 +362,7 @@ class Solver(SolverBase):
 
         return loss, eloc
 
-    def evaluate_grad_manual(self, lpos):
+    def evaluate_grad_manual(self, lpos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian 
@@ -392,7 +412,7 @@ class Solver(SolverBase):
         else:
             raise ValueError("Manual gradient only for energy minimization")
         
-    def evaluate_grad_manual_2(self, lpos):
+    def evaluate_grad_manual_2(self, lpos: torch.Tensor) -> Tuple(torch.Tensor, torch.Tensor):
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian 
@@ -439,7 +459,7 @@ class Solver(SolverBase):
         else:
             raise ValueError("Manual gradient only for energy minimization")
 
-    def log_data_opt(self, nepoch, task):
+    def log_data_opt(self, nepoch: int, task: str) -> None:
         """Log data for the optimization."""
         log.info("")
         log.info("  Optimization")
