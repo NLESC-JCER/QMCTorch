@@ -10,7 +10,7 @@ def set_torch_double_precision() -> None:
     """Set the default precision to double for all torch tensors."""
     torch.set_default_dtype(torch.float64)
     torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32  = False
+    torch.backends.cudnn.allow_tf32 = False
     # torch.set_default_tensor_type(torch.DoubleTensor)
 
 
@@ -18,15 +18,15 @@ def set_torch_single_precision() -> None:
     """Set the default precision to single for all torch tensors."""
     torch.set_default_dtype(torch.float32)
     torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32  = False
+    torch.backends.cudnn.allow_tf32 = False
     # torch.set_default_tensor_type(torch.FloatTensor)
 
 
 def fast_power(
-    x: torch.Tensor, 
-    k: torch.Tensor, 
-    mask0: Optional[torch.Tensor] = None, 
-    mask2: Optional[torch.Tensor] = None
+    x: torch.Tensor,
+    k: torch.Tensor,
+    mask0: Optional[torch.Tensor] = None,
+    mask2: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """
     Computes x**k when k have elements 0, 1, 2.
@@ -78,10 +78,8 @@ def gradients(
 
 
 def diagonal_hessian(
-        out: torch.Tensor, 
-        inp: torch.Tensor, 
-        return_grads: bool = False
-    ) -> torch.Tensor:
+    out: torch.Tensor, inp: torch.Tensor, return_grads: bool = False
+) -> torch.Tensor:
     """Return the diagonal Hessian of `out` with respect to `inp`.
 
     Args:
@@ -148,9 +146,7 @@ class DataSet(Dataset):
 
 class DataLoader:
     def __init__(
-        self, data: torch.Tensor, 
-        batch_size: int, 
-        pin_memory: bool = False
+        self, data: torch.Tensor, batch_size: int, pin_memory: bool = False
     ) -> None:
         """Simple DataLoader to replace torch data loader
 
@@ -200,7 +196,8 @@ class DataLoader:
             return out
         else:
             raise StopIteration
-        
+
+
 class OrthoReg(nn.Module):
     """add a penalty to make matrice orthgonal."""
 

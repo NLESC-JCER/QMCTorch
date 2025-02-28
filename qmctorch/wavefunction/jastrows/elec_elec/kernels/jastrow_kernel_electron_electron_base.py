@@ -3,6 +3,7 @@ from torch import nn
 from torch.autograd import grad
 from typing import Tuple
 
+
 class JastrowKernelElectronElectronBase(nn.Module):
     def __init__(self, nup: int, ndown: int, cuda: bool, **kwargs):
         r"""Base class for the elec-elec jastrow kernels
@@ -74,7 +75,9 @@ class JastrowKernelElectronElectronBase(nn.Module):
 
         return ker_grad.unsqueeze(1) * dr
 
-    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
+    def compute_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
+    ) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron using automatic differentiation
 
@@ -119,7 +122,9 @@ class JastrowKernelElectronElectronBase(nn.Module):
         return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
 
     @staticmethod
-    def _hess(val: torch.Tensor, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def _hess(
+        val: torch.Tensor, pos: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """get the hessian of the jastrow values.
         of a given orbital terms
         Warning thos work only because the orbital term are dependent

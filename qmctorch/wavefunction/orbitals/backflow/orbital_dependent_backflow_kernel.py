@@ -4,12 +4,15 @@ from typing import Dict
 from .kernels.backflow_kernel_base import BackFlowKernelBase
 from ....scf import Molecule
 
+
 class OrbitalDependentBackFlowKernel(nn.Module):
-    def __init__(self, 
-                 backflow_kernel: BackFlowKernelBase, 
-                 backflow_kernel_kwargs: Dict, 
-                 mol : Molecule, 
-                 cuda: bool) -> None:
+    def __init__(
+        self,
+        backflow_kernel: BackFlowKernelBase,
+        backflow_kernel_kwargs: Dict,
+        mol: Molecule,
+        cuda: bool,
+    ) -> None:
         """Compute orbital dependent back flow kernel, i.e. the functions
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation

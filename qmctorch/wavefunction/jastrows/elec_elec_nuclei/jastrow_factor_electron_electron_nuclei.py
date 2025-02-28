@@ -5,15 +5,19 @@ from typing import Dict, Tuple, Optional, List, Union
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from ....scf import Molecule
-from .kernels.jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
+from .kernels.jastrow_kernel_electron_electron_nuclei_base import (
+    JastrowKernelElectronElectronNucleiBase,
+)
+
 
 class JastrowFactorElectronElectronNuclei(nn.Module):
-    def __init__(self, 
-                 mol: Molecule, 
-                 jastrow_kernel: JastrowKernelElectronElectronNucleiBase, 
-                 kernel_kwargs: Dict = {}, 
-                 cuda: bool = False
-                 ) -> None:
+    def __init__(
+        self,
+        mol: Molecule,
+        jastrow_kernel: JastrowKernelElectronElectronNucleiBase,
+        kernel_kwargs: Dict = {},
+        cuda: bool = False,
+    ) -> None:
         """Jastrow Factor of the elec-elec-nuc term:
 
         .. math::
@@ -142,7 +146,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         # cat both
         return torch.cat((ren, ree), -1)
 
-    def assemble_dist_deriv(self, pos: torch.Tensor, derivative: int = 1) -> torch.Tensor:
+    def assemble_dist_deriv(
+        self, pos: torch.Tensor, derivative: int = 1
+    ) -> torch.Tensor:
         """Assemle the different distances for easy calculations
            the output has dimension  nbatch, 3 x natom, nelec_pair, 3
            the last dimension is composed of [r_{e_1n}, r_{e_2n}, r_{ee}]
@@ -179,7 +185,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             if at in self.__dict__:
                 self.__dict__[at] = self.__dict__[at].to(self.device)
 
-    def forward(self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True) -> torch.Tensor:
+    def forward(
+        self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True
+    ) -> torch.Tensor:
         """Compute the Jastrow factors.
 
         Args:
@@ -244,7 +252,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         else:
             raise ValueError("Derivative value nor recognized")
 
-    def jastrow_factor_derivative(self, r: torch.Tensor, dr: torch.Tensor, jast: torch.Tensor, sum_grad: bool) -> torch.Tensor:
+    def jastrow_factor_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, jast: torch.Tensor, sum_grad: bool
+    ) -> torch.Tensor:
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -305,12 +315,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return out
 
-    def jastrow_factor_second_derivative(self, 
-                                         r: torch.Tensor, 
-                                         dr: torch.Tensor, 
-                                         d2r: torch.Tensor, 
-                                         jast: torch.Tensor
-                                         ) -> torch.Tensor:
+    def jastrow_factor_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor, jast: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the value of the pure 2nd derivative of the Jastrow factor
 
         Args:
@@ -372,10 +379,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return ((out.sum(2)) ** 2).sum(1)
 
-    def jastrow_factor_second_derivative_auto(self, 
-                                              pos: torch.Tensor, 
-                                              jast: Union[None, torch.Tensor] = None
-                                              ) -> torch.Tensor:
+    def jastrow_factor_second_derivative_auto(
+        self, pos: torch.Tensor, jast: Union[None, torch.Tensor] = None
+    ) -> torch.Tensor:
         """Compute the second derivative of the jastrow factor automatically.
         This is needed for complicate kernels where the partial derivatives of
         the kernels are difficult to organize in a total derivaitve e.e Boys-Handy

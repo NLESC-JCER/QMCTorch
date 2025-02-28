@@ -4,6 +4,7 @@ from torch.autograd import grad
 from typing import Tuple, List, Union
 from .....scf import Molecule
 
+
 class BackFlowKernelBase(nn.Module):
     def __init__(self, mol: Molecule, cuda: bool):
         """Compute the back flow kernel, i.e. the function
@@ -100,7 +101,9 @@ class BackFlowKernelBase(nn.Module):
         return grad(val, ree, grad_outputs=torch.ones_like(val), allow_unused=False)[0]
 
     @staticmethod
-    def _hess(val, ree: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor,torch.Tensor]]:
+    def _hess(
+        val, ree: torch.Tensor
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
         """get the hessian of thekernel.
 
         Warning thos work only because the kernel term are dependent
@@ -110,9 +113,15 @@ class BackFlowKernelBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val, ree, grad_outputs=torch.ones_like(val), create_graph=True, allow_unused=False)[0]
+        gval = grad(
+            val,
+            ree,
+            grad_outputs=torch.ones_like(val),
+            create_graph=True,
+            allow_unused=False,
+        )[0]
         hval = grad(gval, ree, grad_outputs=torch.ones_like(gval), allow_unused=True)[0]
-        
+
         # if the kernel is linear, hval is None
         if hval is None:
             hval = torch.zeros_like(ree)

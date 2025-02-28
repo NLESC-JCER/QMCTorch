@@ -5,7 +5,9 @@ from torch.autograd.variable import Variable
 
 
 class JastrowKernelElectronElectronNucleiBase(nn.Module):
-    def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, **kwargs) -> None:
+    def __init__(
+        self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, **kwargs
+    ) -> None:
         r"""Base Class for the elec-elec-nuc jastrow kernel
 
         Args:
@@ -54,7 +56,9 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         # sum over the atoms
         return out
 
-    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
+    def compute_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
+    ) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels."""
 
         dr2 = dr * dr

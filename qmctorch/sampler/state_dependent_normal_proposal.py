@@ -41,13 +41,13 @@ class StateDependentNormalProposal(object):
         """
         nwalkers = x.shape[0]
         scale = self.kernel(x)  # shape (nwalkers, nelec*ndim)
-        displacement = self.multiVariate.sample((nwalkers, self.nelec))  # shape (nwalkers, nelec, ndim)
+        displacement = self.multiVariate.sample(
+            (nwalkers, self.nelec)
+        )  # shape (nwalkers, nelec, ndim)
         displacement *= scale  # shape (nwalkers, nelec, ndim)
         return displacement.view(nwalkers, self.nelec * self.ndim)
 
-    def get_transition_ratio(
-        self, x: torch.Tensor, y: torch.Tensor
-    ) -> torch.Tensor:
+    def get_transition_ratio(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
         Compute the transition ratio for the Metropolis-Hastings acceptance probability.
 

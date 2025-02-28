@@ -103,8 +103,11 @@ class SlaterPooling(nn.Module):
         """
         mo_up, mo_down = self.get_slater_matrices(input)
         det_up = torch.det(mo_up)
-        det_down = torch.det(mo_down) 
-        return (det_up[self.orb_proj.index_unique_configs[0], ...] * det_down[self.orb_proj.index_unique_configs[1], ...]).transpose(0, 1)
+        det_down = torch.det(mo_down)
+        return (
+            det_up[self.orb_proj.index_unique_configs[0], ...]
+            * det_down[self.orb_proj.index_unique_configs[1], ...]
+        ).transpose(0, 1)
 
     def det_single_double(self, input: torch.Tensor) -> torch.Tensor:
         """Computes the determinant of ground state + single + double excitations.
@@ -124,7 +127,9 @@ class SlaterPooling(nn.Module):
             * det_unique_down[:, self.index_unique_excitation[1]]
         )
 
-    def det_ground_state(self, input: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def det_ground_state(
+        self, input: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the Slater determinants of the ground state.
 
         Args:
@@ -138,7 +143,9 @@ class SlaterPooling(nn.Module):
             torch.det(input[:, self.nup :, : self.ndown]),
         )
 
-    def det_unique_single_double(self, input: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def det_unique_single_double(
+        self, input: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the SD of single/double excitations
 
         The determinants of the single excitations
@@ -276,7 +283,6 @@ class SlaterPooling(nn.Module):
         if self.config_method == "ground_state":
             op_vals = self.operator_ground_state(mo, bop, op_squared)
 
-
         elif self.config_method.startswith("single"):
             if self.use_explicit_operator:
                 op_vals = self.operator_explicit(mo, bop, op_squared)
@@ -296,11 +302,11 @@ class SlaterPooling(nn.Module):
             return op_vals
 
     def operator_ground_state(
-            self, 
-            mo: torch.Tensor, 
-            bop: torch.Tensor, 
-            op_squared: bool = False, 
-            inv_mo: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+        self,
+        mo: torch.Tensor,
+        bop: torch.Tensor,
+        op_squared: bool = False,
+        inv_mo: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the values of any operator on gs only
 
@@ -425,11 +431,11 @@ class SlaterPooling(nn.Module):
         )
 
     def operator_unique_single_double(
-            self, 
-            mo: torch.Tensor, 
-            bop: torch.Tensor, 
-            op_squared: bool, 
-            inv_mo: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
+        self,
+        mo: torch.Tensor,
+        bop: torch.Tensor,
+        op_squared: bool,
+        inv_mo: Optional[Tuple[torch.Tensor, torch.Tensor]] = None,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute the operator value of the unique single/double conformation
 
@@ -454,12 +460,11 @@ class SlaterPooling(nn.Module):
         do_single = len(self.exc_mask.index_unique_single_up) != 0
         do_double = len(self.exc_mask.index_unique_double_up) != 0
 
-        # compute or retrieve the inverse of the up/down MO matrices 
+        # compute or retrieve the inverse of the up/down MO matrices
         if inv_mo is None:
             invAup, invAdown = self.compute_inverse_occupied_mo_matrix(mo)
         else:
             invAup, invAdown = inv_mo
-        
 
         # precompute invA @ B
         invAB_up = invAup @ bop[..., : self.nup, : self.nup]
@@ -501,10 +506,8 @@ class SlaterPooling(nn.Module):
             invAdown @ bop_virt_down - invAdown @ bop_occ_down @ invAdown @ Avirt_down
         )
 
-        
         # if we only want the normal value of the op and not its squared
         if not op_squared:
-
             # reshape the M matrices
             Mup = Mup.view(*Mup.shape[:-2], -1)
             Mdown = Mdown.view(*Mdown.shape[:-2], -1)
@@ -562,7 +565,6 @@ class SlaterPooling(nn.Module):
         # if we want the squre of the operator
         # typically trace(ABAB)
         else:
-
             # compute A^-1 B M
             Yup = invAB_up @ Mup
             Ydown = invAB_down @ Mdown
@@ -601,7 +603,6 @@ class SlaterPooling(nn.Module):
                 op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
 
             if do_double:
-                
                 # spin up values
                 op_dbl_up = self.op_squared_multiexcitation(
                     op_ground_up,
@@ -669,12 +670,12 @@ class SlaterPooling(nn.Module):
 
     @staticmethod
     def op_multiexcitation(
-        baseterm: torch.Tensor, 
-        mat_exc: torch.Tensor, 
+        baseterm: torch.Tensor,
+        mat_exc: torch.Tensor,
         M: torch.Tensor,
-        index: List[int], 
-        size: int, 
-        nbatch: int
+        index: List[int],
+        size: int,
+        nbatch: int,
     ) -> torch.Tensor:
         r"""Computes the operator values for single excitation
 
@@ -707,7 +708,7 @@ class SlaterPooling(nn.Module):
         # computes T @ M (after reshaping M as size x size matrices)
         # THIS IS SURPRSINGLY THE COMPUTATIONAL BOTTLENECK
         m_tmp = M[..., index].view(_m_shape)
-        op_vals =  T @ m_tmp
+        op_vals = T @ m_tmp
 
         # compute the trace
         op_vals = btrace(op_vals)
@@ -724,7 +725,7 @@ class SlaterPooling(nn.Module):
         M: torch.Tensor,
         Y: torch.Tensor,
         index: List[int],
-        nbatch: int
+        nbatch: int,
     ) -> torch.Tensor:
         r"""Computes the operator squared for single excitation
 
@@ -769,7 +770,7 @@ class SlaterPooling(nn.Module):
         Y: torch.tensor,
         index: List[int],
         size: int,
-        nbatch: int
+        nbatch: int,
     ) -> torch.tensor:
         r"""Computes the operator squared for multiple excitation
 
@@ -818,12 +819,10 @@ class SlaterPooling(nn.Module):
         op_vals += baseterm
 
         return op_vals
-    
 
-    def compute_inverse_occupied_mo_matrix( 
-            self, 
-            mo: torch.Tensor
-            ) -> Union[Tuple[torch.Tensor, torch.Tensor], None]:
+    def compute_inverse_occupied_mo_matrix(
+        self, mo: torch.Tensor
+    ) -> Union[Tuple[torch.Tensor, torch.Tensor], None]:
         """precompute the inverse of the occupied mo matrix
 
         Args:
@@ -834,11 +833,13 @@ class SlaterPooling(nn.Module):
         """
         # return None if we use the explicit calculation of all dets
         if self.config_method.startswith("cas("):
-            return None 
-        
+            return None
+
         if self.use_explicit_operator:
             return None
-        
+
         # return inverse of the mo matrices
-        return (torch.inverse(mo[:, : self.nup, : self.nup]), 
-                torch.inverse(mo[:, self.nup :, : self.ndown]))
+        return (
+            torch.inverse(mo[:, : self.nup, : self.nup]),
+            torch.inverse(mo[:, self.nup :, : self.ndown]),
+        )

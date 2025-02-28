@@ -8,12 +8,9 @@ from .scaling import (
 
 
 class ElectronElectronDistance(nn.Module):
-    def __init__(self, 
-                 nelec: int, 
-                 ndim: int = 3, 
-                 scale: bool = False,
-                 scale_factor: float = 0.6
-                 ) -> None:
+    def __init__(
+        self, nelec: int, ndim: int = 3, scale: bool = False, scale_factor: float = 0.6
+    ) -> None:
         """Computes the electron-electron distances
 
         .. math::
@@ -47,11 +44,7 @@ class ElectronElectronDistance(nn.Module):
         elif _type_ == torch.float64:
             self.eps = 1e-16
 
-    def forward(
-        self, 
-        input: torch.Tensor, 
-        derivative: int = 0
-    ) -> torch.Tensor:
+    def forward(self, input: torch.Tensor, derivative: int = 0) -> torch.Tensor:
         """Compute the pairwise distance between the electrons
         or its derivative.
 
@@ -66,14 +59,14 @@ class ElectronElectronDistance(nn.Module):
             \\frac{d r_{ij}}{dx_j} = -\\frac{dr_{ij}}{dx_i}
 
         Args:
-            input (torch.Tensor): position of the electron 
+            input (torch.Tensor): position of the electron
                                   size : Nbatch x [Nelec x Ndim]
-            derivative (int, optional): degre of the derivative. 
+            derivative (int, optional): degre of the derivative.
                                         Defaults to 0.
 
         Returns:
-            torch.Tensor: distance (or derivative) matrix 
-                          Nbatch x Nelec x Nelec if derivative = 0 
+            torch.Tensor: distance (or derivative) matrix
+                          Nbatch x Nelec x Nelec if derivative = 0
                           Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
 
         """
@@ -155,7 +148,9 @@ class ElectronElectronDistance(nn.Module):
         diff_axis = diff_axis - diff_axis.transpose(2, 3)
         return diff_axis * invr
 
-    def get_second_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
+    def get_second_der_distance(
+        self, pos: torch.Tensor, dist: torch.Tensor
+    ) -> torch.Tensor:
         """Get the second derivative of the electron electron distance matrix.
 
         .. math::

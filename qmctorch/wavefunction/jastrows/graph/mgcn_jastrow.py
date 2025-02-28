@@ -11,6 +11,7 @@ from .elec_elec_graph import ElecElecGraph
 from .elec_nuc_graph import ElecNucGraph
 from ....scf import Molecule
 
+
 class MGCNJastrowFactor(nn.Module):
     def __init__(
         self,
@@ -83,11 +84,9 @@ class MGCNJastrowFactor(nn.Module):
         """representation of the jastrow factor"""
         return "ee, en graph -> " + self.__class__.__name__
 
-    def forward(self, 
-                pos: torch.Tensor, 
-                derivative: int = 0, 
-                sum_grad: bool = True
-                ) -> Union[torch.Tensor, Tuple[torch.Tensor,torch.Tensor,torch.Tensor]]:
+    def forward(
+        self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """Compute the Jastrow factors.
 
         Args:
@@ -147,7 +146,9 @@ class MGCNJastrowFactor(nn.Module):
                 pos, ee_kernel, en_kernel, sum_grad=sum_grad, return_all=True
             )
 
-    def _get_val(self, ee_kernel: torch.Tensor, en_kernel: torch.Tensor) -> torch.Tensor:
+    def _get_val(
+        self, ee_kernel: torch.Tensor, en_kernel: torch.Tensor
+    ) -> torch.Tensor:
         """Get the jastrow values.
 
         Args:
@@ -156,7 +157,13 @@ class MGCNJastrowFactor(nn.Module):
         """
         return torch.exp(ee_kernel + en_kernel)
 
-    def _get_grad_vals(self, pos: torch.Tensor, ee_kernel: torch.Tensor, en_kernel: torch.Tensor, sum_grad: bool) -> torch.Tensor:
+    def _get_grad_vals(
+        self,
+        pos: torch.Tensor,
+        ee_kernel: torch.Tensor,
+        en_kernel: torch.Tensor,
+        sum_grad: bool,
+    ) -> torch.Tensor:
         """Get the values of the gradients
 
 
@@ -180,7 +187,12 @@ class MGCNJastrowFactor(nn.Module):
         return grad_val
 
     def _get_hess_vals(
-        self, pos: torch.Tensor, ee_kernel: torch.Tensor, en_kernel: torch.Tensor, sum_grad: bool = False, return_all: bool = False
+        self,
+        pos: torch.Tensor,
+        ee_kernel: torch.Tensor,
+        en_kernel: torch.Tensor,
+        sum_grad: bool = False,
+        return_all: bool = False,
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """Get the hessian values
 

@@ -42,8 +42,9 @@ class Hamiltonian(SamplerBase):
         self.traj_length = L
 
     @staticmethod
-    def get_grad(func: Callable[[torch.Tensor], torch.Tensor],
-                 inp: torch.Tensor) -> torch.Tensor:
+    def get_grad(
+        func: Callable[[torch.Tensor], torch.Tensor], inp: torch.Tensor
+    ) -> torch.Tensor:
         """get the gradient of the pdf using autograd
 
         Args:
@@ -76,9 +77,12 @@ class Hamiltonian(SamplerBase):
         """
         return lambda x: -torch.log(func(x))
 
-    def __call__(self, pdf: Callable[[torch.Tensor], torch.Tensor],
-                 pos: Optional[torch.Tensor] = None,
-                 with_tqdm: bool = True) -> torch.Tensor:
+    def __call__(
+        self,
+        pdf: Callable[[torch.Tensor], torch.Tensor],
+        pos: Optional[torch.Tensor] = None,
+        with_tqdm: bool = True,
+    ) -> torch.Tensor:
         """Generate walkers following HMC
 
         Generates a series of walkers following the HMC algorithm
@@ -136,11 +140,15 @@ class Hamiltonian(SamplerBase):
         return torch.cat(pos).requires_grad_()
 
     @staticmethod
-    def _step(U: Callable[[torch.Tensor], torch.Tensor], 
-              get_grad: Callable[[Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor], 
-              epsilon: float, 
-              L: int, 
-              q_init: torch.Tensor) -> Tuple[torch.Tensor, float]:
+    def _step(
+        U: Callable[[torch.Tensor], torch.Tensor],
+        get_grad: Callable[
+            [Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor
+        ],
+        epsilon: float,
+        L: int,
+        q_init: torch.Tensor,
+    ) -> Tuple[torch.Tensor, float]:
         """Take one step of the sampler
 
         Args:

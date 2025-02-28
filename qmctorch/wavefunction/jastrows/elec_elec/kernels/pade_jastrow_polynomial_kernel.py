@@ -6,8 +6,15 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 
 
 class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
-    def __init__(self, nup: int, ndown: int, cuda: bool, order: int = 2, 
-                 weight_a: Union[torch.Tensor, None] = None, weight_b: Union[torch.Tensor, None]=None) -> None:
+    def __init__(
+        self,
+        nup: int,
+        ndown: int,
+        cuda: bool,
+        order: int = 2,
+        weight_a: Union[torch.Tensor, None] = None,
+        weight_b: Union[torch.Tensor, None] = None,
+    ) -> None:
         """Computes a polynomial Pade-Jastrow factor
 
         .. math::
@@ -75,7 +82,9 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
         return static_weight
 
-    def set_variational_weights(self, weight_a: Union[torch.Tensor, None], weight_b: Union[torch.Tensor, None]) -> None:
+    def set_variational_weights(
+        self, weight_a: Union[torch.Tensor, None], weight_b: Union[torch.Tensor, None]
+    ) -> None:
         """Define the initial values of the variational weights.
 
         Args:
@@ -171,7 +180,9 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
         return (der_num * denom - num * der_denom) / (denom * denom)
 
-    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
+    def compute_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
+    ) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 
@@ -234,7 +245,9 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
         return num, denom
 
-    def _compute_polynom_derivatives(self, r: torch.Tensor, dr: torch.Tensor) -> torch.Tensor:
+    def _compute_polynom_derivatives(
+        self, r: torch.Tensor, dr: torch.Tensor
+    ) -> torch.Tensor:
         """Computes the derivatives of the polynomials.
 
         Args:
@@ -263,7 +276,9 @@ class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
 
         return der_num, der_denom
 
-    def _compute_polynom_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
+    def _compute_polynom_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
+    ) -> torch.Tensor:
         """Computes the second derivative of the polynoms.
 
         Args:

@@ -19,6 +19,7 @@ from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse imp
     BackFlowKernelInverse,
 )
 from qmctorch.utils import set_torch_double_precision
+
 set_torch_double_precision()
 
 

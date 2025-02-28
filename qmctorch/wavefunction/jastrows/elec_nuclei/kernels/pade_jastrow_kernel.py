@@ -6,7 +6,9 @@ from .jastrow_kernel_electron_nuclei_base import JastrowKernelElectronNucleiBase
 
 
 class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
-    def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, w: float = 1.0) -> None:
+    def __init__(
+        self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, w: float = 1.0
+    ) -> None:
         r"""Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -31,7 +33,7 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
         self.static_weight = torch.as_tensor([1.0]).to(self.device)
         self.requires_autograd = True
 
-    def forward(self, r:torch.Tensor) -> torch.Tensor:
+    def forward(self, r: torch.Tensor) -> torch.Tensor:
         """Get the jastrow kernel.
         .. math::
             B_{ij} = \frac{b r_{i,j}}{1+b'r_{i,j}}
@@ -76,7 +78,9 @@ class PadeJastrowKernel(JastrowKernelElectronNucleiBase):
 
         return a + b
 
-    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
+    def compute_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
+    ) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 

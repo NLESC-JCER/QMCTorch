@@ -113,7 +113,9 @@ class ElectronNucleiDistance(nn.Module):
         diff_axis = (pos.unsqueeze(-1) - self.atoms.T).transpose(2, 3)
         return (diff_axis * invr).permute(0, 3, 1, 2)
 
-    def get_second_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
+    def get_second_der_distance(
+        self, pos: torch.Tensor, dist: torch.Tensor
+    ) -> torch.Tensor:
         """Get the derivative of the electron-nuclei distance matrix
 
         .. math::
@@ -137,7 +139,9 @@ class ElectronNucleiDistance(nn.Module):
         return diff_axis * invr3
 
     @staticmethod
-    def _get_distance_quadratic(elec_pos: torch.Tensor, atom_pos: torch.Tensor) -> torch.Tensor:
+    def _get_distance_quadratic(
+        elec_pos: torch.Tensor, atom_pos: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the distance following a quadratic expansion
 
         Arguments:

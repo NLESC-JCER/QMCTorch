@@ -3,7 +3,8 @@ import torch
 
 class BaseProposalKernel(object):
     def __call__(self, x):
-        raise NotImplementedError   
+        raise NotImplementedError
+
 
 class DensityVarianceKernel(BaseProposalKernel):
     def __init__(self, atomic_pos, sigma=1.0, scale_factor=1.0):

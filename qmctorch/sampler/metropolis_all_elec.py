@@ -75,8 +75,9 @@ class Metropolis(SamplerBase):
         log.info("  Move proba          : {0}", self.movedict["proba"])
 
     @staticmethod
-    def log_func(func: Callable[[torch.Tensor], torch.Tensor]
-                 ) -> Callable[[torch.Tensor], torch.Tensor]:
+    def log_func(
+        func: Callable[[torch.Tensor], torch.Tensor]
+    ) -> Callable[[torch.Tensor], torch.Tensor]:
         """Compute the log of a function
 
         Args:

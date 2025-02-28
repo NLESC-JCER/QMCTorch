@@ -106,7 +106,7 @@ def CartesianHarmonics(
     mask2: torch.Tensor,
     derivative: list = [0],
     sum_grad: bool = True,
-    sum_hess: bool = True
+    sum_hess: bool = True,
 ) -> torch.Tensor:
     r"""Computes Real Cartesian Harmonics
 
@@ -244,7 +244,9 @@ def SphericalHarmonics(
         return get_grad_spherical_harmonics(xyz, l, m)
 
 
-def get_spherical_harmonics(xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tensor, derivative: int):
+def get_spherical_harmonics(
+    xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tensor, derivative: int
+):
     r"""Compute the Real Spherical Harmonics of the AO.
 
     Args:
@@ -303,7 +305,9 @@ def get_spherical_harmonics(xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tens
     return Y
 
 
-def get_grad_spherical_harmonics(xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tensor) -> torch.Tensor:
+def get_grad_spherical_harmonics(
+    xyz: torch.Tensor, lval: torch.Tensor, m: torch.Tensor
+) -> torch.Tensor:
     r"""Compute the gradient of the Real Spherical Harmonics of the AO.
 
     Args:
