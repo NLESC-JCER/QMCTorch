@@ -167,7 +167,7 @@ class DataLoader:
 
 
 class Loss(nn.Module):
-    def __init__(self, wf, method="energy", clip=False):
+    def __init__(self, wf, method="energy", clip=False, clip_threshold=5):
         """Defines the loss to use during the optimization
 
         Arguments:
@@ -194,7 +194,7 @@ class Loss(nn.Module):
 
         # number of +/- std for clipping
         # Excludes values + /- Nstd x std the mean of the eloc
-        self.clip_num_std = 5
+        self.clip_num_std = clip_threshold
 
         # select loss function
         self.loss_fn = {"energy": torch.mean, "variance": torch.var}[method]
@@ -251,9 +251,11 @@ class Loss(nn.Module):
         if self.clip:
             median = torch.median(local_energies)
             std = torch.std(local_energies)
-            emax = median + self.clip_num_std * std
-            emin = median - self.clip_num_std * std
-            mask = (local_energies < emax) & (local_energies > emin)
+            zscore = torch.abs((local_energies - median) / std)    
+            mask = zscore < self.clip_num_std
+            # emax = median + self.clip_num_std * std
+            # emin = median - self.clip_num_std * std
+            # mask = (local_energies < emax) & (local_energies > emin)
         else:
             mask = torch.ones_like(local_energies).type(torch.bool)
 
