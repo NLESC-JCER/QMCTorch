@@ -253,9 +253,6 @@ class Loss(nn.Module):
             std = torch.std(local_energies)
             zscore = torch.abs((local_energies - median) / std)    
             mask = zscore < self.clip_num_std
-            # emax = median + self.clip_num_std * std
-            # emin = median - self.clip_num_std * std
-            # mask = (local_energies < emax) & (local_energies > emin)
         else:
             mask = torch.ones_like(local_energies).type(torch.bool)
 
