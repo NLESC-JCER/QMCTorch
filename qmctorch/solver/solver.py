@@ -44,6 +44,7 @@ class Solver(SolverBase):
         grad=None,
         ortho_mo=None,
         clip_loss=False,
+        clip_threshold=5,
         resampling=None,
     ):
         """Configure the solver
@@ -85,7 +86,7 @@ class Solver(SolverBase):
 
         # get the loss
         if loss is not None:
-            self.loss = Loss(self.wf, method=loss, clip=clip_loss)
+            self.loss = Loss(self.wf, method=loss, clip=clip_loss, clip_threshold=clip_threshold)
             self.loss.use_weight = self.resampling_options.resample_every > 1
 
         # orthogonalization penalty for the MO coeffs
