@@ -1,6 +1,6 @@
 from time import time
 from types import SimpleNamespace
-from typing import Optional
+from typing import Optional, Dict, Union, List, Tuple, Any
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
 

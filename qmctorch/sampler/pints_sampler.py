@@ -115,7 +115,7 @@ class PintsSampler(SamplerBase):
 
     @staticmethod
     def log_func(
-        func: Callable[[torch.Tensor], torch.Tensor],
+        func: Callable[[torch.Tensor], torch.Tensor]
     ) -> Callable[[torch.Tensor], torch.Tensor]:
         """Compute the negative log of a function
 

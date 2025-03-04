@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from typing import Union
+from typing import Union, Optional
 from .....utils import register_extra_attributes
 from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 

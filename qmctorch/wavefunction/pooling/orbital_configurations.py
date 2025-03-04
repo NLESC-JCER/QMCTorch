@@ -308,7 +308,7 @@ class OrbitalConfigurations:
 
 
 def get_excitation(
-    configs: Tuple[torch.LongTensor, torch.LongTensor],
+    configs: Tuple[torch.LongTensor, torch.LongTensor]
 ) -> Tuple[List[List[List[int]]], List[List[List[int]]]]:
     """Get the excitation data
 
@@ -350,7 +350,7 @@ def get_excitation(
 
 
 def get_unique_excitation(
-    configs: Tuple[torch.LongTensor, torch.LongTensor],
+    configs: Tuple[torch.LongTensor, torch.LongTensor]
 ) -> Tuple[Tuple[List[List[int]], List[List[int]]], Tuple[List[int], List[int]]]:
     """get the unique excitation data
 

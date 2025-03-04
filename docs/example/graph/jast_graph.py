@@ -1,8 +1,10 @@
 from qmctorch.wavefunction.jastrows.graph.mgcn_jastrow import MGCNJastrowFactor
 import torch
+from torch.autograd import grad
 from types import SimpleNamespace
 
 # from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
+from dgllife.model.model_zoo.mgcn_predictor import MGCNPredictor
 
 nup = 2
 ndown = 2

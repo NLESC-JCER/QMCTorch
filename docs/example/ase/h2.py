@@ -1,9 +1,11 @@
 from qmctorch.ase import QMCTorch
+from qmctorch.ase.optimizer import TorchOptimizer
 from ase import Atoms
-from ase.optimize import FIRE
+from ase.optimize import GoodOldQuasiNewton, FIRE
 from ase.io import write
 import torch
 import numpy as np
+from qmctorch.utils.plot_data import plot_walkers_traj, plot_correlation_coefficient
 
 torch.random.manual_seed(0)
 np.random.seed(0)

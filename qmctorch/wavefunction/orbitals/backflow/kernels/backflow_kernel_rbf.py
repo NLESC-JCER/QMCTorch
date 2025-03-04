@@ -3,6 +3,7 @@ from torch import nn
 from torch.nn import functional as F
 
 from .....scf import Molecule
+from .....utils import register_extra_attributes
 from .backflow_kernel_base import BackFlowKernelBase
 
 

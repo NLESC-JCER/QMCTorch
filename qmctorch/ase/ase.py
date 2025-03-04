@@ -1,4 +1,4 @@
-from ase.calculators.calculator import Calculator
+from ase.calculators.calculator import Calculator, all_changes
 from ase import Atoms
 import numpy as np
 import torch
@@ -15,6 +15,7 @@ from ..wavefunction.orbitals.backflow import (
 )
 from ..solver import Solver
 from ..sampler import Metropolis
+from .. import log
 
 
 class QMCTorch(Calculator):
@@ -26,7 +27,7 @@ class QMCTorch(Calculator):
         *,
         labels: list = None,
         atoms: Atoms = None,
-        **kwargs: dict,
+        **kwargs: dict
     ) -> None:
         """
         Initialize a QMCTorchCalculator object.

@@ -1,7 +1,7 @@
 import unittest
 
 import torch
-from torch.autograd import Variable
+from torch.autograd import Variable, grad
 import numpy as np
 
 from qmctorch.scf import Molecule

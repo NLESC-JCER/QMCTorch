@@ -1,6 +1,5 @@
 # -*- coding: utf-8 -*-
 """Documentation about QMCTorch"""
-
 from .__version__ import __version__
 
 

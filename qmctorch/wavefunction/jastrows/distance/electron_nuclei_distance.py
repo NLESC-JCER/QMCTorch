@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
 from .scaling import (
     get_scaled_distance,
     get_der_scaled_distance,

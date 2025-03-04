@@ -3,6 +3,7 @@ from qmctorch.scf import Molecule
 import numpy as np
 import torch
 from .base_test_cases import BaseTestCases
+from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import (
     JastrowFactorElectronElectron,

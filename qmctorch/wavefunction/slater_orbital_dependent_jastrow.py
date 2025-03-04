@@ -1,6 +1,6 @@
 import torch
 import operator
-from typing import Union, Dict
+from typing import Union, Dict, Tuple
 from .slater_jastrow import SlaterJastrow
 from .jastrows.elec_elec.kernels.jastrow_kernel_electron_electron_base import (
     JastrowKernelElectronElectronBase,

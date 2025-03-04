@@ -5,8 +5,9 @@ from torch import optim
 from qmctorch.scf import Molecule
 
 from qmctorch.solver import Solver
-from qmctorch.sampler import Metropolis
+from qmctorch.sampler import Metropolis, Hamiltonian
 from qmctorch.utils import set_torch_double_precision
+from qmctorch.utils.plot_data import plot_energy, plot_data
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
