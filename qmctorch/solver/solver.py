@@ -454,6 +454,63 @@ class Solver(SolverBase):
         else:
             raise ValueError("Manual gradient only for energy minimization")
 
+    def evaluate_grad_manual_3(self, lpos):
+        """Evaluate the gradient using low variance expression
+        WARNING : This method is not valid to compute forces
+        as it does not include derivative of the hamiltonian 
+        wrt atomic positions 
+ 
+        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
+
+        Args:
+            lpos ([type]): [description]
+
+        Args:
+            lpos (torch.tensor): sampling points
+
+        Returns:
+            tuple: loss values and local energies
+        """
+
+        # determine if we need the grad of eloc
+        no_grad_eloc = True
+        if self.wf.kinetic_method == "auto":
+            no_grad_eloc = False
+
+        if self.wf.jastrow.requires_autograd:
+            no_grad_eloc = False
+
+        if self.loss.method in ["energy", "weighted-energy"]:
+            # Get the gradient of the total energy
+            # dE/dk = <  (E_L - <E_L >) d[ln(abs(psi))] / dk) >
+
+            # compute local energy
+            with self.loss.get_grad_mode(no_grad_eloc):
+                eloc = self.wf.local_energy(lpos)            
+
+            # compute the wf values
+            psi = torch.log(torch.abs(self.wf(lpos)))
+            norm = 1.0 / len(psi)
+
+            # evaluate the prefactor of the grads
+            weight = eloc.clone()
+            weight -= torch.mean(eloc)
+            weight *= 2.0 * norm
+
+            # clip the values
+            clip_mask = self.loss.get_clipping_mask(eloc)
+            psi = psi[clip_mask]
+            weight = weight[clip_mask]
+
+            # compute the gradients
+            psi.backward(weight)
+
+            return torch.mean(eloc), eloc
+
+        else:
+            raise ValueError("Manual gradient only for energy minimization")
+
+
     def log_data_opt(self, nepoch, task):
         """Log data for the optimization."""
         log.info("")
