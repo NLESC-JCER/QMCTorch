@@ -1,8 +1,8 @@
+
 from qmctorch.wavefunction.jastrows.graph.mgcn_jastrow import MGCNJastrowFactor
 import torch
 from torch.autograd import grad
 from types import SimpleNamespace
-
 # from qmctorch.wavefunction.jastrows.graph.mgcn.mgcn_predictor import MGCNPredictor
 from dgllife.model.model_zoo.mgcn_predictor import MGCNPredictor
 
@@ -19,10 +19,10 @@ mol = SimpleNamespace(
 )
 
 jast = MGCNJastrowFactor(
-    mol,
-    ee_model_kwargs={"n_layers": 3, "feats": 32, "cutoff": 5.0, "gap": 1.0},
-    en_model_kwargs={"n_layers": 3, "feats": 32, "cutoff": 5.0, "gap": 1.0},
-)
+            mol,
+            ee_model_kwargs={"n_layers": 3, "feats": 32, "cutoff": 5.0, "gap": 1.0},
+            en_model_kwargs={"n_layers": 3, "feats": 32, "cutoff": 5.0, "gap": 1.0},
+        )
 
 
 pos = torch.rand(10, 12)

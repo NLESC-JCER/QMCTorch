@@ -11,7 +11,6 @@ from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron i
 from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
 from qmctorch.utils import set_torch_double_precision
 
-
 class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
     def setUp(self):
         torch.manual_seed(101)
@@ -29,9 +28,7 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
         )
 
         # define jastrow factor
-        jastrow = JastrowFactorElectronElectron(
-            mol, PadeJastrowKernel, orbital_dependent_kernel=True
-        )
+        jastrow = JastrowFactorElectronElectron(mol, PadeJastrowKernel, orbital_dependent_kernel=True)
 
         self.wf = SlaterJastrow(
             mol,
@@ -59,7 +56,6 @@ class TestSlaterJastrow(BaseTestCases.WaveFunctionBaseTest):
 
     def test_local_energy(self):
         pass
-
 
 if __name__ == "__main__":
     unittest.main()

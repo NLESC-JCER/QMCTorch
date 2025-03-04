@@ -6,11 +6,10 @@ from typing import Optional, Dict, Union, List, Tuple, Any
 import torch
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
-from ..utils import OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
+from ..utils import  OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
 from .. import log
 from .solver_base import SolverBase
 from .loss import Loss
-
 
 class Solver(SolverBase):
     def __init__(  # pylint: disable=too-many-arguments
@@ -102,14 +101,12 @@ class Solver(SolverBase):
         # orthogonalization penalty for the MO coeffs
         self.ortho_mo = ortho_mo
         if self.ortho_mo is True:
-            log.warning(
-                "Orthogonalization of the MO coeffs is better done in the wave function"
-            )
+            log.warning("Orthogonalization of the MO coeffs is better done in the wave function")
             self.ortho_loss = OrthoReg()
 
-    def set_params_requires_grad(
-        self, wf_params: Optional[bool] = True, geo_params: Optional[bool] = False
-    ):
+    def set_params_requires_grad(self, 
+                                 wf_params: Optional[bool] = True, 
+                                 geo_params: Optional[bool] = False):
         """Configure parameters for wf opt."""
 
         # opt all wf parameters
@@ -180,13 +177,14 @@ class Solver(SolverBase):
         self.sampler.ntherm = self.sampler._ntherm_save
         # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
+
     def run(
-        self,
-        nepoch: int,
-        batchsize: Optional[int] = None,
-        hdf5_group: Optional[str] = "wf_opt",
-        chkpt_every: Optional[int] = None,
-        tqdm: Optional[bool] = False,
+        self, 
+        nepoch: int, 
+        batchsize : Optional[int] = None, 
+        hdf5_group: Optional[str] = "wf_opt", 
+        chkpt_every: Optional[int] = None, 
+        tqdm: Optional[bool] = False
     ) -> SimpleNamespace:
         """Run a wave function optimization
 
@@ -215,9 +213,7 @@ class Solver(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(
-        self, batchsize: int, chkpt_every: int, tqdm: Optional[bool] = False
-    ):
+    def prepare_optimization(self, batchsize: int, chkpt_every: int , tqdm: Optional[bool] = False):
         """Prepare the optimization process
 
         Args:
@@ -260,12 +256,9 @@ class Solver(SolverBase):
 
         add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
-    def run_epochs(
-        self,
-        nepoch: int,
-        with_tqdm: Optional[bool] = False,
-        verbose: Optional[bool] = True,
-    ) -> float:
+    def run_epochs(self, nepoch: int, 
+                   with_tqdm: Optional[bool] = False, 
+                   verbose: Optional[bool] = True) -> float :
         """Run a certain number of epochs
 
         Args:
@@ -278,8 +271,8 @@ class Solver(SolverBase):
         # init the loss in case we have nepoch=0
         cumulative_loss = 0
         min_loss = 0  # this is set at n=0
-
-        # the range
+        
+        # the range 
         rng = tqdm(
             range(nepoch),
             desc="INFO:QMCTorch|  Optimization",
@@ -288,12 +281,12 @@ class Solver(SolverBase):
 
         # loop over the epoch
         for n in rng:
+
             if verbose:
                 tstart = time()
                 log.info("")
                 log.info(
-                    "  epoch %d | %d sampling points"
-                    % (n, len(self.dataloader.dataset))
+                    "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
                 )
 
             # reset the gradients and loss
@@ -346,9 +339,7 @@ class Solver(SolverBase):
 
         return cumulative_loss
 
-    def evaluate_grad_auto(
-        self, lpos: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def evaluate_grad_auto(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using automatic differentiation
 
         Args:
@@ -370,14 +361,12 @@ class Solver(SolverBase):
 
         return loss, eloc
 
-    def evaluate_grad_manual(
-        self, lpos: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+    def evaluate_grad_manual(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
-        as it does not include derivative of the hamiltonian
-        wrt atomic positions
-
+        as it does not include derivative of the hamiltonian 
+        wrt atomic positions 
+ 
         https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
 
         Args:
@@ -421,13 +410,11 @@ class Solver(SolverBase):
 
         else:
             raise ValueError("Manual gradient only for energy minimization")
-
-    def evaluate_grad_manual_2(
-        self, lpos: torch.Tensor
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        
+    def evaluate_grad_manual_2(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
-        as it does not include derivative of the hamiltonian
+        as it does not include derivative of the hamiltonian 
         wrt atomic positions
 
         https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
@@ -460,10 +447,10 @@ class Solver(SolverBase):
             psi = self.wf(lpos)
             norm = 2.0 / len(psi)
 
-            weight1 = norm * eloc / psi.detach().clone()
-            weight2 = -norm * eloc_mean / psi.detach().clone()
+            weight1 = norm * eloc/psi.detach().clone()
+            weight2 = -norm * eloc_mean/psi.detach().clone()
 
-            psi.backward(weight1, retain_graph=True)
+            psi.backward(weight1,retain_graph=True) 
             psi.backward(weight2)
 
             return torch.mean(eloc), eloc

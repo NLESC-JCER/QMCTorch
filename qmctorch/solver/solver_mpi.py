@@ -22,15 +22,15 @@ def logd(rank: int, *args):
 
 
 class SolverMPI(Solver):
-    def __init__(
-        self,
-        wf: Optional[WaveFunction] = None,
-        sampler: Optional[SamplerBase] = None,
-        optimizer: Optional[torch.optim.Optimizer] = None,
-        scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
-        output: Optional[str] = None,
-        rank: int = 0,
-    ) -> None:
+    def __init__(        
+            self,
+            wf: Optional[WaveFunction] = None,
+            sampler: Optional[SamplerBase] = None,
+            optimizer: Optional[torch.optim.Optimizer] = None,
+            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+            output: Optional[str] = None,
+            rank: int = 0,
+        ) -> None:
         """Distributed QMC solver
 
         Args:
@@ -208,10 +208,10 @@ class SolverMPI(Solver):
         return self.observable
 
     def single_point(
-        self,
-        with_tqdm: bool = True,
-        batchsize: Optional[int] = None,
-        hdf5_group: str = "single_point",
+        self, 
+        with_tqdm: bool = True, 
+        batchsize: Optional[int] = None, 
+        hdf5_group: str = "single_point"
     ) -> SimpleNamespace:
         """Performs a single point calculation
 

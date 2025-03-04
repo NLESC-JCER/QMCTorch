@@ -11,7 +11,6 @@ from .. import log
 from ..utils import add_group_attr, dump_to_hdf5
 from ..utils import get_git_tag
 
-
 class SolverBase:
     def __init__(  # pylint: disable=too-many-arguments
         self,
@@ -66,6 +65,7 @@ class SolverBase:
             basename: str = os.path.basename(self.wf.mol.hdf5file).split(".")[0]
             self.hdf5file = basename + "_QMCTorch.hdf5"
 
+
         if rank == 0:
             if os.path.isfile(self.hdf5file):
                 os.remove(self.hdf5file)
@@ -75,8 +75,8 @@ class SolverBase:
 
     def configure_resampling(  # pylint: disable=too-many-arguments
         self,
-        mode: str = "update",
-        resample_every: int = 1,
+        mode: str ="update",
+        resample_every: int =1,
         nstep_update: int = 25,
         ntherm_update: int = -1,
         increment: Dict = {"every": None, "factor": None},
@@ -145,7 +145,7 @@ class SolverBase:
         # reset the Namesapce
         self.observable = SimpleNamespace()
         self.observable.qmctorch_version = self.qmctorch_version
-
+        
         # add the energy of the sytem
         if "energy" not in obs_name:
             obs_name += ["energy"]
@@ -172,13 +172,10 @@ class SolverBase:
 
         self.observable.models = SimpleNamespace()
 
-    def store_observable(
-        self,
-        pos: torch.tensor,
-        local_energy: Optional[torch.tensor] = None,
-        ibatch: Optional[int] = None,
-        **kwargs
-    ):
+    def store_observable(self, pos: torch.tensor, 
+                         local_energy: Optional[torch.tensor] = None, 
+                         ibatch: Optional[int] = None, 
+                         **kwargs):
         """store observale in the dictionary
 
         Args:
@@ -270,7 +267,7 @@ class SolverBase:
                 )
                 log.options(style="percent").info("loss %f" % (cumulative_loss))
 
-    def resample(self, n: int, pos: torch.tensor) -> torch.tensor:
+    def resample(self, n : int, pos: torch.tensor) -> torch.tensor:
         """Resample the wave function
 
         Args:
@@ -313,12 +310,9 @@ class SolverBase:
 
         return pos
 
-    def single_point(
-        self,
-        with_tqdm: Optional[bool] = True,
-        batchsize: Optional[int] = None,
-        hdf5_group: str = "single_point",
-    ):
+    def single_point(self, with_tqdm: Optional[bool] = True, 
+                     batchsize: Optional[int] = None, 
+                     hdf5_group: str = "single_point"):
         """Performs a single point calculation
 
         Args:
@@ -386,7 +380,7 @@ class SolverBase:
 
         return obs
 
-    def save_checkpoint(self, epoch: int, loss: float):
+    def save_checkpoint(self, epoch: int , loss: float):
         """save the model and optimizer state
 
         Args:
@@ -420,7 +414,7 @@ class SolverBase:
         loss = data["loss"]
         return epoch, loss
 
-    def _append_observable(self, key: str, data: Any):
+    def _append_observable(self, key : str, data: Any):
         """Append a new data point to observable key.
 
         Arguments:
@@ -432,12 +426,10 @@ class SolverBase:
             self.obs_dict[key] = []
         self.obs_dict[key].append(data)
 
-    def sampling_traj(
-        self,
-        pos: Optional[torch.tensor] = None,
-        with_tqdm: Optional[bool] = True,
-        hdf5_group: Optional[str] = "sampling_trajectory",
-    ) -> torch.tensor:
+    def sampling_traj(self, pos: Optional[torch.tensor] = None, 
+                      with_tqdm: Optional[bool] = True, 
+                      hdf5_group: Optional[str] = "sampling_trajectory"
+                      ) -> torch.tensor:
         """Compute the local energy along a sampling trajectory
 
         Args:
@@ -467,7 +459,7 @@ class SolverBase:
         add_group_attr(self.hdf5file, hdf5_group, {"type": "sampling_traj"})
         return obs
 
-    def print_parameters(self, grad: Optional[bool] = False) -> None:
+    def print_parameters(self, grad: Optional[bool]=False) -> None:
         """print parameter values
 
         Args:

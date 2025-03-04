@@ -32,7 +32,7 @@ def get_elec_elec_edges(nelec: int) -> list:
     return ee_edges
 
 
-def get_elec_elec_ndata(nelec: int, nup: int) -> torch.Tensor:
+def get_elec_elec_ndata(nelec:int , nup: int) -> torch.Tensor:
     """Compute the node data of the elec-elec graph"""
 
     ee_ndata = []

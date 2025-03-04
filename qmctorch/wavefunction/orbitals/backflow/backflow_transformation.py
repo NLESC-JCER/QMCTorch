@@ -43,7 +43,10 @@ class BackFlowTransformation(nn.Module):
         if self.cuda:
             self.device = torch.device("cuda")
 
-    def forward(self, pos: torch.Tensor, derivative: Optional[int] = 0) -> torch.Tensor:
+    def forward(self, 
+                pos: torch.Tensor, 
+                derivative: Optional[int] = 0
+                ) -> torch.Tensor:
         if derivative == 0:
             return self._get_backflow(pos)
 
@@ -58,7 +61,9 @@ class BackFlowTransformation(nn.Module):
                 "derivative of the backflow transformation must be 0, 1 or 2"
             )
 
-    def _get_backflow(self, pos: torch.Tensor) -> torch.Tensor:
+    def _get_backflow(self, 
+                      pos: torch.Tensor
+                      ) -> torch.Tensor:
         """Computes the backflow transformation
 
         .. math:
@@ -235,7 +240,7 @@ class BackFlowTransformation(nn.Module):
 
         return out.unsqueeze(-1)
 
-    def _backflow_derivative_od(self, pos: torch.Tensor) -> torch.Tensor:
+    def _backflow_derivative_od(self, pos:torch.Tensor) -> torch.Tensor:
         r"""Computes the derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -521,6 +526,7 @@ class BackFlowTransformation(nn.Module):
         out = term1 + term2 + d2bf_delta_ee + term3
 
         return out.permute(0, 2, 3, 4, 5, 1)
+
 
     def __repr__(self):
         """representation of the backflow transformation"""

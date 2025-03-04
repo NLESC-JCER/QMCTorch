@@ -245,7 +245,7 @@ def radial_gaussian_pure(
     xyz: torch.Tensor = None,  # positions of the electrons
     derivative: List[int] = [0],  # degree of the derivative
     sum_grad: bool = True,  # return the sum_grad, i.e the sum of the gradients
-    sum_hess: bool = True,  # return the sum_hess, i.e the sum of the lapacian
+    sum_hess: bool = True  # return the sum_hess, i.e the sum of the lapacian
 ) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Compute the radial part of GTOs (or its derivative).
 
@@ -327,7 +327,7 @@ def radial_slater_pure(
     xyz: torch.Tensor = None,  # positions of the electrons
     derivative: Union[int, List[int]] = 0,  # degree of the derivative
     sum_grad: bool = True,  # return the sum_grad, i.e the sum of the gradients
-    sum_hess: bool = True,  # return the sum_hess, i.e the sum of the laplacian
+    sum_hess: bool = True  # return the sum_hess, i.e the sum of the laplacian
 ) -> Union[torch.Tensor, List[torch.Tensor]]:
     """Compute the radial part of STOs (or its derivative).
 

@@ -61,9 +61,7 @@ class SamplerBase:
         log.info("  Decorelation steps  : {0}", self.ndecor)
         log.info("  Walkers init pos    : {0}", init["method"])
 
-    def __call__(
-        self, pdf: Callable[[torch.Tensor], torch.Tensor], *args, **kwargs
-    ) -> torch.Tensor:
+    def __call__(self, pdf: Callable[[torch.Tensor], torch.Tensor], *args, **kwargs) -> torch.Tensor:
         """
         Evaluate the sampling algorithm.
 

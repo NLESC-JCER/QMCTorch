@@ -1,8 +1,7 @@
 import torch
 from torch import nn
 from .backflow_kernel_base import BackFlowKernelBase
-from .....scf import Molecule
-
+from.....scf import Molecule
 
 class BackFlowKernelFullyConnected(BackFlowKernelBase):
     def __init__(self, mol: Molecule, cuda: bool):

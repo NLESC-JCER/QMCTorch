@@ -4,7 +4,6 @@ import torch
 from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.utils import set_torch_double_precision
-
 set_torch_double_precision()
 
 torch.manual_seed(101)
@@ -45,21 +44,21 @@ def hess_single_element(out, inp):
 
     return hess.reshape(*shape)
 
-
 class BaseTestCases:
     class TestBackFlowKernelBase(unittest.TestCase):
-        def setUp(self):
-            pass
 
+        def setUp(self):
+            pass 
+        
         def test_derivative_backflow_kernel(self):
             """Test the derivative of the kernel function
             wrt the elec-elec distance."""
 
             ree = self.edist(self.pos)
             bf_kernel = self.kernel(ree)
-            dbf_kernel_auto = grad(
-                bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel)
-            )[0]
+            dbf_kernel_auto = grad(bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel))[
+                0
+            ]
             dbf_kernel = self.kernel(ree, derivative=1)
 
             assert torch.allclose(dbf_kernel.sum(), dbf_kernel_auto.sum())
@@ -244,17 +243,13 @@ class BaseTestCases:
             for iq in range(nao):
                 qao = q[:, iq, ...]
                 dqao = grad(
-                    qao,
-                    self.pos,
-                    grad_outputs=torch.ones_like(self.pos),
-                    retain_graph=True,
+                    qao, self.pos, grad_outputs=torch.ones_like(self.pos), retain_graph=True
                 )[0]
                 if dq_grad is None:
                     dq_grad = dqao
                 else:
                     dq_grad = torch.cat(
-                        (dq_grad, dqao),
-                        axis=self.backflow_trans.backflow_kernel.stack_axis,
+                        (dq_grad, dqao), axis=self.backflow_trans.backflow_kernel.stack_axis
                     )
             # checksum
             assert torch.allclose(dq.sum(), dq_grad.sum())

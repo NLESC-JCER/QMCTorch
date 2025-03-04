@@ -4,33 +4,25 @@ from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowK
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import Solver
 from qmctorch.utils import set_torch_double_precision
-
 set_torch_double_precision()
 
 # define the molecule
-mol = Molecule(
-    atom="H 0 0 -0.69; H 0 0 0.69", calculator="pyscf", basis="dzp", unit="bohr"
-)
+mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
+               calculator='pyscf', basis='dzp', unit='bohr')
 
 # jastrow
 jastrow = JastrowFactor(mol, PadeJastrowKernel)
 
 # define the wave function
-wf = SlaterJastrow(
-    mol, kinetic="jacobi", configs="ground_state", jastrow=jastrow
-)  # .gto2sto()
+wf = SlaterJastrow(mol, kinetic='jacobi',
+                   configs='ground_state', jastrow=jastrow) #.gto2sto()
 
 # sampler
-sampler = Metropolis(
-    nwalkers=1000,
-    nstep=1000,
-    step_size=0.25,
-    nelec=wf.nelec,
-    ndim=wf.ndim,
-    init=mol.domain("atomic"),
-    move={"type": "one-elec", "proba": "normal"},
-    logspace=False,
-)
+sampler = Metropolis(nwalkers=1000, nstep=1000, step_size=0.25,
+                     nelec=wf.nelec, ndim=wf.ndim,
+                     init=mol.domain('atomic'),
+                     move={'type': 'one-elec', 'proba': 'normal'},
+                     logspace=False)
 
 
 # pos = sampler(wf.pdf)

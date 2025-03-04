@@ -6,7 +6,12 @@ from .jastrow_kernel_electron_nuclei_base import JastrowKernelElectronNucleiBase
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronNucleiBase):
     def __init__(
-        self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, w: float = 1.0
+        self,
+        nup: int,
+        ndown: int,
+        atomic_pos: torch.Tensor,
+        cuda: bool,
+        w: float = 1.0
     ) -> None:
         r"""Computes the Simple Pade-Jastrow factor
 

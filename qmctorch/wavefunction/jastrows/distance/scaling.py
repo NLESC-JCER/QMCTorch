@@ -19,9 +19,7 @@ def get_scaled_distance(kappa: float, r: torch.Tensor) -> torch.Tensor:
     return (1.0 - torch.exp(-kappa * r)) / kappa
 
 
-def get_der_scaled_distance(
-    kappa: float, r: torch.Tensor, dr: torch.Tensor
-) -> torch.Tensor:
+def get_der_scaled_distance(kappa: float, r:torch.Tensor, dr: torch.Tensor) -> torch.Tensor:
     """Returns the derivative of the scaled distances
 
     .. math::
@@ -41,9 +39,7 @@ def get_der_scaled_distance(
     return dr * torch.exp(-kappa * r.unsqueeze(1))
 
 
-def get_second_der_scaled_distance(
-    kappa: float, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
-) -> torch.Tensor:
+def get_second_der_scaled_distance(kappa: float, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
     """computes the second derivative of the scaled distances
 
     .. math::

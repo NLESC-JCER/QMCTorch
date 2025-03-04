@@ -12,10 +12,10 @@ from .stat_utils import (
 
 
 def plot_energy(
-    local_energy: np.ndarray,
-    e0: Optional[float] = None,
-    show_variance: bool = False,
-    clip: bool = False,
+    local_energy: np.ndarray, 
+    e0: Optional[float] = None, 
+    show_variance: bool = False, 
+    clip: bool = False, 
     q: float = 0.15,
 ) -> None:
     """Plot the evolution of the energy.
@@ -27,7 +27,6 @@ def plot_energy(
         clip (bool, optional): Clip the values to remove outliers. Defaults to False.
         q (float, optional): Quantile used for the interquartile range. Defaults to 0.15.
     """
-
     def clip_values(values: np.ndarray, std_factor: int = 5) -> np.ndarray:
         if clip:
             values = values.flatten()
@@ -52,7 +51,9 @@ def plot_energy(
     q25 = np.array([np.quantile(clip_values(e), 0.5 - q) for e in local_energy])
 
     # plot
-    ax.fill_between(epoch, q25, q75, alpha=0.5, color="#4298f4")
+    ax.fill_between(
+        epoch, q25, q75, alpha=0.5, color="#4298f4"
+    )
     ax.plot(epoch, energy, color="#144477")
     if e0 is not None:
         ax.axhline(e0, color="black", linestyle="--")
@@ -71,7 +72,10 @@ def plot_energy(
     plt.show()
 
 
-def plot_data(observable: SimpleNamespace, obsname: str) -> None:
+def plot_data(
+    observable: SimpleNamespace, 
+    obsname: str
+) -> None:
     """Plot the evolution of a given data
 
     Args:
@@ -89,9 +93,7 @@ def plot_data(observable: SimpleNamespace, obsname: str) -> None:
     plt.show()
 
 
-def plot_walkers_traj(
-    eloc: np.ndarray, walkers: Union[int, str, None] = "mean"
-) -> None:
+def plot_walkers_traj(eloc: np.ndarray, walkers: Union[int, str, None] = "mean") -> None:
     """Plot the trajectory of all the individual walkers
 
     Args:
@@ -171,7 +173,10 @@ def plot_correlation_coefficient(
 
 
 def plot_integrated_autocorrelation_time(
-    eloc: np.ndarray, rho: np.ndarray = None, size_max: int = 100, C: int = 5
+    eloc: np.ndarray,
+    rho: np.ndarray = None,
+    size_max: int = 100,
+    C: int = 5
 ) -> int:
     """Compute and plot the integrated autocorrelation time.
 
@@ -218,9 +223,7 @@ def plot_integrated_autocorrelation_time(
     return ii
 
 
-def plot_blocking_energy(
-    eloc: np.ndarray, block_size: int, walkers: str = "mean"
-) -> np.ndarray:
+def plot_blocking_energy(eloc: np.ndarray, block_size: int, walkers: str = "mean") -> np.ndarray:
     """Plot the blocked energy values
 
     Args:

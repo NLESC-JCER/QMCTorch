@@ -9,7 +9,6 @@ from ...path_utils import PATH_TEST
 
 set_torch_double_precision()
 
-
 class TestAOderivativesADF(BaseTestAO.BaseTestAOderivatives):
     def setUp(self):
         # define the molecule

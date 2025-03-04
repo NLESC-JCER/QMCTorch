@@ -3,8 +3,11 @@ from scipy.optimize import curve_fit
 from scipy.signal import fftconvolve
 from typing import Tuple
 
-
-def blocking(x: np.ndarray, block_size: int, expand: bool = False) -> np.ndarray:
+def blocking(
+    x: np.ndarray,
+    block_size: int,
+    expand: bool = False
+) -> np.ndarray:
     """block the data
 
     Args:

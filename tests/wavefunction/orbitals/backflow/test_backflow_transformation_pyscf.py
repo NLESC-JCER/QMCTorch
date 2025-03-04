@@ -10,11 +10,13 @@ from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 from qmctorch.utils import set_torch_double_precision
 from .test_backflow_base import BaseTestCases
-
 set_torch_double_precision()
 
 torch.manual_seed(101)
 np.random.seed(101)
+
+
+
 
 
 class TestBackFlowTransformation(BaseTestCases.TestBackFlowTransformationBase):

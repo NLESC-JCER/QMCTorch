@@ -60,9 +60,7 @@ class InterpolateMolecularOrbitals:
         else:
             raise ValueError("orb must occupied or all")
 
-    def interpolate_mo_irreg_grid(
-        self, pos: torch.Tensor, n: int, orb: str
-    ) -> torch.Tensor:
+    def interpolate_mo_irreg_grid(self, pos: torch.Tensor, n: int, orb: str) -> torch.Tensor:
         """Interpolate the molecular orbitals occupied in the configs.
 
         Args:
@@ -82,15 +80,13 @@ class InterpolateMolecularOrbitals:
                 x = torch.as_tensor(x).type(torch.get_default_dtype())
                 ao = self.wf.ao(x, one_elec=True)
                 mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
-                return mo[:, : self.mo_max_index].detach()
+                return mo[:, :self.mo_max_index].detach()
 
             self.interp_mo_func = interpolator_irreg_grid(func, grid_pts)
 
         nbatch = pos.shape[0]
         mos = torch.zeros(nbatch, self.wf.mol.nelec, self.wf.mol.basis.nmo)
-        mos[:, :, : self.mo_max_index] = interpolate_irreg_grid(
-            self.interp_mo_func, pos
-        )
+        mos[:, :, :self.mo_max_index] = interpolate_irreg_grid(self.interp_mo_func, pos)
         return mos
 
     def interpolate_mo_reg_grid(
@@ -134,9 +130,7 @@ class InterpolateAtomicOrbitals:
         """Interpolation of the AO using a log grid centered on each atom."""
         self.wf = wf
 
-    def __call__(
-        self, pos: torch.Tensor, n: int = 6, length: float = 2
-    ) -> torch.Tensor:
+    def __call__(self, pos: torch.Tensor, n: int = 6, length: float = 2) -> torch.Tensor:
         """Interpolate the AO.
 
         Args:
@@ -175,7 +169,9 @@ class InterpolateAtomicOrbitals:
 
         return torch.as_tensor(data.transpose(1, 2, 0))
 
-    def get_interpolator(self, n: int = 6, length: float = 2) -> None:
+    def get_interpolator(
+        self, n: int = 6, length: float = 2
+    ) -> None:
         """evaluate the interpolation function.
 
         Args:
@@ -262,9 +258,9 @@ def get_boundaries(
 
 
 def get_reg_grid(
-    atomic_positions: Union[torch.Tensor, np.ndarray, list],
-    resolution: float = 0.1,
-    border_length: float = 2.0,
+    atomic_positions: Union[torch.Tensor, np.ndarray, list], 
+    resolution: float = 0.1, 
+    border_length: float = 2.0
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Computes a regular grid points from the atomic positions
 
@@ -315,7 +311,8 @@ def interpolator_reg_grid(
 
 
 def interpolate_reg_grid(
-    interpfunc: Callable[[np.ndarray], np.ndarray], pos: torch.Tensor
+    interpfunc: Callable[[np.ndarray], np.ndarray],
+    pos: torch.Tensor
 ) -> torch.Tensor:
     """Interpolate the function
 
@@ -398,9 +395,7 @@ def get_log_grid(
     return grid_pts
 
 
-def interpolator_irreg_grid(
-    func: Callable[[np.ndarray], torch.Tensor], grid_pts: np.ndarray
-) -> Callable:
+def interpolator_irreg_grid(func: Callable[[np.ndarray], torch.Tensor], grid_pts: np.ndarray) -> Callable:
     """Compute a linear ND interpolator
 
     Args:
@@ -414,7 +409,8 @@ def interpolator_irreg_grid(
 
 
 def interpolate_irreg_grid(
-    interpfunc: Callable[[np.ndarray], np.ndarray], pos: torch.Tensor
+    interpfunc: Callable[[np.ndarray], np.ndarray],
+    pos: torch.Tensor
 ) -> torch.Tensor:
     """Interpolate the function
 
@@ -427,6 +423,4 @@ def interpolate_irreg_grid(
     """
 
     nbatch, nelec, ndim = pos.shape[0], pos.shape[1] // 3, 3
-    return torch.as_tensor(
-        interpfunc(pos.reshape(nbatch, nelec, ndim).detach().numpy())
-    )
+    return torch.as_tensor(interpfunc(pos.reshape(nbatch, nelec, ndim).detach().numpy()))

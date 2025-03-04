@@ -7,8 +7,13 @@ from .jastrow_kernel_electron_electron_nuclei_base import (
 
 class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
     def __init__(
-        self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, nterm: int = 5
-    ) -> None:  # pylint: disable=too-many-arguments
+        self,
+        nup: int,
+        ndown: int,
+        atomic_pos: torch.Tensor,
+        cuda: bool,
+        nterm: int = 5
+        ) -> None:  # pylint: disable=too-many-arguments
         r"""Defines a Boys Handy jastrow factors.
 
         J.W. Moskowitz et. al

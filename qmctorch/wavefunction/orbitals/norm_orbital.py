@@ -4,8 +4,7 @@ import math
 from types import SimpleNamespace
 from ...utils.algebra_utils import double_factorial
 
-
-def atomic_orbital_norm(basis: SimpleNamespace) -> torch.Tensor:
+def atomic_orbital_norm(basis : SimpleNamespace) -> torch.Tensor:
     """Computes the norm of the atomic orbitals
 
     Args:
@@ -83,22 +82,20 @@ def norm_gaussian_spherical(bas_n: torch.Tensor, bas_exp: torch.Tensor) -> torch
     bas_n = bas_n + 1.0
     exp1 = 0.25 * (2.0 * bas_n + 1.0)
 
-    A = torch.tensor(bas_exp) ** exp1
-    B = 2 ** (2.0 * bas_n + 3.0 / 2)
-    C = torch.as_tensor(double_factorial(2 * bas_n.int() - 1) * np.pi**0.5).type(
-        torch.get_default_dtype()
-    )
+    A = torch.tensor(bas_exp)**exp1
+    B = 2**(2. * bas_n + 3. / 2)
+    C = torch.as_tensor(double_factorial(2 * bas_n.int() - 1) * np.pi **
+                        0.5).type(torch.get_default_dtype())
 
     return torch.sqrt(B / C) * A
 
 
-def norm_slater_cartesian(
-    a: torch.Tensor,
-    b: torch.Tensor,
-    c: torch.Tensor,
-    n: torch.Tensor,
-    exp: torch.Tensor,
-) -> torch.Tensor:
+def norm_slater_cartesian(a: torch.Tensor, 
+                          b: torch.Tensor, 
+                          c: torch.Tensor, 
+                          n: torch.Tensor, 
+                          exp: torch.Tensor
+                          ) -> torch.Tensor:
     """Normaliation of STos with cartesian harmonics. \n
      * Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 
@@ -112,7 +109,7 @@ def norm_slater_cartesian(
     Returns:
         torch.tensor: normalization factor
     """
-    lvals = a + b + c + n + 1.0
+    lvals = a + b + c + n + 1.
 
     lfact = torch.as_tensor([math.factorial(int(2 * i)) for i in lvals]).type(
         torch.get_default_dtype()
@@ -120,22 +117,23 @@ def norm_slater_cartesian(
 
     prefact = 4 * np.pi * lfact / ((2 * exp) ** (2 * lvals + 1))
 
-    num = torch.as_tensor(
-        double_factorial(2 * a.astype("int") - 1)
-        * double_factorial(2 * b.astype("int") - 1)
-        * double_factorial(2 * c.astype("int") - 1)
-    ).type(torch.get_default_dtype())
+    num = torch.as_tensor(double_factorial(2 * a.astype('int') - 1) *
+                          double_factorial(2 * b.astype('int') - 1) *
+                          double_factorial(2 * c.astype('int') - 1)
+                          ).type(torch.get_default_dtype())
 
     denom = torch.as_tensor(
-        double_factorial((2 * a + 2 * b + 2 * c + 1).astype("int"))
-    ).type(torch.get_default_dtype())
+        double_factorial((2 * a + 2 * b + 2 * c + 1).astype('int')
+           )).type(torch.get_default_dtype())
 
     return torch.sqrt(1.0 / (prefact * num / denom))
 
 
-def norm_gaussian_cartesian(
-    a: torch.Tensor, b: torch.Tensor, c: torch.Tensor, exp: torch.Tensor
-) -> torch.Tensor:
+def norm_gaussian_cartesian(a: torch.Tensor, 
+                            b: torch.Tensor, 
+                            c: torch.Tensor, 
+                            exp: torch.Tensor
+                            ) -> torch.Tensor:
     """Normaliation of GTOs with cartesian harmonics. \n
      * Monte Carlo Methods in Ab Initio Quantum Chemistry page 279
 
@@ -148,14 +146,14 @@ def norm_gaussian_cartesian(
     Returns:
         torch.tensor: normalization factor
     """
-    pref = torch.as_tensor((2 * exp / np.pi) ** (0.75))
-    am1 = (2 * a - 1).astype("int")
-    x = (4 * exp) ** (a / 2) / torch.sqrt(torch.as_tensor(double_factorial(am1)))
+    pref = torch.as_tensor((2 * exp / np.pi)**(0.75))
+    am1 = (2 * a - 1).astype('int')
+    x = (4 * exp)**(a / 2) / torch.sqrt(torch.as_tensor(double_factorial(am1)))
 
-    bm1 = (2 * b - 1).astype("int")
-    y = (4 * exp) ** (b / 2) / torch.sqrt(torch.as_tensor(double_factorial(bm1)))
+    bm1 = (2 * b - 1).astype('int')
+    y = (4 * exp)**(b / 2) / torch.sqrt(torch.as_tensor(double_factorial(bm1)))
 
-    cm1 = (2 * c - 1).astype("int")
-    z = (4 * exp) ** (c / 2) / torch.sqrt(torch.as_tensor(double_factorial(cm1)))
+    cm1 = (2 * c - 1).astype('int')
+    z = (4 * exp)**(c / 2) / torch.sqrt(torch.as_tensor(double_factorial(cm1)))
 
     return (pref * x * y * z).type(torch.get_default_dtype())

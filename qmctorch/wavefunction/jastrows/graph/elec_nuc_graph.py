@@ -3,9 +3,7 @@ import torch
 from mendeleev import element
 
 
-def ElecNucGraph(
-    natoms: int, atom_types: list, atomic_features: list, nelec: int, nup: int
-) -> dgl.DGLGraph:
+def ElecNucGraph(natoms:int, atom_types:list, atomic_features:list, nelec:int, nup:int) -> dgl.DGLGraph:
     """Create the elec-nuc graph
 
     Args:
@@ -41,9 +39,7 @@ def get_elec_nuc_edges(natoms: int, nelec: int) -> tuple:
     return en_edges
 
 
-def get_elec_nuc_ndata(
-    natoms: int, atom_types: list, atomic_features: list, nelec: int, nup: int
-) -> torch.Tensor:
+def get_elec_nuc_ndata(natoms: int, atom_types: list, atomic_features: list, nelec: int, nup: int) -> torch.Tensor:
     """Compute the node data of the elec-elec graph"""
 
     en_ndata = []

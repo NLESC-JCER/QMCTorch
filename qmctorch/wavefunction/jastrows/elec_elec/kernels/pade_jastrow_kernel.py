@@ -116,9 +116,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
         return a + b
 
-    def compute_second_derivative(
-        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor
-    ) -> torch.Tensor:
+    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 

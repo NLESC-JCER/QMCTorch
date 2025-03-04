@@ -15,5 +15,5 @@ __all__ = [
     "BackFlowKernelPowerSum",
     "BackFlowKernelSquare",
     "BackFlowKernelRBF",
-    "BackFlowKernelExp",
+    "BackFlowKernelExp"
 ]

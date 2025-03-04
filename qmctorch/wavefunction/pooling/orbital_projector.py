@@ -2,11 +2,11 @@ import torch
 from typing import List, Tuple
 from ...scf import Molecule
 
-
 class OrbitalProjector:
-    def __init__(
-        self, configs: List[torch.tensor], mol: Molecule, cuda: bool = False
-    ) -> None:
+    def __init__(self, 
+                 configs: List[torch.tensor], 
+                 mol: Molecule, 
+                 cuda: bool = False) -> None:
         """Project the MO matrix in Slater Matrices
 
         Args:
@@ -20,38 +20,31 @@ class OrbitalProjector:
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
         self.ndown = mol.ndown
-
+        
         self.device = torch.device("cpu")
         if cuda:
             self.device = torch.device("cuda")
         self.unique_configs, self.index_unique_configs = self.get_unique_configs()
-
-    def get_unique_configs(
-        self,
-    ) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
+    def get_unique_configs(self) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
         """Get the unique configurations
 
         Returns:
-            Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
+            Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]: 
                 configs_up (torch.Tensor): unique configurations of the spin up electrons
                 configs_down (torch.Tensor): unique configurations of the spin down electrons
                 index_unique_confs_up (torch.Tensor): index of the unique configurations of the spin up electrons
                 index_unique_confs_down (torch.Tensor): index of the unique configurations of the spin down electrons
         """
-        configs_up, index_unique_confs_up = torch.unique(
-            self.configs[0], dim=0, return_inverse=True
-        )
-        configs_down, index_unique_confs_down = torch.unique(
-            self.configs[1], dim=0, return_inverse=True
-        )
+        configs_up, index_unique_confs_up = torch.unique(self.configs[0], dim=0, return_inverse=True)
+        configs_down, index_unique_confs_down = torch.unique(self.configs[1], dim=0, return_inverse=True)
 
-        return (configs_up.to(self.device), configs_down.to(self.device)), (
-            index_unique_confs_up.to(self.device),
-            index_unique_confs_down.to(self.device),
-        )
+        return (configs_up.to(self.device), configs_down.to(self.device)), (index_unique_confs_up.to(self.device), index_unique_confs_down.to(self.device))
+
 
     def split_orbitals(
-        self, mat: torch.Tensor, unique_configs: bool = False
+        self,
+        mat: torch.Tensor,
+        unique_configs: bool = False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Split the orbital matrix in multiple Slater matrices
            This version does not store the projectors
@@ -66,34 +59,28 @@ class OrbitalProjector:
         if mat.ndim == 3:
             nbatch = mat.shape[0]
             out_up = torch.zeros(0, nbatch, self.nup, self.nup, device=self.device)
-            out_down = torch.zeros(
-                0, nbatch, self.ndown, self.ndown, device=self.device
-            )
+            out_down = torch.zeros(0, nbatch, self.ndown, self.ndown, device=self.device)
 
         if mat.ndim == 4:
             nbatch = mat.shape[1]
             nop = mat.shape[0]
             out_up = torch.zeros(0, nop, nbatch, self.nup, self.nup, device=self.device)
-            out_down = torch.zeros(
-                0, nop, nbatch, self.ndown, self.ndown, device=self.device
-            )
-
-        if unique_configs:
+            out_down = torch.zeros(0, nop, nbatch, self.ndown, self.ndown, device=self.device)
+        
+        if unique_configs :
             configs_up, configs_down = self.unique_configs
-
+            
         else:
             configs_up, configs_down = self.configs
-
+            
         for _, (cup, cdown) in enumerate(zip(configs_up, configs_down)):
+        
             # cat the tensors
             out_up = torch.cat((out_up, mat[..., : self.nup, cup].unsqueeze(0)), dim=0)
-            out_down = torch.cat(
-                (out_down, mat[..., self.nup :, cdown].unsqueeze(0)), dim=0
-            )
+            out_down = torch.cat((out_down, mat[..., self.nup :, cdown].unsqueeze(0)), dim=0)
 
         return out_up, out_down
-
-
+        
 class ExcitationMask:
     def __init__(
         self,

@@ -6,15 +6,12 @@ from .kernels.backflow_kernel_base import BackFlowKernelBase
 from .orbital_dependent_backflow_kernel import OrbitalDependentBackFlowKernel
 from ....scf import Molecule
 
-
 class OrbitalDependentBackFlowTransformation(nn.Module):
-    def __init__(
-        self,
-        mol: Molecule,
-        backflow_kernel: BackFlowKernelBase,
-        backflow_kernel_kwargs: Dict = {},
-        cuda: bool = False,
-    ):
+    def __init__(self, 
+                 mol: Molecule, 
+                 backflow_kernel: BackFlowKernelBase, 
+                 backflow_kernel_kwargs: Dict = {}, 
+                 cuda: bool=False):
         """Transform the electorn coordinates into backflow coordinates.
         see : Orbital-dependent backflow wave functions for real-space quantum Monte Carlo
         https://arxiv.org/abs/1910.07167

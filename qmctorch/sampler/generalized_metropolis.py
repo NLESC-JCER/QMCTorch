@@ -43,12 +43,9 @@ class GeneralizedMetropolis(SamplerBase):
             self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
         )
 
-    def __call__(
-        self,
-        pdf: Callable[[torch.Tensor], torch.Tensor],
-        pos: Optional[torch.Tensor] = None,
-        with_tqdm: bool = True,
-    ) -> torch.Tensor:
+    def __call__(self, pdf: Callable[[torch.Tensor], torch.Tensor],
+                 pos: Optional[torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
@@ -144,7 +141,9 @@ class GeneralizedMetropolis(SamplerBase):
         # Return reshaped positions
         return new_pos.view(self.walkers.nwalkers, self.nelec * self.ndim)
 
-    def _move(self, drift: torch.Tensor, index: int) -> torch.Tensor:
+    def _move(
+        self, drift: torch.Tensor, index: int
+    ) -> torch.Tensor:
         """Move a walker.
 
         Args:
@@ -169,9 +168,7 @@ class GeneralizedMetropolis(SamplerBase):
             + mv.sample((self.walkers.nwalkers, 1)).squeeze()
         )
 
-    def trans(
-        self, xf: torch.Tensor, xi: torch.Tensor, drifti: torch.Tensor
-    ) -> torch.Tensor:
+    def trans(self, xf: torch.Tensor, xi: torch.Tensor, drifti: torch.Tensor) -> torch.Tensor:
         """Transform the positions
 
         Args:

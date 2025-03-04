@@ -13,7 +13,7 @@ class torch_model(pints.LogPDF):
             pdf: wf.pdf function
             ndim: number of dimensions
         """
-        self.pdf = pdf
+        self.pdf = pdf 
         self.ndim = ndim
 
     def __call__(self, x: numpy.ndarray) -> numpy.ndarray:
@@ -114,9 +114,7 @@ class PintsSampler(SamplerBase):
         #     '  Sampler             : {0}', self.method.name(None))
 
     @staticmethod
-    def log_func(
-        func: Callable[[torch.Tensor], torch.Tensor]
-    ) -> Callable[[torch.Tensor], torch.Tensor]:
+    def log_func(func: Callable[[torch.Tensor], torch.Tensor]) -> Callable[[torch.Tensor], torch.Tensor]:
         """Compute the negative log of a function
 
         Args:

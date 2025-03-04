@@ -65,9 +65,8 @@ class MetropolisHasting(SamplerBase):
         # log.info('  Move type           : {0}', 'all-elec')
 
     @staticmethod
-    def log_func(
-        func: Callable[[torch.Tensor], torch.Tensor]
-    ) -> Callable[[torch.Tensor], torch.Tensor]:
+    def log_func(func: Callable[[torch.Tensor], torch.Tensor]
+                 ) -> Callable[[torch.Tensor], torch.Tensor]:
         """Compute the negative log of  a function
 
         Args:

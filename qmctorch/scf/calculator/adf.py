@@ -63,14 +63,10 @@ class CalculatorADF(CalculatorBase):
         )
 
         if charge != 0:
-            raise ValueError(
-                "ADF calculator does not support charge yet, open an issue in the repo :)"
-            )
-
+            raise ValueError("ADF calculator does not support charge yet, open an issue in the repo :)")
+        
         if spin != 0:
-            raise ValueError(
-                "ADF calculator does not support spin polarization yet, open an issue in the repo :)"
-            )
+            raise ValueError("ADF calculator does not support spin polarization yet, open an issue in the repo :)")
 
         # basis from the emma paper
         self.additional_basis_type = ["VB1", "VB2", "VB3", "CVB1", "CVB2", "CVB3"]
@@ -132,7 +128,7 @@ class CalculatorADF(CalculatorBase):
     def get_plams_molecule(self) -> plams.Molecule:
         """Returns a plams molecule object."""
         mol = plams.Molecule()
-        bohr2angs = BOHR2ANGS  # the coordinate are always in bohr
+        bohr2angs = BOHR2ANGS # the coordinate are always in bohr
         for at, xyz in zip(self.atoms, self.atom_coords):
             xyz = list(bohr2angs * np.array(xyz))
             mol.add_atom(plams.Atom(symbol=at, coords=tuple(xyz)))
@@ -295,7 +291,7 @@ class CalculatorADF(CalculatorBase):
         return basis
 
     @staticmethod
-    def read_array(kf: BinaryIO, section: str, name: str) -> np.ndarray:
+    def read_array(kf: BinaryIO , section: str, name: str) -> np.ndarray:
         """read a data from the kf file
 
         Args:

@@ -3,7 +3,6 @@ import numpy as np
 from typing import List
 from scipy.special import factorial2 as f2
 
-
 def btrace(M: torch.Tensor) -> torch.Tensor:
     """Computes the trace of batched matrices
 
@@ -52,7 +51,7 @@ def double_factorial(input: List) -> np.ndarray:
         List: values of the double factorial
     """
     output = f2(input)
-    return np.array([1 if o == 0 else o for o in output])
+    return np.array([1 if o==0 else o for o in output])
 
 
 class BatchDeterminant(torch.autograd.Function):

@@ -5,9 +5,7 @@ from .jastrow_kernel_electron_electron_nuclei_base import (
 
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronNucleiBase):
-    def __init__(
-        self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool
-    ) -> None:
+    def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool)-> None:
         """Defines a fully connected jastrow factors.
 
         Args:

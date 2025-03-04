@@ -2,14 +2,12 @@ import torch
 import operator
 from typing import Union, Dict, Tuple
 from .slater_jastrow import SlaterJastrow
-from .jastrows.elec_elec.kernels.jastrow_kernel_electron_electron_base import (
-    JastrowKernelElectronElectronBase,
-)
+from .jastrows.elec_elec.kernels.jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
 from .jastrows.elec_elec.jastrow_factor_electron_electron import (
     JastrowFactorElectronElectron,
 )
-from ..scf import Molecule
+from  ..scf import Molecule
 
 
 class SlaterOrbitalDependentJastrow(SlaterJastrow):
@@ -79,9 +77,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
 
         self.log_data()
 
-    def ordered_jastrow(
-        self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True
-    ) -> torch.Tensor:
+    def ordered_jastrow(self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Returns the value of the jastrow with the correct dimensions
 
         Args:
@@ -113,9 +109,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         else:
             return permute(jast_vals)
 
-    def forward(
-        self, x: torch.Tensor, ao: Union[torch.Tensor, None] = None
-    ) -> torch.Tensor:
+    def forward(self, x: torch.Tensor, ao: Union[torch.Tensor, None]=None) -> torch.Tensor:
         """computes the value of the wave function for the sampling points
 
         .. math::
@@ -165,9 +159,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
     def ao2cmo(self, ao, jastrow):
         return jastrow * self.mo(self.mo_scf(ao))
 
-    def pos2mo(
-        self, x: torch.Tensor, derivative: int = 0, sum_grad: bool = True
-    ) -> torch.Tensor:
+    def pos2mo(self, x: torch.Tensor, derivative: int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Compute the uncorrelated MOs from the positions."""
 
         ao = self.ao(x, derivative=derivative, sum_grad=sum_grad)
@@ -176,9 +168,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         else:
             return self.ao2mo(ao.transpose(2, 3)).transpose(2, 3)
 
-    def pos2cmo(
-        self, x: torch.Tensor, derivative: int = 0, sum_grad: bool = True
-    ) -> torch.Tensor:
+    def pos2cmo(self, x: torch.Tensor, derivative:int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Get the values of correlated MOs
 
         Arguments:
@@ -274,9 +264,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
-    def gradients_jacobi(
-        self, x: torch.Tensor, sum_grad: bool = True, pdf: bool = False
-    ) -> torch.Tensor:
+    def gradients_jacobi(self, x: torch.Tensor, sum_grad: bool = True, pdf: bool = False) -> torch.Tensor:
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
