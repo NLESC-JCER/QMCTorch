@@ -63,7 +63,7 @@ solver = Solver(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
 # configure the solver
 solver.configure(track=['local_energy', 'parameters'], freeze=['ao'],
                  loss='energy', grad='manual',
-                 ortho_mo=False, clip_loss=False,
+                 ortho_mo=False, clip_loss=True, clip_threshold=2,
                  resampling={'mode': 'update',
                              'resample_every': 1,
                              'nstep_update': 150,

@@ -53,6 +53,7 @@ class Solver(SolverBase):
         grad: Optional[str] = None,
         ortho_mo: Optional[bool] = None,
         clip_loss: bool = False,
+        clip_threshold: int = 5,
         resampling: Optional[Dict[str, Any]] = None,
     ) -> None:
         """Configure the solver
@@ -95,7 +96,7 @@ class Solver(SolverBase):
 
         # get the loss
         if loss is not None:
-            self.loss = Loss(self.wf, method=loss, clip=clip_loss)
+            self.loss = Loss(self.wf, method=loss, clip=clip_loss, clip_threshold=clip_threshold)
             self.loss.use_weight = self.resampling_options.resample_every > 1
 
         # orthogonalization penalty for the MO coeffs
@@ -391,8 +392,11 @@ class Solver(SolverBase):
             # Get the gradient of the total energy
             # dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
 
-            # compute local energy and wf values
-            _, eloc = self.loss(lpos, no_grad=no_grad_eloc)
+            # compute local energy
+            with self.loss.get_grad_mode(no_grad_eloc):
+                eloc = self.wf.local_energy(lpos)            
+
+            # compute the wf values
             psi = self.wf(lpos)
             norm = 1.0 / len(psi)
 
@@ -400,8 +404,12 @@ class Solver(SolverBase):
             weight = eloc.clone()
             weight -= torch.mean(eloc)
             weight /= psi.clone()
-            weight *= 2.0
-            weight *= norm
+            weight *= 2.0 * norm
+
+            # clip the values
+            clip_mask = self.loss.get_clipping_mask(eloc)
+            psi = psi[clip_mask]
+            weight = weight[clip_mask]
 
             # compute the gradients
             psi.backward(weight)
@@ -449,6 +457,13 @@ class Solver(SolverBase):
 
             weight1 = norm * eloc/psi.detach().clone()
             weight2 = -norm * eloc_mean/psi.detach().clone()
+
+            # clip the values
+            clip_mask = self.loss.get_clipping_mask(eloc)
+            psi = psi[clip_mask]
+            weight1 = weight1[clip_mask]
+            weight2 = weight2[clip_mask]
+
 
             psi.backward(weight1,retain_graph=True) 
             psi.backward(weight2)
