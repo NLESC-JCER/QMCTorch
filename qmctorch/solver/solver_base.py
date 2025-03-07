@@ -325,6 +325,9 @@ class SolverBase:
 
         if self.wf.jastrow.requires_autograd:
             grad_mode = torch.enable_grad()
+        
+        if self.sampler.requires_autograd:
+            grad_mode = torch.enable_grad()
 
         with grad_mode:
             #  get the position and put to gpu if necessary

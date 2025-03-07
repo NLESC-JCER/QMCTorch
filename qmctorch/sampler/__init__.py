@@ -5,6 +5,7 @@ __all__ = [
     "PintsSampler",
     "MetropolisHasting",
     "GeneralizedMetropolis",
+    "Langevin",
 ]
 
 from .sampler_base import SamplerBase
@@ -13,3 +14,4 @@ from .hamiltonian import Hamiltonian
 from .generalized_metropolis import GeneralizedMetropolis
 from .pints_sampler import PintsSampler
 from .metropolis_hasting_all_elec import MetropolisHasting
+from .langevin import Langevin

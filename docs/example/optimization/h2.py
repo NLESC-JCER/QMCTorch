@@ -5,9 +5,9 @@ from torch import optim
 from qmctorch.scf import Molecule
 
 from qmctorch.solver import Solver
-from qmctorch.sampler import Metropolis, Hamiltonian
+from qmctorch.sampler import Metropolis, Langevin
 from qmctorch.utils import set_torch_double_precision
-from qmctorch.utils.plot_data import (plot_energy, plot_data)
+from qmctorch.utils.plot_data import (plot_energy, plot_data, plot_walkers_traj)
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
@@ -40,9 +40,15 @@ wf = SlaterJastrow(mol, kinetic='jacobi',
 #                       ntherm=-1, ndecor=10,
 #                       init=mol.domain('atomic'))
 
-sampler = Metropolis(nwalkers=10, nstep=200, nelec=wf.nelec, 
-                     ntherm=100, ndecor=10,
-                     step_size=0.05, init=mol.domain('atomic'))
+sampler = Langevin(nwalkers=1000, nstep=1000, nelec=wf.nelec, 
+                     ntherm=0, ndecor=1,
+                     step_size=0.05, 
+                     init=mol.domain('atomic'))
+
+sampler2 = Metropolis(nwalkers=1000, nstep=1000, nelec=wf.nelec, 
+                     ntherm=0, ndecor=1,
+                     step_size=0.05, 
+                     init=mol.domain('atomic'))
 
 # optimizer
 lr_dict = [{'params': wf.jastrow.parameters(), 'lr': 1E-2},
@@ -59,35 +65,40 @@ solver = Solver(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
 
 # perform a single point calculation
 # obs = solver.single_point()
+obs = solver.sampling_traj()
+# plot_walkers_traj(obs.local_energy, walkers='mean')
+
+solver.sampler = sampler2
+obs2 = solver.sampling_traj()
 
 # configure the solver
-solver.configure(track=['local_energy', 'parameters'], freeze=['ao'],
-                 loss='energy', grad='manual',
-                 ortho_mo=False, clip_loss=False, clip_threshold=2,
-                 resampling={'mode': 'update',
-                             'resample_every': 1,
-                             'nstep_update': 150,
-                             'ntherm_update': 50}
-                 )
+# solver.configure(track=['local_energy', 'parameters'], freeze=['ao'],
+#                  loss='energy', grad='manual',
+#                  ortho_mo=False, clip_loss=False, clip_threshold=2,
+#                  resampling={'mode': 'update',
+#                              'resample_every': 1,
+#                              'nstep_update': 150,
+#                              'ntherm_update': 50}
+#                  )
 
-pos = torch.rand(10, 6)
-pos.requires_grad = True
+# pos = torch.rand(10, 6)
+# pos.requires_grad = True
 
-wf.fc.weight.data = torch.rand(1, 4) - 0.5
-print(wf(pos))
+# wf.fc.weight.data = torch.rand(1, 4) - 0.5
+# print(wf(pos))
 
-solver.evaluate_grad_manual(pos)
-print(wf.jastrow.jastrow_kernel.weight.grad)
-wf.zero_grad()
+# solver.evaluate_grad_manual(pos)
+# print(wf.jastrow.jastrow_kernel.weight.grad)
+# wf.zero_grad()
 
 
-solver.evaluate_grad_manual_3(pos)
-print(wf.jastrow.jastrow_kernel.weight.grad)
-wf.zero_grad()
+# solver.evaluate_grad_manual_3(pos)
+# print(wf.jastrow.jastrow_kernel.weight.grad)
+# wf.zero_grad()
 
-solver.evaluate_grad_auto(pos)
-print(wf.jastrow.jastrow_kernel.weight.grad)
-wf.zero_grad()
+# solver.evaluate_grad_auto(pos)
+# print(wf.jastrow.jastrow_kernel.weight.grad)
+# wf.zero_grad()
 
 
 # optimize the wave function

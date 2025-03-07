@@ -38,6 +38,7 @@ class SamplerBase:
         self.walkers = Walkers(
             nwalkers=nwalkers, nelec=nelec, ndim=ndim, init=init, cuda=cuda
         )
+        self.requires_autograd = False
 
         log.info("")
         log.info(" Monte-Carlo Sampler")
