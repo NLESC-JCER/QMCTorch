@@ -138,7 +138,7 @@ class SlaterJastrow(WaveFunction):
         # scf layer
         self.mo_scf = nn.Linear(self.mol.basis.nao, self.nmo_opt, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
-        self.mo_scf.weight.requires_grad = False
+        self.mo_scf.weight.requires_grad = True
 
         # port the layer to cuda if needed
         if self.cuda:
@@ -284,7 +284,7 @@ class SlaterJastrow(WaveFunction):
         x = self.mo_scf(x)
 
         # mix the mos
-        x = self.mo(x)
+        # x = self.mo(x)
 
         # pool the mos
         x = self.pool(x)
@@ -624,7 +624,7 @@ class SlaterJastrow(WaveFunction):
         mo_coeff = torch.as_tensor(self.mol.basis.mos).type(torch.get_default_dtype())
         if not self.include_all_mo:
             mo_coeff = mo_coeff[:, : self.highest_occ_mo]
-        return nn.Parameter(mo_coeff.transpose(0, 1).contiguous())
+        return nn.Parameter(mo_coeff.transpose(0, 1), requires_grad=True)
 
     def update_mo_coeffs(self):
         """Update the Mo coefficient during a GO run."""

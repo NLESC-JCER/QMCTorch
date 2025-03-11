@@ -83,6 +83,7 @@ class Molecule:
         self.basis_name = basis
         self.save_scf_file = save_scf_file
         self.scf_level = scf
+        self.symmetry = None
 
         if rank == 0:
             log.info("")

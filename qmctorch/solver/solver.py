@@ -77,7 +77,7 @@ class Solver(SolverBase):
             self.grad_method = grad
             self.evaluate_gradient = {
                 "auto": self.evaluate_grad_auto,
-                "manual": self.evaluate_grad_manual_3,
+                "manual": self.evaluate_grad_manual,
             }[grad]
 
         # resampling of the wave function
@@ -394,6 +394,8 @@ class Solver(SolverBase):
 
             # compute the gradients
             psi.backward(weight)
+
+            print(self.wf.mo_scf.weight.grad)
 
             return torch.mean(eloc), eloc
 

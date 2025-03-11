@@ -1,5 +1,6 @@
 from qmctorch.ase import QMCTorch     
 from qmctorch.ase.optimizer import TorchOptimizer
+from qmctorch.ase.symmetry import Cinfv
 from ase import Atoms 
 from ase.optimize import GoodOldQuasiNewton, FIRE
 from ase.io import write
@@ -21,21 +22,22 @@ h2.calc.scf_options.basis = 'dzp'
 
 # WF options
 # h2.calc.wf_options.configs = 'ground_state'
-h2.calc.wf_options.configs = 'single_double(2,2)'
+h2.calc.wf_options.configs = 'single_double(2,4)'
 h2.calc.wf_options.orthogonalize_mo = False
 # h2.calc.wf_options.gto2sto = True
 h2.calc.wf_options.jastrow.kernel_kwargs = {'w':1.0}
 
 # sampler options
 h2.calc.sampler_options.nwalkers = 100
-h2.calc.sampler_options.nstep  = 5000
+h2.calc.sampler_options.nstep  = 500
 h2.calc.sampler_options.step_size = 0.5
-h2.calc.sampler_options.ntherm = 4000
+h2.calc.sampler_options.ntherm = 400
 h2.calc.sampler_options.ndecor = 10
+h2.calc.sampler_options.symmetry = Cinfv(axis='z')
 
 # solver options
 h2.calc.solver_options.freeze = []
-h2.calc.solver_options.niter = 10
+h2.calc.solver_options.niter = 0
 h2.calc.solver_options.tqdm = True
 h2.calc.solver_options.grad = 'manual'
 
@@ -44,8 +46,26 @@ h2.calc.solver_options.resampling.mode = 'update'
 h2.calc.solver_options.resampling.resample_every = 1
 h2.calc.solver_options.resampling.ntherm_update = 100
 
+
 # Optimize the wave function
 h2.calc.initialize()
+
+print(h2.calc.wf.mo_scf.weight.data)
+print(h2.calc.wf.ao.bas_exp.data)
+mo_init = torch.clone(h2.calc.wf.mo_scf.weight.data)
+# compute forces
+h2.get_forces()
+# h2.get_potential_energy()
+
+
+pos = torch.rand(2,6)
+sym_pos = h2.calc.sampler.symmetry(pos)
+h2.calc.wf.fc.weight.data = torch.rand(1, 16)
+print(h2.calc.wf.local_energy(pos))
+print(h2.calc.wf.local_energy(sym_pos))
+
+
+print(mo_init - h2.calc.wf.mo_scf.weight.data)
 
 # use torch optim for the optimization
 # dyn = TorchOptimizer(h2, 
@@ -53,6 +73,6 @@ h2.calc.initialize()
 #                      nepoch_wf_init=50, 
 #                      nepoch_wf_update=15, 
 #                      tqdm=True)
-dyn = FIRE(h2, trajectory='traj.xyz')
-dyn.run(fmax=0.005, steps=5)
-write('final.xyz',h2)
+# dyn = FIRE(h2, trajectory='traj.xyz')
+# dyn.run(fmax=0.005, steps=5)
+# write('final.xyz',h2)
