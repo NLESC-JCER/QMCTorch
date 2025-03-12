@@ -16,6 +16,7 @@ from .jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorEl
 from .jastrows.elec_elec.kernels import PadeJastrowKernel
 from .jastrows.combine_jastrow import CombineJastrow
 from .orbitals.atomic_orbitals import AtomicOrbitals
+from .orbitals.molecular_orbitals import MolecularOrbitals
 from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .pooling.slater_pooling import SlaterPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
@@ -33,6 +34,7 @@ class SlaterJastrow(WaveFunction):
         kinetic="jacobi",
         cuda=False,
         include_all_mo=True,
+        mix_mo = False,
         orthogonalize_mo=False
     ):
         """Slater Jastrow wave function with electron-electron Jastrow factor
@@ -92,10 +94,7 @@ class SlaterJastrow(WaveFunction):
         self.init_atomic_orb(backflow)
 
         # init mo layer
-        self.init_molecular_orb(include_all_mo)
-
-        # init the mo mixer layer
-        self.init_mo_mixer(orthogonalize_mo)
+        self.init_molecular_orb(include_all_mo, mix_mo, orthogonalize_mo)
 
         # initialize the slater det calculator
         self.init_slater_det_calculator()
@@ -110,7 +109,7 @@ class SlaterJastrow(WaveFunction):
         self.init_kinetic(kinetic, backflow)
 
         # register the callable for hdf5 dump
-        register_extra_attributes(self, ["ao", "mo_scf", "mo", "jastrow", "pool", "fc"])
+        register_extra_attributes(self, ["ao", "mo", "jastrow", "pool", "fc"])
 
         self.log_data()
 
@@ -128,47 +127,32 @@ class SlaterJastrow(WaveFunction):
         if self.cuda:
             self.ao = self.ao.to(self.device)
 
-    def init_molecular_orb(self, include_all_mo):
+    def init_molecular_orb(self, include_all_mo, mix_mo, orthogonalize_mo):
         """initialize the molecular orbital layers"""
 
-        # determine which orbs to include in the transformation
+        # # determine which orbs to include in the transformation
         self.include_all_mo = include_all_mo
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
 
         # scf layer
         self.mo_scf = nn.Linear(self.mol.basis.nao, self.nmo_opt, bias=False)
         self.mo_scf.weight = self.get_mo_coeffs()
-        self.mo_scf.weight.requires_grad = True
+        self.mo_scf.weight.requires_grad = False
 
         # port the layer to cuda if needed
         if self.cuda:
             self.mo_scf.to(self.device)
 
-    def init_mo_mixer(self, orthogonalize_mo):
-        """
-        Initialize the molecular orbital mixing layer.
+        self.mo = MolecularOrbitals(self.mol, 
+                                    include_all_mo, 
+                                    self.highest_occ_mo, 
+                                    mix_mo,
+                                    orthogonalize_mo,
+                                    self.cuda)
 
-        Parameters
-        ----------
-        orthogonalize_mo : bool
-            whether to orthogonalize the mo mixer layer
-
-        """
-        self.orthogonalize_mo = orthogonalize_mo
-
-        # mo mixer layer
-        self.mo = nn.Linear(self.nmo_opt, self.nmo_opt, bias=False)
-
-        # init the weight to idenity matrix
-        self.mo.weight = nn.Parameter(torch.eye(self.nmo_opt, self.nmo_opt))
-
-        # orthogonalize it
-        if self.orthogonalize_mo:
-            self.mo = orthogonal(self.mo)
-
-        # put on the card if needed
         if self.cuda:
             self.mo.to(self.device)
+
 
     def init_config(self, configs):
         """Initialize the electronic configurations desired in the wave function."""
@@ -281,10 +265,7 @@ class SlaterJastrow(WaveFunction):
             x = ao
 
         # molecular orbitals
-        x = self.mo_scf(x)
-
-        # mix the mos
-        # x = self.mo(x)
+        x = self.mo(x)
 
         # pool the mos
         x = self.pool(x)
@@ -298,8 +279,7 @@ class SlaterJastrow(WaveFunction):
 
     def ao2mo(self, ao):
         """transforms AO values in to MO values."""
-
-        return self.mo(self.mo_scf(ao))
+        return self.mo(ao)
 
     def pos2mo(self, x, derivative=0, sum_grad=True):
         """Compute the MO vals from the pos

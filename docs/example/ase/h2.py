@@ -23,6 +23,7 @@ h2.calc.scf_options.basis = 'dzp'
 # WF options
 # h2.calc.wf_options.configs = 'ground_state'
 h2.calc.wf_options.configs = 'single_double(2,4)'
+h2.calc.wf_options.mix_mo = False
 h2.calc.wf_options.orthogonalize_mo = False
 # h2.calc.wf_options.gto2sto = True
 h2.calc.wf_options.jastrow.kernel_kwargs = {'w':1.0}
@@ -50,22 +51,30 @@ h2.calc.solver_options.resampling.ntherm_update = 100
 # Optimize the wave function
 h2.calc.initialize()
 
-print(h2.calc.wf.mo_scf.weight.data)
-print(h2.calc.wf.ao.bas_exp.data)
-mo_init = torch.clone(h2.calc.wf.mo_scf.weight.data)
-# compute forces
-h2.get_forces()
-# h2.get_potential_energy()
+
+# wf = h2.calc.wf 
+# pos = torch.rand(5,6)
+# ao = wf.ao(pos)
+
+# print(wf.mo_scf(ao))
+# print(wf.mo(ao))
+
+# print(h2.calc.wf.mo_scf.weight.data)
+# print(h2.calc.wf.ao.bas_exp.data)
+# mo_init = torch.clone(h2.calc.wf.mo_scf.weight.data)
+# # compute forces
+# h2.get_forces()
+h2.get_potential_energy()
 
 
-pos = torch.rand(2,6)
-sym_pos = h2.calc.sampler.symmetry(pos)
-h2.calc.wf.fc.weight.data = torch.rand(1, 16)
-print(h2.calc.wf.local_energy(pos))
-print(h2.calc.wf.local_energy(sym_pos))
+# pos = torch.rand(2,6)
+# sym_pos = h2.calc.sampler.symmetry(pos)
+# h2.calc.wf.fc.weight.data = torch.rand(1, 16)
+# print(h2.calc.wf.local_energy(pos))
+# print(h2.calc.wf.local_energy(sym_pos))
 
 
-print(mo_init - h2.calc.wf.mo_scf.weight.data)
+# print(mo_init - h2.calc.wf.mo_scf.weight.data)
 
 # use torch optim for the optimization
 # dyn = TorchOptimizer(h2, 

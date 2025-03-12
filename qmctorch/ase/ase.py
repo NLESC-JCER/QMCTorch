@@ -63,6 +63,7 @@ class QMCTorch(Calculator):
         self.wf_options = SimpleNamespace(kinetic='jacobi',
                                           configs='single_double(2,2)',
                                           orthogonalize_mo=True,
+                                          mix_mo = False,
                                           include_all_mo=True,
                                           cuda=self.use_cuda,
                                           jastrow=SimpleNamespace(
@@ -201,6 +202,7 @@ class QMCTorch(Calculator):
                                 configs=self.wf_options.configs,
                                 backflow=backflow,
                                 jastrow=jastrow,
+                                mix_mo=self.wf_options.mix_mo,
                                 orthogonalize_mo=self.wf_options.orthogonalize_mo,
                                 include_all_mo=self.wf_options.include_all_mo,
                                 cuda=self.use_cuda)
@@ -240,7 +242,6 @@ class QMCTorch(Calculator):
         lr_dict = [{'params': self.wf.jastrow.parameters(), 'lr': 1E-2},
                 {'params': self.wf.ao.parameters(), 'lr': 1E-2},
                 {'params': self.wf.mo.parameters(), 'lr': 1E-2},
-                {'params': self.wf.mo_scf.parameters(), 'lr': 1E-2},
                 {'params': self.wf.fc.parameters(), 'lr': 1E-2}]
         self.optimizer = optim.Adam(lr_dict, lr=1E-2)
 
