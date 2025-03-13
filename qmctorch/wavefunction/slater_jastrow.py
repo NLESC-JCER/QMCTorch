@@ -159,7 +159,10 @@ class SlaterJastrow(WaveFunction):
 
         # define the SD we want
         self.orb_confs = OrbitalConfigurations(self.mol)
-        self.configs_method = configs
+        if isinstance(configs, str):
+            self.configs_method = configs
+        elif isinstance(configs, tuple):
+            self.configs_method = "explicit"
         self.configs = self.orb_confs.get_configs(configs)
         self.nci = len(self.configs[0])
         self.highest_occ_mo = max(self.configs[0].max(), self.configs[1].max()) + 1

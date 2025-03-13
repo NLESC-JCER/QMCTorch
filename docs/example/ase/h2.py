@@ -11,6 +11,9 @@ from qmctorch.utils.plot_data import plot_walkers_traj, plot_correlation_coeffic
 torch.random.manual_seed(0)
 np.random.seed(0)
 
+
+configs = (torch.tensor([[0],[1]]), torch.tensor([[0],[1]]))
+
 d = 0.70
 h2 = Atoms('H2', positions=[(0, 0, -d/2), (0, 0, d/2)])
 
@@ -22,7 +25,8 @@ h2.calc.scf_options.basis = 'dzp'
 
 # WF options
 # h2.calc.wf_options.configs = 'ground_state'
-h2.calc.wf_options.configs = 'single_double(2,4)'
+# h2.calc.wf_options.configs = 'single_double(2,4)'
+h2.calc.wf_options.configs = configs
 h2.calc.wf_options.mix_mo = False
 h2.calc.wf_options.orthogonalize_mo = False
 # h2.calc.wf_options.gto2sto = True
@@ -38,7 +42,7 @@ h2.calc.sampler_options.symmetry = Cinfv(axis='z')
 
 # solver options
 h2.calc.solver_options.freeze = []
-h2.calc.solver_options.niter = 0
+h2.calc.solver_options.niter = 10
 h2.calc.solver_options.tqdm = True
 h2.calc.solver_options.grad = 'manual'
 
@@ -64,7 +68,8 @@ h2.calc.initialize()
 # mo_init = torch.clone(h2.calc.wf.mo_scf.weight.data)
 # # compute forces
 # h2.get_forces()
-h2.get_potential_energy()
+# h2.get_potential_energy()
+
 
 
 # pos = torch.rand(2,6)
