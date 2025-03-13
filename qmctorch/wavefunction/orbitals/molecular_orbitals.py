@@ -31,7 +31,7 @@ class MolecularOrbitals(nn.Module):
                 self.mo_mixer = orthogonal(self.mo_mixer)
 
         if self.cuda:
-            self.mo_scf.to(self.device)
+            self.mo_scf = self.mo_scf.to(self.device)
             self.mo_modifier.to(self.device)
             if self.mix_mo:
                 self.mo_mixer.to(self.device)

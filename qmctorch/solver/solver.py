@@ -395,8 +395,6 @@ class Solver(SolverBase):
             # compute the gradients
             psi.backward(weight)
 
-            print(self.wf.mo_scf.weight.grad)
-
             return torch.mean(eloc), eloc
 
         else:

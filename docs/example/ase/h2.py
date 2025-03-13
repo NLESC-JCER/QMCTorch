@@ -25,8 +25,8 @@ h2.calc.scf_options.basis = 'dzp'
 
 # WF options
 # h2.calc.wf_options.configs = 'ground_state'
-# h2.calc.wf_options.configs = 'single_double(2,4)'
-h2.calc.wf_options.configs = configs
+h2.calc.wf_options.configs = 'single_double(2,4)'
+# h2.calc.wf_options.configs = configs
 h2.calc.wf_options.mix_mo = False
 h2.calc.wf_options.orthogonalize_mo = False
 # h2.calc.wf_options.gto2sto = True

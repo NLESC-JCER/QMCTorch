@@ -152,7 +152,7 @@ class SlaterJastrow(WaveFunction):
 
         if self.cuda:
             self.mo.to(self.device)
-
+            
 
     def init_config(self, configs):
         """Initialize the electronic configurations desired in the wave function."""
