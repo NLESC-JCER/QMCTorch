@@ -15,7 +15,7 @@ np.random.seed(0)
 configs = (torch.tensor([[0],[1]]), torch.tensor([[0],[1]]))
 
 d = 0.70
-h2 = Atoms('H2', positions=[(0, 0, -d/2), (0, 0, d/2)])
+h2 = Atoms('LiH', positions=[(0, 0, 0), (0, 0, 3.14)])
 
 h2.calc = QMCTorch()
 
@@ -38,7 +38,7 @@ h2.calc.sampler_options.nstep  = 500
 h2.calc.sampler_options.step_size = 0.5
 h2.calc.sampler_options.ntherm = -1
 h2.calc.sampler_options.ndecor = 10
-h2.calc.sampler_options.symmetry = Dinfh(axis='z')
+h2.calc.sampler_options.symmetry = None
 
 # solver options
 h2.calc.solver_options.freeze = []

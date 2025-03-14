@@ -28,7 +28,7 @@ class MolecularOrbitals(nn.Module):
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
 
         self.mo_scf = self.get_mo_coeffs()
-        self.mo_modifier = nn.Parameter(torch.ones(self.nmo_opt, self.nmo_opt, requires_grad=True)).type(dtype)
+        self.mo_modifier = nn.Parameter(torch.ones_like(self.mo_scf, requires_grad=True)).type(dtype)
 
         self.mo_mixed = None
         if self.mix_mo:
