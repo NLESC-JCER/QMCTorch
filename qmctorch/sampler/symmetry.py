@@ -33,7 +33,7 @@ def planar_symmetry(pos: torch.tensor, plane: str, nelec: int, ndim: int, inplac
     return out
 
 class BaseSymmetry(ABC):
-    def __init__(self, label: str = "C1"):
+    def __init__(self, label: str):
         self.label = label
         self.nelec = None
         self.ndim = 3

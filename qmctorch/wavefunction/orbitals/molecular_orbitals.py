@@ -1,9 +1,15 @@
 import torch
 from torch import nn
 from torch.nn.utils.parametrizations import orthogonal 
-
+from ...scf import Molecule
 class MolecularOrbitals(nn.Module):
-    def __init__(self, mol, include_all_mo: bool, highest_occ_mo: int, mix_mo: bool, orthogonalize_mo: bool, cuda: bool):
+    def __init__(self, 
+                 mol: Molecule, 
+                 include_all_mo: bool, 
+                 highest_occ_mo: int, 
+                 mix_mo: bool, 
+                 orthogonalize_mo: bool, 
+                 cuda: bool):
         
         super(MolecularOrbitals, self).__init__()
         dtype = torch.get_default_dtype()

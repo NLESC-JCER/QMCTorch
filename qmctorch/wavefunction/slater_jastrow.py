@@ -134,15 +134,6 @@ class SlaterJastrow(WaveFunction):
         self.include_all_mo = include_all_mo
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
 
-        # scf layer
-        self.mo_scf = nn.Linear(self.mol.basis.nao, self.nmo_opt, bias=False)
-        self.mo_scf.weight = self.get_mo_coeffs()
-        self.mo_scf.weight.requires_grad = False
-
-        # port the layer to cuda if needed
-        if self.cuda:
-            self.mo_scf.to(self.device)
-
         self.mo = MolecularOrbitals(self.mol, 
                                     include_all_mo, 
                                     self.highest_occ_mo, 
@@ -601,13 +592,6 @@ class SlaterJastrow(WaveFunction):
         log.info("  Cuda support        : {0}", self.cuda)
         if self.cuda:
             log.info("  GPU                 : {0}", torch.cuda.get_device_name(0))
-
-    def get_mo_coeffs(self):
-        """Get the molecular orbital coefficients to init the mo layer."""
-        mo_coeff = torch.as_tensor(self.mol.basis.mos).type(torch.get_default_dtype())
-        if not self.include_all_mo:
-            mo_coeff = mo_coeff[:, : self.highest_occ_mo]
-        return nn.Parameter(mo_coeff.transpose(0, 1), requires_grad=True)
 
     def update_mo_coeffs(self):
         """Update the Mo coefficient during a GO run."""

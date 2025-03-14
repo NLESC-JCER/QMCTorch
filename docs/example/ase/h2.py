@@ -1,6 +1,6 @@
 from qmctorch.ase import QMCTorch     
 from qmctorch.ase.optimizer import TorchOptimizer
-from qmctorch.ase.symmetry import Cinfv
+from qmctorch.sampler.symmetry import Cinfv
 from ase import Atoms 
 from ase.optimize import GoodOldQuasiNewton, FIRE
 from ase.io import write
@@ -38,7 +38,7 @@ h2.calc.sampler_options.nstep  = 500
 h2.calc.sampler_options.step_size = 0.5
 h2.calc.sampler_options.ntherm = 400
 h2.calc.sampler_options.ndecor = 10
-h2.calc.sampler_options.symmetry = Cinfv(axis='z')
+h2.calc.sampler_options.symmetry = None
 
 # solver options
 h2.calc.solver_options.freeze = []
@@ -55,6 +55,21 @@ h2.calc.solver_options.resampling.ntherm_update = 100
 # Optimize the wave function
 h2.calc.initialize()
 
+# single point
+obs = h2.calc.solver.single_point()
+pos = obs.pos 
+
+h2.calc.solver.evaluate_grad_manual(pos)
+print(h2.calc.solver.wf.fc.weight.grad)
+# print(h2.calc.solver.wf.ao.bas_exp.grad)
+h2.calc.solver.wf.zero_grad() 
+
+
+symm_pos = Cinfv(axis='z')(pos)
+h2.calc.solver.evaluate_grad_manual(symm_pos)
+print(h2.calc.solver.wf.fc.weight.grad)
+# print(h2.calc.solver.wf.ao.bas_exp.grad)
+h2.calc.solver.wf.zero_grad()
 
 # wf = h2.calc.wf 
 # pos = torch.rand(5,6)
