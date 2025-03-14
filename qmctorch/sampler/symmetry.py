@@ -133,6 +133,11 @@ class Dinfh(BaseSymmetry):
         if axis not in ['x', 'y', 'z']:
             raise ValueError(f"Axis {axis} is not valid. Must be 'x', 'y', or 'z'.")
         self.axis = axis
+        self.symmetry_planes = {'x':['xy','xz'],
+                                'y':['xy','yz'],
+                                'z':['xz','yz']}[self.axis]
+        self.last_symmetry = {'x':'yz', 'y':'xz', 'z':'xy'}[self.axis]
+    
 
     def __call__(self, pos: torch.tensor) -> torch.tensor:
         """
@@ -150,4 +155,10 @@ class Dinfh(BaseSymmetry):
         """
         if self.nelec is None:
             self.nelec = pos.shape[1] // self.ndim
-        raise NotImplementedError("Dinfh symmetry not implemented yet")
+        symmetry_pos = []
+        symmetry_pos.append(pos)
+        for plane in self.symmetry_planes:
+            symmetry_pos.append(planar_symmetry(pos, plane, self.nelec, self.ndim, inplace=False))
+        symmetry_pos.append(planar_symmetry(pos, self.symmetry_planes, self.nelec, self.ndim, inplace=False))
+        symmetry_pos.append(planar_symmetry(torch.cat(symmetry_pos, dim=0), self.last_symmetry, self.nelec, self.ndim, inplace=False))
+        return torch.cat(symmetry_pos, dim=0).requires_grad_(pos.requires_grad)

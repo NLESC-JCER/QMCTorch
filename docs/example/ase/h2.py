@@ -1,6 +1,6 @@
 from qmctorch.ase import QMCTorch     
 from qmctorch.ase.optimizer import TorchOptimizer
-from qmctorch.sampler.symmetry import Cinfv
+from qmctorch.sampler.symmetry import Cinfv, Dinfh
 from ase import Atoms 
 from ase.optimize import GoodOldQuasiNewton, FIRE
 from ase.io import write
@@ -60,15 +60,15 @@ obs = h2.calc.solver.single_point()
 pos = obs.pos 
 
 h2.calc.solver.evaluate_grad_manual(pos)
-print(h2.calc.solver.wf.fc.weight.grad)
-# print(h2.calc.solver.wf.ao.bas_exp.grad)
+# print(h2.calc.solver.wf.fc.weight.grad)
+print(h2.calc.solver.wf.ao.bas_exp.grad)
 h2.calc.solver.wf.zero_grad() 
 
 
-symm_pos = Cinfv(axis='z')(pos)
+symm_pos = Dinfh(axis='z')(pos)
 h2.calc.solver.evaluate_grad_manual(symm_pos)
-print(h2.calc.solver.wf.fc.weight.grad)
-# print(h2.calc.solver.wf.ao.bas_exp.grad)
+# print(h2.calc.solver.wf.fc.weight.grad)
+print(h2.calc.solver.wf.ao.bas_exp.grad)
 h2.calc.solver.wf.zero_grad()
 
 # wf = h2.calc.wf 
