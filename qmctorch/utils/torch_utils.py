@@ -283,20 +283,3 @@ class Loss(nn.Module):
 
         else:
             return 1.0
-
-
-class OrthoReg(nn.Module):
-    """add a penalty to make matrice orthgonal."""
-
-    def __init__(self, alpha=0.1):
-        """Add a penalty loss to keep the MO orthogonalized
-
-        Keyword Arguments:
-            alpha {float} -- strength of the penaly (default: {0.1})
-        """
-        super(OrthoReg, self).__init__()
-        self.alpha = alpha
-
-    def forward(self, W):
-        """Return the loss : |W x W^T - I|."""
-        return self.alpha * torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))

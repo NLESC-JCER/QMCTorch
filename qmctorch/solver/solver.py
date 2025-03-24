@@ -2,7 +2,7 @@ from copy import deepcopy
 from time import time
 from tqdm import tqdm
 import torch
-from qmctorch.utils import Loss, OrthoReg, add_group_attr, dump_to_hdf5, DataLoader
+from qmctorch.utils import Loss, add_group_attr, dump_to_hdf5, DataLoader
 
 from .. import log
 from .solver_base import SolverBase
@@ -92,8 +92,7 @@ class Solver(SolverBase):
         # orthogonalization penalty for the MO coeffs
         self.ortho_mo = ortho_mo
         if self.ortho_mo is True:
-            log.warning("Orthogonalization of the MO coeffs is better done in the wave function")
-            self.ortho_loss = OrthoReg()
+            log.warning("Orthogonalization of the MO coeffs via loss penalty is deprecated")
 
     def set_params_requires_grad(self, wf_params=True, geo_params=False):
         """Configure parameters for wf opt."""
@@ -333,10 +332,6 @@ class Solver(SolverBase):
 
         # compute the loss
         loss, eloc = self.loss(lpos)
-
-        # add mo orthogonalization if required
-        if self.wf.mo.weight.requires_grad and self.ortho_mo:
-            loss += self.ortho_loss(self.wf.mo.weight)
 
         # compute local gradients
         loss.backward()

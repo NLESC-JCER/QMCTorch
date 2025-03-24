@@ -712,3 +712,4 @@ class SlaterJastrow(WaveFunction):
             cuda=self.cuda,
             include_all_mo=self.include_all_mo,
         )
+

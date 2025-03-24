@@ -2,7 +2,7 @@ from time import time
 from types import SimpleNamespace
 
 import torch
-from qmctorch.utils import DataLoader, Loss, OrthoReg, add_group_attr, dump_to_hdf5
+from qmctorch.utils import DataLoader, Loss, add_group_attr, dump_to_hdf5
 
 from .. import log
 from .solver import Solver
