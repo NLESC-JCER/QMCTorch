@@ -60,7 +60,7 @@ class InterpolateMolecularOrbitals:
             def func(x):
                 x = torch.as_tensor(x).type(torch.get_default_dtype())
                 ao = self.wf.ao(x, one_elec=True)
-                mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
+                mo = self.wf.mo(ao).squeeze(1)
                 return mo[:, : self.mo_max_index].detach()
 
             self.interp_mo_func = interpolator_irreg_grid(func, grid_pts)
@@ -92,7 +92,7 @@ class InterpolateMolecularOrbitals:
             def func(x):
                 x = torch.as_tensor(x).type(torch.get_default_dtype())
                 ao = self.wf.ao(x, one_elec=True)
-                mo = self.wf.mo(self.wf.mo_scf(ao)).squeeze(1)
+                mo = self.wf.mo(ao).squeeze(1)
                 return mo[:, : self.mo_max_index]
 
             self.interp_mo_func = interpolator_reg_grid(func, x, y, z)
