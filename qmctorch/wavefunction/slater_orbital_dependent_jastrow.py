@@ -137,9 +137,6 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             x = ao
 
         # molecular orbitals
-        x = self.mo_scf(x)
-
-        # mix the mos
         x = self.mo(x)
 
         # jastrow for each orbital
@@ -152,10 +149,10 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         return self.fc(x)
 
     def ao2mo(self, ao):
-        return self.mo(self.mo_scf(ao))
+        return self.mo(ao)
 
     def ao2cmo(self, ao, jastrow):
-        return jastrow * self.mo(self.mo_scf(ao))
+        return jastrow * self.mo(ao)
 
     def pos2mo(self, x, derivative=0, sum_grad=True):
         """Compute the uncorrelated MOs from the positions."""

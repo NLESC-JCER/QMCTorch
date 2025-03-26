@@ -40,14 +40,14 @@ class TestInterpolate(unittest.TestCase):
     def test_mo_reg(self):
         interp_mo = InterpolateMolecularOrbitals(self.wf)
         inter = interp_mo(self.pos, method="reg")
-        ref = self.wf.mo(self.wf.mo_scf(self.wf.ao(self.pos)))
+        ref = self.wf.mo(self.wf.ao(self.pos))
         delta = (inter - ref).abs().mean()
         assert delta < 0.1
 
     def test_mo_irreg(self):
         interp_mo = InterpolateMolecularOrbitals(self.wf)
         inter = interp_mo(self.pos, method="irreg")
-        ref = self.wf.mo(self.wf.mo_scf(self.wf.ao(self.pos)))
+        ref = self.wf.mo(self.wf.ao(self.pos))
         delta = (inter - ref).abs().mean()
         assert delta < 0.1
 
