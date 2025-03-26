@@ -21,7 +21,6 @@ from .stat_utils import (
 from .torch_utils import (
     DataSet,
     DataLoader,
-    Loss,
     fast_power,
     set_torch_double_precision,
     set_torch_single_precision,
@@ -33,7 +32,6 @@ __all__ = [
     "set_torch_double_precision",
     "set_torch_single_precision",
     "DataSet",
-    "Loss",
     "DataLoader",
     "add_group_attr",
     "dump_to_hdf5",
