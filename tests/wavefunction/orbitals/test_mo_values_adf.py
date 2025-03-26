@@ -72,7 +72,7 @@ class TestMOvaluesADF(unittest.TestCase):
         self.pos.requires_grad = True
 
     def test_mo(self):
-        movals = self.wf.mo_scf(self.wf.ao(self.pos)).detach().numpy()
+        movals = self.wf.mo(self.wf.ao(self.pos)).detach().numpy()
 
         for iorb in range(self.mol.basis.nmo):
             path_cube = PATH_TEST / f"cube/C_MO_%SCF_A%{iorb + 1}.cub"

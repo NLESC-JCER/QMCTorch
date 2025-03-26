@@ -4,6 +4,7 @@ import numpy as np
 import torch
 from torch import optim
 from types import SimpleNamespace
+
 from ..utils import set_torch_double_precision
 from ..utils.constants import ANGS2BOHR
 from ..scf.molecule import Molecule as SCF
@@ -63,6 +64,7 @@ class QMCTorch(Calculator):
         self.wf_options = SimpleNamespace(kinetic='jacobi',
                                           configs='single_double(2,2)',
                                           orthogonalize_mo=True,
+                                          mix_mo = False,
                                           include_all_mo=True,
                                           cuda=self.use_cuda,
                                           jastrow=SimpleNamespace(
@@ -83,8 +85,10 @@ class QMCTorch(Calculator):
         # default option for the sampler
         self.sampler = None
         self.sampler_options = SimpleNamespace(nwalkers=4000, nstep=2000, 
-                                               ntherm=-1, ndecor=1, step_size=0.05)
+                                               ntherm=-1, ndecor=1, step_size=0.05,
+                                               symmetry=None)
         self.recognized_sampler_options = list(self.sampler_options.__dict__.keys())
+        
         
         # optimizer .... 
         self.optimizer = None
@@ -199,6 +203,7 @@ class QMCTorch(Calculator):
                                 configs=self.wf_options.configs,
                                 backflow=backflow,
                                 jastrow=jastrow,
+                                mix_mo=self.wf_options.mix_mo,
                                 orthogonalize_mo=self.wf_options.orthogonalize_mo,
                                 include_all_mo=self.wf_options.include_all_mo,
                                 cuda=self.use_cuda)
@@ -229,7 +234,8 @@ class QMCTorch(Calculator):
         self.validate_options(self.sampler_options, self.recognized_sampler_options, 'Sampler')
         self.sampler = Metropolis(nwalkers=self.sampler_options.nwalkers, nstep=self.sampler_options.nstep, 
                                   nelec=self.wf.nelec, ntherm=self.sampler_options.ntherm, ndecor=self.sampler_options.ndecor,
-                                  step_size=self.sampler_options.step_size, init=self.molecule.domain('atomic'), cuda=self.use_cuda)
+                                  step_size=self.sampler_options.step_size, init=self.molecule.domain('atomic'),
+                                  symmetry=self.sampler_options.symmetry, cuda=self.use_cuda)
         
     def set_default_optimizer(self) -> None:
         if self.wf is None:
@@ -464,6 +470,7 @@ class QMCTorch(Calculator):
         # optimize the wave function
         if self.solver_options.niter > 0:
             self.solver.set_params_requires_grad(wf_params=True, geo_params=False)
+            self.solver.freeze_parameters(self.solver_options.freeze)
             self.solver.run(self.solver_options.niter, tqdm=self.solver_options.tqdm)
 
         # compute the energy 
@@ -498,6 +505,7 @@ class QMCTorch(Calculator):
         # optimize the wave function
         if self.solver_options.niter > 0:
             self.solver.set_params_requires_grad(wf_params=True, geo_params=False)
+            self.solver.freeze_parameters(self.solver_options.freeze)
             self.solver.run(self.solver_options.niter, tqdm=self.solver_options.tqdm)
 
         # resample

@@ -73,6 +73,8 @@ class SlaterPooling(nn.Module):
         """
         if self.config_method.startswith("cas("):
             return self.det_explicit(input)
+        elif self.config_method == 'explicit':
+            return self.det_explicit(input)
         else:
             if self.use_explicit_operator:
                 return self.det_explicit(input)
@@ -284,6 +286,9 @@ class SlaterPooling(nn.Module):
                 op_vals = self.operator_single_double(mo, bop, op_squared, inv_mo)
 
         elif self.config_method.startswith("cas("):
+            op_vals = self.operator_explicit(mo, bop, op_squared)
+
+        elif self.config_method == 'explicit':
             op_vals = self.operator_explicit(mo, bop, op_squared)
 
         else:

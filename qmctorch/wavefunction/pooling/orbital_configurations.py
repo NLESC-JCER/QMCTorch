@@ -24,7 +24,11 @@ class OrbitalConfigurations:
         if isinstance(configs, str):
             configs = configs.lower()
 
-        if isinstance(configs, torch.Tensor):
+        if isinstance(configs, tuple):
+            assert len(configs) == 2
+            assert configs[0].shape == configs[1].shape
+            assert len(configs[0][0]) == self.nup
+            assert len(configs[0][0]) == self.ndown
             return configs
 
         elif configs == "ground_state":
@@ -54,6 +58,7 @@ class OrbitalConfigurations:
             print("              single(nelec,norb)")
             print("              single_double(nelec,norb)")
             print("              cas(nelec,norb)")
+            print("              tuple(tesnor,tensor)")
             raise ValueError("Config error")
 
     def sanity_check(self, nelec: int, norb: int) -> None:

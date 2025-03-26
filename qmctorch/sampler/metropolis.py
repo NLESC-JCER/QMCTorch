@@ -20,6 +20,7 @@ class Metropolis(SamplerBase):
         init: Dict = {"min": -5, "max": 5},
         move: Dict = {"type": "all-elec", "proba": "normal"},
         logspace: bool = False,
+        symmetry = None,
         cuda: bool = False,
     ) -> None:
         """Metropolis Hasting generator
@@ -59,6 +60,10 @@ class Metropolis(SamplerBase):
         self.logspace = logspace
         self.configure_move(move)
         self.log_data()
+        if symmetry is None:
+            self.symmetry = lambda x: x
+        else:
+            self.symmetry = symmetry
 
     def log_data(self) -> None:
         """log data about the sampler."""
@@ -108,7 +113,10 @@ class Metropolis(SamplerBase):
             if self.ntherm < 0:
                 self.ntherm = self.nstep + self.ntherm
 
+            # init the walkers
             self.walkers.initialize(pos=pos)
+
+
             if self.logspace:
                 fx = self.log_func(pdf)(self.walkers.pos)
             else:
@@ -126,6 +134,7 @@ class Metropolis(SamplerBase):
 
             for istep in rng:
                 for id_elec in self.fixed_id_elec_list:
+                    
                     # new positions
                     Xn = self.move(pdf, id_elec)
 
@@ -167,7 +176,7 @@ class Metropolis(SamplerBase):
                 )
                 log.info("   Total Time          : {:1.2f} sec.", (time() - tstart))
 
-        return torch.cat(pos).requires_grad_()
+        return self.symmetry(torch.cat(pos)).requires_grad_()
 
     def configure_move(self, move: Dict) -> None:
         """Configure the electron moves

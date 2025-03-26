@@ -5,8 +5,9 @@ from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
 
 import torch
-from ..utils import DataLoader, OrthoReg, add_group_attr, dump_to_hdf5
+from ..utils import DataLoader, add_group_attr, dump_to_hdf5
 from .loss import Loss
+
 from .. import log
 from .solver import Solver
 
@@ -110,9 +111,6 @@ class SolverMPI(Solver):
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
         self.loss.use_weight = self.resampling_options.resample_every > 1
-
-        # orthogonalization penalty for the MO coeffs
-        self.ortho_loss = OrthoReg()
 
         self.prepare_optimization(batchsize, chkpt_every)
         # log data

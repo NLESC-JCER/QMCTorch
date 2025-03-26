@@ -139,9 +139,6 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             x = ao
 
         # molecular orbitals
-        x = self.mo_scf(x)
-
-        # mix the mos
         x = self.mo(x)
 
         # jastrow for each orbital
@@ -153,11 +150,11 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         # compute the CI and return
         return self.fc(x)
 
-    def ao2mo(self, ao: torch.Tensor) -> torch.Tensor:
-        return self.mo(self.mo_scf(ao))
+    def ao2mo(self, ao):
+        return self.mo(ao)
 
     def ao2cmo(self, ao, jastrow):
-        return jastrow * self.mo(self.mo_scf(ao))
+        return jastrow * self.mo(ao)
 
     def pos2mo(self, x: torch.Tensor, derivative: int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Compute the uncorrelated MOs from the positions."""

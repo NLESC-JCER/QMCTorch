@@ -200,26 +200,3 @@ class DataLoader:
             return out
         else:
             raise StopIteration
-        
-class OrthoReg(nn.Module):
-    """add a penalty to make matrice orthgonal."""
-
-    def __init__(self, alpha: float = 0.1) -> None:
-        """Add a penalty loss to keep the MO orthogonalized
-
-        Keyword Arguments:
-            alpha {float} -- strength of the penaly (default: {0.1})
-        """
-        super(OrthoReg, self).__init__()
-        self.alpha: float = alpha
-
-    def forward(self, W: torch.Tensor) -> torch.Tensor:
-        """Return the loss : |W x W^T - I|.
-
-        Args:
-            W: The matrix to orthogonalize
-
-        Returns:
-            The loss value
-        """
-        return self.alpha * torch.norm(W.mm(W.transpose(0, 1)) - torch.eye(W.shape[0]))

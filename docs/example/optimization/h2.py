@@ -63,15 +63,35 @@ solver = Solver(wf=wf, sampler=sampler, optimizer=opt, scheduler=None)
 # configure the solver
 solver.configure(track=['local_energy', 'parameters'], freeze=['ao'],
                  loss='energy', grad='manual',
-                 ortho_mo=False, clip_loss=True, clip_threshold=2,
+                 ortho_mo=False, clip_loss=False, clip_threshold=2,
                  resampling={'mode': 'update',
                              'resample_every': 1,
                              'nstep_update': 150,
                              'ntherm_update': 50}
                  )
 
+pos = torch.rand(10, 6)
+pos.requires_grad = True
+
+wf.fc.weight.data = torch.rand(1, 4) - 0.5
+print(wf(pos))
+
+solver.evaluate_grad_manual(pos)
+print(wf.jastrow.jastrow_kernel.weight.grad)
+wf.zero_grad()
+
+
+solver.evaluate_grad_manual_3(pos)
+print(wf.jastrow.jastrow_kernel.weight.grad)
+wf.zero_grad()
+
+solver.evaluate_grad_auto(pos)
+print(wf.jastrow.jastrow_kernel.weight.grad)
+wf.zero_grad()
+
+
 # optimize the wave function
-obs = solver.run(5)  # , batchsize=10)
+# obs = solver.run(5)  # , batchsize=10)
 
 # plot
 # plot_energy(obs.local_energy, e0=-1.1645, show_variance=True)
