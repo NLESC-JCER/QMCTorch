@@ -575,6 +575,34 @@ class Solver(SolverBase):
 
         return forces
 
+    def compute_forces(self, lpos: torch.tensor) -> torch.tensor:
+        """
+        Compute the forces using automatic differentiation.
+
+        Args:
+            lpos (torch.tensor): sampling points
+
+        Returns:
+            torch.tensor: the numerical forces
+        """
+        original_requires_grad = self.wf.ao.atom_coords.requires_grad
+        batch_size = lpos.shape[0]
+        if not original_requires_grad:
+            self.wf.ao.atom_coords.requires_grad = True
+
+        local_energy = self.wf.local_energy(lpos)
+        grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=torch.ones_like(local_energy))[0]
+
+        proba = torch.log(self.wf.pdf(lpos))
+        grad_output = (local_energy-local_energy.mean()).squeeze()
+        grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_output)[0]
+        
+        if not original_requires_grad:
+            self.wf.ao.atom_coords.requires_grad = False
+
+        return 1./batch_size * (grad_eloc + grad_proba)
+
+
     def log_data_opt(self, nepoch, task):
         """Log data for the optimization."""
         log.info("")
