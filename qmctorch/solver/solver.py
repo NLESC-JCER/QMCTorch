@@ -575,26 +575,56 @@ class Solver(SolverBase):
 
         return forces
 
-    def compute_forces(self, lpos: torch.tensor, batch_size: int = None) -> torch.tensor:
+    def compute_forces(self, lpos: torch.tensor, batch_size: int = None, clip: int = None) -> torch.tensor:
         """
-        Compute the forces using automatic differentiation.
+        Compute the forces using automatic differentation
 
         Args:
             lpos (torch.tensor): sampling points
+            batch_size (int): the size of the batch to use for the automatic differentiation
+            clip (int): the number of decimal places to clip the sampling points
 
         Returns:
             torch.tensor: the numerical forces
+
         """
+
+        def get_clipping_mask(values, clip):
+            """
+            Compute a mask to clip the values based on their zscore
+
+            Parameters
+            ----------
+            values : torch.tensor
+                the values to clip
+            clip : int
+                the number of decimal places to clip the values
+
+            Returns
+            -------
+            mask : torch.tensor
+                the mask to clip the values
+            """
+            if clip is not None:
+                median = torch.median(values)
+                std = torch.std(values)
+                zscore = torch.abs((values - median) / std)    
+                mask = zscore < clip
+            else:
+                mask = torch.ones_like(values).type(torch.bool)
+
+            return mask
+    
         original_requires_grad = self.wf.ao.atom_coords.requires_grad
         if not original_requires_grad:
             self.wf.ao.atom_coords.requires_grad = True
 
         if batch_size is None:
             batch_size = lpos.shape[0]
+        nbatch = lpos.shape[0]//batch_size
 
         forces = torch.zeros_like(self.wf.ao.atom_coords)
 
-        nbatch = lpos.shape[0]//batch_size
         for ibatch in range(nbatch):
 
             # get the batch
@@ -604,14 +634,18 @@ class Solver(SolverBase):
                 idx_end = lpos.shape[0]
             lpos_batch = lpos[idx_start:idx_end]
 
+            # compute the local energy and its gradient
             local_energy = self.wf.local_energy(lpos_batch)
-            grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=torch.ones_like(local_energy))[0]
+            clip_mask = get_clipping_mask(local_energy, clip)
+            grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=clip_mask)[0]
 
+            # compute the log density and its gradient
             wf_val = self.wf.pdf(lpos_batch)
             proba = torch.log(wf_val)
-            grad_output = (local_energy-local_energy.mean()).squeeze()
-            grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_output)[0]
+            grad_outputs = (local_energy-local_energy.mean()).squeeze() * clip_mask
+            grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_outputs)[0]
         
+            # accumulate in the force
             forces += 1./batch_size * (grad_eloc + grad_proba)
 
         if not original_requires_grad:
