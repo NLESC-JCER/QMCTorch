@@ -575,7 +575,7 @@ class Solver(SolverBase):
 
         return forces
 
-    def compute_forces(self, lpos: torch.tensor) -> torch.tensor:
+    def compute_forces(self, lpos: torch.tensor, batch_size: int = None) -> torch.tensor:
         """
         Compute the forces using automatic differentiation.
 
@@ -586,21 +586,38 @@ class Solver(SolverBase):
             torch.tensor: the numerical forces
         """
         original_requires_grad = self.wf.ao.atom_coords.requires_grad
-        batch_size = lpos.shape[0]
         if not original_requires_grad:
             self.wf.ao.atom_coords.requires_grad = True
 
-        local_energy = self.wf.local_energy(lpos)
-        grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=torch.ones_like(local_energy))[0]
+        if batch_size is None:
+            batch_size = lpos.shape[0]
 
-        proba = torch.log(self.wf.pdf(lpos))
-        grad_output = (local_energy-local_energy.mean()).squeeze()
-        grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_output)[0]
+        forces = torch.zeros_like(self.wf.ao.atom_coords)
+
+        nbatch = lpos.shape[0]//batch_size
+        for ibatch in range(nbatch):
+
+            # get the batch
+            idx_start = ibatch*batch_size
+            idx_end = (ibatch+1)*batch_size
+            if idx_end > lpos.shape[0]:
+                idx_end = lpos.shape[0]
+            lpos_batch = lpos[idx_start:idx_end]
+
+            local_energy = self.wf.local_energy(lpos_batch)
+            grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=torch.ones_like(local_energy))[0]
+
+            wf_val = self.wf.pdf(lpos_batch)
+            proba = torch.log(wf_val)
+            grad_output = (local_energy-local_energy.mean()).squeeze()
+            grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_output)[0]
         
+            forces += 1./batch_size * (grad_eloc + grad_proba)
+
         if not original_requires_grad:
             self.wf.ao.atom_coords.requires_grad = False
 
-        return 1./batch_size * (grad_eloc + grad_proba)
+        return forces
 
 
     def log_data_opt(self, nepoch, task):
