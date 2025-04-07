@@ -642,7 +642,7 @@ class Solver(SolverBase):
             # compute the log density and its gradient
             wf_val = self.wf.pdf(lpos_batch)
             proba = torch.log(wf_val)
-            grad_outputs = (local_energy-local_energy.mean()).squeeze() * clip_mask
+            grad_outputs = ((local_energy-local_energy.mean()) * clip_mask).squeeze()
             grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_outputs)[0]
         
             # accumulate in the force
