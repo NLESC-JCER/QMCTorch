@@ -505,79 +505,15 @@ class Solver(SolverBase):
         else:
             raise ValueError("Manual gradient only for energy minimization")
 
-    def compute_numerical_forces(self, lpos: torch.tensor, eps: float = 1E-3) -> torch.tensor:
-        """Compute the numerical forces
-
-        Args:
-            lpos (torch.tensor): sampling points
-            eps (float, optional): the finite difference step. Defaults to 1E-3.
-
-        Returns:
-            torch.tensor: the numerical forces
-        """
-        
-        def displace_atom(idx_atom: int , idx_dir: int, eps: float, pos: torch.tensor) -> torch.tensor: 
-            """Displace an atom in a given direction
-
-            Args:
-                idx_atom (int): index of the atom
-                idx_dir (int): index of the direction
-                eps (float): the finite difference step
-                pos (torch.tensor): positions of the atoms
-
-            Returns:
-                torch.tensor: the new positions of the atoms
-            """
-            new_pos = pos.clone()
-            new_pos[idx_atom, idx_dir] += eps
-            return new_pos    
-        
-        original_atom_coords = self.wf.ao.atom_coords.clone()
-        original_bas_coords = self.wf.ao.bas_coords.clone()
-
-        forces = torch.zeros((self.wf.natom, 3))
-        for i in range(self.wf.natom):
-            for j in range(3):
-                self.wf.ao.atom_coords.data = displace_atom(i, j, eps, original_atom_coords)
-                self.wf.ao.bas_coords.data = self.wf.ao.atom_coords.repeat_interleave(self.wf.ao.nshells, dim=0)
-                loss_p, _ = self.loss(lpos)
-
-                self.wf.ao.atom_coords.data = displace_atom(i, j, -eps, original_atom_coords)
-                self.wf.ao.bas_coords.data = self.wf.ao.atom_coords.repeat_interleave(self.wf.ao.nshells, dim=0)
-                loss_m, _ = self.loss(lpos)
-
-                forces [i, j] = (loss_p - loss_m) / (2.0 * eps)
-
-        self.wf.ao.atom_coords.data = original_atom_coords
-        self.wf.ao.bas_coords.data = original_bas_coords
-
-        return forces
-                
-    def compute_autograd_forces(self, lpos: torch.tensor) -> torch.tensor:
-        """Compute the forces using automatic differentation
-
-        Args:
-            lpos (torch.tensor): sampling points
-
-        Returns:
-            torch.tensor: the numerical forces
-        """
-        original_requires_grad = self.wf.ao.atom_coords.requires_grad
-
-        if not original_requires_grad:
-            self.wf.ao.atom_coords.requires_grad = True
-
-        loss, _ = self.loss(lpos)
-        forces =  torch.autograd.grad(loss, self.wf.ao.atom_coords, retain_graph=True)[0]
-
-        if not original_requires_grad:
-            self.wf.ao.atom_coords.requires_grad = False
-
-        return forces
 
     def compute_forces(self, lpos: torch.tensor, batch_size: int = None, clip: int = None) -> torch.tensor:
-        """
-        Compute the forces using automatic differentation
+        r"""
+        Compute the forces using automatic differentation and stable estimator
+
+        ..math::
+            F = -\\langle \\nabla_\\alpha E_L(R) + (E_L(R) - E) \\nabla)\\alpha |\Psi(R)|^2 \\rangle
+
+        see e.g. https://arxiv.org/abs/2404.09755
 
         Args:
             lpos (torch.tensor): sampling points
