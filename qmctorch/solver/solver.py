@@ -506,6 +506,90 @@ class Solver(SolverBase):
             raise ValueError("Manual gradient only for energy minimization")
 
 
+    def compute_forces(self, lpos: torch.tensor, batch_size: int = None, clip: int = None) -> torch.tensor:
+        r"""
+        Compute the forces using automatic differentation and stable estimator
+
+        ..math::
+            F = -\\langle \\nabla_\\alpha E_L(R) + (E_L(R) - E) \\nabla)\\alpha |\Psi(R)|^2 \\rangle
+
+        see e.g. https://arxiv.org/abs/2404.09755
+
+        Args:
+            lpos (torch.tensor): sampling points
+            batch_size (int): the size of the batch to use for the automatic differentiation
+            clip (int): the number of decimal places to clip the sampling points
+
+        Returns:
+            torch.tensor: the numerical forces
+
+        """
+
+        def get_clipping_mask(values, clip):
+            """
+            Compute a mask to clip the values based on their zscore
+
+            Parameters
+            ----------
+            values : torch.tensor
+                the values to clip
+            clip : int
+                the number of decimal places to clip the values
+
+            Returns
+            -------
+            mask : torch.tensor
+                the mask to clip the values
+            """
+            if clip is not None:
+                median = torch.median(values)
+                std = torch.std(values)
+                zscore = torch.abs((values - median) / std)    
+                mask = zscore < clip
+            else:
+                mask = torch.ones_like(values).type(torch.bool)
+
+            return mask
+    
+        original_requires_grad = self.wf.ao.atom_coords.requires_grad
+        if not original_requires_grad:
+            self.wf.ao.atom_coords.requires_grad = True
+
+        if batch_size is None:
+            batch_size = lpos.shape[0]
+        nbatch = lpos.shape[0]//batch_size
+
+        forces = torch.zeros_like(self.wf.ao.atom_coords)
+
+        for ibatch in range(nbatch):
+
+            # get the batch
+            idx_start = ibatch*batch_size
+            idx_end = (ibatch+1)*batch_size
+            if idx_end > lpos.shape[0]:
+                idx_end = lpos.shape[0]
+            lpos_batch = lpos[idx_start:idx_end]
+
+            # compute the local energy and its gradient
+            local_energy = self.wf.local_energy(lpos_batch)
+            clip_mask = get_clipping_mask(local_energy, clip)
+            grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=clip_mask)[0]
+
+            # compute the log density and its gradient
+            wf_val = self.wf.pdf(lpos_batch)
+            proba = torch.log(wf_val)
+            grad_outputs = ((local_energy-local_energy.mean()) * clip_mask).squeeze()
+            grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_outputs)[0]
+        
+            # accumulate in the force
+            forces += 1./batch_size * (grad_eloc + grad_proba)
+
+        if not original_requires_grad:
+            self.wf.ao.atom_coords.requires_grad = False
+
+        return forces
+
+
     def log_data_opt(self, nepoch, task):
         """Log data for the optimization."""
         log.info("")
