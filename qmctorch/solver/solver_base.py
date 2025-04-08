@@ -447,9 +447,12 @@ class SolverBase:
 
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.walkers.nwalkers, ndim)
+        
         el = []
         rng = tqdm(p, desc="INFO:QMCTorch|  Energy  ", disable=not with_tqdm)
         for ip in rng:
+            if self.wf.cuda and ip.device.type == "cpu":
+                ip = ip.to(self.device)
             el.append(self.wf.local_energy(ip).cpu().detach().numpy())
 
         el = np.array(el).squeeze(-1)
