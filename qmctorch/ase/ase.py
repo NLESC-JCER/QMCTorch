@@ -14,6 +14,7 @@ from ..wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from ..wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
 from ..solver import Solver
 from ..sampler import Metropolis
+from ..sampler.symmetry import C1
 from .. import log
 
 class QMCTorch(Calculator):
@@ -105,6 +106,9 @@ class QMCTorch(Calculator):
         self.recognized_solver_options = list(self.solver_options.__dict__.keys())
         self.recognized_resampling_options = list(self.solver_options.resampling.__dict__.keys())
         
+        # default symmetry
+        self.symmetry = C1()
+
     @staticmethod
     def validate_options(options: SimpleNamespace, recognized_options: list, name: str = "") -> None:
         """
@@ -498,14 +502,11 @@ class QMCTorch(Calculator):
         observable = self.solver.single_point()
 
         # compute the forces 
-        # we use evaluate_grad_auto as evaluate_grad_manual is not
-        # valid for forces  
-        self.solver.set_params_requires_grad(wf_params=False, geo_params=True)
-        _, _ = self.solver.evaluate_grad_auto(observable.pos)
+        forces = self.solver.compute_forces(self.symmetry(observable.pos)).detach().cpu().numpy()
 
         # store and output
         self.results['energy'] = observable.energy.cpu().numpy()
-        self.results['forces'] = -self.solver.wf.ao.atom_coords.grad.cpu().numpy()
+        self.results['forces'] = forces
         self.solver.wf.zero_grad()
 
         self.has_forces = True
