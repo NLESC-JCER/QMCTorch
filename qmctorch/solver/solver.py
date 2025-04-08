@@ -470,7 +470,7 @@ class Solver(SolverBase):
         else:
             raise ValueError("Manual gradient only for energy minimization")
 
-    def evaluate_grad_manual_3(self, lpos):
+    def evaluate_grad_manual_3(self, lpos: torch.tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian 
@@ -546,7 +546,7 @@ class Solver(SolverBase):
 
         """
 
-        def get_clipping_mask(values, clip):
+        def get_clipping_mask(values: torch.tensor, clip: int) -> torch.tensor:
             """
             Compute a mask to clip the values based on their zscore
 
