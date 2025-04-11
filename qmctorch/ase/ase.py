@@ -5,7 +5,6 @@ import torch
 from torch import optim
 from types import SimpleNamespace
 
-from ..sampler.symmetry import BaseSymmetry
 from ..utils import set_torch_double_precision
 from ..utils.constants import ANGS2BOHR
 from ..scf.molecule import Molecule as SCF
@@ -22,12 +21,11 @@ class QMCTorch(Calculator):
     implemented_properties = ["energy", "forces"]
 
     def __init__(self,
-                 restart=None,
+                 restart: str = None,
                  *,
-                 labels=None,
-                 atoms=None,
-                 **kwargs):
-        
+                 labels: list = None,
+                 atoms: Atoms = None,
+                 **kwargs: dict) -> None:
         """
         Initialize a QMCTorchCalculator object.
 
@@ -41,10 +39,13 @@ class QMCTorch(Calculator):
             to set initial labels.
         atoms : Atoms object, optional
             The initial atomic configuration.
-        **kwargs
+        **kwargs : dict
             Additional keyword arguments are passed to the
             SCF, WF, Sampler, Optimizer and Solver objects.
 
+        Returns
+        -------
+        None
         """
         Calculator.__init__(self, restart=restart, labels=labels, atoms=atoms)
         self.use_cuda = torch.cuda.is_available()
@@ -138,7 +139,7 @@ class QMCTorch(Calculator):
                     "Invalid %s options: %s. Recognized options are %s" % (name, opt, recognized_options)
                 )
 
-    def run_scf(self):
+    def run_scf(self) -> None:
         """
         Set a default molecule called SCF here object. If the atoms object is not set, it raises
         a ValueError.
@@ -167,7 +168,7 @@ class QMCTorch(Calculator):
                                  calculator=self.scf_options.calculator, 
                                  basis=self.scf_options.basis, redo_scf=True)
 
-    def set_wf(self):
+    def set_wf(self) -> None:
         """
         Set the default wave function for the QMCTorchCalculator.
 
@@ -217,7 +218,7 @@ class QMCTorch(Calculator):
                 raise ValueError("gto2sto is only supported for pyscf")
             self.wf = self.wf.gto2sto()
 
-    def set_sampler(self):
+    def set_sampler(self) -> None:
         """
         Set default sampler object.
 
@@ -240,7 +241,7 @@ class QMCTorch(Calculator):
                                   step_size=self.sampler_options.step_size, init=self.molecule.domain('atomic'),
                                   symmetry=self.sampler_options.symmetry, cuda=self.use_cuda)
         
-    def set_default_optimizer(self):
+    def set_default_optimizer(self) -> None:
         if self.wf is None:
             raise ValueError("Wave function object is not set")
         lr_dict = [{'params': self.wf.jastrow.parameters(), 'lr': 1E-2},
@@ -250,7 +251,7 @@ class QMCTorch(Calculator):
         self.optimizer = optim.Adam(lr_dict, lr=1E-2)
 
 
-    def set_resampling_options(self):
+    def set_resampling_options(self) -> None:
         """
         Configure the resampling options for the solver.
 
@@ -276,7 +277,7 @@ class QMCTorch(Calculator):
             if self.solver_options.resampling.ntherm_update != -1:
                 self.solver_options.resampling.ntherm_update = -1
 
-    def initialize(self):
+    def initialize(self) -> None:
         """
         Set the default solver object for the QMCTorchCalculator.
 
@@ -320,7 +321,7 @@ class QMCTorch(Calculator):
                 resampling=self.solver_options.resampling.__dict__
                 )
 
-    def set_atoms(self, atoms):
+    def set_atoms(self, atoms: Atoms) -> None:
         """
         Set atoms object.
 
@@ -332,7 +333,7 @@ class QMCTorch(Calculator):
         self.atoms = atoms
 
 
-    def reset(self):
+    def reset(self) -> None:
         """
         Reset the internal state of the QMCTorchCalculator.
 
@@ -350,7 +351,7 @@ class QMCTorch(Calculator):
         self.has_forces = False
         self.reset_results()
 
-    def reset_results(self):
+    def reset_results(self) -> None:
         """
         Reset the results dictionary.
 
@@ -361,7 +362,7 @@ class QMCTorch(Calculator):
         """
         self.results = {}
 
-    def reset_solver(self, atoms=None, force=True):
+    def reset_solver(self, atoms: Atoms = None, force: bool = True) -> None:
         """
         Update the calculator.
 
@@ -374,14 +375,19 @@ class QMCTorch(Calculator):
         ----------
         atoms : ASE Atoms object, optional
             The atoms object to be set. If not provided, the calculator will not be reset.
+        force : bool
+            If True, the solver will be reset even if the atomic positions have not changed.
+
+        Returns
+        -------
+        None
 
         Notes
         -----
         This method is typically called before calculating a quantity.
         """
         if atoms is not None:
-            # if any((self.atoms.get_positions() != np.array(self.molecule.atom_coords)).flatten().tolist()):
-            if not np.allclose(self.atoms.get_positions()*ANGS2BOHR, np.array(self.molecule.atom_coords)):
+            if not np.allclose(self.atoms.get_positions() * ANGS2BOHR, np.array(self.molecule.atom_coords)):
                 self.reset()
                 self.set_atoms(atoms)
                 self.initialize()
@@ -389,7 +395,8 @@ class QMCTorch(Calculator):
             if self.solver is None:
                 self.initialize()
 
-    def calculate(self, atoms=None, properties=['energy'], system_changes=None):
+    def calculate(self, atoms: Atoms = None, properties: 
+                  list = ['energy'], system_changes: any = None) -> float:
         """
         Calculate specified properties for the given atomic configuration.
 
@@ -406,6 +413,13 @@ class QMCTorch(Calculator):
         properties : list of str, optional
             A list of properties to calculate. Supported properties are 'energy' 
             and 'forces'. Default is ['energy'].
+        system_changes : any, optional
+            Information about the changes in the atomic system. Default is None.
+
+        Returns
+        -------
+        float
+            The computed value of the requested property.
 
         Raises
         ------
@@ -433,7 +447,7 @@ class QMCTorch(Calculator):
             elif p == 'energy':
                 return self._calculate_energy(atoms=atoms)
 
-    def _calculate_energy(self, atoms=None):
+    def _calculate_energy(self, atoms: Atoms =None) -> float:
         # check if reset is necessary 
         """
         Compute the energy using the wave function and the atomic positions.
@@ -470,7 +484,7 @@ class QMCTorch(Calculator):
         self.results['energy'] = observable.energy
         return self.results['energy']
 
-    def _calculate_forces(self, atoms=None):
+    def _calculate_forces(self, atoms: Atoms = None) -> float:
 
         # check if reset is necessary
         """
@@ -512,7 +526,7 @@ class QMCTorch(Calculator):
         self.has_forces = True
         return self.results['forces']
 
-    def check_forces(self):
+    def check_forces(self) -> bool:
         """
         Check if the forces have been computed.
 
@@ -526,7 +540,7 @@ class QMCTorch(Calculator):
         self.has_forces = False
         return False
     
-    def get_forces(self, atoms=None):
+    def get_forces(self, atoms: Atoms = None) -> np.ndarray:
         """
         Return the total forces.
 
@@ -547,7 +561,7 @@ class QMCTorch(Calculator):
         else:
             return self._calculate_forces(atoms=atoms)
     
-    def get_total_energy(self, atoms=None):
+    def get_total_energy(self, atoms: Atoms=None) -> float:
         """
         Return the total energy.
 

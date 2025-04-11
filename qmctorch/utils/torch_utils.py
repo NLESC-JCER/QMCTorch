@@ -1,3 +1,4 @@
+from typing import Optional, ContextManager, Tuple
 import torch
 from torch import nn
 from torch.autograd import grad, Variable
@@ -5,7 +6,7 @@ from torch.utils.data import Dataset
 from math import ceil
 
 
-def set_torch_double_precision():
+def set_torch_double_precision() -> None:
     """Set the default precision to double for all torch tensors."""
     torch.set_default_dtype(torch.float64)
     torch.backends.cuda.matmul.allow_tf32 = False
@@ -13,7 +14,7 @@ def set_torch_double_precision():
     # torch.set_default_tensor_type(torch.DoubleTensor)
 
 
-def set_torch_single_precision():
+def set_torch_single_precision() -> None:
     """Set the default precision to single for all torch tensors."""
     torch.set_default_dtype(torch.float32)
     torch.backends.cuda.matmul.allow_tf32 = False
@@ -21,17 +22,23 @@ def set_torch_single_precision():
     # torch.set_default_tensor_type(torch.FloatTensor)
 
 
-def fast_power(x, k, mask0=None, mask2=None):
-    """Computes x**k when k have elements 0, 1, 2
+def fast_power(
+    x: torch.Tensor, 
+    k: torch.Tensor, 
+    mask0: Optional[torch.Tensor] = None, 
+    mask2: Optional[torch.Tensor] = None
+) -> torch.Tensor:
+    """
+    Computes x**k when k have elements 0, 1, 2.
 
     Args:
-        x (torch.tensor): input
-        k (torch.tensor): exponents
-        mask0 (torch.tensor): precomputed mask of the elements of that are 0 (Defaults to None and computed here)
-        mask2 (torch.tensor): precomputed mask of the elements of that are 2 (Defaults to None and computed here)
+        x (torch.Tensor): input
+        k (torch.Tensor): exponents
+        mask0 (torch.Tensor): precomputed mask of the elements of that are 0 (Defaults to None and computed here)
+        mask2 (torch.Tensor): precomputed mask of the elements of that are 2 (Defaults to None and computed here)
 
     Returns:
-        torch.tensor: values of x**k
+        torch.Tensor: values of x**k
     """
     kmax = 3
     if k.max() < kmax:
@@ -53,25 +60,38 @@ def fast_power(x, k, mask0=None, mask2=None):
     return out
 
 
-def gradients(out, inp):
-    """Return the gradients of out wrt inp
+def gradients(
+    out: torch.Tensor,
+    inp: torch.Tensor,
+) -> torch.Tensor:
+    """
+    Return the gradients of out wrt inp
 
     Args:
-        out ([type]): [description]
-        inp ([type]): [description]
+        out (torch.Tensor): The output tensor
+        inp (torch.Tensor): The input tensor
+
+    Returns:
+        torch.Tensor: Gradient of out wrt inp
     """
     return grad(out, inp, grad_outputs=torch.ones_like(out))
 
 
-def diagonal_hessian(out, inp, return_grads=False):
-    """return the diagonal hessian of out wrt to inp
+def diagonal_hessian(
+        out: torch.Tensor, 
+        inp: torch.Tensor, 
+        return_grads: bool = False
+    ) -> torch.Tensor:
+    """Return the diagonal Hessian of `out` with respect to `inp`.
 
     Args:
-        out ([type]): [description]
-        inp ([type]): [description]
+        out (torch.Tensor): The output tensor.
+        inp (torch.Tensor): The input tensor.
+        return_grads (bool, optional): Whether to return gradients. Defaults to False.
 
     Returns:
-        [type]: [description]
+        torch.Tensor: Diagonal elements of the Hessian.
+        torch.Tensor (optional): Gradients of `out` with respect to `inp` if `return_grads` is True.
     """
     # compute the jacobian
     z = Variable(torch.ones(out.shape))
@@ -99,15 +119,14 @@ def diagonal_hessian(out, inp, return_grads=False):
 
 
 class DataSet(Dataset):
-    def __init__(self, data):
+    def __init__(self, data: torch.Tensor) -> None:
         """Creates a torch data set
 
         Arguments:
-            data {torch.tensor} -- data
+            data (torch.Tensor): data
         """
-        self.data = data
 
-    def __len__(self):
+    def __len__(self) -> int:
         """get the number of data points
 
         Returns:
@@ -115,7 +134,7 @@ class DataSet(Dataset):
         """
         return self.data.shape[0]
 
-    def __getitem__(self, index):
+    def __getitem__(self, index: int) -> torch.Tensor:
         """returns a given data point
 
         Arguments:
@@ -128,11 +147,15 @@ class DataSet(Dataset):
 
 
 class DataLoader:
-    def __init__(self, data, batch_size, pin_memory=False):
-        """Simple DataLoader to replace toch data loader
+    def __init__(
+        self, data: torch.Tensor, 
+        batch_size: int, 
+        pin_memory: bool = False
+    ) -> None:
+        """Simple DataLoader to replace torch data loader
 
         Args:
-            data (torch.tensor): data to load [Nbatch,Nelec*3]
+            data (torch.Tensor): data to load [Nbatch,Nelec*3]
             batch_size (int): size of the minibatch
             pin_memory (bool, optional): copy the data to pinned memory. Defaults to False.
         """
@@ -148,10 +171,23 @@ class DataLoader:
         self.batch_size = batch_size
 
     def __iter__(self):
+        """Initialize the iterator.
+
+        Returns:
+            DataLoader: The iterator instance.
+        """
         self.count = 0
         return self
 
-    def __next__(self):
+    def __next__(self) -> torch.Tensor:
+        """Returns the next batch of data points.
+
+        Returns:
+            torch.Tensor: The next batch of data points.
+
+        Raises:
+            StopIteration: If there are no more batches to return.
+        """
         if self.count < self.nbatch - 1:
             out = self.dataset[
                 self.count * self.batch_size : (self.count + 1) * self.batch_size
@@ -164,122 +200,3 @@ class DataLoader:
             return out
         else:
             raise StopIteration
-
-
-class Loss(nn.Module):
-    def __init__(self, wf, method="energy", clip=False, clip_threshold=5):
-        """Defines the loss to use during the optimization
-
-        Arguments:
-            wf {WaveFunction} -- wave function object used
-
-        Keyword Arguments:
-            method {str} -- method to use  (default: {'energy'})
-                            (energy, variance, weighted-energy,
-                            weighted-variance)
-            clip {bool} -- clip the values that are +/- % sigma away from
-                           the mean (default: {False})
-        """
-
-        super(Loss, self).__init__()
-
-        self.wf = wf
-        self.method = method
-        self.clip = clip
-
-        # by default we use weights
-        # that are needed if we do
-        # not resample at every time step
-        self.use_weight = True
-
-        # number of +/- std for clipping
-        # Excludes values + /- Nstd x std the mean of the eloc
-        self.clip_num_std = clip_threshold
-
-        # select loss function
-        self.loss_fn = {"energy": torch.mean, "variance": torch.var}[method]
-
-        # init values of the weights
-        self.weight = {"psi": None, "psi0": None}
-
-    def forward(self, pos, no_grad=False, deactivate_weight=False):
-        """Computes the loss
-
-        Arguments:
-            pos {torch.tensor} -- positions of the walkers in that batch
-
-        Keyword Arguments:
-            no_grad {bool} -- computes the gradient of the loss
-                              (default: {False})
-
-        Returns:
-            torch.tensor, torch.tensor -- value of the loss, local energies
-        """
-
-        # check if grads are requested
-        with self.get_grad_mode(no_grad):
-            # compute local eneergies
-            local_energies = self.wf.local_energy(pos)
-
-            # mask the energies if necessary
-            mask = self.get_clipping_mask(local_energies)
-
-            # sampling_weight
-            weight = self.get_sampling_weights(pos, deactivate_weight)
-
-            # compute the loss
-            loss = self.loss_fn((weight * local_energies)[mask])
-
-        return loss, local_energies
-
-    @staticmethod
-    def get_grad_mode(no_grad):
-        """Returns enable_grad or no_grad
-
-        Arguments:
-            no_grad {bool} -- [description]
-        """
-
-        return torch.no_grad() if no_grad else torch.enable_grad()
-
-    def get_clipping_mask(self, local_energies):
-        """computes the clipping mask
-
-        Arguments:
-            local_energies {torch.tensor} -- values of the local energies
-        """
-        if self.clip:
-            median = torch.median(local_energies)
-            std = torch.std(local_energies)
-            zscore = torch.abs((local_energies - median) / std)    
-            mask = zscore < self.clip_num_std
-        else:
-            mask = torch.ones_like(local_energies).type(torch.bool)
-
-        return mask
-
-    def get_sampling_weights(self, pos, deactivate_weight):
-        """Get the weight needed when resampling is not
-        done at every step
-        """
-
-        local_use_weight = self.use_weight * (not deactivate_weight)
-
-        if local_use_weight:
-            # computes the weights
-            self.weight["psi"] = self.wf(pos)
-
-            # if we just resampled store psi and all w=1
-            if self.weight["psi0"] is None:
-                self.weight["psi0"] = self.weight["psi"].detach().clone()
-                w = torch.ones_like(self.weight["psi"])
-
-            # otherwise compute ration of psi
-            else:
-                w = (self.weight["psi"] / self.weight["psi0"]) ** 2
-                w /= w.sum()  # should we multiply by the number of elements ?
-
-            return w
-
-        else:
-            return 1.0

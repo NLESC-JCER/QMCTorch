@@ -5,17 +5,15 @@ from torch.autograd.variable import Variable
 
 
 class JastrowKernelElectronElectronNucleiBase(nn.Module):
-    def __init__(self, nup, ndown, atomic_pos, cuda, **kwargs):
+    def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, **kwargs) -> None:
         r"""Base Class for the elec-elec-nuc jastrow kernel
-
 
         Args:
             nup (int): number of spin up electons
-            ndow (int): number of spin down electons
-            atoms (torch.tensor): atomic positions of the atoms
+            ndown (int): number of spin down electons
+            atomic_pos (torch.tensor): atomic positions of the atoms
             cuda (bool, optional): Turns GPU ON/OFF. Defaults to False.
         """
-
         super().__init__()
         self.nup, self.ndown = nup, ndown
         self.cuda = cuda
@@ -30,7 +28,7 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
             self.device = torch.device("cuda")
         self.requires_autograd = True
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the values of the kernel
 
         Args:
@@ -44,7 +42,7 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         """
         raise NotImplementedError()
 
-    def compute_derivative(self, r, dr):
+    def compute_derivative(self, r: torch.Tensor, dr: torch.Tensor) -> torch.Tensor:
         """Get the elements of the derivative of the jastrow kernels."""
 
         kernel = self.forward(r)
@@ -56,7 +54,7 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         # sum over the atoms
         return out
 
-    def compute_second_derivative(self, r, dr, d2r):
+    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels."""
 
         dr2 = dr * dr
@@ -69,7 +67,7 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         return jhess
 
     @staticmethod
-    def _grads(val, pos):
+    def _grads(val, pos: torch.Tensor) -> torch.Tensor:
         """Get the gradients of the jastrow values
         of a given orbital terms
 
@@ -82,7 +80,7 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
 
     @staticmethod
-    def _hess(val, pos, device):
+    def _hess(val, pos: torch.Tensor, device: torch.device) -> torch.Tensor:
         """get the hessian of the jastrow values.
 
         Args:

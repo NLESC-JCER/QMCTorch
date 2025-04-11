@@ -1,12 +1,13 @@
 import torch
 from torch import nn
 
+from .....scf import Molecule
 from .....utils import register_extra_attributes
 from .backflow_kernel_base import BackFlowKernelBase
 
 
 class BackFlowKernelExp(BackFlowKernelBase):
-    def __init__(self, mol, cuda=False, weight=0.0, alpha=1.0):
+    def __init__(self, mol: Molecule, cuda: bool = False, weight: float = 0.0, alpha : float = 1.0):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
@@ -22,7 +23,7 @@ class BackFlowKernelExp(BackFlowKernelBase):
         self.weight = nn.Parameter(torch.as_tensor([weight]))  # .to(self.device)
         self.alpha = nn.Parameter(torch.as_tensor([alpha])) 
 
-    def _backflow_kernel(self, ree):
+    def _backflow_kernel(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the backflow kernel:
 
         .. math:
@@ -39,7 +40,7 @@ class BackFlowKernelExp(BackFlowKernelBase):
         # mask = torch.ones_like(ree) - eye
         return self.weight * torch.exp(-self.alpha * ree)
 
-    def _backflow_kernel_derivative(self, ree):
+    def _backflow_kernel_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the derivative of the kernel function
             w.r.t r_{ij}
         .. math::
@@ -55,7 +56,7 @@ class BackFlowKernelExp(BackFlowKernelBase):
         # eye = torch.eye(self.nelec, self.nelec).to(self.device)
         # invree = 1.0 / (ree + eye) - eye
         return -self.weight * self.alpha *  torch.exp(-self.alpha * ree)
-    def _backflow_kernel_second_derivative(self, ree):
+    def _backflow_kernel_second_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the derivative of the kernel function
             w.r.t r_{ij}
         .. math::

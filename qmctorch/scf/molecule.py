@@ -1,5 +1,6 @@
 import os
 import numpy as np
+from typing import Dict, List
 from mendeleev import element
 from types import SimpleNamespace
 import h5py
@@ -19,70 +20,73 @@ except ModuleNotFoundError:
 class Molecule:
     def __init__(  # pylint: disable=too-many-arguments
         self,
-        atom=None,
-        calculator="adf",
-        scf="hf",
-        basis="dzp",
-        unit="bohr",
-        charge=0,
-        spin=0,
-        name=None,
-        load=None,
-        save_scf_file=False,
-        redo_scf=False,
-        rank=0,
-        mpi_size=0,
-    ):
+        atom: str = None,
+        calculator: str = "adf",
+        scf: str = "hf",
+        basis: str = "dzp",
+        unit: str = "bohr",
+        charge: int = 0,
+        spin: int = 0,
+        name: str = None,
+        load: str = None,
+        save_scf_file: bool = False,
+        redo_scf: bool = False,
+        rank: int = 0,
+        mpi_size: int = 0,
+    ) -> None:
         """Create a molecule in QMCTorch
 
         Args:
-            atom (str or None, optional): defines the atoms and their positions. Defaults to None.
+            atom (str, optional): Defines the atoms and their positions. Defaults to None.
                 - At1 x y z; At2 x y z ... : Provide the atomic coordinate directly
-                - <file>.xyz : provide the path to an .xyz file containing the atomic coordinates
-            calculator (str, optional): selet scf calculator. Defaults to 'adf'.
-                - pyscf : PySCF calculator
-                - adf : ADF2020+ calculator
-                - adf2019 : ADF2019 calculator
-            scf (str, optional): select scf level of theory. Defaults to 'hf'.
-                - hf : perform a Hatree-Fock calculation to obtain the molecular orbital coefficients
-                - dft : perform a density functional theory using the local density approximation
-            charge (int, optional): extra charge on the molecule, Default to 0
-            spin (int, optional): exess of spin up electrons on the molecule, Default to 0
-            basis (str, optional): select the basis set. Defaults to 'dzp'.
-            unit (str, optional): units of the coordinates; 'bohr' or 'angs'. Defaults to 'bohr'.
-            name (str or None, optional): name of the molecule. Defaults to None.
-            load (str or None, optional): path to a hdf5 file to load. Defaults to None.
-            save_scf_file (bool, optional): save the scf file (when applicable) Defaults to False
-            redo_scf (bool, optional): if true ignore existing hdf5 file and redo the scf calculation
+                - <file>.xyz : Provide the path to an .xyz file containing the atomic coordinates
+            calculator (str, optional): Select SCF calculator. Defaults to 'adf'.
+                - 'pyscf' : PySCF calculator
+                - 'adf' : ADF2020+ calculator
+                - 'adf2019' : ADF2019 calculator
+            scf (str, optional): Select SCF level of theory. Defaults to 'hf'.
+                - 'hf' : Hartree-Fock calculation
+                - 'dft' : Density Functional Theory using LDA
+            charge (int, optional): Extra charge on the molecule. Defaults to 0.
+            spin (int, optional): Excess of spin-up electrons on the molecule. Defaults to 0.
+            basis (str, optional): Select the basis set. Defaults to 'dzp'.
+            unit (str, optional): Units of the coordinates; 'bohr' or 'angs'. Defaults to 'bohr'.
+            name (str, optional): Name of the molecule. Defaults to None.
+            load (str, optional): Path to a HDF5 file to load. Defaults to None.
+            save_scf_file (bool, optional): Save the SCF file (when applicable). Defaults to False.
+            redo_scf (bool, optional): If true, ignore existing HDF5 file and redo SCF calculation.
             rank (int, optional): Rank of the process. Defaults to 0.
-            mpi_size (int, optional): size of the mpi world
+            mpi_size (int, optional): Size of the MPI world.
 
+        Returns:
+            None
+        
         Examples:
             >>> from qmctorch.scf import Molecule
             >>> mol = Molecule(atom='H 0 0 0; H 0 0 1', unit='angs',
             ...                calculator='adf', basis='dzp')
         """
 
-        self.atom_coords = []
-        self.atomic_nelec = []
-        self.atomic_number = []
-        self.atoms = []
-        self.atoms_str = atom
-        self.hdf5file = None
-        self.max_angular = 2
-        self.name = name
-        self.natom = 0
-        self.ndown = 0
-        self.nelec = 0
-        self.nup = 0
-        self.charge = charge
-        self.spin = spin
-        self.unit = unit
-        self.basis = SimpleNamespace()
-        self.calculator_name = calculator
-        self.basis_name = basis
-        self.save_scf_file = save_scf_file
-        self.scf_level = scf
+        self.atom_coords: list = []
+        self.atomic_nelec: list = []
+        self.atomic_number: list = []
+        self.atoms: list = []
+        self.atoms_str: str = atom
+        self.hdf5file: str = None
+        self.max_angular: int = 2
+        self.name: str = name
+        self.natom: int = 0
+        self.ndown: int = 0
+        self.nelec: int = 0
+        self.nup: int = 0
+        self.charge: int = charge
+        self.spin: int = spin
+        self.unit: str = unit
+        self.basis: SimpleNamespace = SimpleNamespace()
+        self.calculator_name: str = calculator
+        self.basis_name: str = basis
+        self.save_scf_file: bool = save_scf_file
+        self.scf_level: str = scf
 
         if rank == 0:
             log.info("")
@@ -156,7 +160,7 @@ class Molecule:
                     log.info("  Loading data from {file}", file=self.hdf5file)
                     self._load_hdf5(self.hdf5file)
 
-    def log_data(self):
+    def log_data(self) -> None:
         log.info("  Molecule name       : {0}", self.name)
         log.info("  Number of electrons : {0}", self.nelec)
         log.info("  SCF calculator      : {0}", self.calculator_name)
@@ -168,7 +172,7 @@ class Molecule:
             "  SCF Energy          : {:.3f} Hartree".format(self.get_total_energy())
         )
 
-    def domain(self, method):
+    def domain(self, method: str) -> Dict:
         """Returns information to initialize the walkers
 
         Args:
@@ -208,7 +212,7 @@ class Molecule:
 
         return domain
 
-    def _process_atom_str(self):
+    def _process_atom_str(self) -> None:
         """Process the atom description."""
 
         if self.atoms_str.endswith(".xyz"):
@@ -221,7 +225,7 @@ class Molecule:
 
         self._get_atomic_properties(atoms)
 
-    def _get_atomic_properties(self, atoms):
+    def _get_atomic_properties(self, atoms: str) -> None:
         """Generates the atomic propeties of the molecule
 
         Args:
@@ -260,7 +264,7 @@ class Molecule:
             self.name = self._get_mol_name(self.atoms)
         self.atoms = np.array(self.atoms)
 
-    def _read_xyz_file(self):
+    def _read_xyz_file(self) -> List:
         """Process a xyz file containing the data
 
         Returns:
@@ -278,7 +282,16 @@ class Molecule:
         return atoms
 
     @staticmethod
-    def _get_mol_name(atoms):
+    def _get_mol_name(atoms: List[str]) -> str:
+        """
+        Generate a molecule name from the list of atoms.
+
+        Args:
+            atoms (List[str]): List of atoms in the molecule
+
+        Returns:
+            str: The molecule name
+        """
         mol_name = ""
         unique_atoms = list(set(atoms))
         for ua in unique_atoms:
@@ -288,7 +301,7 @@ class Molecule:
                 mol_name += str(nat)
         return mol_name
 
-    def _load_basis(self):
+    def _load_basis(self) -> SimpleNamespace:
         """Get the basis information needed to compute the AO values."""
 
         h5 = h5py.File(self.hdf5file, "r")
@@ -335,7 +348,7 @@ class Molecule:
         h5.close()
         return self.basis
 
-    def print_total_energy(self):
+    def print_total_energy(self) -> None:
         """Print the SCF energy of the molecule.
 
         Examples::
@@ -345,14 +358,14 @@ class Molecule:
         e = self.get_total_energy()
         log.info("== SCF Energy : {e}", e=e)
 
-    def get_total_energy(self):
+    def get_total_energy(self) -> float:
         """Get the value of the total energy."""
         h5 = h5py.File(self.hdf5file, "r")
         e = h5["molecule"]["basis"]["TotalEnergy"][()]
         h5.close()
         return e
 
-    def _check_basis(self):
+    def _check_basis(self) -> None:
         """Check if the basis contains all the necessary fields."""
 
         names = [
@@ -377,7 +390,7 @@ class Molecule:
             if not hasattr(self.basis, n):
                 raise ValueError(n, " not in the basis namespace")
 
-    def _load_hdf5(self, filename):
+    def _load_hdf5(self, filename: str) -> None:
         """Load a molecule from hdf5
 
         Args:

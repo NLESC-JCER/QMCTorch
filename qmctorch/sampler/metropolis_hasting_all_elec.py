@@ -5,14 +5,14 @@ from typing import Callable, Union, Dict
 from .sampler_base import SamplerBase
 from .. import log
 
-from .proposal_kernels import ConstantVarianceKernel
+from .proposal_kernels import ConstantVarianceKernel, BaseProposalKernel
 from .state_dependent_normal_proposal import StateDependentNormalProposal
 
 
 class MetropolisHasting(SamplerBase):
     def __init__(
         self,
-        kernel=ConstantVarianceKernel(0.2),
+        kernel: BaseProposalKernel = ConstantVarianceKernel(0.2),
         nwalkers: int = 100,
         nstep: int = 1000,
         ntherm: int = -1,
@@ -22,29 +22,23 @@ class MetropolisHasting(SamplerBase):
         init: Dict = {"min": -5, "max": 5},
         logspace: bool = False,
         cuda: bool = False,
-    ):
+    ) -> None:
         """Metropolis Hasting generator
 
         Args:
+            kernel (BaseProposalKernel, optional): proposal kernel. Defaults to ConstantVarianceKernel(0.2).
             nwalkers (int, optional): Number of walkers. Defaults to 100.
             nstep (int, optional): Number of steps. Defaults to 1000.
-            step_size (int, optional): length of the step. Defaults to 0.2.
-            nelec (int, optional): total number of electrons. Defaults to 1.
             ntherm (int, optional): number of mc step to thermalize. Defaults to -1, i.e. keep ponly last position
             ndecor (int, optional): number of mc step for decorelation. Defauts to 1.
+            nelec (int, optional): total number of electrons. Defaults to 1.
             ndim (int, optional): total number of dimension. Defaults to 3.
             init (dict, optional): method to init the positions of the walkers. See Molecule.domain()
-
-            move (dict, optional): method to move the electrons. default('all-elec','normal') \n
-                                   'type':
-                                        'one-elec': move a single electron per iteration \n
-                                        'all-elec': move all electrons at the same time \n
-                                        'all-elec-iter': move all electrons by iterating through single elec moves \n
-                                    'proba' :
-                                        'uniform': uniform ina cube \n
-                                        'normal': gussian in a sphere \n
+            logspace (bool, optional):  Defaults to False.
             cuda (bool, optional): turn CUDA ON/OFF. Defaults to False.
 
+        Returns:
+            None
 
         Examples::
             >>> mol = Molecule('h2.xyz')
@@ -66,16 +60,17 @@ class MetropolisHasting(SamplerBase):
 
         self.log_data()
 
-    def log_data(self):
+    def log_data(self) -> None:
         """log data about the sampler."""
         # log.info('  Move type           : {0}', 'all-elec')
 
     @staticmethod
-    def log_func(func):
+    def log_func(func: Callable[[torch.Tensor], torch.Tensor]
+                 ) -> Callable[[torch.Tensor], torch.Tensor]:
         """Compute the negative log of  a function
 
         Args:
-            func (callable): input function
+            func: input function
 
         Returns:
             callable: negative log of the function
@@ -84,7 +79,7 @@ class MetropolisHasting(SamplerBase):
 
     def __call__(
         self,
-        pdf: Callable,
+        pdf: Callable[[torch.Tensor], torch.Tensor],
         pos: Union[None, torch.Tensor] = None,
         with_tqdm: bool = True,
     ) -> torch.Tensor:

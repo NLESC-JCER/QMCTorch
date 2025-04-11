@@ -1,12 +1,16 @@
 import torch
-
+from typing import List, Tuple
+from ...scf import Molecule
 
 class OrbitalProjector:
-    def __init__(self, configs, mol, cuda=False):
+    def __init__(self, 
+                 configs: List[torch.tensor], 
+                 mol: Molecule, 
+                 cuda: bool = False) -> None:
         """Project the MO matrix in Slater Matrices
 
         Args:
-            configs (list): configurations of the slater determinants
+            configs (List[torch.tensor]): configurations of the slater determinants
             mol (Molecule): Molecule object
             cuda (bool): use cuda or not
         """
@@ -21,8 +25,15 @@ class OrbitalProjector:
         if cuda:
             self.device = torch.device("cuda")
         self.unique_configs, self.index_unique_configs = self.get_unique_configs()
-    def get_unique_configs(self):
+    def get_unique_configs(self) -> Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
         """Get the unique configurations
+
+        Returns:
+            Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]: 
+                configs_up (torch.Tensor): unique configurations of the spin up electrons
+                configs_down (torch.Tensor): unique configurations of the spin down electrons
+                index_unique_confs_up (torch.Tensor): index of the unique configurations of the spin up electrons
+                index_unique_confs_down (torch.Tensor): index of the unique configurations of the spin down electrons
         """
         configs_up, index_unique_confs_up = torch.unique(self.configs[0], dim=0, return_inverse=True)
         configs_down, index_unique_confs_down = torch.unique(self.configs[1], dim=0, return_inverse=True)
@@ -30,16 +41,20 @@ class OrbitalProjector:
         return (configs_up.to(self.device), configs_down.to(self.device)), (index_unique_confs_up.to(self.device), index_unique_confs_down.to(self.device))
 
 
-    def split_orbitals(self, mat, unique_configs=False):
-        """Split the orbital  matrix in multiple slater matrices
+    def split_orbitals(
+        self,
+        mat: torch.Tensor,
+        unique_configs: bool = False
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """Split the orbital matrix in multiple Slater matrices
            This version does not store the projectors
 
         Args:
-            mat (torch.tensor): matrix to split
-            unique_confgs (bool, optional): compute only the slater matrices of the unique conf if True (Defaulta False)
+            mat: matrix to split
+            unique_confgs: compute only the Slater matrices of the unique conf if True (Default=False)
 
         Returns:
-            torch.tensor: all slater matrices
+            Tuple[torch.Tensor, torch.Tensor]: all Slater matrices
         """
         if mat.ndim == 3:
             nbatch = mat.shape[0]
@@ -67,7 +82,13 @@ class OrbitalProjector:
         return out_up, out_down
         
 class ExcitationMask:
-    def __init__(self, unique_excitations, mol, max_orb, cuda=False):
+    def __init__(
+        self,
+        unique_excitations: List[Tuple[torch.Tensor, torch.Tensor]],
+        mol: Molecule,
+        max_orb: List[int],
+        cuda: bool = False,
+    ) -> None:
         """Select the occupied MOs of Slater determinant using masks
 
         Args:
@@ -89,7 +110,7 @@ class ExcitationMask:
         if cuda:
             self.device = torch.device("cuda")
 
-    def get_index_unique_single(self):
+    def get_index_unique_single(self) -> None:
         """Computes the 1D index and permutation
         for the unique singles."""
 
@@ -130,7 +151,7 @@ class ExcitationMask:
             self.device
         )
 
-    def get_index_unique_double(self):
+    def get_index_unique_double(self) -> None:
         """Computes the 1D index of the double excitation matrices."""
 
         ncol_up = self.max_orb[0] - self.nup

@@ -1,40 +1,43 @@
 import torch
 import pints
-from typing import Callable, Union, Dict
+import numpy
+from typing import Callable, Union, Dict, Tuple
 from .sampler_base import SamplerBase
 
 
 class torch_model(pints.LogPDF):
-    def __init__(self, pdf, ndim):
-        """Ancillary class tha wrap the wave function in a PINTS class
+    def __init__(self, pdf: Callable[[torch.Tensor], torch.Tensor], ndim: int) -> None:
+        """Ancillary class that wraps the wave function in a PINTS class
 
         Args:
-            pdf (callable): wf.pdf function
-            ndim (int): number of dimensions
+            pdf: wf.pdf function
+            ndim: number of dimensions
         """
-        self.pdf = pdf
+        self.pdf = pdf 
         self.ndim = ndim
 
-    def __call__(self, x):
-        """Evalaute the log pdf of the wave function at points x
+    def __call__(self, x: numpy.ndarray) -> numpy.ndarray:
+        """Evaluate the log pdf of the wave function at points x
 
         Args:
-            x (numpy array): positions of the walkers
+            x: positions of the walkers (numpy array)
 
         Returns:
-            numpy.array: values of the log pdfat those points
+            values of the log pdf at those points (numpy array)
         """
         x = torch.as_tensor(x).view(1, -1)
         return torch.log(self.pdf(x)).cpu().detach().numpy()
 
-    def evaluateS1(self, x):
-        """Evalaute the log pdf and the gradients of the log pdf at points x
+    def evaluateS1(self, x: numpy.ndarray) -> Tuple[numpy.ndarray, numpy.ndarray]:
+        """Evaluate the log pdf and the gradients of the log pdf at points x
 
         Args:
-            x (numpy.array): positions of the walkers
+            x (numpy.ndarray): positions of the walkers
 
         Returns:
-            tuple: values of the log pdf and gradients
+            tuple:
+                log_pdf (numpy.ndarray): values of the log pdf
+                grad_log_pdf (numpy.ndarray): gradients of the log pdf
         """
 
         x = torch.as_tensor(x).view(1, -1)
@@ -44,7 +47,7 @@ class torch_model(pints.LogPDF):
         grad_log_pdf = 1.0 / pdf * self.pdf(x, return_grad=True)
         return (log_pdf.cpu().detach().numpy(), grad_log_pdf.cpu().detach().numpy())
 
-    def n_parameters(self):
+    def n_parameters(self) -> int:
         """Returns the number of dimensions."""
         return self.ndim
 
@@ -111,16 +114,15 @@ class PintsSampler(SamplerBase):
         #     '  Sampler             : {0}', self.method.name(None))
 
     @staticmethod
-    def log_func(func):
-        """Compute the negative log of  a function
+    def log_func(func: Callable[[torch.Tensor], torch.Tensor]) -> Callable[[torch.Tensor], torch.Tensor]:
+        """Compute the negative log of a function
 
         Args:
-            func (callable): input function
+            func (Callable[[torch.Tensor], torch.Tensor]): input function
 
         Returns:
-            callable: negative log of the function
+            Callable[[torch.Tensor], torch.Tensor]: negative log of the function
         """
-
         return lambda x: torch.log(func(torch.as_tensor(x)))
 
     def __call__(

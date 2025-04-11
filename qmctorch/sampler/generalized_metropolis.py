@@ -1,4 +1,5 @@
 from tqdm import tqdm
+from typing import Dict, Any, Callable, Optional
 import torch
 from torch.autograd import Variable, grad
 from torch.distributions import MultivariateNormal
@@ -11,45 +12,50 @@ from .. import log
 class GeneralizedMetropolis(SamplerBase):
     def __init__(  # pylint: disable=dangerous-default-value
         self,
-        nwalkers=100,
-        nstep=1000,
-        step_size=3,
-        ntherm=-1,
-        ndecor=1,
-        nelec=1,
-        ndim=1,
-        init={"type": "uniform", "min": -5, "max": 5},
-        cuda=False,
-    ):
+        nwalkers: int = 100,
+        nstep: int = 1000,
+        step_size: float = 3,
+        ntherm: int = -1,
+        ndecor: int = 1,
+        nelec: int = 1,
+        ndim: int = 1,
+        init: Dict[str, Any] = {"type": "uniform", "min": -5, "max": 5},
+        cuda: bool = False,
+    ) -> None:
         """Generalized Metropolis Hasting sampler
 
         Args:
             nwalkers (int, optional): number of walkers. Defaults to 100.
             nstep (int, optional): number of steps. Defaults to 1000.
-            step_size (int, optional): size of the steps. Defaults to 3.
+            step_size (float, optional): size of the steps. Defaults to 3.
             ntherm (int, optional): number of steps for thermalization. Defaults to -1.
             ndecor (int, optional): number of steps for decorelation. Defaults to 1.
             nelec (int, optional): number of electron. Defaults to 1.
             ndim (int, optional): number of dimensions. Defaults to 1.
             init (dict, optional): method to initialize the walkers. Defaults to {'type': 'uniform', 'min': -5, 'max': 5}.
             cuda (bool, optional): use cuda. Defaults to False.
+
+        Returns:
+            None
         """
 
         SamplerBase.__init__(
             self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
         )
 
-    def __call__(self, pdf, pos=None, with_tqdm=True):
+    def __call__(self, pdf: Callable[[torch.Tensor], torch.Tensor],
+                 pos: Optional[torch.Tensor] = None,
+                 with_tqdm: bool = True) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
             pdf (callable): probability distribution function to be sampled
-            pos (torch.tensor, optional): position to start with.
+            pos (torch.Tensor, optional): position to start with.
                                           Defaults to None.
             with_tqdm (bool, optional): use tqdm to monitor progress
 
         Returns:
-            torch.tensor: positions of the walkers
+            torch.Tensor: positions of the walkers
         """
         with torch.no_grad():
             if self.ntherm < 0:
@@ -112,64 +118,73 @@ class GeneralizedMetropolis(SamplerBase):
 
         return torch.cat(pos).requires_grad_()
 
-    def move(self, drift):
+    def move(self, drift: torch.Tensor) -> torch.Tensor:
         """Move electron one at a time in a vectorized way.
 
         Args:
-            drift (torch.tensor): drift velocity of the walkers
+            drift (torch.Tensor): drift velocity of the walkers
 
         Returns:
-            torch.tensor: new positions of the walkers
+            torch.Tensor: new positions of the walkers
         """
 
-        # clone and reshape data : Nwlaker, Nelec, Ndim
+        # Clone and reshape data to (nwalkers, nelec, ndim)
         new_pos = self.walkers.pos.clone()
         new_pos = new_pos.view(self.walkers.nwalkers, self.nelec, self.ndim)
 
-        # get indexes
+        # Get random indices for electrons to move
         index = torch.LongTensor(self.walkers.nwalkers).random_(0, self.nelec)
 
+        # Update positions of selected electrons
         new_pos[range(self.walkers.nwalkers), index, :] += self._move(drift, index)
 
+        # Return reshaped positions
         return new_pos.view(self.walkers.nwalkers, self.nelec * self.ndim)
 
-    def _move(self, drift, index):
+    def _move(
+        self, drift: torch.Tensor, index: int
+    ) -> torch.Tensor:
         """Move a walker.
 
         Args:
-            drift (torch.tensor): drift velocity
-            index (int): indx of the electron to move
+            drift (torch.Tensor): drift velocity
+            index (int): index of the electron to move
 
         Returns:
-            torch.tensor: position of the walkers
+            torch.Tensor: position of the walkers
         """
 
+        # Reshape drift to (nwalkers, nelec, ndim)
         d = drift.view(self.walkers.nwalkers, self.nelec, self.ndim)
 
+        # Create a multivariate normal distribution with mean 0 and variance step_size
         mv = MultivariateNormal(
             torch.zeros(self.ndim), np.sqrt(self.step_size) * torch.eye(self.ndim)
         )
 
+        # Add the drift to the random normal variable
         return (
             self.step_size * d[range(self.walkers.nwalkers), index, :]
             + mv.sample((self.walkers.nwalkers, 1)).squeeze()
         )
 
-    def trans(self, xf, xi, drifti):
-        """transform the positions
+    def trans(self, xf: torch.Tensor, xi: torch.Tensor, drifti: torch.Tensor) -> torch.Tensor:
+        """Transform the positions
 
         Args:
-            xf ([type]): [description]
-            xi ([type]): [description]
-            drifti ([type]): [description]
+            xf (torch.Tensor): Final positions
+            xi (torch.Tensor): Initial positions
+            drifti (torch.Tensor): Drift velocity
 
         Returns:
-            [type]: [description]
+            torch.Tensor: Transition probabilities
         """
         a = (xf - xi - drifti * self.step_size).norm(dim=1)
         return torch.exp(-0.5 * a / self.step_size)
 
-    def get_drift(self, pdf, x):
+    def get_drift(
+        self, pdf: Callable[[torch.Tensor], torch.Tensor], x: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the drift velocity
 
         Args:
@@ -186,16 +201,16 @@ class GeneralizedMetropolis(SamplerBase):
             grad_rho = grad(rho, x, grad_outputs=z, only_inputs=True)[0]
             return 0.5 * grad_rho / rho
 
-    def _accept(self, P):
-        """accept the move or not
+    def _accept(self, P: torch.Tensor) -> torch.Tensor:
+        """Accept the move or not
 
         Args:
-            P (torch.tensor): probability of each move
+            P (torch.Tensor): probability of each move
 
         Returns:
-            torch.tensor: the indx of the accepted moves
+            torch.Tensor: the index of the accepted moves
         """
         P[P > 1] = 1.0
-        tau = torch.rand(self.walkers.nwalkers).double()
+        tau = torch.rand(self.walkers.nwalkers, dtype=torch.float64)
         index = (P - tau >= 0).reshape(-1)
         return index.type(torch.bool)

@@ -1,9 +1,15 @@
 import torch
 from torch import nn
-
+from typing import Dict
+from .kernels.backflow_kernel_base import BackFlowKernelBase
+from ....scf import Molecule
 
 class OrbitalDependentBackFlowKernel(nn.Module):
-    def __init__(self, backflow_kernel, backflow_kernel_kwargs, mol, cuda):
+    def __init__(self, 
+                 backflow_kernel: BackFlowKernelBase, 
+                 backflow_kernel_kwargs: Dict, 
+                 mol : Molecule, 
+                 cuda: bool) -> None:
         """Compute orbital dependent back flow kernel, i.e. the functions
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
@@ -33,7 +39,7 @@ class OrbitalDependentBackFlowKernel(nn.Module):
         # Nbatch x Nao x ...
         self.stack_axis = 1
 
-    def forward(self, ree, derivative=0):
+    def forward(self, ree: torch.Tensor, derivative: int = 0) -> torch.Tensor:
         """Computes the desired values of the kernels
          Args:
             ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec

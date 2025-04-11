@@ -1,6 +1,7 @@
 import torch
 from torch import nn
 from torch.autograd import grad
+from typing import Dict, List, Union, Tuple
 import dgl
 
 from dgllife.model.model_zoo.mgcn_predictor import MGCNPredictor
@@ -8,17 +9,17 @@ from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from .elec_elec_graph import ElecElecGraph
 from .elec_nuc_graph import ElecNucGraph
-
+from ....scf import Molecule
 
 class MGCNJastrowFactor(nn.Module):
     def __init__(
         self,
-        mol,
-        ee_model_kwargs={},
-        en_model_kwargs={},
-        atomic_features=["atomic_number"],
-        cuda=False,
-    ):
+        mol: Molecule,
+        ee_model_kwargs: Dict = {},
+        en_model_kwargs: Dict = {},
+        atomic_features: List = ["atomic_number"],
+        cuda: bool = False,
+    ) -> None:
         """Graph Neural Network Jastrow Factor
 
         Args:
@@ -78,11 +79,15 @@ class MGCNJastrowFactor(nn.Module):
             self.natoms, self.atom_types, self.atomic_features, self.nelec, self.nup
         )
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         """representation of the jastrow factor"""
         return "ee, en graph -> " + self.__class__.__name__
 
-    def forward(self, pos, derivative=0, sum_grad=True):
+    def forward(self, 
+                pos: torch.Tensor, 
+                derivative: int = 0, 
+                sum_grad: bool = True
+                ) -> Union[torch.Tensor, Tuple[torch.Tensor,torch.Tensor,torch.Tensor]]:
         """Compute the Jastrow factors.
 
         Args:
@@ -142,7 +147,7 @@ class MGCNJastrowFactor(nn.Module):
                 pos, ee_kernel, en_kernel, sum_grad=sum_grad, return_all=True
             )
 
-    def _get_val(self, ee_kernel, en_kernel):
+    def _get_val(self, ee_kernel: torch.Tensor, en_kernel: torch.Tensor) -> torch.Tensor:
         """Get the jastrow values.
 
         Args:
@@ -151,7 +156,7 @@ class MGCNJastrowFactor(nn.Module):
         """
         return torch.exp(ee_kernel + en_kernel)
 
-    def _get_grad_vals(self, pos, ee_kernel, en_kernel, sum_grad):
+    def _get_grad_vals(self, pos: torch.Tensor, ee_kernel: torch.Tensor, en_kernel: torch.Tensor, sum_grad: bool) -> torch.Tensor:
         """Get the values of the gradients
 
 
@@ -175,8 +180,8 @@ class MGCNJastrowFactor(nn.Module):
         return grad_val
 
     def _get_hess_vals(
-        self, pos, ee_kernel, en_kernel, sum_grad=False, return_all=False
-    ):
+        self, pos: torch.Tensor, ee_kernel: torch.Tensor, en_kernel: torch.Tensor, sum_grad: bool = False, return_all: bool = False
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """Get the hessian values
 
         Args:
@@ -227,7 +232,7 @@ class MGCNJastrowFactor(nn.Module):
         else:
             return hval
 
-    def get_mask_tri_up(self):
+    def get_mask_tri_up(self) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         r"""Get the mask to select the triangular up matrix
 
         Returns:
@@ -245,7 +250,7 @@ class MGCNJastrowFactor(nn.Module):
         index_row = torch.LongTensor(index_row).to(self.device)
         return mask, index_col, index_row
 
-    def extract_tri_up(self, inp):
+    def extract_tri_up(self, inp: torch.Tensor) -> torch.Tensor:
         r"""extract the upper triangular elements
 
         Args:
@@ -258,7 +263,7 @@ class MGCNJastrowFactor(nn.Module):
         out = inp.masked_select(self.mask_tri_up)
         return out.view(*(shape[:-2] + [-1]))
 
-    def extract_elec_nuc_dist(self, ren):
+    def extract_elec_nuc_dist(self, ren: torch.Tensor) -> torch.Tensor:
         """reorganizre the elec-nuc distance to load them in the graph
 
         Args:

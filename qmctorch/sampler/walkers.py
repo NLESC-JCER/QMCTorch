@@ -13,7 +13,7 @@ class Walkers:
         ndim: int = 3,
         init: Union[Dict, None] = None,
         cuda: bool = False,
-    ):
+    ) -> None:
         """Creates Walkers for the sampler.
 
         Args:
@@ -38,7 +38,7 @@ class Walkers:
         else:
             self.device = torch.device("cpu")
 
-    def initialize(self, pos: Union[None, torch.Tensor] = None):
+    def initialize(self, pos: Union[None, torch.Tensor] = None) -> None:
         """Initalize the position of the walkers
 
         Args:
@@ -73,46 +73,52 @@ class Walkers:
             else:
                 raise ValueError("Init walkers not recognized")
 
-    def _init_center(self):
+    def _init_center(self) -> torch.Tensor:
         """Initialize the walkers at the center of the molecule
 
         Returns:
-            torch.tensor: positions of the walkers
+            torch.tensor: positions of the walkers, shape (nwalkers, nelec * ndim)
         """
         eps = 1e-3
         pos = -eps + 2 * eps * torch.rand(self.nwalkers, self.nelec * self.ndim)
         return pos.type(torch.get_default_dtype()).to(device=self.device)
 
-    def _init_uniform(self):
+    def _init_uniform(self) -> torch.Tensor:
         """Initialize the walkers in a box covering the molecule
 
         Returns:
-            torch.tensor: positions of the walkers
+            torch.tensor: positions of the walkers, shape (nwalkers, nelec * ndim)
         """
         pos = torch.rand(self.nwalkers, self.nelec * self.ndim)
         pos *= self.init_domain["max"] - self.init_domain["min"]
         pos += self.init_domain["min"]
         return pos.type(torch.get_default_dtype()).to(device=self.device)
 
-    def _init_multivar(self):
-        """Initialize the walkers in a sphere covering the molecule
+    def _init_multivar(self) -> torch.Tensor:
+        """Initialize the walkers in a sphere covering the molecule.
 
         Returns:
-            torch.tensor -- positions of the walkers
+            torch.Tensor: positions of the walkers, shape (nwalkers, nelec * ndim)
         """
+        # Create a multivariate normal distribution with the given mean and covariance
         multi = MultivariateNormal(
             torch.as_tensor(self.init_domain["mean"]),
             torch.as_tensor(self.init_domain["sigma"]),
         )
+        # Sample positions for the walkers and cast to the default dtype
         pos = multi.sample((self.nwalkers, self.nelec)).type(torch.get_default_dtype())
+        # Reshape the sampled positions to match the expected output shape
         pos = pos.view(self.nwalkers, self.nelec * self.ndim)
+        # Move the positions to the appropriate device (CPU or GPU)
         return pos.to(device=self.device)
 
-    def _init_atomic(self):
-        """Initialize the walkers around the atoms
+    def _init_atomic(self) -> torch.Tensor:
+        """Initialize the walkers around the atoms.
+
+        Positions are distributed around atomic coordinates with some randomness.
 
         Returns:
-            torch.tensor -- positions of the walkers
+            torch.Tensor: Positions of the walkers, shape (nwalkers, nelec * ndim).
         """
         pos = torch.zeros(self.nwalkers, self.nelec * self.ndim)
         idx_ref, nelec_tot = [], 0

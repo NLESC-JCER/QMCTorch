@@ -1,24 +1,26 @@
 import torch
 import operator
-
+from typing import Union, Dict, Tuple
 from .slater_jastrow import SlaterJastrow
+from .jastrows.elec_elec.kernels.jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 from .jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
 from .jastrows.elec_elec.jastrow_factor_electron_electron import (
     JastrowFactorElectronElectron,
 )
+from  ..scf import Molecule
 
 
 class SlaterOrbitalDependentJastrow(SlaterJastrow):
     def __init__(
         self,
-        mol,
-        configs="ground_state",
-        kinetic="jacobi",
-        jastrow_kernel=PadeJastrowKernel,
-        jastrow_kernel_kwargs={},
-        cuda=False,
-        include_all_mo=True,
-    ):
+        mol: Molecule,
+        configs: str = "ground_state",
+        kinetic: str = "jacobi",
+        jastrow_kernel: JastrowKernelElectronElectronBase = PadeJastrowKernel,
+        jastrow_kernel_kwargs: Dict = {},
+        cuda: bool = False,
+        include_all_mo: bool = True,
+    ) -> None:
         """Slater Jastrow Wave function with an orbital dependent Electron-Electron Jastrow Factor
 
         .. math::
@@ -75,7 +77,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
 
         self.log_data()
 
-    def ordered_jastrow(self, pos, derivative=0, sum_grad=True):
+    def ordered_jastrow(self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Returns the value of the jastrow with the correct dimensions
 
         Args:
@@ -95,7 +97,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         """
         jast_vals = self.jastrow(pos, derivative, sum_grad)
 
-        def permute(vals):
+        def permute(vals: torch.Tensor) -> torch.Tensor:
             """transpose the data depending on the number of dim."""
             if vals.ndim == 3:
                 return vals.permute(1, 2, 0)
@@ -107,7 +109,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         else:
             return permute(jast_vals)
 
-    def forward(self, x, ao=None):
+    def forward(self, x: torch.Tensor, ao: Union[torch.Tensor, None]=None) -> torch.Tensor:
         """computes the value of the wave function for the sampling points
 
         .. math::
@@ -154,7 +156,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
     def ao2cmo(self, ao, jastrow):
         return jastrow * self.mo(ao)
 
-    def pos2mo(self, x, derivative=0, sum_grad=True):
+    def pos2mo(self, x: torch.Tensor, derivative: int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Compute the uncorrelated MOs from the positions."""
 
         ao = self.ao(x, derivative=derivative, sum_grad=sum_grad)
@@ -163,7 +165,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         else:
             return self.ao2mo(ao.transpose(2, 3)).transpose(2, 3)
 
-    def pos2cmo(self, x, derivative=0, sum_grad=True):
+    def pos2cmo(self, x: torch.Tensor, derivative:int = 0, sum_grad: bool = True) -> torch.Tensor:
         """Get the values of correlated MOs
 
         Arguments:
@@ -214,7 +216,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
             # assemble kin op
             return jast_d2mo + 2 * djast_dmo + d2jast_mo
 
-    def kinetic_energy_jacobi(self, x, **kwargs):
+    def kinetic_energy_jacobi(self, x: torch.Tensor, **kwargs) -> torch.Tensor:
         """Compute the value of the kinetic enery using the Jacobi Formula.
         C. Filippi, Simple Formalism for Efficient Derivatives .
 
@@ -259,7 +261,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         # assemble
         return self.fc(kin * slater_dets) / self.fc(slater_dets)
 
-    def gradients_jacobi(self, x, sum_grad=True, pdf=False):
+    def gradients_jacobi(self, x: torch.Tensor, sum_grad: bool = True, pdf: bool = False) -> torch.Tensor:
         """Computes the gradients of the wf using Jacobi's Formula
 
         Args:
@@ -293,7 +295,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
         # assemble
         return out
 
-    def get_hessian_operator(self, x):
+    def get_hessian_operator(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the Bkin matrix
 
         Args:
@@ -345,7 +347,7 @@ class SlaterOrbitalDependentJastrow(SlaterJastrow):
 
         return d2mo_jast + d2jast_mo + 2 * djast_dmo
 
-    def get_gradient_operator(self, x):
+    def get_gradient_operator(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the gradient operator
 
         Args:

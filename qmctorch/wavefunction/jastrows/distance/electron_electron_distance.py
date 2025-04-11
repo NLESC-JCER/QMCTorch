@@ -8,7 +8,12 @@ from .scaling import (
 
 
 class ElectronElectronDistance(nn.Module):
-    def __init__(self, nelec, ndim=3, scale=False, scale_factor=0.6):
+    def __init__(self, 
+                 nelec: int, 
+                 ndim: int = 3, 
+                 scale: bool = False,
+                 scale_factor: float = 0.6
+                 ) -> None:
         """Computes the electron-electron distances
 
         .. math::
@@ -16,10 +21,11 @@ class ElectronElectronDistance(nn.Module):
 
         Args:
             nelec (int): number of electrons
-            ndim (int): number of spatial dimensions
-            scale(bool, optional): return scaled values, Defaults to False
-            scale_factor(float, optional): value of the scale factor,
-                                           Defaults to 0.6
+            ndim (int, optional): number of spatial dimensions.
+                Defaults to 3.
+            scale (bool, optional): return scaled values. Defaults to False.
+            scale_factor (float, optional): value of the scale factor.
+                Defaults to 0.6.
 
         Examples::
             >>> edist = ElectronDistance(2,3)
@@ -41,9 +47,13 @@ class ElectronElectronDistance(nn.Module):
         elif _type_ == torch.float64:
             self.eps = 1e-16
 
-    def forward(self, input, derivative=0):
+    def forward(
+        self, 
+        input: torch.Tensor, 
+        derivative: int = 0
+    ) -> torch.Tensor:
         """Compute the pairwise distance between the electrons
-        or its derivative. \n
+        or its derivative.
 
         When required, the derivative is computed wrt to the first electron i.e.
 
@@ -56,14 +66,14 @@ class ElectronElectronDistance(nn.Module):
             \\frac{d r_{ij}}{dx_j} = -\\frac{dr_{ij}}{dx_i}
 
         Args:
-            input (torch.tesnor): position of the electron \n
+            input (torch.Tensor): position of the electron 
                                   size : Nbatch x [Nelec x Ndim]
-            derivative (int, optional): degre of the derivative. \n
+            derivative (int, optional): degre of the derivative. 
                                         Defaults to 0.
 
         Returns:
-            torch.tensor: distance (or derivative) matrix \n
-                          Nbatch x Nelec x Nelec if derivative = 0 \n
+            torch.Tensor: distance (or derivative) matrix 
+                          Nbatch x Nelec x Nelec if derivative = 0 
                           Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
 
         """
@@ -98,7 +108,7 @@ class ElectronElectronDistance(nn.Module):
             else:
                 return d2_dist
 
-    def safe_sqrt(self, dist):
+    def safe_sqrt(self, dist: torch.Tensor) -> torch.Tensor:
         """Compute the square root of the electron electron distance matrix.
 
         Args:
@@ -122,7 +132,7 @@ class ElectronElectronDistance(nn.Module):
 
         return dist
 
-    def get_der_distance(self, pos, dist):
+    def get_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
         """Get the derivative of the electron electron distance matrix.
 
         .. math::
@@ -145,7 +155,7 @@ class ElectronElectronDistance(nn.Module):
         diff_axis = diff_axis - diff_axis.transpose(2, 3)
         return diff_axis * invr
 
-    def get_second_der_distance(self, pos, dist):
+    def get_second_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
         """Get the second derivative of the electron electron distance matrix.
 
         .. math::
@@ -170,7 +180,7 @@ class ElectronElectronDistance(nn.Module):
         return diff_axis * invr3
 
     @staticmethod
-    def get_distance_quadratic(pos):
+    def get_distance_quadratic(pos: torch.Tensor) -> torch.Tensor:
         """Compute the distance following a quadratic expansion
 
         Arguments:
@@ -185,7 +195,7 @@ class ElectronElectronDistance(nn.Module):
         return dist
 
     @staticmethod
-    def get_difference(pos):
+    def get_difference(pos: torch.Tensor) -> torch.Tensor:
         """Compute the difference ri - rj
 
         Arguments:

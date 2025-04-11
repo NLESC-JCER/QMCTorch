@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-
+from typing import Optional, List, Tuple
 from .norm_orbital import atomic_orbital_norm
 from .radial_functions import (
     radial_gaussian,
@@ -9,10 +9,10 @@ from .radial_functions import (
     radial_slater_pure,
 )
 from .spherical_harmonics import Harmonics
-
+from ...scf import Molecule
 
 class AtomicOrbitals(nn.Module):
-    def __init__(self, mol, cuda=False):
+    def __init__(self, mol: Molecule, cuda: Optional[bool] = False) -> None:
         """Computes the value of atomic orbitals
 
         Args:
@@ -100,7 +100,7 @@ class AtomicOrbitals(nn.Module):
         if self.cuda:
             self._to_device()
 
-    def __repr__(self):
+    def __repr__(self) -> None:
         name = self.__class__.__name__
         return name + "(%s, %s, %d -> (%d,%d) )" % (
             self.radial_type,
@@ -110,7 +110,7 @@ class AtomicOrbitals(nn.Module):
             self.norb,
         )
 
-    def _to_device(self):
+    def _to_device(self) -> None:
         """Export the non parameter variable to the device."""
 
         self.device = torch.device("cuda")
@@ -128,8 +128,13 @@ class AtomicOrbitals(nn.Module):
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(
-        self, pos, derivative=[0], sum_grad=True, sum_hess=True, one_elec=False
-    ):
+        self, 
+        pos: torch.Tensor, 
+        derivative: Optional[List[int]] = [0], 
+        sum_grad: Optional[bool] = True, 
+        sum_hess: Optional[bool] = True, 
+        one_elec: Optional[bool] = False
+    ) -> torch.Tensor:
         """Computes the values of the atomic orbitals.
 
         .. math::
@@ -211,7 +216,7 @@ class AtomicOrbitals(nn.Module):
 
         return ao
 
-    def _compute_ao_values(self, pos):
+    def _compute_ao_values(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the value of the ao from the xyx and r tensor
 
         Args:
@@ -227,7 +232,7 @@ class AtomicOrbitals(nn.Module):
         Y = self.harmonics(xyz)
         return self._ao_kernel(R, Y)
 
-    def _ao_kernel(self, R, Y):
+    def _ao_kernel(self, R: torch.Tensor, Y: torch.Tensor) -> torch.Tensor:
         """Kernel for the ao values
 
         Args:
@@ -242,7 +247,7 @@ class AtomicOrbitals(nn.Module):
             ao = self._contract(ao)
         return ao
 
-    def _compute_first_derivative_ao_values(self, pos, sum_grad):
+    def _compute_first_derivative_ao_values(self, pos: torch.Tensor, sum_grad: bool) -> torch.Tensor:
         """Compute the value of the derivative of the ao from the xyx and r tensor
 
         Args:
@@ -259,7 +264,7 @@ class AtomicOrbitals(nn.Module):
         else:
             return self._compute_gradient_ao_values(pos)
 
-    def _compute_sum_gradient_ao_values(self, pos):
+    def _compute_sum_gradient_ao_values(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the jacobian of the ao from the xyx and r tensor
 
         Args:
@@ -279,7 +284,12 @@ class AtomicOrbitals(nn.Module):
 
         return self._sum_gradient_kernel(R, dR, Y, dY)
 
-    def _sum_gradient_kernel(self, R, dR, Y, dY):
+    def _sum_gradient_kernel(self, 
+                             R: torch.Tensor, 
+                             dR: torch.Tensor, 
+                             Y: torch.Tensor, 
+                             dY: torch.Tensor
+                             ) -> torch.Tensor :
         """Kernel for the jacobian of the ao values
 
         Args:
@@ -296,7 +306,7 @@ class AtomicOrbitals(nn.Module):
             dao = self._contract(dao)
         return dao
 
-    def _compute_gradient_ao_values(self, pos):
+    def _compute_gradient_ao_values(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the gradient of the ao from the xyx and r tensor
 
         Args:
@@ -317,7 +327,12 @@ class AtomicOrbitals(nn.Module):
 
         return self._gradient_kernel(R, dR, Y, dY)
 
-    def _gradient_kernel(self, R, dR, Y, dY):
+    def _gradient_kernel(self, 
+                         R: torch.Tensor, 
+                         dR: torch.Tensor, 
+                         Y: torch.Tensor, 
+                         dY: torch.Tensor
+                         ) -> torch.Tensor:
         """Kernel for the gradient of the ao values
 
         Args:
@@ -343,7 +358,7 @@ class AtomicOrbitals(nn.Module):
             ao = bas
         return ao
 
-    def _compute_second_derivative_ao_values(self, pos, sum_hess):
+    def _compute_second_derivative_ao_values(self, pos: torch.Tensor, sum_hess: bool) -> torch.Tensor:
         """Compute the values of the 2nd derivative of the ao from the xyz and r tensors
 
         Args:
@@ -360,7 +375,7 @@ class AtomicOrbitals(nn.Module):
         else:
             return self._compute_diag_hessian_ao_values(pos)
 
-    def _compute_sum_diag_hessian_ao_values(self, pos):
+    def _compute_sum_diag_hessian_ao_values(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the laplacian of the ao from the xyx and r tensor
 
         Args:
@@ -380,7 +395,14 @@ class AtomicOrbitals(nn.Module):
         Y, dY, d2Y = self.harmonics(xyz, derivative=[0, 1, 2], sum_grad=False)
         return self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
-    def _sum_diag_hessian_kernel(self, R, dR, d2R, Y, dY, d2Y):
+    def _sum_diag_hessian_kernel(self, 
+                                 R: torch.Tensor, 
+                                 dR: torch.Tensor, 
+                                 d2R: torch.Tensor, 
+                                 Y: torch.Tensor, 
+                                 dY: torch.Tensor, 
+                                 d2Y: torch.Tensor
+                                 ) -> torch.Tensor:
         """Kernel for the sum of the diag hessian of the ao values
 
         Args:
@@ -400,7 +422,7 @@ class AtomicOrbitals(nn.Module):
             d2ao = self._contract(d2ao)
         return d2ao
 
-    def _compute_diag_hessian_ao_values(self, pos):
+    def _compute_diag_hessian_ao_values(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the individual elements of the laplacian of the ao from the xyx and r tensor
 
         Args:
@@ -430,7 +452,14 @@ class AtomicOrbitals(nn.Module):
 
         return self._diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
-    def _diag_hessian_kernel(self, R, dR, d2R, Y, dY, d2Y):
+    def _diag_hessian_kernel(self, 
+                             R: torch.Tensor, 
+                             dR: torch.Tensor, 
+                             d2R: torch.Tensor, 
+                             Y: torch.Tensor, 
+                             dY: torch.Tensor, 
+                             d2Y: torch.Tensor
+                             ) -> torch.Tensor:
         """Kernel for the diagonal hessian of the ao values
 
         Args:
@@ -463,7 +492,7 @@ class AtomicOrbitals(nn.Module):
 
         return d2ao
 
-    def _compute_mixed_second_derivative_ao_values(self, pos):
+    def _compute_mixed_second_derivative_ao_values(self, pos: torch.Tensor) -> torch.Tensor:
         """Compute the mixed second derivative of the ao from the xyx and r tensor
 
         Args:
@@ -489,21 +518,31 @@ class AtomicOrbitals(nn.Module):
 
         return self._off_diag_hessian_kernel(R, dR, d2R, d2mR, Y, dY, d2Y, d2mY)
 
-    def _off_diag_hessian_kernel(self, R, dR, d2R, d2mR, Y, dY, d2Y, d2mY):
+    def _off_diag_hessian_kernel(
+        self,
+        R: torch.Tensor,
+        dR: torch.Tensor,
+        d2R: torch.Tensor,
+        d2mR: torch.Tensor,
+        Y: torch.Tensor,
+        dY: torch.Tensor,
+        d2Y: torch.Tensor,
+        d2mY: torch.Tensor,
+    ) -> torch.Tensor:
         """Kernel for the off diagonal hessian of the ao values
 
         Args:
-            R (torch.tensor): radial part of the AOs
-            dR (torch.tensor): derivative of the radial part of the AOs
-            d2R (torch.tensor): 2nd derivative of the radial part of the AOs
-            d2mR (torch.tensor): mixed 2nd derivative of the radial part of the AOs
-            Y (torch.tensor): harmonics part of the AOs
-            dY (torch.tensor): derivative of the harmonics part of the AOs
-            d2Y (torch.tensor): 2nd derivative of the harmonics part of the AOs
-            d2mY (torch.tensor): 2nd mixed derivative of the harmonics part of the AOs
+            R (torch.Tensor): radial part of the AOs
+            dR (torch.Tensor): derivative of the radial part of the AOs
+            d2R (torch.Tensor): 2nd derivative of the radial part of the AOs
+            d2mR (torch.Tensor): mixed 2nd derivative of the radial part of the AOs
+            Y (torch.Tensor): harmonics part of the AOs
+            dY (torch.Tensor): derivative of the harmonics part of the AOs
+            d2Y (torch.Tensor): 2nd derivative of the harmonics part of the AOs
+            d2mY (torch.Tensor): 2nd mixed derivative of the harmonics part of the AOs
 
         Returns:
-            torch.tensor: values of the mixed derivative of the AOs (with contraction)
+            torch.Tensor: values of the mixed derivative of the AOs (with contraction)
         """
 
         nbatch = R.shape[0]
@@ -533,19 +572,19 @@ class AtomicOrbitals(nn.Module):
 
         return d2ao
 
-    def _compute_all_ao_values(self, pos):
+    def _compute_all_ao_values(
+        self, pos: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
 
         Args:
             pos (torch.tensor): position of each elec size Nbatch, Nelec x Ndim
-            sum_grad (bool): return the sum of the gradients if True
-            sum_hess (bool): returns the sum of the diag hess if True
+
         Returns:
             tuple(): (ao, grad and lapalcian) of atomic orbital values
                      ao size (Nbatch, Nelec, Norb)
                      dao size (Nbatch, Nelec, Norb, Ndim)
                      d2ao size (Nbatch, Nelec, Norb)
-
         """
 
         xyz, r = self._process_position(pos)
@@ -566,7 +605,7 @@ class AtomicOrbitals(nn.Module):
             self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y),
         )
 
-    def _process_position(self, pos):
+    def _process_position(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/orb
 
         Args:
@@ -588,7 +627,7 @@ class AtomicOrbitals(nn.Module):
             r.repeat_interleave(self.nshells, dim=2),
         )
 
-    def _elec_atom_dist(self, pos):
+    def _elec_atom_dist(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/atoms
 
         Args:
@@ -609,7 +648,7 @@ class AtomicOrbitals(nn.Module):
 
         return xyz, r
 
-    def _contract(self, bas):
+    def _contract(self, bas: torch.Tensor) -> torch.Tensor:
         """Contrat the basis set to form the atomic orbitals
 
         Args:
@@ -626,7 +665,7 @@ class AtomicOrbitals(nn.Module):
         cbas.index_add_(2, self.index_ctr, bas)
         return cbas
 
-    def update(self, ao, pos, idelec):
+    def update(self, ao: torch.Tensor, pos: torch.Tensor, idelec: int) -> torch.Tensor:
         """Update an AO matrix with the new positions of one electron
 
         Args:

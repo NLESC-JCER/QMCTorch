@@ -6,7 +6,7 @@ from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectron
 
 
 class PadeJastrowKernel(JastrowKernelElectronElectronBase):
-    def __init__(self, nup, ndown, cuda, w=1.0):
+    def __init__(self, nup: int, ndown: int, cuda: bool, w: float = 1.0) -> None:
         """Computes the Simple Pade-Jastrow factor
 
         .. math::
@@ -31,7 +31,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
         self.static_weight = self.get_static_weight()
         self.requires_autograd = False
 
-    def get_static_weight(self):
+    def get_static_weight(self) -> torch.Tensor:
         """Get the matrix of static weights
 
         Returns:
@@ -65,7 +65,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
         return static_weight
 
-    def forward(self, r):
+    def forward(self, r: torch.Tensor) -> torch.Tensor:
         """Get the jastrow kernel.
 
         .. math::
@@ -81,7 +81,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
         """
         return self.static_weight * r / (1.0 + self.weight * r)
 
-    def compute_derivative(self, r, dr):
+    def compute_derivative(self, r: torch.Tensor, dr: torch.Tensor) -> torch.Tensor:
         """Get the elements of the derivative of the jastrow kernels
         wrt to the first electrons
 
@@ -116,7 +116,7 @@ class PadeJastrowKernel(JastrowKernelElectronElectronBase):
 
         return a + b
 
-    def compute_second_derivative(self, r, dr, d2r):
+    def compute_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
         """Get the elements of the pure 2nd derivative of the jastrow kernels
         wrt to the first electron
 

@@ -1,8 +1,12 @@
 from time import time
 from types import SimpleNamespace
+from typing import Optional, Dict, Union, List, Tuple, Any
+from ..wavefunction import WaveFunction
+from ..sampler import SamplerBase
 
 import torch
-from qmctorch.utils import DataLoader, Loss, add_group_attr, dump_to_hdf5
+from ..utils import DataLoader, add_group_attr, dump_to_hdf5
+from .loss import Loss
 
 from .. import log
 from .solver import Solver
@@ -13,15 +17,21 @@ except ModuleNotFoundError:
     pass
 
 
-def logd(rank, *args):
+def logd(rank: int, *args):
     if rank == 0:
         log.info(*args)
 
 
 class SolverMPI(Solver):
-    def __init__(  # pylint: disable=too-many-arguments
-        self, wf=None, sampler=None, optimizer=None, scheduler=None, output=None, rank=0
-    ):
+    def __init__(        
+            self,
+            wf: Optional[WaveFunction] = None,
+            sampler: Optional[SamplerBase] = None,
+            optimizer: Optional[torch.optim.Optimizer] = None,
+            scheduler: Optional[torch.optim.lr_scheduler._LRScheduler] = None,
+            output: Optional[str] = None,
+            rank: int = 0,
+        ) -> None:
         """Distributed QMC solver
 
         Args:
@@ -44,15 +54,15 @@ class SolverMPI(Solver):
 
     def run(  # pylint: disable=too-many-arguments
         self,
-        nepoch,
-        batchsize=None,
-        loss="energy",
-        clip_loss=False,
-        grad="manual",
-        hdf5_group="wf_opt",
-        num_threads=1,
-        chkpt_every=None,
-    ):
+        nepoch: int,
+        batchsize: Optional[int] = None,
+        loss: str = "energy",
+        clip_loss: bool = False,
+        grad: str = "manual",
+        hdf5_group: str = "wf_opt",
+        num_threads: int = 1,
+        chkpt_every: Optional[int] = None,
+    ) -> SimpleNamespace:
         """Run the optimization
 
         Args:
@@ -101,9 +111,6 @@ class SolverMPI(Solver):
         # get the loss
         self.loss = Loss(self.wf, method=loss, clip=clip_loss)
         self.loss.use_weight = self.resampling_options.resample_every > 1
-
-        # orthogonalization penalty for the MO coeffs
-        self.ortho_loss = OrthoReg()
 
         self.prepare_optimization(batchsize, chkpt_every)
         # log data
@@ -198,11 +205,18 @@ class SolverMPI(Solver):
 
         return self.observable
 
-    def single_point(self, with_tqdm=True, batchsize=None, hdf5_group="single_point"):
+    def single_point(
+        self, 
+        with_tqdm: bool = True, 
+        batchsize: Optional[int] = None, 
+        hdf5_group: str = "single_point"
+    ) -> SimpleNamespace:
         """Performs a single point calculation
 
         Args:
             with_tqdm (bool, optional): use tqdm for samplig. Defaults to True.
+            batchsize (int, optional): Number of sample in a mini batch. If None, all samples are used.
+                                      Defaults to Never.
             hdf5_group (str, optional): hdf5 group where to store the data.
                                         Defaults to 'single_point'.
 
@@ -233,21 +247,21 @@ class SolverMPI(Solver):
 
         with grad_mode:
             # sample the wave function
-            pos = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
+            pos: torch.tensor = self.sampler(self.wf.pdf, with_tqdm=with_tqdm)
             if self.wf.cuda and pos.device.type == "cpu":
                 pos = pos.to(self.device)
 
             # compute energy/variance/error
-            eloc = self.wf.local_energy(pos)
-            e, s, err = torch.mean(eloc), torch.var(eloc), self.wf.sampling_error(eloc)
+            eloc: torch.tensor = self.wf.local_energy(pos)
+            e: torch.tensor = torch.mean(eloc)
+            s: torch.tensor = torch.var(eloc)
+            err: torch.tensor = self.wf.sampling_error(eloc)
 
             # gather all data
-            eloc_all = hvd.allgather(eloc, name="local_energies")
-            e, s, err = (
-                torch.mean(eloc_all),
-                torch.var(eloc_all),
-                self.wf.sampling_error(eloc_all),
-            )
+            eloc_all: torch.tensor = hvd.allgather(eloc, name="local_energies")
+            e = torch.mean(eloc_all)
+            s = torch.var(eloc_all)
+            err = self.wf.sampling_error(eloc_all)
 
             # print
             if hvd.rank() == 0:
@@ -257,7 +271,7 @@ class SolverMPI(Solver):
                 log.options(style="percent").info("  Variance : %f" % s.detach().item())
 
             # dump data to hdf5
-            obs = SimpleNamespace(
+            obs: SimpleNamespace = SimpleNamespace(
                 pos=pos, local_energy=eloc_all, energy=e, variance=s, error=err
             )
 
@@ -269,15 +283,15 @@ class SolverMPI(Solver):
         return obs
 
     @staticmethod
-    def metric_average(val, name):
-        """Average a give quantity over all processes
+    def metric_average(val: torch.Tensor, name: str) -> float:
+        """Average a given quantity over all processes
 
-        Arguments:
-            val {torch.tensor} -- data to average
-            name {str} -- name of the data
+        Args:
+            val (torch.Tensor): data to average
+            name (str): name of the data
 
         Returns:
-            torch.tensor -- Averaged quantity
+            float: Averaged quantity
         """
         tensor = val.clone().detach()
         avg_tensor = hvd.allreduce(tensor, name=name)

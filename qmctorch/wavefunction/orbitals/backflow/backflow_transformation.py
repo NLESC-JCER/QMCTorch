@@ -1,5 +1,8 @@
 import torch
 from torch import nn
+from typing import Dict, Optional
+from ....scf import Molecule
+from .kernels.backflow_kernel_base import BackFlowKernelBase
 from .orbital_dependent_backflow_kernel import OrbitalDependentBackFlowKernel
 from ...jastrows.distance.electron_electron_distance import ElectronElectronDistance
 
@@ -7,11 +10,11 @@ from ...jastrows.distance.electron_electron_distance import ElectronElectronDist
 class BackFlowTransformation(nn.Module):
     def __init__(
         self,
-        mol,
-        backflow_kernel,
-        backflow_kernel_kwargs={},
-        orbital_dependent=False,
-        cuda=False,
+        mol: Molecule,
+        backflow_kernel: BackFlowKernelBase,
+        backflow_kernel_kwargs: Optional[Dict] = {},
+        orbital_dependent: Optional[bool] = False,
+        cuda: Optional[bool] = False,
     ):
         """Transform the electorn coordinates into backflow coordinates.
         see : Orbital-dependent backflow wave functions for real-space quantum Monte Carlo
@@ -40,7 +43,10 @@ class BackFlowTransformation(nn.Module):
         if self.cuda:
             self.device = torch.device("cuda")
 
-    def forward(self, pos, derivative=0):
+    def forward(self, 
+                pos: torch.Tensor, 
+                derivative: Optional[int] = 0
+                ) -> torch.Tensor:
         if derivative == 0:
             return self._get_backflow(pos)
 
@@ -55,7 +61,9 @@ class BackFlowTransformation(nn.Module):
                 "derivative of the backflow transformation must be 0, 1 or 2"
             )
 
-    def _get_backflow(self, pos):
+    def _get_backflow(self, 
+                      pos: torch.Tensor
+                      ) -> torch.Tensor:
         """Computes the backflow transformation
 
         .. math:
@@ -73,7 +81,7 @@ class BackFlowTransformation(nn.Module):
         else:
             return self._backflow(pos)
 
-    def _backflow(self, pos):
+    def _backflow(self, pos: torch.Tensor) -> torch.Tensor:
         """Computes the backflow transformation
 
         .. math:
@@ -101,7 +109,7 @@ class BackFlowTransformation(nn.Module):
 
         return pos.reshape(-1, self.nelec * self.ndim)
 
-    def _backflow_od(self, pos):
+    def _backflow_od(self, pos: torch.Tensor) -> torch.Tensor:
         """Computes the orbital dependent backflow transformation
 
         .. math:
@@ -135,7 +143,7 @@ class BackFlowTransformation(nn.Module):
         # retrurn Nbatch x Nao x Nelec*Ndim
         return pos.reshape(nbatch, nao, self.nelec * self.ndim)
 
-    def _get_backflow_derivative(self, pos):
+    def _get_backflow_derivative(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -161,7 +169,7 @@ class BackFlowTransformation(nn.Module):
         else:
             return self._backflow_derivative(pos)
 
-    def _backflow_derivative(self, pos):
+    def _backflow_derivative(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -232,7 +240,7 @@ class BackFlowTransformation(nn.Module):
 
         return out.unsqueeze(-1)
 
-    def _backflow_derivative_od(self, pos):
+    def _backflow_derivative_od(self, pos:torch.Tensor) -> torch.Tensor:
         r"""Computes the derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -308,7 +316,7 @@ class BackFlowTransformation(nn.Module):
 
         return out.permute(0, 2, 3, 4, 5, 1)
 
-    def _get_backflow_second_derivative(self, pos):
+    def _get_backflow_second_derivative(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the second derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -337,7 +345,7 @@ class BackFlowTransformation(nn.Module):
         else:
             return self._backflow_second_derivative(pos)
 
-    def _backflow_second_derivative(self, pos):
+    def _backflow_second_derivative(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the second derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -426,7 +434,7 @@ class BackFlowTransformation(nn.Module):
 
         return out.unsqueeze(-1)
 
-    def _backflow_second_derivative_od(self, pos):
+    def _backflow_second_derivative_od(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the second derivative of the backflow transformation
            wrt the original positions of the electrons
 

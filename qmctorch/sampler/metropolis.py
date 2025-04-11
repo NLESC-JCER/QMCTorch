@@ -22,7 +22,7 @@ class Metropolis(SamplerBase):
         logspace: bool = False,
         symmetry = None,
         cuda: bool = False,
-    ):
+    ) -> None:
         """Metropolis Hasting generator
 
         Args:
@@ -65,7 +65,7 @@ class Metropolis(SamplerBase):
         else:
             self.symmetry = symmetry
 
-    def log_data(self):
+    def log_data(self) -> None:
         """log data about the sampler."""
         log.info("  Move type           : {0}", self.movedict["type"])
         log.info("  Move proba          : {0}", self.movedict["proba"])
@@ -178,7 +178,7 @@ class Metropolis(SamplerBase):
 
         return self.symmetry(torch.cat(pos)).requires_grad_()
 
-    def configure_move(self, move: Dict):
+    def configure_move(self, move: Dict) -> None:
         """Configure the electron moves
 
         Args:
