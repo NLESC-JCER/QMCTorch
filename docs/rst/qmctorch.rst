@@ -1,4 +1,4 @@
-Wave Function ansatz in QMCTorch
+Wave Function Ansatz in QMCTorch
 ===========================================
 
 `QMCTorch` allows to epxress the wave function ususally used by QMC practitioner as neural network. The most generic architecture of the
@@ -15,22 +15,28 @@ These atomic orbital values are then transformed to molecular orbital values thr
 Then a Slater determinant layer extract the different determinants contained in the wave function. Users can there as well specify wich determinants they require. The weighted sum of the determinants
 is then computed and finally muliplied with the value of the Jastrow factor.
 
-Different wave function forms have been implemented to easily create and use wave function ansatz. These different functional forms differ mainly by the Jastrow factor they use and the presence of backflow transformation or not. 
-
-Two-body Jastrow factors
-^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-In its simplest form the Jastrow factor only depends on the electron-electron distances. This means that the Jastrow layer only has a single kernel function :math:`K_{ee}`. 
-This Jastrow factor can be applied globally, or different Jastrow factors can be applied to individual orbitals. In addition a Backflow transformation can be added or not to the definition
-of the wave function. We therefore have the following wave function available:
-
-* ``SlaterJastrow``: A simple wave function containing an electron-electron Jastrow factor and a sum of Slater determinants 
-* ``SlaterOrbitalDependentJastrow``: A  ``SlaterJastrow`` for but each molecular orbitals has its own Jastrow factor 
-* ``SlaterJastrowBackflow``: A ``SlaterJastrow`` wave function with backflow transformation for the electrons
+The main wave function in QMCTorch is implemented in the ``SlaterJastrow`` class. The definition of the class is as follows :
 
 
-Slater Jastrow Wave Function
-----------------------------------------
+.. code-block:: python
+
+    class SlaterJastrow(WaveFunction):
+        def __init__(
+            self,
+            mol,
+            jastrow='default',
+            backflow=None,
+            configs="ground_state",
+            kinetic="jacobi",
+            cuda=False,
+            include_all_mo=True,
+        ):
+
+Different functional form can be created from this class depending on the need of the user. We review here a few of these forms. 
+
+
+Simple Slater Jastrow Wave Function
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The simplest wave function implemented in `QMCTorch` is a Slater Jastrow form. Through a series of transformations 
 the Slater Jastrow function computes:
@@ -62,7 +68,15 @@ The determinantal parts in the expression of :math:`\Psi` are given by the spin-
 
 A ``SlaterJastrow`` wave function can instantiated following :
 
->>> wf = SlaterJastrow(mol, configs='single_double(2,2)', jastrow_kernel=PadeJastrowKernel)
+.. code-block:: python 
+
+   from qmctorch.scf import Molecule
+   from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+   from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+   from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
+   mol = Molecule('H 0 0 0; H 0 0 1')
+   jastrow = JastrowFactorElectronElectron(mol, PadeJastrowKernel)
+   wf = SlaterJastrow(mol, configs='single_double(2,2)', jastrow=jastrow)
 
 The ``SlaterJastrow`` takes as first mandiatory argument a ``Molecule`` instance. The Slater determinants required in the calculation
 are specified with the ``configs`` arguments which can take the following values :
@@ -72,26 +86,78 @@ are specified with the ``configs`` arguments which can take the following values
   * ``configs='single(n,m)'`` : only single excitation using n electron and m orbitals
   * ``configs='single_double(n,m)'`` : only single/double excitation using n electron and m orbitals
 
-Finally the kernel function of the Jastrow factor can be specifed using the ``jastrow_kernel``
-The ``SlaterJastrow`` class accepts other initialisation arguments to fine tune some advanced settings. The default values
-of these arguments are adequeate for most cases.
+Finally the Jastrow factor can be specifed using the ``jastrow``. We used here a Pade-Jastrow kernel that is already implemented in QMCTorch
 
-Orbital dependent Slater Jastrow Wave Function
----------------------------------------------------
+Custom Jastrow factor
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-A slight modification of the the Slater Jastrow is obtained by making the the Jastrow factor can be made orbital dependent. 
-This is implemented in the ``SlaterOrbitalDependentJastrow`` that can be instantiated as:
+It is possible to define custom Jastrow factor and use these forms in the definition of the wave function. 
 
->>> from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
->>> wf = SlaterOrbitalDependentJastrow(mol, configs='single_double(2,4)'
->>>                                    jastrow_kernel=PadeJastrowKernel)
+.. code-block:: python 
 
-Slater Jastrow Backflow Wave Function
-----------------------------------------
+    from torch import nn 
+    from qmctorch.wavefunction import SlaterJastrow
+    from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
+    from qmctorch.wavefunction.jastrows.elec_elec.kernels import JastrowKernelElectronElectronBase
 
-The Slater Jastrow Backflow wave function builds on the the Slater Jastrow wavefunction but adds a backflow transformation to
-the electronic positions. Following this transformation, each electron becomes a quasi-particle whose position depends on all
+    class MyJastrowKernel(JastrowKernelElectronElectronBase):
+        def __init__(self, nup, ndown, cuda, size=16):
+            super().__init__(nup, ndown, cuda)
+            self.fc1 = nn.Linear(1, size, bias=False)
+            self.fc2 = nn.Linear(size, 1, bias=False)
+        def forward(self, x):
+            nbatch, npair = x.shape
+            x = x.reshape(-1,1)
+            x = self.fc2(self.fc1(x))
+            return x.reshape(nbatch, npair)
+
+    mol = Molecule(atom='H 0. 0. 0; H 0. 0. 1.', calculator='pyscf', unit='bohr', redo_scf=True)
+
+    jastrow = JastrowFactorElectronElectron(mol, MyJastrowKernel, kernel_kwargs={'size': 64})
+
+    wf = SlaterJastrow(mol, jastrow=jastrow)
+
+
+Combining Several Jastrow Factors
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As shown on the figure above it is possible to combine several Jastrow factors to account for not only the electron-electron correlations but also electron-nuclei and three body terms. 
+This can easily be done by passing a list of Jastrow factors to the `SlaterJastrow` wave function. 
+For example if we want to combine a fully connected  electron-electron neural Jastrow factor with a fully connected electron-nuclei neural Jastrow, we can simply use:
+
+.. code-block:: python 
+
+    import torch
+    from qmctorch.scf import Molecule
+    from qmctorch.wavefunction import SlaterJastrow
+
+    from qmctorch.wavefunction.jastrows.elec_elec import (
+        JastrowFactor as JastrowFactorElecElec,
+        FullyConnectedJastrowKernel as FCEE,
+    )
+    from qmctorch.wavefunction.jastrows.elec_nuclei import (
+        JastrowFactor as JastrowFactorElecNuclei,
+        FullyConnectedJastrowKernel as FCEN,
+    )
+
+    mol = Molecule(
+            atom="Li 0 0 0; H 0 0 3.14", 
+            unit='bohr', 
+            calculator="pyscf",
+            basis="sto-3g",
+            redo_scf=True)
+
+    jastrow_ee = JastrowFactorElecElec(mol, FCEE)
+
+    jastrow_en = JastrowFactorElecNuclei(mol, FCEN)
+
+    wf = SlaterJastrow(mol, jastrow=[jastrow_ee, jastrow_en])
+
+Wave Functions with Backflow Transformations
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+As seen on the figure above, a backflow transformation of the electronic positions can be added to the definition of the wave function. 
+Following this transformation, each electron becomes a quasi-particle whose position depends on all
 electronic positions. The backflow transformation is given by :
 
 .. math::
@@ -115,92 +181,67 @@ The wave function is then constructed as :
 The Jastrow factor is still computed using the original positions of the electrons while the determinant part uses the
 backflow transformed positions. One can define such wave function with:
 
->>> from qmctorch.wavefunction import SlaterJastrowBackFlow
->>> from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
->>>
->>> wf = SlaterJastrowBackFlow(mol, 
->>>                            configs='single_double(2,2)',
->>>                            jastrow_kernel=PadeJastrowKernel,
->>>                            backflow_kernel=BackFlowKernelInverse)
+.. code-block:: python 
 
-Compared to the ``SlaterJastrow`` wave function, the kernel of the backflow transformation must be specified. By default the inverse kernel will be used.
+    from qmctorch.scf import Molecule
+    from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
-Orbital Dependent Backflow Transformation
-******************************************
+    from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
-The backflow transformation can be different for each atomic orbitals.
+    from qmctorch.wavefunction.orbitals.backflow import (
+        BackFlowTransformation,
+        BackFlowKernelInverse,
+    )
 
-.. math::
+    # molecule
+    mol = Molecule(
+        atom="Li 0 0 0; H 0 0 3.015",
+        unit="bohr",
+        calculator="pyscf",
+        basis="sto-3g",
+        redo_scf=True,
+    )
 
-    q^\alpha(x_i) = x_i + \sum_{j\neq i} \text{Kernel}^\alpha(r_{ij}) (x_i-x_j)
+    # define jastrow factor
+    jastrow = JastrowFactor(mol, PadeJastrowKernel)
 
-where each orbital has its dedicated backflow kernel. This provides much more flexibility when optimizing the wave function.
+    # define backflow trans
+    backflow = BackFlowTransformation(mol, BackFlowKernelInverse)
 
-This wave function can be used with
+    # define the wave function
+    wf = SlaterJastrow(
+        mol,
+        configs="single_double(2,2)",
+        jastrow=jastrow,
+        backflow=backflow,
+    )
 
->>> from qmctorch.wavefunction import SlaterJastrowBackFlow
->>> from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel
->>>
->>> wf = SlaterJastrowBackFlow(mol, 
->>>                            configs='single_double(2,2)',
->>>                            jastrow_kernel=PadeJastrowKernel,
->>>                            orbital_dependent_backflow=True,
->>>                            backflow_kernel=BackFlowKernelInverse)
+Custom Backflow Transformation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+As for the Jastrow factor, it is possible to create custom backlfow transformations and use them in the definition of the wave function. 
+For example to define a fully connected backflow kernel and use it we can use:
 
-Many-Body Jastrow factors
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+.. code-block:: python 
 
-Jastrow factors can also depends on the electron-nuclei distances and the many body terms involving two electrons and one nuclei. 
-In that case the Jastrow factor depends on all the kernel function represented in the figure above. A backflow transformation can also be added to the definition of the wave function.
-As a result we have the following wave function forms available. 
+    import torch
+    from torch import nn 
+    from qmctorch.scf import Molecule
+    from qmctorch.wavefunction import SlaterJastrow
+    from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelBase
+    from qmctorch.wavefunction.orbitals.backflow import BackFlowTransformation
 
-* ``SlaterManyBodyJastrow``: A wave function that contains a many body Jastrow factor and a sum of Slater determinants with backflow transformation for the electrons
-* ``SlaterManyBodyJastrowBackflow``: A ``SlaterManyBodyJastrow`` wave function with a backflow transformation
+    class MyBackflowKernel(BackFlowKernelBase):
+        def __init__(self, mol, cuda, size=16):
+            super().__init__(mol, cuda)
+            self.fc1 = nn.Linear(1, size, bias=False)
+            self.fc2 = nn.Linear(size, 1, bias=False)
+        def forward(self, x):
+            original_shape = x.shape
+            x = x.reshape(-1,1)
+            x = self.fc2(self.fc1(x))
+            return x.reshape(*original_shape)
 
-
-
-Many-Body Jastrow Wave Function
-----------------------------------------
-
-The Jastrow factor combines here multiple terms that represent electron-electron, electron-nuclei and electron-electron-nuclei terms. 
-
-.. math::
-
-    J(R_{at},r) = \exp\left(  \sum_{i<j} K_{ee}(r_i, r_j) + \sum_{i,\alpha}K_{en}(R_\alpha, r_i) + \sum_{i<j,\alpha} K_{een}(R_\alpha, r_i, r_j) \right)
-
-
->>> from qmctorch.wavefunction import SlaterManyBodyJastrow
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels import PadeJastrowKernel as PadeJastrowElecElec
->>> from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import PadeJastrowKernel as PadeJastrowKernelElecNuc
->>> from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import BoysHandyJastrowKernel
->>>
->>> wf = SlaterManyBodyJastrow(mol, 
->>>                            configs='single_double(2,2)',
->>>                            jastrow_kernel={
->>>                                 'ee': PadeJastrowKernelElecElec,
->>>                                 'en': PadeJastrowKernelElecNuc,
->>>                                 'een': BoysHandyJastrowKernel})
-
-
-
-Many-Body Jastrow Wave Function with backflow transformation 
-------------------------------------------------------------------
-
-A backflow transformation can be used together with the many body Jastrow
-
-
->>> from qmctorch.wavefunction import SlaterManyBodyJastrowBackflow
->>> from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowElecElec
->>> from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel as PadeJastrowKernelElecNuc
->>> from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.boys_handy_jastrow_kernel import BoysHandyJastrowKernel
->>>
->>> wf = SlaterManyBodyJastrowBackflow(mol, 
->>>                            configs='single_double(2,2)',
->>>                            jastrow_kernel={
->>>                                 'ee': PadeJastrowKernelElecElec,
->>>                                 'en': PadeJastrowKernelElecNuc,
->>>                                 'een': BoysHandyJastrowKernel},
->>>                             backflow_kernel=BackFlowKernelInverse)
+    mol = Molecule(atom='H 0. 0. 0; H 0. 0. 1.', unit='bohr', redo_scf=True)
+    backflow = BackFlowTransformation(mol, MyBackflowKernel, backflow_kernel_kwargs={'size': 8})
+    wf = SlaterJastrow(mol, backflow=backflow)

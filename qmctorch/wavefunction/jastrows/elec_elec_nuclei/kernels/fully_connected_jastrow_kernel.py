@@ -1,12 +1,19 @@
 import torch
-from .jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
+from .jastrow_kernel_electron_electron_nuclei_base import (
+    JastrowKernelElectronElectronNucleiBase,
+)
 
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronNucleiBase):
+    def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool)-> None:
+        """Defines a fully connected jastrow factors.
 
-    def __init__(self, nup, ndown, atomic_pos, cuda):
-        """Defines a fully connected jastrow factors."""
-
+        Args:
+            nup (int): number of spin up electrons
+            ndown (int): number of spin down electrons
+            atomic_pos (torch.tensor): atomic positions of the atoms
+            cuda (bool): whether to use the GPU or not
+        """
         super().__init__(nup, ndown, atomic_pos, cuda)
 
         self.fc1 = torch.nn.Linear(3, 9, bias=True)
@@ -17,13 +24,13 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         torch.nn.init.uniform_(self.fc2.weight)
         torch.nn.init.uniform_(self.fc2.weight)
 
-        self.fc1.weight.data *= 1E-3
-        self.fc2.weight.data *= 1E-3
-        self.fc3.weight.data *= 1E-3
+        self.fc1.weight.data *= 1e-3
+        self.fc2.weight.data *= 1e-3
+        self.fc3.weight.data *= 1e-3
 
         self.nl_func = torch.nn.Sigmoid()
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the values of the individual f_ij=f(r_ij)
 
         Args:

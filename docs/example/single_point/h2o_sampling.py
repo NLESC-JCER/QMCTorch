@@ -1,17 +1,22 @@
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrow
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import Solver
 from qmctorch.utils import plot_walkers_traj
+
 
 # define the molecule
 mol = Molecule(atom='water.xyz', unit='angs',
                calculator='pyscf', basis='sto-3g' , 
                name='water', redo_scf=True)
 
+# jastrow
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
-                   configs='ground_state')
+                   configs='ground_state', jastrow=jastrow)
 
 # sampler
 sampler = Metropolis(nwalkers=1000, nstep=500, step_size=0.25,

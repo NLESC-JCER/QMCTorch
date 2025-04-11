@@ -1,12 +1,20 @@
 import torch
 from torch import nn
-from .jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
+from .jastrow_kernel_electron_electron_nuclei_base import (
+    JastrowKernelElectronElectronNucleiBase,
+)
 
 
 class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
-
-    def __init__(self, nup, ndown, atomic_pos, cuda, nterm=5):
-        """Defines a Boys Handy jastrow factors.
+    def __init__(
+        self,
+        nup: int,
+        ndown: int,
+        atomic_pos: torch.Tensor,
+        cuda: bool,
+        nterm: int = 5
+        ) -> None:  # pylint: disable=too-many-arguments
+        r"""Defines a Boys Handy jastrow factors.
 
         J.W. Moskowitz et. al
         Correlated Monte Carlo Wave Functions for Some Cations and Anions of the First Row Atoms
@@ -32,7 +40,7 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         self.exp = nn.Parameter(torch.ones(2, self.nterm))
         self.repeat_dim = torch.as_tensor([2, 1]).to(self.device)
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the values of the kernel
 
         Args:
@@ -60,15 +68,13 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         # x[1] = (a r_{jA})/(1 + b r_{jA})
         # x[2] = (a r_{ij})/(1 + b r_{ij})
         # output shape : [N, 3, nterm]
-        wnum = self.weight_num.repeat_interleave(
-            self.repeat_dim, dim=1)
-        wdenom = self.weight_denom.repeat_interleave(
-            self.repeat_dim, dim=1)
-        x = (wnum * x) / (1. + wdenom * x)
+        wnum = self.weight_num.repeat_interleave(self.repeat_dim, dim=1)
+        wdenom = self.weight_denom.repeat_interleave(self.repeat_dim, dim=1)
+        x = (wnum * x) / (1.0 + wdenom * x)
 
         # comput the powers
         xp = self.exp.repeat_interleave(self.repeat_dim, dim=0)
-        x = x**(xp)
+        x = x ** (xp)
 
         # product over the r_{iA}, r_{jA}, r_{ij}
         # output shape : [N, nterm]

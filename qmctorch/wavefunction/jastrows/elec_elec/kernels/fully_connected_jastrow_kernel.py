@@ -1,16 +1,30 @@
 import torch
 from torch import nn
-import numpy as np
 from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 
 class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
+    def __init__(
+        self,
+        nup: int,
+        ndown: int,
+        cuda: bool,
+        size1: int = 16,
+        size2: int = 8,
+        activation: torch.nn.Module = torch.nn.Sigmoid(),
+        include_cusp_weight: bool = True,
+    ) -> None:
+        """Defines a fully connected jastrow factors.
 
-    def __init__(self,  nup, ndown, cuda,
-                 size1=16, size2=8,
-                 activation=torch.nn.Sigmoid(),
-                 include_cusp_weight=True):
-        """Defines a fully connected jastrow factors."""
+        Args:
+            nup (int): Number of spin up electrons.
+            ndown (int): Number of spin down electrons.
+            cuda (bool): Whether to use the GPU or not.
+            size1 (int, optional): Number of neurons in the first hidden layer. Defaults to 16.
+            size2 (int, optional): Number of neurons in the second hidden layer. Defaults to 8.
+            activation (torch.nn.Module, optional): Activation function. Defaults to torch.nn.Sigmoid.
+            include_cusp_weight (bool, optional): Whether to include the cusp weights or not. Defaults to True.
+        """
 
         super().__init__(nup, ndown, cuda)
 
@@ -20,13 +34,13 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc2 = nn.Linear(size1, size2, bias=False)
         self.fc3 = nn.Linear(size2, 1, bias=False)
 
-        eps = 1E-6
+        eps = 1e-6
         self.fc1.weight.data *= eps
         self.fc2.weight.data *= eps
         self.fc3.weight.data *= eps
 
         self.nl_func = activation
-        #self.nl_func = lambda x:  x
+        # self.nl_func = lambda x:  x
 
         self.prefac = torch.rand(1)
 
@@ -36,18 +50,17 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
         self.include_cusp_weight = include_cusp_weight
 
-    def get_var_weight(self):
+    def get_var_weight(self) -> None:
         """define the variational weight."""
 
         nelec = self.nup + self.ndown
 
-        self.var_cusp_weight = nn.Parameter(
-            torch.as_tensor([0., 0.]))
+        self.var_cusp_weight = nn.Parameter(torch.as_tensor([0.0, 0.0]))
 
         idx_pair = []
-        for i in range(nelec-1):
+        for i in range(nelec - 1):
             ispin = 0 if i < self.nup else 1
-            for j in range(i+1, nelec):
+            for j in range(i + 1, nelec):
                 jspin = 0 if j < self.nup else 1
 
                 if ispin == jspin:
@@ -56,28 +69,41 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
                     idx_pair.append(1)
         self.idx_pair = torch.as_tensor(idx_pair).to(self.device)
 
-    def get_static_weight(self):
+    def get_static_weight(self) -> torch.Tensor:
         """Get the matrix of static weights
 
         Returns:
             torch.tensor: static weight (0.5 (0.25) for parallel(anti) spins
         """
 
-        bup = torch.cat((0.25 * torch.ones(self.nup, self.nup), 0.5 *
-                         torch.ones(self.nup, self.ndown)), dim=1)
+        bup = torch.cat(
+            (
+                0.25 * torch.ones(self.nup, self.nup),
+                0.5 * torch.ones(self.nup, self.ndown),
+            ),
+            dim=1,
+        )
 
-        bdown = torch.cat((0.5 * torch.ones(self.ndown, self.nup), 0.25 *
-                           torch.ones(self.ndown, self.ndown)), dim=1)
+        bdown = torch.cat(
+            (
+                0.5 * torch.ones(self.ndown, self.nup),
+                0.25 * torch.ones(self.ndown, self.ndown),
+            ),
+            dim=1,
+        )
 
         static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
 
-        mask_tri_up = torch.triu(torch.ones_like(
-            static_weight), diagonal=1).type(torch.BoolTensor).to(self.device)
+        mask_tri_up = (
+            torch.triu(torch.ones_like(static_weight), diagonal=1)
+            .type(torch.BoolTensor)
+            .to(self.device)
+        )
         static_weight = static_weight.masked_select(mask_tri_up)
 
         return static_weight
 
-    def forward(self, x):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the kernel values
 
         Args:

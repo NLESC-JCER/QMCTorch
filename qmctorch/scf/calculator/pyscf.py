@@ -1,4 +1,5 @@
 from types import SimpleNamespace
+from typing import List
 import itertools
 import numpy as np
 from pyscf import gto, scf, dft
@@ -8,14 +9,56 @@ from ... import log
 
 
 class CalculatorPySCF(CalculatorBase):
+    def __init__(
+        self,
+        atoms: List[str],
+        atom_coords: List[np.ndarray],
+        basis: str,
+        charge: int,
+        spin: int,
+        scf: str,
+        units: str,
+        molname: str,
+        savefile: str,
+    ) -> None:
+        """
+        Initialize the PySCF calculator.
 
-    def __init__(self, atoms, atom_coords, basis, scf, units, molname, savefile):
+        Args:
+            atoms (list): List of atom symbols.
+            atom_coords (list): List of atomic coordinates.
+            basis (str): Basis set name.
+            charge (int): Molecular charge.
+            spin (int): Spin multiplicity.
+            scf (str): Self-consistent field method.
+            units (str): Units of the coordinates; 'bohr' or 'angs'.
+            molname (str): Molecule name.
+            savefile (str): File name to save results.
 
+        Returns:
+            None
+        """
         CalculatorBase.__init__(
-            self, atoms, atom_coords, basis, scf, units, molname, 'pyscf', savefile)
+            self,
+            atoms,
+            atom_coords,
+            basis,
+            charge,
+            spin,
+            scf,
+            units,
+            molname,
+            "pyscf",
+            savefile,
+        )
 
-    def run(self):
-        """Run the scf calculation using PySCF."""
+    def run(self) -> SimpleNamespace:
+        """
+        Run the scf calculation using PySCF.
+
+        Returns:
+            SimpleNamespace: Contains the basis set data.
+        """
 
         # refresh the atom positions if necessary
         atom_str = self.get_atoms_str()
@@ -23,37 +66,43 @@ class CalculatorPySCF(CalculatorBase):
         # pyscf calculation
         mol = gto.M(
             atom=atom_str,
+            spin=self.spin,
+            charge=self.charge,
             basis=self.basis_name,
-            unit='Bohr',
-            cart=False)
+            unit="Bohr",
+            cart=False,
+        )
 
-        if self.scf.lower() == 'hf':
+        if self.scf.lower() == "hf":
             pyscf_data = scf.RHF(mol).run()
 
-        elif self.scf.lower() == 'dft':
+        elif self.scf.lower() == "dft":
             pyscf_data = dft.RKS(mol)
-            pyscf_data.xc = 'lda, vwn'
+            pyscf_data.xc = "lda, vwn"
             pyscf_data = pyscf_data.newton()
             pyscf_data.kernel()
 
         if self.savefile:
-            save_file_name = self.molname + '_pyscf.chkfile'
+            save_file_name = self.molname + "_pyscf.chkfile"
             shutil.copyfile(pyscf_data.chkfile, save_file_name)
             self.savefile = save_file_name
 
         basis = self.get_basis_data(mol, pyscf_data)
         return basis
 
-    def get_basis_data(self, mol, rhf):
-        """Save the data to HDF5
+    def get_basis_data(self, mol: gto.M, rhf: scf.RHF) -> SimpleNamespace:
+        """Get the information about the basis
 
         Arguments:
             mol {pyscf.gto.M} -- psycf Molecule
             rhf {pyscf.scf} -- scf object
+
+        Returns:
+            SimpleNamespace -- basis data
         """
 
         # sphereical quantum nummbers
-        mvalues = {0: [0], 1: [-1,0,1], 2: [-2,-1,0,1,2]}
+        mvalues = {0: [0], 1: [-1, 0, 1], 2: [-2, -1, 0, 1, 2]}
 
         # cartesian quantum numbers
         kx = {0: [0], 1: [1, 0, 0], 2: [2, 1, 1, 0, 0, 0]}
@@ -62,9 +111,8 @@ class CalculatorPySCF(CalculatorBase):
 
         basis = SimpleNamespace()
         basis.TotalEnergy = rhf.e_tot
-        basis.radial_type = 'gto_pure'
-        basis.harmonics_type = 'cart'
-
+        basis.radial_type = "gto_pure"
+        basis.harmonics_type = "cart"
 
         # number of AO / MO
         # can be different if d or f orbs are present
@@ -86,7 +134,6 @@ class CalculatorPySCF(CalculatorBase):
         iao = 0
         ishell = 0
         for ibas in range(mol.nbas):
-
             # number of contracted gto per shell
             nctr = mol.bas_nctr(ibas)
 
@@ -102,17 +149,16 @@ class CalculatorPySCF(CalculatorBase):
 
             # coeffs and exponents
             coeffs = mol.bas_ctr_coeff(ibas)
-            exps =  mol.bas_exp(ibas)
+            exps = mol.bas_exp(ibas)
 
             # deal with  multiple zeta
             if coeffs.shape != (nprim, nctr):
-                raise ValueError('Contraction coefficients issue')
-         
+                raise ValueError("Contraction coefficients issue")
+
             ictr = 0
             while ictr < nctr:
-
                 n = bas_n_ori[ishell]
-                coeffs_ictr = coeffs[:,ictr] / (ictr+1)
+                coeffs_ictr = coeffs[:, ictr] / (ictr + 1)
 
                 # coeffs/exp
                 bas_coeff += coeffs_ictr.flatten().tolist() * ncart_comp
@@ -158,15 +204,16 @@ class CalculatorPySCF(CalculatorBase):
         intervals = np.concatenate(([0], np.cumsum(nshells)))
 
         basis.nao_per_atom = []
-        for i in range(len(intervals)-1):
-            s, e = intervals[i], intervals[i+1]
+        for i in range(len(intervals) - 1):
+            s, e = intervals[i], intervals[i + 1]
             nao = len(np.unique(basis.index_ctr[s:e]))
             basis.nao_per_atom.append(nao)
 
         # determine the number of contraction per
         # atomic orbital
         basis.nctr_per_ao = np.array(
-            [len(list(y)) for _, y in itertools.groupby(index_ctr)])
+            [len(list(y)) for _, y in itertools.groupby(index_ctr)]
+        )
 
         basis.bas_coeffs = np.array(bas_coeff)
         basis.bas_exp = np.array(bas_exp)
@@ -193,24 +240,22 @@ class CalculatorPySCF(CalculatorBase):
 
         return basis
 
-    def get_atoms_str(self):
-        """Refresh the atom string (use after atom move). """
-        atoms_str = ''
+    def get_atoms_str(self) -> str:
+        """Refresh the atom string (use after atom move)."""
+        atoms_str = ""
         natom = len(self.atoms)
 
         for iA in range(natom):
-            atoms_str += self.atoms[iA] + ' '
-            atoms_str += ' '.join(str(xi)
-                                  for xi in self.atom_coords[iA])
-            atoms_str += ';'
+            atoms_str += self.atoms[iA] + " "
+            atoms_str += " ".join(str(xi) for xi in self.atom_coords[iA])
+            atoms_str += ";"
         return atoms_str
 
     @staticmethod
-    def get_bas_n(mol):
+    def get_bas_n(mol: gto.M) -> List[str]:
+        recognized_labels = ["s", "p", "d"]
 
-        recognized_labels = ['s','p','d']
-
-        label2int = {'s': 1, 'p': 2, 'd': 3}
+        label2int = {"s": 1, "p": 2, "d": 3}
         labels = [l[:3] for l in mol.cart_labels(fmt=False)]
         unique_labels = []
         for l in labels:
@@ -219,10 +264,13 @@ class CalculatorPySCF(CalculatorBase):
         nlabel = [l[2][1] for l in unique_labels]
 
         if np.any([nl not in recognized_labels for nl in nlabel]):
-            log.error('the pyscf calculator only supports the following orbitals: {0}', recognized_labels)
-            log.error('The following orbitals have been found: {0}', nlabel)
-            log.error('Using the basis set: {0}', mol.basis)
-            raise ValueError('Basis set not supported')
+            log.error(
+                "the pyscf calculator only supports the following orbitals: {0}",
+                recognized_labels,
+            )
+            log.error("The following orbitals have been found: {0}", nlabel)
+            log.error("Using the basis set: {0}", mol.basis)
+            raise ValueError("Basis set not supported")
 
         n = [label2int[nl] for nl in nlabel]
         return n

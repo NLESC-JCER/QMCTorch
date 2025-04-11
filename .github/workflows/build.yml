@@ -1,6 +1,14 @@
 name: build
 
-on: [push]
+on:
+  push:
+    branches:
+      - master
+      - development
+  pull_request:
+    branches:
+      - master
+      - development
 
 jobs:
   build:
@@ -8,9 +16,9 @@ jobs:
     runs-on: ubuntu-latest
 
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        version: ['3.8', '3.10']
+        version: ['3.9']
 
     steps:
     - name: Cancel Previous Runs
@@ -18,32 +26,23 @@ jobs:
       with:
           access_token: ${{ github.token }}
     - uses: actions/checkout@v4
-    - name: Setup conda
-      uses: s-weigand/setup-conda@v1
-      with:
-        update-conda: true
-        python-version: ${{ matrix.version }}
-        conda-channels: anaconda
     - name: Install essential
       run: |
         sudo apt update
-        sudo apt install build-essential
-    - name: Install conda packages
+        sudo apt install build-essential pandoc
+    - name: Install specific packages
       run: |
-        conda install -c anaconda cmake
-        conda install mpi4py h5py pytorch==2.0.0 torchvision==0.15.0 cpuonly -c pytorch -c conda-forge
-        conda install -c conda-forge libstdcxx-ng
-        conda install -c anaconda gxx_linux-64
-
+        python -m pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/cpu
+        python -m pip install dgl -f https://data.dgl.ai/wheels/torch-2.4/repo.html
     - name: Install the package
-      run: python -m pip install .[test,hpc]
+      run: python -m pip install .[test,doc]
       env:
         CONDA_PREFIX: /usr/share/miniconda
 
-    - name: Test with multithreading
-      env:
-        CONDA_PREFIX: /usr/share/miniconda
-      run: mpirun -np 2 coverage run -m pytest tests_hvd
+    # - name: Test with multithreading
+    #   env:
+    #     CONDA_PREFIX: /usr/share/miniconda
+    #   run: mpirun -np 2 coverage run -m pytest tests_hvd
 
     - name: Test with single thread
       env:

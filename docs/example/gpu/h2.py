@@ -1,6 +1,7 @@
 from torch import optim
 
 from qmctorch.scf import Molecule
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.solver import Solver
 from qmctorch.sampler import Metropolis
@@ -20,9 +21,14 @@ mol = Molecule(atom='H 0 0 -0.69; H 0 0 0.69',
                basis='dzp',
                unit='bohr')
 
+
+# jastrow
+jastrow = JastrowFactor(mol, PadeJastrowKernel)
+
 # define the wave function
 wf = SlaterJastrow(mol, kinetic='jacobi',
                    configs='cas(2,2)',
+                   jastrow=jastrow,
                    cuda=True)
 
 # sampler

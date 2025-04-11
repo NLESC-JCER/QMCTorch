@@ -1,13 +1,17 @@
-import numpy
 import torch
 from torch import nn
+from typing import Dict
 from ...jastrows.distance.electron_electron_distance import ElectronElectronDistance
+from .kernels.backflow_kernel_base import BackFlowKernelBase
 from .orbital_dependent_backflow_kernel import OrbitalDependentBackFlowKernel
-
+from ....scf import Molecule
 
 class OrbitalDependentBackFlowTransformation(nn.Module):
-
-    def __init__(self, mol, backflow_kernel, backflow_kernel_kwargs={}, cuda=False):
+    def __init__(self, 
+                 mol: Molecule, 
+                 backflow_kernel: BackFlowKernelBase, 
+                 backflow_kernel_kwargs: Dict = {}, 
+                 cuda: bool=False):
         """Transform the electorn coordinates into backflow coordinates.
         see : Orbital-dependent backflow wave functions for real-space quantum Monte Carlo
         https://arxiv.org/abs/1910.07167
@@ -21,16 +25,16 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
         self.nelec = mol.nelec
         self.nao = mol.basis.nao
         self.backflow_kernel = OrbitalDependentBackFlowKernel(
-            backflow_kernel, backflow_kernel_kwargs, mol, cuda)
+            backflow_kernel, backflow_kernel_kwargs, mol, cuda
+        )
         self.ndim = 3
 
         self.cuda = cuda
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
 
-    def forward(self, pos, derivative=0):
-
+    def forward(self, pos: torch.Tensor, derivative: int = 0) -> torch.Tensor:
         if derivative == 0:
             return self._backflow(pos)
 
@@ -42,9 +46,10 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
 
         else:
             raise ValueError(
-                'Derivative of the backflow transformation must be 0, 1 or 2')
+                "Derivative of the backflow transformation must be 0, 1 or 2"
+            )
 
-    def _backflow(self, pos):
+    def _backflow(self, pos: torch.Tensor) -> torch.Tensor:
         """Computes the backflow transformation
 
         .. math:
@@ -62,22 +67,23 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
         # compute the difference
         # Nbatch x 1 x Nelec x Nelec x 3
         delta_ee = self.edist.get_difference(
-            pos.reshape(nbatch, self.nelec, self.ndim)).unsqueeze(1)
+            pos.reshape(nbatch, self.nelec, self.ndim)
+        ).unsqueeze(1)
 
         # compute the backflow function
         # Nbatch x Nao x Nelec x Nelec x 1
-        bf_kernel = self.backflow_kernel(
-            self.edist(pos)).unsqueeze(-1)
+        bf_kernel = self.backflow_kernel(self.edist(pos)).unsqueeze(-1)
         nao = bf_kernel.shape[self.backflow_kernel.stack_axis]
 
         # update pos
-        pos = pos.reshape(nbatch, 1, self.nelec, self.ndim) + \
-            (bf_kernel * delta_ee).sum(3)
+        pos = pos.reshape(nbatch, 1, self.nelec, self.ndim) + (
+            bf_kernel * delta_ee
+        ).sum(3)
 
         # retrurn Nbatch x Nao x Nelec*Ndim
-        return pos.reshape(nbatch, nao, self.nelec*self.ndim)
+        return pos.reshape(nbatch, nao, self.nelec * self.ndim)
 
-    def _backflow_derivative(self, pos):
+    def _backflow_derivative(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -108,8 +114,11 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
 
         # difference between elec pos
         # Nbatch, 1, 3, Nelec, Nelec
-        delta_ee = self.edist.get_difference(
-            pos.reshape(nbatch, nelec, 3)).permute(0, 3, 1, 2).unsqueeze(1)
+        delta_ee = (
+            self.edist.get_difference(pos.reshape(nbatch, nelec, 3))
+            .permute(0, 3, 1, 2)
+            .unsqueeze(1)
+        )
 
         # backflow kernel : Nbatch x Nao x Nelec x Nelec
         bf = self.backflow_kernel(ree)
@@ -126,32 +135,29 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
 
         # compute the delta_ij * (1 + sum k \neq i eta(rik))
         # Nbatch x Nao x Nelec x Nelec (diagonal matrix)
-        delta_ij_bf = torch.diag_embed(
-            1 + bf.sum(-1), dim1=-1, dim2=-2)
+        delta_ij_bf = torch.diag_embed(1 + bf.sum(-1), dim1=-1, dim2=-2)
 
         # eye 3x3 in 1x3x3x1x1
-        eye_mat = torch.eye(3, 3).view(
-            1, 1, 3, 3, 1, 1).to(self.device)
+        eye_mat = torch.eye(3, 3).view(1, 1, 3, 3, 1, 1).to(self.device)
 
         # compute the delta_ab * delta_ij * (1 + sum k \neq i eta(rik))
         # Nbatch x Ndim x Ndim x Nelec x Nelec (diagonal matrix)
-        delta_ab_delta_ij_bf = eye_mat * \
-            delta_ij_bf.view(nbatch, nao, 1, 1, nelec, nelec)
+        delta_ab_delta_ij_bf = eye_mat * delta_ij_bf.view(
+            nbatch, nao, 1, 1, nelec, nelec
+        )
 
         # compute sum_k df(r_ik)/dbeta_i (alpha_i - alpha_k)
         # Nbatch x Nao x Ndim x Ndim x Nelec x Nelec
-        delta_ij_sum = torch.diag_embed(
-            dbf_delta_ee.sum(-1), dim1=-1, dim2=-2)
+        delta_ij_sum = torch.diag_embed(dbf_delta_ee.sum(-1), dim1=-1, dim2=-2)
 
         # compute delta_ab * f(rij)
-        delta_ab_bf = eye_mat * \
-            bf.view(nbatch, nao, 1, 1, nelec, nelec)
+        delta_ab_bf = eye_mat * bf.view(nbatch, nao, 1, 1, nelec, nelec)
 
         # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
         # nbatch d alpha_i / d beta_j
         return delta_ab_delta_ij_bf + delta_ij_sum - dbf_delta_ee - delta_ab_bf
 
-    def _backflow_second_derivative(self, pos):
+    def _backflow_second_derivative(self, pos: torch.Tensor) -> torch.Tensor:
         r"""Computes the second derivative of the backflow transformation
            wrt the original positions of the electrons
 
@@ -183,8 +189,11 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
 
         # difference between elec pos
         # Nbatch, 1, 3, Nelec, Nelec
-        delta_ee = self.edist.get_difference(
-            pos.reshape(nbatch, nelec, 3)).permute(0, 3, 1, 2).unsqueeze(1)
+        delta_ee = (
+            self.edist.get_difference(pos.reshape(nbatch, nelec, 3))
+            .permute(0, 3, 1, 2)
+            .unsqueeze(1)
+        )
 
         # derivative ee dist matrix  d r_{ij} / d x_i
         # Nbatch x 1 x 3 x Nelec x Nelec
@@ -213,13 +222,16 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
         dbf = dbf * dree
 
         # eye matrix in dim x dim
-        eye_mat = torch.eye(3, 3).reshape(
-            1, 1, 3, 3, 1, 1).to(self.device)
+        eye_mat = torch.eye(3, 3).reshape(1, 1, 3, 3, 1, 1).to(self.device)
 
         # compute delta_ij delta_ab 2 sum_k dbf(ik) / dbeta_i
-        term1 = 2 * eye_mat * \
-            torch.diag_embed(
-                dbf.sum(-1), dim1=-1, dim2=-2).reshape(nbatch, nao, 1, 3, nelec, nelec)
+        term1 = (
+            2
+            * eye_mat
+            * torch.diag_embed(dbf.sum(-1), dim1=-1, dim2=-2).reshape(
+                nbatch, nao, 1, 3, nelec, nelec
+            )
+        )
 
         # (d2 eta(r_ij) / d2 beta_i) (alpha_i - alpha_j)
         # Nbatch x Nao x 3 x 3 x Nelec x Nelec
@@ -227,12 +239,10 @@ class OrbitalDependentBackFlowTransformation(nn.Module):
 
         # compute sum_k d2f(r_ik)/d2beta_i (alpha_i - alpha_k)
         # Nbatch x Nao x Ndim x Ndim x Nelec x Nelec
-        term2 = torch.diag_embed(
-            d2bf_delta_ee.sum(-1), dim1=-1, dim2=-2)
+        term2 = torch.diag_embed(d2bf_delta_ee.sum(-1), dim1=-1, dim2=-2)
 
         # compute delta_ab * df(rij)/dbeta_j
-        term3 = 2 * eye_mat * \
-            dbf.reshape(nbatch, nao, 1, 3, nelec, nelec)
+        term3 = 2 * eye_mat * dbf.reshape(nbatch, nao, 1, 3, nelec, nelec)
 
         # return Nbatch x Ndim(alpha) x Ndim(beta) x Nelec(i) x Nelec(j)
         # nbatch d2 alpha_i / d2 beta_j

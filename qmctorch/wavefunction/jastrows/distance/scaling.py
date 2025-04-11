@@ -1,7 +1,7 @@
 import torch
 
 
-def get_scaled_distance(kappa, r):
+def get_scaled_distance(kappa: float, r: torch.Tensor) -> torch.Tensor:
     """compute the scaled distance
 
     .. math::
@@ -16,10 +16,10 @@ def get_scaled_distance(kappa, r):
         torch.tensor: values of the scaled distance
                         Nbatch, Nelec, Nelec
     """
-    return (1. - torch.exp(-kappa * r))/kappa
+    return (1.0 - torch.exp(-kappa * r)) / kappa
 
 
-def get_der_scaled_distance(kappa, r, dr):
+def get_der_scaled_distance(kappa: float, r:torch.Tensor, dr: torch.Tensor) -> torch.Tensor:
     """Returns the derivative of the scaled distances
 
     .. math::
@@ -39,7 +39,7 @@ def get_der_scaled_distance(kappa, r, dr):
     return dr * torch.exp(-kappa * r.unsqueeze(1))
 
 
-def get_second_der_scaled_distance(kappa, r, dr, d2r):
+def get_second_der_scaled_distance(kappa: float, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor) -> torch.Tensor:
     """computes the second derivative of the scaled distances
 
     .. math::
@@ -59,4 +59,4 @@ def get_second_der_scaled_distance(kappa, r, dr, d2r):
         torch.tensor : second deriative of the scaled distance
                         Nbatch x Ndim x Nelec x Nelec
     """
-    return (d2r - kappa * dr * dr) * torch.exp(-kappa*r.unsqueeze(1))
+    return (d2r - kappa * dr * dr) * torch.exp(-kappa * r.unsqueeze(1))

@@ -7,37 +7,53 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import Solver
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterJastrowBackFlow
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
+from qmctorch.wavefunction.orbitals.backflow import (
+    BackFlowTransformation,
+    BackFlowKernelInverse,
+)
+from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
 
 from ..path_utils import PATH_TEST
+from .test_base_solver import BaseTestSolvers
 
 
-class TestLiHBackFlowADF(unittest.TestCase):
-
+class TestLiHBackFlowADF(BaseTestSolvers.BaseTestSolverMolecule):
     def setUp(self):
-
         torch.manual_seed(0)
         np.random.seed(0)
         set_torch_double_precision()
 
         # molecule
-        path_hdf5 = (
-            PATH_TEST / 'hdf5/LiH_adf_dz.hdf5').absolute().as_posix()
+        path_hdf5 = (PATH_TEST / "hdf5/LiH_adf_dz.hdf5").absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
+        # jastrow
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
+        # backflow
+        backflow = BackFlowTransformation(
+            self.mol, BackFlowKernelInverse, orbital_dependent=False
+        )
+
         # wave function
-        self.wf = SlaterJastrowBackFlow(self.mol, kinetic='jacobi',
-                                        configs='single_double(2,2)',
-                                        orbital_dependent_backflow=True,
-                                        include_all_mo=True)
+        self.wf = SlaterJastrow(
+            self.mol,
+            kinetic="jacobi",
+            jastrow=jastrow,
+            backflow=backflow,
+            configs="single_double(2,2)",
+            include_all_mo=True,
+        )
 
         # fc weights
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
 
         # jastrow weights
         self.wf.jastrow.jastrow_kernel.weight.data = torch.rand(
-            self.wf.jastrow.jastrow_kernel.weight.shape)
+            self.wf.jastrow.jastrow_kernel.weight.shape
+        )
 
         # sampler
         self.sampler = Metropolis(
@@ -46,55 +62,21 @@ class TestLiHBackFlowADF(unittest.TestCase):
             step_size=0.05,
             ndim=self.wf.ndim,
             nelec=self.wf.nelec,
-            init=self.mol.domain('normal'),
-            move={
-                'type': 'all-elec',
-                'proba': 'normal'})
+            init=self.mol.domain("normal"),
+            move={"type": "all-elec", "proba": "normal"},
+        )
 
         # optimizer
         self.opt = optim.Adam(self.wf.parameters(), lr=0.01)
 
         # solver
-        self.solver = Solver(wf=self.wf, sampler=self.sampler,
-                                          optimizer=self.opt)
+        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.opt)
 
         # artificial pos
         self.nbatch = 10
-        self.pos = torch.as_tensor(np.random.rand(
-            self.nbatch, self.wf.nelec*3))
+        self.pos = torch.as_tensor(np.random.rand(self.nbatch, self.wf.nelec * 3))
         self.pos.requires_grad = True
-
-    def test_0_wavefunction(self):
-
-        eauto = self.wf.kinetic_energy_autograd(self.pos)
-        ejac = self.wf.kinetic_energy_jacobi(self.pos)
-        print(torch.stack([eauto, ejac], axis=1).squeeze())
-        assert torch.allclose(
-            eauto.data, ejac.data, rtol=1E-4, atol=1E-4)
-
-    def test1_single_point(self):
-
-        # sample and compute observables
-        obs = self.solver.single_point()
-        e, v = obs.energy, obs.variance
-
-    def test2_wf_opt_grad_auto(self):
-        self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy', 'parameters'],
-                              loss='energy', grad='auto')
-        obs = self.solver.run(5)
-
-    def test3_wf_opt_grad_manual(self):
-        self.solver.sampler = self.sampler
-
-        self.solver.configure(track=['local_energy', 'parameters'],
-                              loss='energy', grad='manual')
-        obs = self.solver.run(5)
 
 
 if __name__ == "__main__":
-    # unittest.main()
-    t = TestLiHBackFlowADF()
-    t.setUp()
-    t.test2_wf_opt_grad_auto()
+    unittest.main()

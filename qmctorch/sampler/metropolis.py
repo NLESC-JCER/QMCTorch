@@ -8,18 +8,21 @@ from .. import log
 
 
 class Metropolis(SamplerBase):
-
-    def __init__(self,
-                 nwalkers: int = 100,
-                 nstep: int = 1000,
-                 step_size: float = 0.2,
-                 ntherm: int = -1,
-                 ndecor: int = 1,
-                 nelec: int = 1,
-                 ndim: int = 3,
-                 init: Dict = {'min': -5, 'max': 5},
-                 move: Dict = {'type': 'all-elec', 'proba': 'normal'},
-                 cuda: bool = False):
+    def __init__(  # pylint: disable=dangerous-default-value
+        self,
+        nwalkers: int = 100,
+        nstep: int = 1000,
+        step_size: float = 0.2,
+        ntherm: int = -1,
+        ndecor: int = 1,
+        nelec: int = 1,
+        ndim: int = 3,
+        init: Dict = {"min": -5, "max": 5},
+        move: Dict = {"type": "all-elec", "proba": "normal"},
+        logspace: bool = False,
+        symmetry = None,
+        cuda: bool = False,
+    ) -> None:
         """Metropolis Hasting generator
 
         Args:
@@ -50,21 +53,41 @@ class Metropolis(SamplerBase):
             >>> pos = sampler(wf.pdf)
         """
 
-        SamplerBase.__init__(self, nwalkers, nstep,
-                             step_size, ntherm, ndecor,
-                             nelec, ndim, init, cuda)
+        SamplerBase.__init__(
+            self, nwalkers, nstep, step_size, ntherm, ndecor, nelec, ndim, init, cuda
+        )
 
+        self.logspace = logspace
         self.configure_move(move)
         self.log_data()
+        if symmetry is None:
+            self.symmetry = lambda x: x
+        else:
+            self.symmetry = symmetry
 
-    def log_data(self):
+    def log_data(self) -> None:
         """log data about the sampler."""
-        log.info('  Move type           : {0}', self.movedict['type'])
-        log.info(
-            '  Move proba          : {0}', self.movedict['proba'])
+        log.info("  Move type           : {0}", self.movedict["type"])
+        log.info("  Move proba          : {0}", self.movedict["proba"])
 
-    def __call__(self, pdf: Callable, pos: Union[None, torch.Tensor] = None,
-                 with_tqdm: bool = True) -> torch.Tensor:
+    @staticmethod
+    def log_func(func):
+        """Compute the negative log of  a function
+
+        Args:
+            func (callable): input function
+
+        Returns:
+            callable: negative log of the function
+        """
+        return lambda x: torch.log(func(x))
+
+    def __call__(
+        self,
+        pdf: Callable,
+        pos: Union[None, torch.Tensor] = None,
+        with_tqdm: bool = True,
+    ) -> torch.Tensor:
         """Generate a series of point using MC sampling
 
         Args:
@@ -79,69 +102,83 @@ class Metropolis(SamplerBase):
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
-            eps = 1E-7
+            eps = 1e-7
         elif _type_ == torch.float64:
-            eps = 1E-16
+            eps = 1e-16
 
         if self.ntherm >= self.nstep:
-            raise ValueError('Thermalisation longer than trajectory')
+            raise ValueError("Thermalisation longer than trajectory")
 
         with torch.no_grad():
-
             if self.ntherm < 0:
                 self.ntherm = self.nstep + self.ntherm
 
+            # init the walkers
             self.walkers.initialize(pos=pos)
-            fx = pdf(self.walkers.pos)
+
+
+            if self.logspace:
+                fx = self.log_func(pdf)(self.walkers.pos)
+            else:
+                fx = pdf(self.walkers.pos)
 
             fx[fx == 0] = eps
             pos, rate, idecor = [], 0, 0
 
-            rng = tqdm(range(self.nstep),
-                       desc='INFO:QMCTorch|  Sampling',
-                       disable=not with_tqdm)
+            rng = tqdm(
+                range(self.nstep),
+                desc="INFO:QMCTorch|  Sampling",
+                disable=not with_tqdm,
+            )
             tstart = time()
 
             for istep in rng:
-
                 for id_elec in self.fixed_id_elec_list:
-
+                    
                     # new positions
                     Xn = self.move(pdf, id_elec)
 
-                    # new function
-                    fxn = pdf(Xn)
-                    fxn[fxn == 0.] = eps
-                    df = fxn / fx
+                    if self.logspace:
+                        fxn = self.log_func(pdf)(Xn)
+                        df = fxn - fx
+
+                    else:
+                        # new function
+                        fxn = pdf(Xn)
+                        fxn[fxn == 0.0] = eps
+                        df = fxn / fx
 
                     # accept the moves
                     index = self._accept(df)
 
                     # acceptance rate
-                    rate += index.byte().sum().float().to('cpu') / \
-                        (self.nwalkers * self._move_per_iter)
+                    rate += index.byte().sum().float().to("cpu") / (
+                        self.walkers.nwalkers * self._move_per_iter
+                    )
 
                     # update position/function value
                     self.walkers.pos[index, :] = Xn[index, :]
                     fx[index] = fxn[index]
                     fx[fx == 0] = eps
 
-                if (istep >= self.ntherm):
-                    if (idecor % self.ndecor == 0):
-                        pos.append(self.walkers.pos.to('cpu').clone())
+                if istep >= self.ntherm:
+                    if idecor % self.ndecor == 0:
+                        pos.append(self.walkers.pos.to("cpu").clone())
                     idecor += 1
 
             if with_tqdm:
                 log.info(
-                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100))
+                    "   Acceptance rate     : {:1.2f} %", (rate / self.nstep * 100)
+                )
                 log.info(
-                    "   Timing statistics   : {:1.2f} steps/sec.", self.nstep/(time()-tstart))
-                log.info(
-                    "   Total Time          : {:1.2f} sec.", (time()-tstart))
+                    "   Timing statistics   : {:1.2f} steps/sec.",
+                    self.nstep / (time() - tstart),
+                )
+                log.info("   Total Time          : {:1.2f} sec.", (time() - tstart))
 
-        return torch.cat(pos).requires_grad_()
+        return self.symmetry(torch.cat(pos)).requires_grad_()
 
-    def configure_move(self, move: Dict):
+    def configure_move(self, move: Dict) -> None:
         """Configure the electron moves
 
         Args:
@@ -160,28 +197,30 @@ class Metropolis(SamplerBase):
 
         self.movedict = move
 
-        if 'type' not in self.movedict.keys():
-            print('Metroplis : Set 1 electron move by default')
-            self.movedict['type'] = 'one-elec'
+        if "type" not in self.movedict.keys():
+            print("Metroplis : Set 1 electron move by default")
+            self.movedict["type"] = "one-elec"
 
-        if 'proba' not in self.movedict.keys():
-            print('Metroplis : Set uniform trial move probability')
-            self.movedict['proba'] = 'uniform'
+        if "proba" not in self.movedict.keys():
+            print("Metroplis : Set uniform trial move probability")
+            self.movedict["proba"] = "uniform"
 
-        if self.movedict['proba'] == 'normal':
-            _sigma = self.step_size / \
-                (2 * torch.sqrt(2 * torch.log(torch.as_tensor(2.))))
+        if self.movedict["proba"] == "normal":
+            _sigma = self.step_size / (
+                2 * torch.sqrt(2 * torch.log(torch.as_tensor(2.0)))
+            )
             self.multiVariate = MultivariateNormal(
-                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim))
+                torch.zeros(self.ndim), _sigma * torch.eye(self.ndim)
+            )
 
         self._move_per_iter = 1
-        if self.movedict['type'] not in [
-                'one-elec', 'all-elec', 'all-elec-iter']:
+        if self.movedict["type"] not in ["one-elec", "all-elec", "all-elec-iter"]:
             raise ValueError(
                 " 'type' in move should be 'one-elec','all-elec', \
-                  'all-elec-iter'")
+                  'all-elec-iter'"
+            )
 
-        if self.movedict['type'] == 'all-elec-iter':
+        if self.movedict["type"] == "all-elec-iter":
             self.fixed_id_elec_list = range(self.nelec)
             self._move_per_iter = self.nelec
         else:
@@ -197,28 +236,24 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: new positions of the walkers
         """
-        if self.nelec == 1 or self.movedict['type'] == 'all-elec':
+        if self.nelec == 1 or self.movedict["type"] == "all-elec":
             return self.walkers.pos + self._move(self.nelec)
 
         else:
-
             # clone and reshape data : Nwlaker, Nelec, Ndim
             new_pos = self.walkers.pos.clone()
-            new_pos = new_pos.view(self.nwalkers,
-                                   self.nelec, self.ndim)
+            new_pos = new_pos.view(self.walkers.nwalkers, self.nelec, self.ndim)
 
             # get indexes
             if id_elec is None:
-                index = torch.LongTensor(self.nwalkers).random_(
-                    0, self.nelec)
+                index = torch.LongTensor(self.walkers.nwalkers).random_(0, self.nelec)
             else:
-                index = torch.LongTensor(self.nwalkers).fill_(id_elec)
+                index = torch.LongTensor(self.walkers.nwalkers).fill_(id_elec)
 
             # change selected data
-            new_pos[range(self.nwalkers), index,
-                    :] += self._move(1)
+            new_pos[range(self.walkers.nwalkers), index, :] += self._move(1)
 
-            return new_pos.view(self.nwalkers, self.nelec * self.ndim)
+            return new_pos.view(self.walkers.nwalkers, self.nelec * self.ndim)
 
     def _move(self, num_elec: int) -> torch.Tensor:
         """propose a move for the electrons
@@ -229,17 +264,19 @@ class Metropolis(SamplerBase):
         Returns:
             torch.tensor: new positions of the walkers
         """
-        if self.movedict['proba'] == 'uniform':
+        if self.movedict["proba"] == "uniform":
             d = torch.rand(
-                (self.nwalkers, num_elec, self.ndim), device=self.device).view(
-                self.nwalkers, num_elec * self.ndim)
-            return self.step_size * (2. * d - 1.)
+                (self.walkers.nwalkers, num_elec, self.ndim), device=self.device
+            ).view(self.walkers.nwalkers, num_elec * self.ndim)
+            out = self.step_size * (2.0 * d - 1.0)
 
-        elif self.movedict['proba'] == 'normal':
+        elif self.movedict["proba"] == "normal":
             displacement = self.multiVariate.sample(
-                (self.nwalkers, num_elec)).to(self.device)
-            return displacement.view(
-                self.nwalkers, num_elec * self.ndim)
+                (self.walkers.nwalkers, num_elec)
+            ).to(self.device)
+            out = displacement.view(self.walkers.nwalkers, num_elec * self.ndim)
+
+        return out
 
     def _accept(self, proba: torch.Tensor) -> torch.Tensor:
         """accept the move or not
@@ -250,8 +287,14 @@ class Metropolis(SamplerBase):
         Returns:
             t0rch.tensor: the indx of the accepted moves
         """
-
-        proba[proba > 1] = 1.0
-        tau = torch.rand_like(proba)
-        index = (proba - tau >= 0).reshape(-1)
-        return index.type(torch.bool)
+        if self.logspace:
+            proba[proba > 0] = 0.0
+            tau = torch.log(torch.rand_like(proba))
+            index = (proba - tau >= 0).reshape(-1)
+            out = index.type(torch.bool)
+        else:
+            proba[proba > 1] = 1.0
+            tau = torch.rand_like(proba)
+            index = (proba - tau >= 0).reshape(-1)
+            out = index.type(torch.bool)
+        return out

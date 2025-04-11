@@ -1,11 +1,11 @@
 import torch
 from torch import nn
-from torch.autograd import grad, Variable
-
+from torch.autograd import grad
+from typing import Tuple, List, Union
+from .....scf import Molecule
 
 class BackFlowKernelBase(nn.Module):
-
-    def __init__(self, mol, cuda):
+    def __init__(self, mol: Molecule, cuda: bool):
         """Compute the back flow kernel, i.e. the function
         f(rij) where rij is the distance between electron i and j
         This kernel is used in the backflow transformation
@@ -15,11 +15,11 @@ class BackFlowKernelBase(nn.Module):
         super().__init__()
         self.nelec = mol.nelec
         self.cuda = cuda
-        self.device = torch.device('cpu')
+        self.device = torch.device("cpu")
         if self.cuda:
-            self.device = torch.device('cuda')
+            self.device = torch.device("cuda")
 
-    def forward(self, ree, derivative=0):
+    def forward(self, ree: torch.Tensor, derivative: int = 0) -> torch.Tensor:
         """Computes the desired values of the kernel
          Args:
             ree (torch.tensor): e-e distance Nbatch x Nelec x Nelec
@@ -39,10 +39,9 @@ class BackFlowKernelBase(nn.Module):
             return self._backflow_kernel_second_derivative(ree)
 
         else:
-            raise ValueError(
-                'derivative of the kernel must be 0, 1 or 2')
+            raise ValueError("derivative of the kernel must be 0, 1 or 2")
 
-    def _backflow_kernel(self, ree):
+    def _backflow_kernel(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the kernel via autodiff
 
         Args:
@@ -51,10 +50,9 @@ class BackFlowKernelBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        raise NotImplementedError(
-            'Please implement the backflow kernel')
+        raise NotImplementedError("Please implement the backflow kernel")
 
-    def _backflow_kernel_derivative(self, ree):
+    def _backflow_kernel_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the first derivative of the kernel via autodiff
 
         Args:
@@ -71,7 +69,7 @@ class BackFlowKernelBase(nn.Module):
 
         return self._grad(kernel_val, ree)
 
-    def _backflow_kernel_second_derivative(self, ree):
+    def _backflow_kernel_second_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the second derivative of the kernel via autodiff
 
         Args:
@@ -84,14 +82,13 @@ class BackFlowKernelBase(nn.Module):
             ree.requires_grad = True
 
         with torch.enable_grad():
-
             kernel_val = self._backflow_kernel(ree)
             hess_val, _ = self._hess(kernel_val, ree)
 
         return hess_val
 
     @staticmethod
-    def _grad(val, ree):
+    def _grad(val, ree: torch.Tensor) -> torch.Tensor:
         """Get the gradients of the kernel.
 
         Args:
@@ -100,10 +97,10 @@ class BackFlowKernelBase(nn.Module):
         Returns:
             [type]: [description]
         """
-        return grad(val, ree, grad_outputs=torch.ones_like(val))[0]
+        return grad(val, ree, grad_outputs=torch.ones_like(val), allow_unused=False)[0]
 
     @staticmethod
-    def _hess(val, ree):
+    def _hess(val, ree: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor,torch.Tensor]]:
         """get the hessian of thekernel.
 
         Warning thos work only because the kernel term are dependent
@@ -113,11 +110,11 @@ class BackFlowKernelBase(nn.Module):
             pos ([type]): [description]
         """
 
-        gval = grad(val,
-                    ree,
-                    grad_outputs=torch.ones_like(val),
-                    create_graph=True)[0]
-
-        hval = grad(gval, ree, grad_outputs=torch.ones_like(gval))[0]
+        gval = grad(val, ree, grad_outputs=torch.ones_like(val), create_graph=True, allow_unused=False)[0]
+        hval = grad(gval, ree, grad_outputs=torch.ones_like(gval), allow_unused=True)[0]
+        
+        # if the kernel is linear, hval is None
+        if hval is None:
+            hval = torch.zeros_like(ree)
 
         return hval, gval

@@ -263,3 +263,4 @@ intersphinx_mapping = {
 autoclass_content = 'init'
 autodoc_member_order = 'bysource'
 nbsphinx_allow_errors = True
+nbsphinx_execute = 'never'

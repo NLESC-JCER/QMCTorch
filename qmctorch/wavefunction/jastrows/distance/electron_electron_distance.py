@@ -1,13 +1,19 @@
 import torch
 from torch import nn
-from .scaling import (get_scaled_distance,
-                      get_der_scaled_distance,
-                      get_second_der_scaled_distance)
+from .scaling import (
+    get_scaled_distance,
+    get_der_scaled_distance,
+    get_second_der_scaled_distance,
+)
 
 
 class ElectronElectronDistance(nn.Module):
-
-    def __init__(self, nelec, ndim=3, scale=False, scale_factor=0.6):
+    def __init__(self, 
+                 nelec: int, 
+                 ndim: int = 3, 
+                 scale: bool = False,
+                 scale_factor: float = 0.6
+                 ) -> None:
         """Computes the electron-electron distances
 
         .. math::
@@ -15,10 +21,11 @@ class ElectronElectronDistance(nn.Module):
 
         Args:
             nelec (int): number of electrons
-            ndim (int): number of spatial dimensions
-            scale(bool, optional): return scaled values, Defaults to False
-            scale_factor(float, optional): value of the scale factor,
-                                           Defaults to 0.6
+            ndim (int, optional): number of spatial dimensions.
+                Defaults to 3.
+            scale (bool, optional): return scaled values. Defaults to False.
+            scale_factor (float, optional): value of the scale factor.
+                Defaults to 0.6.
 
         Examples::
             >>> edist = ElectronDistance(2,3)
@@ -36,13 +43,17 @@ class ElectronElectronDistance(nn.Module):
 
         _type_ = torch.get_default_dtype()
         if _type_ == torch.float32:
-            self.eps = 1E-6
+            self.eps = 1e-6
         elif _type_ == torch.float64:
-            self.eps = 1E-16
+            self.eps = 1e-16
 
-    def forward(self, input, derivative=0):
+    def forward(
+        self, 
+        input: torch.Tensor, 
+        derivative: int = 0
+    ) -> torch.Tensor:
         """Compute the pairwise distance between the electrons
-        or its derivative. \n
+        or its derivative.
 
         When required, the derivative is computed wrt to the first electron i.e.
 
@@ -55,14 +66,14 @@ class ElectronElectronDistance(nn.Module):
             \\frac{d r_{ij}}{dx_j} = -\\frac{dr_{ij}}{dx_i}
 
         Args:
-            input (torch.tesnor): position of the electron \n
+            input (torch.Tensor): position of the electron 
                                   size : Nbatch x [Nelec x Ndim]
-            derivative (int, optional): degre of the derivative. \n
+            derivative (int, optional): degre of the derivative. 
                                         Defaults to 0.
 
         Returns:
-            torch.tensor: distance (or derivative) matrix \n
-                          Nbatch x Nelec x Nelec if derivative = 0 \n
+            torch.Tensor: distance (or derivative) matrix 
+                          Nbatch x Nelec x Nelec if derivative = 0 
                           Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
 
         """
@@ -79,7 +90,6 @@ class ElectronElectronDistance(nn.Module):
                 return dist
 
         elif derivative == 1:
-
             der_dist = self.get_der_distance(input_, dist)
 
             if self.scale:
@@ -88,19 +98,17 @@ class ElectronElectronDistance(nn.Module):
                 return der_dist
 
         elif derivative == 2:
-
             d2_dist = self.get_second_der_distance(input_, dist)
 
             if self.scale:
                 der_dist = self.get_der_distance(input_, dist)
-                return get_second_der_scaled_distance(self.kappa,
-                                                      dist,
-                                                      der_dist,
-                                                      d2_dist)
+                return get_second_der_scaled_distance(
+                    self.kappa, dist, der_dist, d2_dist
+                )
             else:
                 return d2_dist
 
-    def safe_sqrt(self, dist):
+    def safe_sqrt(self, dist: torch.Tensor) -> torch.Tensor:
         """Compute the square root of the electron electron distance matrix.
 
         Args:
@@ -113,21 +121,18 @@ class ElectronElectronDistance(nn.Module):
         """
 
         # epsilon on the diag needed for back prop
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+        eps_ = self.eps * torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
 
         # extact the diagonal as diag can be negative someties
         # due to numerical noise
-        diag = torch.diag_embed(
-            torch.diagonal(
-                dist, dim1=-1, dim2=-2))
+        diag = torch.diag_embed(torch.diagonal(dist, dim1=-1, dim2=-2))
 
         # remove diagonal and add eps for backprop
         dist = torch.sqrt(dist - diag + eps_)
 
         return dist
 
-    def get_der_distance(self, pos, dist):
+    def get_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
         """Get the derivative of the electron electron distance matrix.
 
         .. math::
@@ -143,16 +148,14 @@ class ElectronElectronDistance(nn.Module):
             [type]: [description]
         """
 
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(
-                dist.shape[-1])).expand_as(dist)
+        eps_ = self.eps * torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
 
-        invr = (1. / (dist + eps_)).unsqueeze(1)
+        invr = (1.0 / (dist + eps_)).unsqueeze(1)
         diff_axis = pos.transpose(1, 2).unsqueeze(3)
         diff_axis = diff_axis - diff_axis.transpose(2, 3)
         return diff_axis * invr
 
-    def get_second_der_distance(self, pos, dist):
+    def get_second_der_distance(self, pos: torch.Tensor, dist: torch.Tensor) -> torch.Tensor:
         """Get the second derivative of the electron electron distance matrix.
 
         .. math::
@@ -168,19 +171,16 @@ class ElectronElectronDistance(nn.Module):
             [type]: [description]
         """
 
-        eps_ = self.eps * \
-            torch.diag(dist.new_ones(
-                dist.shape[-1])).expand_as(dist)
-        invr3 = (1. / (dist**3 + eps_)).unsqueeze(1)
+        eps_ = self.eps * torch.diag(dist.new_ones(dist.shape[-1])).expand_as(dist)
+        invr3 = (1.0 / (dist**3 + eps_)).unsqueeze(1)
         diff_axis = pos.transpose(1, 2).unsqueeze(3)
-        diff_axis = (diff_axis - diff_axis.transpose(2, 3))**2
+        diff_axis = (diff_axis - diff_axis.transpose(2, 3)) ** 2
 
-        diff_axis = diff_axis[:, [
-            [1, 2], [2, 0], [0, 1]], ...].sum(2)
-        return (diff_axis * invr3)
+        diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
+        return diff_axis * invr3
 
     @staticmethod
-    def get_distance_quadratic(pos):
+    def get_distance_quadratic(pos: torch.Tensor) -> torch.Tensor:
         """Compute the distance following a quadratic expansion
 
         Arguments:
@@ -191,12 +191,11 @@ class ElectronElectronDistance(nn.Module):
         """
 
         norm = (pos**2).sum(-1).unsqueeze(-1)
-        dist = (norm + norm.transpose(1, 2) - 2.0 *
-                torch.bmm(pos, pos.transpose(1, 2)))
+        dist = norm + norm.transpose(1, 2) - 2.0 * torch.bmm(pos, pos.transpose(1, 2))
         return dist
 
     @staticmethod
-    def get_difference(pos):
+    def get_difference(pos: torch.Tensor) -> torch.Tensor:
         """Compute the difference ri - rj
 
         Arguments:
