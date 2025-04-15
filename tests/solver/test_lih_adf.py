@@ -7,8 +7,9 @@ import torch.optim as optim
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import Solver
 from qmctorch.scf import Molecule
-from qmctorch.wavefunction import SlaterOrbitalDependentJastrow
+from qmctorch.wavefunction import SlaterJastrow
 from qmctorch.utils import set_torch_double_precision
+from qmctorch.wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
 
 from ..path_utils import PATH_TEST
 
@@ -23,17 +24,25 @@ class TestLiHCorrelated(unittest.TestCase):
         path_hdf5 = (PATH_TEST / "hdf5/LiH_adf_dz.hdf5").absolute().as_posix()
         self.mol = Molecule(load=path_hdf5)
 
+        # jastrow
+        jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
+
         # wave function
-        self.wf = SlaterOrbitalDependentJastrow(
-            self.mol, kinetic="jacobi", configs="cas(2,2)", include_all_mo=True
+        self.wf = SlaterJastrow(
+            self.mol, 
+            kinetic="jacobi",
+            jastrow=jastrow,
+            configs="cas(2,2)", 
+            include_all_mo=True
         )
 
         # fc weights
         self.wf.fc.weight.data = torch.rand(self.wf.fc.weight.shape)
 
         # jastrow weights
-        for ker in self.wf.jastrow.jastrow_kernel.jastrow_functions:
-            ker.weight.data = torch.rand(1)
+        self.wf.jastrow.jastrow_kernel.weight.data = torch.rand(
+            self.wf.jastrow.jastrow_kernel.weight.shape
+        )
 
         # sampler
         self.sampler = Metropolis(
@@ -67,13 +76,6 @@ class TestLiHCorrelated(unittest.TestCase):
         # sample and compute observables
         obs = self.solver.single_point()
         _, _ = obs.energy, obs.variance
-
-    # def test2_wf_opt_grad_auto(self):
-    #     self.solver.sampler = self.sampler
-
-    #     self.solver.configure(track=['local_energy'],
-    #                           loss='energy', grad='auto')
-    #     obs = self.solver.run(5)
 
     def test3_wf_opt_grad_manual(self):
         self.solver.sampler = self.sampler
