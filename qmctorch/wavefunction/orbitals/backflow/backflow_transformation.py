@@ -3,7 +3,6 @@ from torch import nn
 from typing import Dict, Optional
 from ....scf import Molecule
 from .kernels.backflow_kernel_base import BackFlowKernelBase
-from .orbital_dependent_backflow_kernel import OrbitalDependentBackFlowKernel
 from ...jastrows.distance.electron_electron_distance import ElectronElectronDistance
 
 
@@ -29,12 +28,7 @@ class BackFlowTransformation(nn.Module):
         self.nelec = mol.nelec
         self.ndim = 3
 
-        if self.orbital_dependent:
-            self.backflow_kernel = OrbitalDependentBackFlowKernel(
-                backflow_kernel, backflow_kernel_kwargs, mol, cuda
-            )
-        else:
-            self.backflow_kernel = backflow_kernel(mol, cuda, **backflow_kernel_kwargs)
+        self.backflow_kernel = backflow_kernel(mol, cuda, **backflow_kernel_kwargs)
 
         self.edist = ElectronElectronDistance(mol.nelec)
 

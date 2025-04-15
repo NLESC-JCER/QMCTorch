@@ -47,7 +47,6 @@ setup(
                       'plams', 'ase', 'rdkit', 'dgllife', 'dgl'],
 
     extras_require={
-        'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme', 'nbsphinx','nbconvert','jupyter'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],
