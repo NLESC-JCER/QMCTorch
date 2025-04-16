@@ -41,7 +41,7 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         self.centers = nn.Parameter(torch.linspace(0, 10, num_rbf))
         self.centers.requires_grad = True
 
-        self.sigma = nn.Parameter(torch.ones(num_rbf))
+        self.sigma = nn.Parameter(0.25*torch.ones(num_rbf))
         self.sigma.requires_grad = True
 
         self.weight = nn.Parameter(torch.Tensor(num_rbf, 1))
@@ -49,9 +49,9 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         self.weight.requires_grad = False
 
         self.fc = nn.Linear(num_rbf, 1, bias=False)
-        self.fc.weight.data.fill_(0.0)
+        self.fc.weight.data = 1E-6 * torch.linspace(1,0,num_rbf)
+        self.bias=None
 
-        self.register_parameter('bias', None)
 
     def _gaussian_kernel(self, ree: torch.Tensor) -> torch.Tensor:
         
