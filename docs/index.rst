@@ -19,21 +19,22 @@ Quantum Monte Carlo with Pytorch
    :maxdepth: 1
    :caption: Tutorial
 
-   notebooks/molecule
-   notebooks/sampling
-   notebooks/wfopt 
-   notebooks/geoopt 
-   notebooks/gpu
+   notebooks/1_Molecule
+   notebooks/2_Sampling
+   notebooks/3_correlation
+   notebooks/4_Wavefuncion_optimization 
+   notebooks/9_Single_GPU_support
+   notebooks/11_ase_calculator
+   notebooks/12_Explore_results
 
 .. toctree::
    :maxdepth: 1
    :caption: Advanced Tutorial
 
-   notebooks/correlation
-   notebooks/create_jastrow
-   notebooks/create_backflow
-   notebooks/combining_jastrow
-   notebooks/horovod
+   notebooks/5_Neural_Jastrow
+   notebooks/6_Custom_Jastrow
+   notebooks/7_Manybody_Jastrow
+   notebooks/8_Custom_backflow
 
 
 .. toctree::
