@@ -61,7 +61,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         self.mol = Molecule(atom=at, calculator="pyscf", basis=basis, unit="bohr")
 
         backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse, orbital_dependent=False
+            self.mol, BackFlowKernelInverse
         )
 
         # define the wave function

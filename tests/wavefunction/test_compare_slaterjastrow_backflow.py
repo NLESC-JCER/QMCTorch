@@ -44,7 +44,7 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
 
         # define backflow trans
         backflow = BackFlowTransformation(
-            mol, BackFlowKernelInverse, orbital_dependent=False
+            mol, BackFlowKernelInverse
         )
 
         self.wf = SlaterJastrow(

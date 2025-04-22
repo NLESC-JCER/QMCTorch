@@ -2,7 +2,6 @@ import torch
 from torch import nn
 from typing import Optional, Dict, Union, Tuple
 from ..distance.electron_electron_distance import ElectronElectronDistance
-from .orbital_dependent_jastrow_kernel import OrbitalDependentJastrowKernel
 from .kernels.jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 from ....scf import Molecule
 
@@ -12,7 +11,6 @@ class JastrowFactorElectronElectron(nn.Module):
         mol: Molecule,
         jastrow_kernel: JastrowKernelElectronElectronBase,
         kernel_kwargs: Optional[Dict] = {},
-        orbital_dependent_kernel: Optional[bool] = False,
         number_of_orbitals: Optional[Union[int, None]] = None,
         scale: Optional[bool]=False,
         scale_factor: Optional[float]=0.6,
@@ -28,7 +26,6 @@ class JastrowFactorElectronElectron(nn.Module):
             ndow (int): number of spin down electons
             jastrow_kernel (kernel): class of a electron-electron Jastrow kernel
             kernel_kwargs (dict, optional): keyword argument of the kernel. Defaults to {}.
-            orbital_dependent_kernel (bool, optional): Make the kernel orbital dependent. Defaults to False.
             number_of_orbitals (int, optional): number of orbitals for orbital dependent kernels. Defaults to None.
             scale (bool, optional): use scaled electron-electron distance. Defaults to False.
             scale_factor (float, optional): scaling factor for elec-elec distance. Defaults to 0.6.
@@ -50,24 +47,10 @@ class JastrowFactorElectronElectron(nn.Module):
         self.requires_autograd = True
 
         # kernel function
-        if orbital_dependent_kernel:
-            # default to all orbitals if number_of_orbitals is None
-            if number_of_orbitals is None:
-                number_of_orbitals = mol.basis.nmo
-            # create the orbital dependent jastrow
-            self.jastrow_kernel = OrbitalDependentJastrowKernel(
-                mol.nup,
-                mol.ndown,
-                number_of_orbitals,
-                cuda,
-                jastrow_kernel,
-                kernel_kwargs,
-            )
-        else:
-            self.jastrow_kernel = jastrow_kernel(
-                mol.nup, mol.ndown, cuda, **kernel_kwargs
-            )
-            self.requires_autograd = self.jastrow_kernel.requires_autograd
+        self.jastrow_kernel = jastrow_kernel(
+            mol.nup, mol.ndown, cuda, **kernel_kwargs
+        )
+        self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # mask to extract the upper diag of the matrices
         self.mask_tri_up, self.index_col, self.index_row = self.get_mask_tri_up()

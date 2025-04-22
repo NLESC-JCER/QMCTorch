@@ -47,7 +47,7 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
 
         # backflow
         backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse, orbital_dependent=False
+            self.mol, BackFlowKernelInverse
         )
 
         # backflow wave function
