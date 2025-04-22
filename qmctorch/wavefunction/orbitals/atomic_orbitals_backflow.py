@@ -318,27 +318,15 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
                                         distance between elec and bas
                                         (Nbatch, Nelec, Norb)
         """
-        if self.backflow_trans.orbital_dependent:
-            # get the elec-atom vectrors/distances
-            xyz, r = self._elec_ao_dist(pos)
+        # get the elec-atom vectrors/distances
+        xyz, r = self._elec_atom_dist(pos)
 
-            if self.contract:
-                # repeat/interleave to get vector and distance between
-                # electrons and orbitals
-                xyz = xyz.repeat_interleave(self.nctr_per_ao, dim=2)
-                r = r.repeat_interleave(self.nctr_per_ao, dim=2)
-
-            return (xyz, r)
-        else:
-            # get the elec-atom vectrors/distances
-            xyz, r = self._elec_atom_dist(pos)
-
-            # repeat/interleave to get vector and distance between
-            # electrons and orbitals
-            return (
-                xyz.repeat_interleave(self.nshells, dim=2),
-                r.repeat_interleave(self.nshells, dim=2),
-            )
+        # repeat/interleave to get vector and distance between
+        # electrons and orbitals
+        return (
+            xyz.repeat_interleave(self.nshells, dim=2),
+            r.repeat_interleave(self.nshells, dim=2),
+        )
 
     def _elec_atom_dist(self, pos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the positions/distance bewteen elec/atoms
