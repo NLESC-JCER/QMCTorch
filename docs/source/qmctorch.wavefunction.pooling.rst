@@ -4,12 +4,29 @@ qmctorch.wavefunction.pooling package
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.wavefunction.pooling.orbital\_configurations module
+------------------------------------------------------------
 
-   qmctorch.wavefunction.pooling.orbital_configurations
-   qmctorch.wavefunction.pooling.orbital_projector
-   qmctorch.wavefunction.pooling.slater_pooling
+.. automodule:: qmctorch.wavefunction.pooling.orbital_configurations
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.wavefunction.pooling.orbital\_projector module
+-------------------------------------------------------
+
+.. automodule:: qmctorch.wavefunction.pooling.orbital_projector
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.wavefunction.pooling.slater\_pooling module
+----------------------------------------------------
+
+.. automodule:: qmctorch.wavefunction.pooling.slater_pooling
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

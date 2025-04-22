@@ -4,12 +4,29 @@ qmctorch.wavefunction.jastrows.distance package
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.wavefunction.jastrows.distance.electron\_electron\_distance module
+---------------------------------------------------------------------------
 
-   qmctorch.wavefunction.jastrows.distance.electron_electron_distance
-   qmctorch.wavefunction.jastrows.distance.electron_nuclei_distance
-   qmctorch.wavefunction.jastrows.distance.scaling
+.. automodule:: qmctorch.wavefunction.jastrows.distance.electron_electron_distance
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.wavefunction.jastrows.distance.electron\_nuclei\_distance module
+-------------------------------------------------------------------------
+
+.. automodule:: qmctorch.wavefunction.jastrows.distance.electron_nuclei_distance
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.wavefunction.jastrows.distance.scaling module
+------------------------------------------------------
+
+.. automodule:: qmctorch.wavefunction.jastrows.distance.scaling
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

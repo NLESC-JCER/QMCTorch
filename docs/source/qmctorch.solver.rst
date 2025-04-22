@@ -4,12 +4,29 @@ qmctorch.solver package
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.solver.loss module
+---------------------------
 
-   qmctorch.solver.solver_base
-   qmctorch.solver.solver
-   qmctorch.solver.solver_mpi
+.. automodule:: qmctorch.solver.loss
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.solver.solver module
+-----------------------------
+
+.. automodule:: qmctorch.solver.solver
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.solver.solver\_base module
+-----------------------------------
+
+.. automodule:: qmctorch.solver.solver_base
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

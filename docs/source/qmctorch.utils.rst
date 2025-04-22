@@ -4,15 +4,69 @@ qmctorch.utils package
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.utils.algebra\_utils module
+------------------------------------
 
-   qmctorch.utils.algebra_utils
-   qmctorch.utils.hdf5_utils
-   qmctorch.utils.interpolate
-   qmctorch.utils.plot_data
-   qmctorch.utils.stat_utils
-   qmctorch.utils.torch_utils
+.. automodule:: qmctorch.utils.algebra_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.constants module
+-------------------------------
+
+.. automodule:: qmctorch.utils.constants
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.hdf5\_utils module
+---------------------------------
+
+.. automodule:: qmctorch.utils.hdf5_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.interpolate module
+---------------------------------
+
+.. automodule:: qmctorch.utils.interpolate
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.plot\_data module
+--------------------------------
+
+.. automodule:: qmctorch.utils.plot_data
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.provenance module
+--------------------------------
+
+.. automodule:: qmctorch.utils.provenance
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.stat\_utils module
+---------------------------------
+
+.. automodule:: qmctorch.utils.stat_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.utils.torch\_utils module
+----------------------------------
+
+.. automodule:: qmctorch.utils.torch_utils
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

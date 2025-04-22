@@ -4,12 +4,29 @@ qmctorch.scf.calculator package
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.scf.calculator.adf module
+----------------------------------
 
-   qmctorch.scf.calculator.adf
-   qmctorch.scf.calculator.calculator_base
-   qmctorch.scf.calculator.pyscf
+.. automodule:: qmctorch.scf.calculator.adf
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.scf.calculator.calculator\_base module
+-----------------------------------------------
+
+.. automodule:: qmctorch.scf.calculator.calculator_base
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.scf.calculator.pyscf module
+------------------------------------
+
+.. automodule:: qmctorch.scf.calculator.pyscf
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

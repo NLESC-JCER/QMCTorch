@@ -1,4 +1,4 @@
-qmctorch.scf package
+qmctorch.ase package
 ====================
 
 Subpackages
@@ -7,15 +7,15 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
-   qmctorch.scf.calculator
+   qmctorch.ase.optimizer
 
 Submodules
 ----------
 
-qmctorch.scf.molecule module
-----------------------------
+qmctorch.ase.ase module
+-----------------------
 
-.. automodule:: qmctorch.scf.molecule
+.. automodule:: qmctorch.ase.ase
    :members:
    :undoc-members:
    :show-inheritance:
@@ -23,7 +23,7 @@ qmctorch.scf.molecule module
 Module contents
 ---------------
 
-.. automodule:: qmctorch.scf
+.. automodule:: qmctorch.ase
    :members:
    :undoc-members:
    :show-inheritance:

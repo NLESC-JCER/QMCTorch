@@ -12,12 +12,13 @@ Subpackages
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.wavefunction.orbitals.backflow.backflow\_transformation module
+-----------------------------------------------------------------------
 
-   qmctorch.wavefunction.orbitals.backflow.backflow_transformation
-   qmctorch.wavefunction.orbitals.backflow.orbital_dependent_backflow_kernel
-   qmctorch.wavefunction.orbitals.backflow.orbital_dependent_backflow_transformation
+.. automodule:: qmctorch.wavefunction.orbitals.backflow.backflow_transformation
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

@@ -1,23 +1,7 @@
-
-Python Interface
--------------------
+qmctorch
+========
 
 .. toctree::
-   :maxdepth: 1
-   :hidden:
+   :maxdepth: 4
 
-   qmctorch.scf
-   qmctorch.wavefunction
-   qmctorch.sampler
-   qmctorch.solver
-   qmctorch.utils
-   qmctorch.ase
-   
-
-Reference
----------------
-
-.. automodule:: qmctorch
-   :members:
-   :undoc-members:
-   :show-inheritance:
+   qmctorch
