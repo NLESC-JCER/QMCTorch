@@ -6,11 +6,13 @@ Python Interface
    :maxdepth: 1
    :hidden:
 
-   qmctorch.sampler
    qmctorch.scf
+   qmctorch.wavefunction
+   qmctorch.sampler
    qmctorch.solver
    qmctorch.utils
-   qmctorch.wavefunction
+   qmctorch.ase
+   
 
 Reference
 ---------------
