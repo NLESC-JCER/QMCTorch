@@ -24,7 +24,7 @@ class CombineJastrow(nn.Module):
         """representation of the jastrow factor"""
         out = []
         for term in self.jastrow_terms:
-            out.append(term.jastrow_kernel.__class__.__name__)
+            out.append(term.__repr__())
 
         return " + ".join(out)
 
