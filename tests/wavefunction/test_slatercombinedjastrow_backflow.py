@@ -7,17 +7,21 @@ from .base_test_cases import BaseTestCases
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 
-from qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms import (
-    JastrowFactorCombinedTerms,
+from qmctorch.wavefunction.jastrows.combine_jastrow import (
+    CombineJastrow,
 )
-from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import (
-    PadeJastrowKernel as PadeJastrowKernelElecNuc,
-)
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import (
-    PadeJastrowKernel as PadeJastrowKernelElecElec,
-)
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import (
-    BoysHandyJastrowKernel,
+
+from qmctorch.wavefunction.jastrows.elec_elec import (
+    JastrowFactor as JastrowFactorElecElec, 
+    PadeJastrowKernel as  ElecElecKernel)
+
+from qmctorch.wavefunction.jastrows.elec_nuclei import (
+    JastrowFactor as JastrowFactorElecNuclei, 
+    PadeJastrowKernel as ElecNucleiKernel)
+
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
+    BoysHandyJastrowKernel as ElecElecNucleiKernel,
+    JastrowFactor as JastrowFactorElecElecNuc
 )
 
 from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
@@ -48,15 +52,15 @@ class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
         )
 
         # define jastrow factor
-        jastrow = JastrowFactorCombinedTerms(
-            mol,
-            jastrow_kernel={
-                "ee": PadeJastrowKernelElecElec,
-                "en": PadeJastrowKernelElecNuc,
-                "een": BoysHandyJastrowKernel,
-            },
-            jastrow_kernel_kwargs={"ee": {"w": 1.0}, "en": {"w": 1.0}, "een": {}},
-        )
+        jastrow_ee = JastrowFactorElecElec(
+            mol, ElecElecKernel, kernel_kwargs={'w':1.})
+
+        jastrow_en = JastrowFactorElecNuclei(
+            mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
+        
+        jastrow_een = JastrowFactorElecElecNuc(mol, ElecElecNucleiKernel)
+
+        jastrow = CombineJastrow([jastrow_ee, jastrow_en, jastrow_een])
 
         # define backflow trans
         backflow = BackFlowTransformation(mol, BackFlowKernelInverse)

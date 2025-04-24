@@ -11,7 +11,6 @@ class JastrowFactorElectronElectron(nn.Module):
         mol: Molecule,
         jastrow_kernel: JastrowKernelElectronElectronBase,
         kernel_kwargs: Optional[Dict] = {},
-        number_of_orbitals: Optional[Union[int, None]] = None,
         scale: Optional[bool]=False,
         scale_factor: Optional[float]=0.6,
         cuda: Optional[bool]=False,
@@ -26,7 +25,6 @@ class JastrowFactorElectronElectron(nn.Module):
             ndow (int): number of spin down electons
             jastrow_kernel (kernel): class of a electron-electron Jastrow kernel
             kernel_kwargs (dict, optional): keyword argument of the kernel. Defaults to {}.
-            number_of_orbitals (int, optional): number of orbitals for orbital dependent kernels. Defaults to None.
             scale (bool, optional): use scaled electron-electron distance. Defaults to False.
             scale_factor (float, optional): scaling factor for elec-elec distance. Defaults to 0.6.
             cuda (bool, optional): use cuda. Defaults to False.

@@ -1,10 +1,12 @@
+from typing import List, Union
+import torch
 from torch import nn
 from functools import reduce
 
 
 class CombineJastrow(nn.Module):
-    def __init__(self, jastrow):
-        """[summary]
+    def __init__(self, jastrow: List[nn.Module]) -> None:
+        """Combine several Jastrow Factors 
 
         Args:
             jastrow (list) : list of jastrow factor
@@ -24,12 +26,16 @@ class CombineJastrow(nn.Module):
         """representation of the jastrow factor"""
         out = []
         for term in self.jastrow_terms:
-            out.append(term.jastrow_kernel.__class__.__name__)
+            out.append(term.__repr__())
 
         return " + ".join(out)
 
-    def forward(self, pos, derivative=0, sum_grad=True):
-        """Compute the Jastrow factors.
+    def forward(self, 
+                pos: torch.Tensor, 
+                derivative: int = 0, 
+                sum_grad: bool = True
+                ) -> Union[torch.Tensor, List[torch.Tensor]]:
+        """Compute the Jastrow factors and/or its derivatives
 
         Args:
             pos(torch.tensor): Positions of the electrons
@@ -38,15 +44,13 @@ class CombineJastrow(nn.Module):
               Defaults to 0.
             sum_grad(bool, optional): Return the sum_grad(i.e. the sum of
                                                            the derivatives)
-              terms. Defaults to True.
-                False only for derivative = 1
 
         Returns:
             torch.tensor: value of the jastrow parameter for all confs
               derivative = 0  (Nmo) x Nbatch x 1
-               derivative = 1  (Nmo) x Nbatch x Nelec
+              derivative = 1  (Nmo) x Nbatch x Nelec
                   (for sum_grad = True)
-                derivative = 1  (Nmo) x Nbatch x Ndim x Nelec
+              derivative = 1  (Nmo) x Nbatch x Ndim x Nelec
                   (for sum_grad = False)
         """
         if derivative == 0:
@@ -103,7 +107,7 @@ class CombineJastrow(nn.Module):
             raise ValueError("derivative not understood")
 
     @staticmethod
-    def get_combined_values(jast_vals):
+    def get_combined_values(jast_vals: List[torch.Tensor]) -> torch.Tensor:
         """Compute the product of all terms in jast_vals."""
         if len(jast_vals) == 1:
             return jast_vals[0]
@@ -111,11 +115,26 @@ class CombineJastrow(nn.Module):
             return reduce(lambda x, y: x * y, jast_vals)
 
     @staticmethod
-    def get_derivative_combined_values(jast_vals, djast_vals):
-        """Compute the derivative of the product.
-        .. math:
+    def get_derivative_combined_values(
+        jast_vals: List[torch.Tensor], 
+        djast_vals: List[torch.Tensor]
+        ) -> torch.Tensor:
+        """Compute the derivative of the product of Jastrow terms.
+
+        This function calculates the first derivative of a product of Jastrow
+        factors with respect to their input variables. The computation is based
+        on the formula:
+
+        .. math::
             J = A * B * C
             \\frac{d J}{dx} = \\frac{d A}{dx} B C + A \\frac{d B}{dx} C + A B \\frac{d C}{dx}
+
+        Args:
+            jast_vals (List[torch.Tensor]): List of Jastrow values.
+            djast_vals (List[torch.Tensor]): List of first derivatives of Jastrow values.
+
+        Returns:
+            torch.Tensor: The derivative of the product of Jastrow terms.
         """
         if len(djast_vals) == 1:
             return djast_vals[0]
@@ -129,13 +148,31 @@ class CombineJastrow(nn.Module):
             return out
 
     @staticmethod
-    def get_second_derivative_combined_values(jast_vals, djast_vals, d2jast_vals):
-        """Compute the derivative of the product.
-        .. math:
+    def get_second_derivative_combined_values(
+        jast_vals: List[torch.Tensor], 
+        djast_vals: List[torch.Tensor], 
+        d2jast_vals: List[torch.Tensor]
+        ) -> torch.Tensor:
+        """Compute the second derivative of the product of Jastrow terms.
+
+        This function calculates the second derivative of a product of Jastrow
+        factors with respect to their input variables. The computation is based
+        on the formula:
+
+        .. math::
             J = A * B * C
             \\frac{d^2 J}{dx^2} = \\frac{d^2 A}{dx^2} B C + A \\frac{d^2 B}{dx^2} C + A B \\frac{d^2 C}{dx^2} \\
-                               + 2( \\frac{d A}{dx} \\frac{dB}{dx} C + \\frac{d A}{dx} B \\frac{dC}{dx} + A \\frac{d B}{dx} \\frac{dC}{dx} )
+                            + 2( \\frac{d A}{dx} \\frac{dB}{dx} C + \\frac{d A}{dx} B \\frac{dC}{dx} + A \\frac{d B}{dx} \\frac{dC}{dx} )
+
+        Args:
+            jast_vals (List[torch.Tensor]): List of Jastrow values.
+            djast_vals (List[torch.Tensor]): List of first derivatives of Jastrow values.
+            d2jast_vals (List[torch.Tensor]): List of second derivatives of Jastrow values.
+
+        Returns:
+            torch.Tensor: The combined second derivative of the Jastrow factors.
         """
+
         if len(d2jast_vals) == 1:
             return d2jast_vals[0]
 

@@ -4,17 +4,20 @@ import numpy as np
 import torch
 from torch.autograd import Variable, grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms import (
-    JastrowFactorCombinedTerms,
+from qmctorch.wavefunction.jastrows.combine_jastrow import (
+    CombineJastrow,
 )
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import (
-    PadeJastrowKernel as PadeJastrowKernelElecElec,
-)
-from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import (
-    PadeJastrowKernel as PadeJastrowKernelElecNuc,
-)
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import (
-    BoysHandyJastrowKernel,
+from qmctorch.wavefunction.jastrows.elec_elec import (
+    JastrowFactor as JastrowFactorElecElec, 
+    PadeJastrowKernel as  ElecElecKernel)
+
+from qmctorch.wavefunction.jastrows.elec_nuclei import (
+    JastrowFactor as JastrowFactorElecNuclei, 
+    PadeJastrowKernel as ElecNucleiKernel)
+
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
+    BoysHandyJastrowKernel as ElecElecNucleiKernel,
+    JastrowFactor as JastrowFactorElecElecNuc
 )
 from qmctorch.utils import set_torch_double_precision
 
@@ -53,15 +56,16 @@ class TestJastrowCombinedTerms(unittest.TestCase):
             nup=self.nup, ndown=self.ndown, atom_coords=self.atoms
         )
 
-        self.jastrow = JastrowFactorCombinedTerms(
-            self.mol,
-            jastrow_kernel={
-                "ee": PadeJastrowKernelElecElec,
-                "en": PadeJastrowKernelElecNuc,
-                "een": BoysHandyJastrowKernel,
-            },
-            jastrow_kernel_kwargs={"ee": {"w": 1.0}, "en": {"w": 1.0}, "een": {}},
-        )
+        jastrow_ee = JastrowFactorElecElec(
+            self.mol, ElecElecKernel, kernel_kwargs={'w':1.}
+            )
+
+        jastrow_en = JastrowFactorElecNuclei(
+            self.mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
+        
+        jastrow_een = JastrowFactorElecElecNuc(self.mol, ElecElecNucleiKernel)
+
+        self.jastrow = CombineJastrow([jastrow_ee, jastrow_en, jastrow_een])
 
         self.nbatch = 5
 

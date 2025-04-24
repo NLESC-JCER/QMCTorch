@@ -384,6 +384,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             pos ([type]): [description]
         """
 
+        @torch.enable_grad()
         def hess(out, pos):
             # compute the jacobian
             z = Variable(torch.ones_like(out))
@@ -402,6 +403,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                     grad_outputs=z,
                     only_inputs=True,
                     create_graph=True,
+                    retain_graph=True
                 )[0]
 
                 hess[:, idim] = tmp[:, idim]
