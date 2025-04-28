@@ -351,13 +351,18 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return hess_jast * jast.unsqueeze(-1)
 
-    def partial_derivative(self, djast: torch.Tensor) -> torch.Tensor:
-        """[summary]
+    def partial_derivative(self, djast: torch.Tensor) -> torch.Tensor:        
+        """
+        Compute the partial derivative of the jastrow factor
 
         Args:
-            djast ([type]): [description]
-        """
+            djast (torch.tensor): derivative of the jastrow elements
+                                  Nbatch x Ndim x Nelec x Nelec x 3
 
+        Returns:
+            torch.tensor: diagonal hessian of the jastrow factors
+                          Nbatch x Nelec x Ndim
+        """
         # create the output vector with size nbatch x nelec
         out_shape = list(djast.shape[:-2]) + [self.nelec]
         out = torch.zeros(out_shape).to(self.device)
@@ -376,12 +381,23 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                                               pos: torch.Tensor, 
                                               jast: Union[None, torch.Tensor] = None
                                               ) -> torch.Tensor:
-        """Compute the second derivative of the jastrow factor automatically.
-        This is needed for complicate kernels where the partial derivatives of
-        the kernels are difficult to organize in a total derivaitve e.e Boys-Handy
+        """
+        Compute the second derivative of the Jastrow factor using automatic differentiation.
+
+        This function utilizes PyTorch's automatic differentiation capabilities to compute
+        the Hessian of the Jastrow factor with respect to the electron positions. It calculates
+        the diagonal elements of the Hessian matrix, which correspond to the second derivatives
+        along each dimension.
 
         Args:
-            pos ([type]): [description]
+            pos (torch.Tensor): Positions of the electrons, with shape (Nbatch, Nelec * Ndim).
+            jast (Union[None, torch.Tensor], optional): Precomputed Jastrow factor values.
+                If None, the Jastrow factor is computed within the function. Defaults to None.
+
+        Returns:
+            torch.Tensor: The summed diagonal elements of the Hessian matrix, with shape
+                        (Nbatch, Nelec), representing the second derivative of the Jastrow
+                        factor for each electron.
         """
 
         @torch.enable_grad()
