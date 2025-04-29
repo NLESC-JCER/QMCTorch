@@ -10,8 +10,6 @@ from qmctorch.utils.torch_utils import diagonal_hessian as hess
 set_torch_double_precision()
 
 
-
-
 class TestThreeBodyFullyConnected(unittest.TestCase):
     def setUp(self):
         torch.manual_seed(0)
