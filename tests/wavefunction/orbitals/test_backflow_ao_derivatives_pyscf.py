@@ -12,29 +12,11 @@ from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
 )
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 from qmctorch.utils import set_torch_double_precision
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 set_torch_double_precision()
 
 torch.manual_seed(101)
 np.random.seed(101)
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
 
 
 def hess_single_element(out, inp):

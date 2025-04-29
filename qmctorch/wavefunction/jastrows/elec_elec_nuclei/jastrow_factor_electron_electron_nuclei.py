@@ -404,9 +404,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         def hess(out, pos):
             # compute the jacobian
             z = Variable(torch.ones_like(out))
-            jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[
-                0
-            ]
+            jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
             # compute the diagonal element of the Hessian
             z = Variable(torch.ones(jacob.shape[0])).to(self.device)

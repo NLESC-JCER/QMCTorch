@@ -4,25 +4,7 @@ import torch
 from torch.autograd import grad, Variable
 
 from qmctorch.wavefunction.orbitals.spherical_harmonics import Harmonics
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 
 
 def hess_mixed_terms(out, pos):
