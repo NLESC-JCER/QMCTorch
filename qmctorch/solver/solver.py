@@ -303,7 +303,7 @@ class Solver(SolverBase):
 
                 # get the gradient
                 loss, eloc = self.evaluate_gradient(lpos)
-                cumulative_loss += loss
+                cumulative_loss += loss.item()
 
                 # check for nan
                 if torch.isnan(eloc).any():
