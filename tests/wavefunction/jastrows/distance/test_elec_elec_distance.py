@@ -3,27 +3,8 @@ from torch.autograd import Variable, grad
 from qmctorch.wavefunction.jastrows.distance import ElectronElectronDistance
 import unittest
 from qmctorch.utils import set_torch_double_precision
-
 set_torch_double_precision()
 
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
 
 
 class TestElecElecDistance(unittest.TestCase):

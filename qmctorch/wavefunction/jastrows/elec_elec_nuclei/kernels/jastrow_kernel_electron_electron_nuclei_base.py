@@ -2,7 +2,7 @@ import torch
 from torch import nn
 from torch.autograd import grad
 from torch.autograd.variable import Variable
-
+from .....utils import gradients
 
 class JastrowKernelElectronElectronNucleiBase(nn.Module):
     def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, **kwargs) -> None:
@@ -46,7 +46,7 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         """Get the elements of the derivative of the jastrow kernels."""
 
         kernel = self.forward(r)
-        ker_grad = self._grads(kernel, r)
+        ker_grad = gradients(kernel, r)
 
         # return the ker * dr
         out = ker_grad.unsqueeze(1) * dr
@@ -67,28 +67,20 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
         return jhess
 
     @staticmethod
-    def _grads(val, pos: torch.Tensor) -> torch.Tensor:
-        """Get the gradients of the jastrow values
-        of a given orbital terms
+    def _hess(val, pos: torch.Tensor, device: torch.device) -> torch.Tensor:
+        """
+        Compute the hessian of the jastrow values.
 
         Args:
-            pos ([type]): [description]
+            val (torch.tensor): values of the jastrow kernel
+            pos (torch.tensor): positions of the electrons and atoms
+            device (torch.device): device to place the output tensors
 
         Returns:
-            [type]: [description]
+            torch.tensor: hessian of the jastrow values
+            torch.tensor: gradient of the jastrow values
         """
-        return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
-
-    @staticmethod
-    def _hess(val, pos: torch.Tensor, device: torch.device) -> torch.Tensor:
-        """get the hessian of the jastrow values.
-
-        Args:
-            pos ([type]): [description]
-        """
-
         gval = grad(val, pos, grad_outputs=torch.ones_like(val), create_graph=True)[0]
-
         grad_out = Variable(torch.ones(*gval.shape[:-1])).to(device)
         hval = torch.zeros_like(gval).to(device)
 
@@ -102,4 +94,4 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
             )[0]
             hval[..., idim] = tmp[..., idim]
 
-        return hval, gval
+        return hval, gval.detach()

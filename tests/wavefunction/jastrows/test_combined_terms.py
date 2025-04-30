@@ -20,28 +20,8 @@ from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
     JastrowFactor as JastrowFactorElecElecNuc
 )
 from qmctorch.utils import set_torch_double_precision
-
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 set_torch_double_precision()
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
-
 
 class TestJastrowCombinedTerms(unittest.TestCase):
     def setUp(self):
@@ -88,7 +68,7 @@ class TestJastrowCombinedTerms(unittest.TestCase):
 
     def test_hess_jastrow(self):
         val = self.jastrow(self.pos)
-        d2val_grad = hess(val, self.pos)
+        d2val_grad, _ = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
 
         assert torch.allclose(d2val.sum(), d2val_grad.sum())

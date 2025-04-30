@@ -90,11 +90,6 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
             dz_r0_fd = np.gradient(r0, self.dz)
             delta = np.delete(np.abs(dz_r0 - dz_r0_fd), np.s_[450:550])
 
-            # plt.plot(r0)
-            # plt.plot(dz_r0)
-            # plt.plot(dz_r0_fd)
-            # plt.show()
-
             assert np.all(delta < 1e-3)
 
     def test_laplacian(self, eps=1e-4):
@@ -148,10 +143,6 @@ class TestCartesianHarmonicsADF(unittest.TestCase):
             delta = np.delete(np.abs(lap_analytic - lap_fd), np.s_[450:550])
 
             assert np.all(delta < 5e-3)
-
-            # plt.plot(lap_analytic, linewidth=2)
-            # plt.plot(lap_fd)
-            # plt.show()
 
     def test_lap_sum(self):
         npts = 100

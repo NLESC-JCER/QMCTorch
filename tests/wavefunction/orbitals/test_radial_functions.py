@@ -7,25 +7,7 @@ from qmctorch.wavefunction.orbitals.radial_functions import (
 )
 import torch
 from torch.autograd import grad, Variable
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 
 
 def hess_mixed_terms(out, pos):
@@ -128,7 +110,7 @@ class TestRadialFunctions(unittest.TestCase):
                 r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2, sum_hess=True
             )
 
-            val_lap_auto = hess(val, self.xyz)
+            val_lap_auto, _ = hess(val, self.xyz)
 
             assert torch.allclose(val_lap.sum(-1), val_lap_sum, atol=1e-6)
 

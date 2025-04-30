@@ -60,10 +60,7 @@ def fast_power(
     return out
 
 
-def gradients(
-    out: torch.Tensor,
-    inp: torch.Tensor,
-) -> torch.Tensor:
+def gradients(out: torch.Tensor, inp: torch.Tensor) -> torch.Tensor:
     """
     Return the gradients of out wrt inp
 
@@ -74,13 +71,29 @@ def gradients(
     Returns:
         torch.Tensor: Gradient of out wrt inp
     """
-    return grad(out, inp, grad_outputs=torch.ones_like(out))
+    gval = grad(out, inp, grad_outputs=torch.ones_like(out))[0]
+    return gval.detach()
 
+
+def hessian(out: torch.Tensor, inp: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """
+    Compute the Hessian and the gradient of `out` wrt `inp`.
+
+    Args:
+        out (torch.Tensor): The output tensor.
+        inp (torch.Tensor): The input tensor.
+
+    Returns:
+        Tuple[torch.Tensor, torch.Tensor]: The Hessian and the gradient.
+    """
+    gval = grad(out, inp, grad_outputs=torch.ones_like(out), create_graph=True)[0]
+    hval = grad(gval, inp, grad_outputs=torch.ones_like(gval))[0]
+
+    return hval, gval.detach()
 
 def diagonal_hessian(
         out: torch.Tensor, 
-        inp: torch.Tensor, 
-        return_grads: bool = False
+        inp: torch.Tensor,
     ) -> torch.Tensor:
     """Return the diagonal Hessian of `out` with respect to `inp`.
 
@@ -94,28 +107,28 @@ def diagonal_hessian(
         torch.Tensor (optional): Gradients of `out` with respect to `inp` if `return_grads` is True.
     """
     # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, inp, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    if return_grads:
-        grads = jacob.detach()
+    jacob = grad(out, 
+                 inp, 
+                 grad_outputs=torch.ones_like(out), 
+                 only_inputs=True, 
+                 create_graph=True)[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
+    hess = torch.zeros_like(jacob)
 
     for idim in range(jacob.shape[1]):
         tmp = grad(
-            jacob[:, idim], inp, grad_outputs=z, only_inputs=True, create_graph=True
+            jacob[:, idim], 
+            inp, 
+            grad_outputs=z, 
+            only_inputs=True, 
+            create_graph=True
         )[0]
 
         hess[:, idim] = tmp[:, idim]
 
-    if return_grads:
-        return hess, grads
-
-    else:
-        return hess
+    return hess, jacob.detach()
 
 
 class DataSet(Dataset):

@@ -4,29 +4,11 @@ import torch
 from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.utils import set_torch_double_precision
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 set_torch_double_precision()
 
 torch.manual_seed(101)
 np.random.seed(101)
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
 
 
 def hess_single_element(out, inp):
@@ -160,7 +142,7 @@ class BaseTestCases:
             )
 
             # computes the the derivative of the kernal values with autograd
-            d2bf_kernel_auto = hess(bf_kernel, self.pos)
+            d2bf_kernel_auto, _ = hess(bf_kernel, self.pos)
 
             # checksum
             assert torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum())
@@ -210,7 +192,7 @@ class BaseTestCases:
 
             # compute der of the backflow pos wrt the
             # original pos using autograd
-            d2q_auto = hess(q, self.pos)
+            d2q_auto, _ = hess(q, self.pos)
 
             # checksum
             assert torch.allclose(d2q.sum(), d2q_auto.sum())
