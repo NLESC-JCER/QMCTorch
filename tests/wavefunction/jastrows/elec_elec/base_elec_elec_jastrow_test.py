@@ -66,7 +66,7 @@ class BaseTestJastrow:
 
         def test_hess_jastrow(self):
             val = self.jastrow(self.pos)
-            d2val_grad = hess(val, self.pos)
+            d2val_grad, _ = hess(val, self.pos)
             d2val = self.jastrow(self.pos, derivative=2)
 
             assert torch.allclose(

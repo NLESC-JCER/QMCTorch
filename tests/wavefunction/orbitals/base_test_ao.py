@@ -65,7 +65,7 @@ class BaseTestAO:
         def test_ao_hess(self):
             ao = self.ao(self.pos)
             d2ao = self.ao(self.pos, derivative=2)
-            d2ao_grad = hess(ao, self.pos)
+            d2ao_grad, _ = hess(ao, self.pos)
             assert torch.allclose(d2ao.sum(), d2ao_grad.sum())
 
         def test_ao_hess_sum(self):

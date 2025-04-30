@@ -72,7 +72,8 @@ class TestThreeBodyFullyConnected(unittest.TestCase):
 
     def test_hess_jastrow(self):
         val = self.jastrow(self.pos)
-        d2val_grad = hess(val, self.pos).view(self.nbatch, self.nelec, 3).sum(2)
+        d2val_grad, _ = hess(val, self.pos)
+        d2val_grad = d2val_grad.view(self.nbatch, self.nelec, 3).sum(2)
         d2val = self.jastrow(self.pos, derivative=2)
         print(d2val_grad)
         print(d2val)

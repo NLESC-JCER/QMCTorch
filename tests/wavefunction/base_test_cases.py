@@ -74,7 +74,7 @@ class BaseTestCases:
             """Hessian of the MOs."""
             val = self.wf.pos2mo(self.pos)
 
-            d2val_grad = hess(val, self.pos)
+            d2val_grad, _ = hess(val, self.pos)
             d2val = self.wf.pos2mo(self.pos, derivative=2)
 
             assert torch.allclose(d2val.sum(), d2val_grad.sum())
@@ -154,7 +154,7 @@ class BaseTestCases:
             """Hessian of the MOs."""
             val = self.wf.pos2mo(self.pos)
 
-            d2val_grad = hess(val, self.pos)
+            d2val_grad, _ = hess(val, self.pos)
             d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
             d2val = self.wf.ao2mo(d2ao)
 

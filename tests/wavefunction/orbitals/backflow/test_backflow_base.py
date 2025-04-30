@@ -142,7 +142,7 @@ class BaseTestCases:
             )
 
             # computes the the derivative of the kernal values with autograd
-            d2bf_kernel_auto = hess(bf_kernel, self.pos)
+            d2bf_kernel_auto, _ = hess(bf_kernel, self.pos)
 
             # checksum
             assert torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum())
@@ -192,7 +192,7 @@ class BaseTestCases:
 
             # compute der of the backflow pos wrt the
             # original pos using autograd
-            d2q_auto = hess(q, self.pos)
+            d2q_auto, _ = hess(q, self.pos)
 
             # checksum
             assert torch.allclose(d2q.sum(), d2q_auto.sum())

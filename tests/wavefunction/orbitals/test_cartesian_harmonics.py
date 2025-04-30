@@ -89,7 +89,7 @@ class TestCartesianHarmonics(unittest.TestCase):
         xyz, _ = self.process_position()
         val_hess = self.harmonics(xyz, derivative=2)
         val = self.harmonics(xyz)
-        val_hess_auto = hess(val, self.pos)
+        val_hess_auto, _ = hess(val, self.pos)
 
         assert torch.allclose(val_hess.sum(), val_hess_auto.sum(), atol=1e-6)
 

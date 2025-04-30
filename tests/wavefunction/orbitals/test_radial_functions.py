@@ -110,7 +110,7 @@ class TestRadialFunctions(unittest.TestCase):
                 r, self.bas_n, self.bas_exp, xyz=xyz, derivative=2, sum_hess=True
             )
 
-            val_lap_auto = hess(val, self.xyz)
+            val_lap_auto, _ = hess(val, self.xyz)
 
             assert torch.allclose(val_lap.sum(-1), val_lap_sum, atol=1e-6)
 
