@@ -66,8 +66,7 @@ class ElectronNucleiDistance(nn.Module):
 
         # get the distance matrices
         input_ = input.view(-1, self.nelec, self.ndim)
-        dist = self._get_distance_quadratic(input_, self.atoms)
-        dist = torch.sqrt(dist)
+        dist = torch.cdist(input_, self.atoms)
 
         if derivative == 0:  # pylint: disable=no-else-return
             if self.scale:
@@ -135,18 +134,3 @@ class ElectronNucleiDistance(nn.Module):
         diff_axis = diff_axis[:, [[1, 2], [2, 0], [0, 1]], ...].sum(2)
 
         return diff_axis * invr3
-
-    @staticmethod
-    def _get_distance_quadratic(elec_pos: torch.Tensor, atom_pos: torch.Tensor) -> torch.Tensor:
-        """Compute the distance following a quadratic expansion
-
-        Arguments:
-            input {torch.tensor} -- electron position [nbatch x nelec x ndim]
-
-        Returns:
-            torch.tensor -- distance matrices nbatch x nelec x ndim]
-        """
-        norm = (elec_pos**2).sum(-1).unsqueeze(-1)
-        norm_atom = (atom_pos**2).sum(-1).unsqueeze(-1).T
-        dist = norm + norm_atom - 2.0 * elec_pos @ atom_pos.T
-        return dist
