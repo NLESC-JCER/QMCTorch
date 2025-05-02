@@ -38,7 +38,7 @@ class TestH2SamplerMH(BaseTestSolvers.BaseTestSolverMolecule):
 
         # wave function
         self.wf = SlaterJastrow(
-            self.mol, kinetic="auto", configs="single(2,2)", jastrow=jastrow
+            self.mol, kinetic="jacobi", configs="single(2,2)", jastrow=jastrow
         )
 
         # sampler

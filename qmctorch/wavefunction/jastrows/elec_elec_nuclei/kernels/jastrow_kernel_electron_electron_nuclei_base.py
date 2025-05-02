@@ -45,8 +45,12 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
     def compute_derivative(self, r: torch.Tensor, dr: torch.Tensor) -> torch.Tensor:
         """Get the elements of the derivative of the jastrow kernels."""
 
-        kernel = self.forward(r)
-        ker_grad = gradients(kernel, r)
+        if r.requires_grad is False:
+            r.requires_grad = True
+
+        with torch.enable_grad():
+            kernel = self.forward(r)
+            ker_grad = gradients(kernel, r)
 
         # return the ker * dr
         out = ker_grad.unsqueeze(1) * dr
@@ -59,10 +63,13 @@ class JastrowKernelElectronElectronNucleiBase(nn.Module):
 
         dr2 = dr * dr
 
-        kernel = self.forward(r)
-        ker_hess, ker_grad = self._hess(kernel, r, self.device)
+        if r.requires_grad == False:
+            r.requires_grad = True
 
-        jhess = ker_hess.unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
+        with torch.enable_grad():
+            kernel = self.forward(r)
+            ker_hess, ker_grad = self._hess(kernel, r, self.device)
+            jhess = ker_hess.unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
 

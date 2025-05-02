@@ -101,7 +101,6 @@ class JastrowKernelElectronElectronBase(nn.Module):
         with torch.enable_grad():
             kernel = self.forward(r)
             ker_hess, ker_grad = hessian(kernel, r)
-
             jhess = (ker_hess).unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess

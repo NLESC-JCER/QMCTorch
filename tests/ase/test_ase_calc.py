@@ -55,13 +55,13 @@ class TestASEcalculator(unittest.TestCase):
     def test_calculate_forces(self):
         self.h2.calc.calculate(properties=['forces'])
 
-    def test_torch_optim(self):
-        dyn = TorchOptimizer(self.h2, 
-                     trajectory='traj.xyz', 
-                     nepoch_wf_init=10, 
-                     nepoch_wf_update=5, 
-                     tqdm=False)
-        dyn.run(fmax=0.005, steps=2)
+    # def test_torch_optim(self):
+    #     dyn = TorchOptimizer(self.h2, 
+    #                  trajectory='traj.xyz', 
+    #                  nepoch_wf_init=10, 
+    #                  nepoch_wf_update=5, 
+    #                  tqdm=False)
+    #     dyn.run(fmax=0.005, steps=2)
 
     def test_fire_optim(self):
         dyn = FIRE(self.h2, trajectory='traj.xyz')

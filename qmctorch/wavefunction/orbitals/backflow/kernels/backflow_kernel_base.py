@@ -91,15 +91,3 @@ class BackFlowKernelBase(nn.Module):
             hess_val = torch.zeros_like(ree)
 
         return hess_val
-
-    @staticmethod
-    def _grad(val, ree: torch.Tensor) -> torch.Tensor:
-        """Get the gradients of the kernel.
-
-        Args:
-            ree ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        return grad(val, ree, grad_outputs=torch.ones_like(val), allow_unused=False)[0]

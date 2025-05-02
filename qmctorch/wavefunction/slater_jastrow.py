@@ -500,8 +500,7 @@ class SlaterJastrow(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
-        silent_timer = True
-
+        
         # get ao values
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 
@@ -629,17 +628,6 @@ class SlaterJastrow(WaveFunction):
             xyz = self.ao.atom_coords[iat, :].cpu().detach().numpy() * convert
             d.append(xyz.tolist())
         return d
-    
-    def forces(self) -> torch.Tensor:
-        """
-        Returns the gradient of the atomic coordinates with respect to the wave function.
-
-        Returns
-        -------
-        torch.Tensor
-            The gradient of the atomic coordinates as a PyTorch tensor.
-        """
-        return self.ao.atom_coords.grad
 
     def gto2sto(self, plot: Optional[bool] = False) -> Self:
         """Fits the AO GTO to AO STO.
