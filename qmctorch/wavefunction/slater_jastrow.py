@@ -501,70 +501,70 @@ class SlaterJastrow(WaveFunction):
             torch.tensor: values of the kinetic energy at each sampling points
         """
         
-        with torch.no_grad():
-            # get ao values
-            ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
+        # with torch.no_grad():
+        # get ao values
+        ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 
-            # get the mo values
-            mo = self.ao2mo(ao)
-            dmo = self.ao2mo(dao)
-            d2mo = self.ao2mo(d2ao)
+        # get the mo values
+        mo = self.ao2mo(ao)
+        dmo = self.ao2mo(dao)
+        d2mo = self.ao2mo(d2ao)
 
-            # precompute the inverse of the MOs
-            inv_mo = self.pool.compute_inverse_occupied_mo_matrix(mo)
-            
-            # compute the value of the slater det
-            slater_dets = self.pool(mo)
-            sum_slater_dets = self.fc(slater_dets)
+        # precompute the inverse of the MOs
+        inv_mo = self.pool.compute_inverse_occupied_mo_matrix(mo)
+        
+        # compute the value of the slater det
+        slater_dets = self.pool(mo)
+        sum_slater_dets = self.fc(slater_dets)
 
-            # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
-            hess = self.pool.operator(mo, d2mo, inv_mo=inv_mo)
+        # compute ( tr(A_u^-1\Delta A_u) + tr(A_d^-1\Delta A_d) )
+        hess = self.pool.operator(mo, d2mo, inv_mo=inv_mo)
 
-            # compute (tr(A_u^-1\nabla A_u) and tr(A_d^-1\nabla A_d))
-            grad = self.pool.operator(mo, dmo, op=None, inv_mo=inv_mo)
+        # compute (tr(A_u^-1\nabla A_u) and tr(A_d^-1\nabla A_d))
+        grad = self.pool.operator(mo, dmo, op=None, inv_mo=inv_mo)
 
-            # compute (tr((A_u^-1\nabla A_u)^2) + tr((A_d^-1\nabla A_d))^2)
-            grad2 = self.pool.operator(mo, dmo, op_squared=True, inv_mo=inv_mo)
+        # compute (tr((A_u^-1\nabla A_u)^2) + tr((A_d^-1\nabla A_d))^2)
+        grad2 = self.pool.operator(mo, dmo, op_squared=True, inv_mo=inv_mo)
 
-            # assemble the total second derivative term
-            hess = (
-                hess.sum(0)
-                + operator.add(*[(g**2).sum(0) for g in grad])
-                - grad2.sum(0)
-                + 2 * operator.mul(*grad).sum(0)
-            )
-            
-            hess = self.fc(hess * slater_dets) / sum_slater_dets
+        # assemble the total second derivative term
+        hess = (
+            hess.sum(0)
+            + operator.add(*[(g**2).sum(0) for g in grad])
+            - grad2.sum(0)
+            + 2 * operator.mul(*grad).sum(0)
+        )
+        
+        hess = self.fc(hess * slater_dets) / sum_slater_dets
 
-            if self.use_jastrow is False:
-                return -0.5 * hess
+        if self.use_jastrow is False:
+            return -0.5 * hess
 
-            # compute the Jastrow terms
-            jast, djast, d2jast = self.jastrow(x, derivative=[0, 1, 2], sum_grad=False)
+        # compute the Jastrow terms
+        jast, djast, d2jast = self.jastrow(x, derivative=[0, 1, 2], sum_grad=False)
 
-            # prepare the second derivative term d2Jast/Jast
-            # Nbatch x Nelec
-            d2jast = d2jast / jast
+        # prepare the second derivative term d2Jast/Jast
+        # Nbatch x Nelec
+        d2jast = d2jast / jast
 
-            # prepare the first derivative term
-            djast = djast / jast.unsqueeze(-1)
+        # prepare the first derivative term
+        djast = djast / jast.unsqueeze(-1)
 
-            # -> Nelec x Ndim x Nbatch
-            djast = djast.permute(2, 1, 0)
+        # -> Nelec x Ndim x Nbatch
+        djast = djast.permute(2, 1, 0)
 
-            # -> [Nelec*Ndim] x Nbatch
-            djast = djast.reshape(-1, djast.shape[-1])
+        # -> [Nelec*Ndim] x Nbatch
+        djast = djast.reshape(-1, djast.shape[-1])
 
-            # prepare the grad of the dets
-            # [Nelec*Ndim] x Nbatch x 1
+        # prepare the grad of the dets
+        # [Nelec*Ndim] x Nbatch x 1
 
-            grad_val = self.fc(operator.add(*grad) * slater_dets) / sum_slater_dets
+        grad_val = self.fc(operator.add(*grad) * slater_dets) / sum_slater_dets
 
-            # [Nelec*Ndim] x Nbatch
-            grad_val = grad_val.squeeze()
+        # [Nelec*Ndim] x Nbatch
+        grad_val = grad_val.squeeze()
 
-            # assemble the derivaite terms
-            out = d2jast.sum(-1) + 2 * (grad_val * djast).sum(0) + hess.squeeze(-1)
+        # assemble the derivaite terms
+        out = d2jast.sum(-1) + 2 * (grad_val * djast).sum(0) + hess.squeeze(-1)
         return -0.5 * out.unsqueeze(-1)
 
     def gradients_jacobi_backflow(self, 
@@ -629,17 +629,6 @@ class SlaterJastrow(WaveFunction):
             xyz = self.ao.atom_coords[iat, :].cpu().detach().numpy() * convert
             d.append(xyz.tolist())
         return d
-    
-    def forces(self) -> torch.Tensor:
-        """
-        Returns the gradient of the atomic coordinates with respect to the wave function.
-
-        Returns
-        -------
-        torch.Tensor
-            The gradient of the atomic coordinates as a PyTorch tensor.
-        """
-        return self.ao.atom_coords.grad
 
     def gto2sto(self, plot: Optional[bool] = False) -> Self:
         """Fits the AO GTO to AO STO.

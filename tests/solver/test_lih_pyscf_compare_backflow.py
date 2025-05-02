@@ -184,7 +184,7 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         reset_generator()
         obs_ref = self.solver_ref.run(nepoch)
         e_ref = torch.as_tensor(np.array(obs_ref.energy))
-
+        print(e_bf, e_ref)
         assert torch.allclose(e_bf, e_ref, rtol=1e-4, atol=1e-4)
 
     def test3_wf_opt_grad_manual(self):

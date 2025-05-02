@@ -378,19 +378,20 @@ class Solver(SolverBase):
         """
 
         # determine if we need the grad of eloc
-        no_grad_eloc = True
-        if self.wf.kinetic_method == "auto":
-            no_grad_eloc = False
+        # no_grad_eloc = True
+        # if self.wf.kinetic_method == "auto":
+        #     no_grad_eloc = False
 
-        if self.wf.jastrow.requires_autograd:
-            no_grad_eloc = False
+        # if self.wf.jastrow.requires_autograd:
+        #     no_grad_eloc = False
 
         if self.loss.method in ["energy", "weighted-energy"]:
             # Get the gradient of the total energy
             # dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
 
             # compute local energy
-            with self.loss.get_grad_mode(no_grad_eloc):
+            # with self.loss.get_grad_mode(no_grad_eloc):
+            with torch.no_grad():
                 eloc = self.wf.local_energy(lpos)            
 
             # compute the wf values
@@ -489,19 +490,20 @@ class Solver(SolverBase):
         """
 
         # determine if we need the grad of eloc
-        no_grad_eloc = True
-        if self.wf.kinetic_method == "auto":
-            no_grad_eloc = False
+        # no_grad_eloc = True
+        # if self.wf.kinetic_method == "auto":
+        #     no_grad_eloc = False
 
-        if self.wf.jastrow.requires_autograd:
-            no_grad_eloc = False
+        # if self.wf.jastrow.requires_autograd:
+        #     no_grad_eloc = False
 
         if self.loss.method in ["energy", "weighted-energy"]:
             # Get the gradient of the total energy
             # dE/dk = <  (E_L - <E_L >) d[ln(abs(psi))] / dk) >
 
             # compute local energy
-            with self.loss.get_grad_mode(no_grad_eloc):
+            # with self.loss.get_grad_mode(no_grad_eloc):
+            with torch.no_grad():
                 eloc = self.wf.local_energy(lpos)            
 
             # compute the wf values
@@ -572,6 +574,7 @@ class Solver(SolverBase):
 
             return mask
     
+        # save the grad status of the ao
         original_requires_grad = self.wf.ao.atom_coords.requires_grad
         if not original_requires_grad:
             self.wf.ao.atom_coords.requires_grad = True
@@ -580,8 +583,7 @@ class Solver(SolverBase):
             batch_size = lpos.shape[0]
         nbatch = lpos.shape[0]//batch_size
 
-        forces = torch.zeros_like(self.wf.ao.atom_coords)
-
+        forces = torch.zeros_like(self.wf.ao.atom_coords).requires_grad_(False)
         for ibatch in range(nbatch):
 
             # get the batch
