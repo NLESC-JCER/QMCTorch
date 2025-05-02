@@ -501,7 +501,6 @@ class SlaterJastrow(WaveFunction):
             torch.tensor: values of the kinetic energy at each sampling points
         """
         
-        # with torch.no_grad():
         # get ao values
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 

@@ -364,11 +364,25 @@ class Solver(SolverBase):
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian 
         wrt atomic positions 
- 
-        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
 
-        Args:
-            lpos ([type]): [description]
+        The gradients are here evaluated following:
+
+        .. math:
+            dE/dk = < (dpsi/dk)/psi (E_L - <E_L >)>
+
+        Other estimators are possible:
+
+        .. math:
+            dE/dk = 2 [ < (dpsi/dk) E_L/psi >  - < (dpsi/dk) / psi > <E_L > ]
+
+        given in https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17.
+        Or
+
+        .. math:
+            dE/dk = <  (E_L - <E_L >) d[ln(abs(psi))] / dk) >
+        
+        used in PauliNet
+
 
         Args:
             lpos (torch.tensor): sampling points
@@ -377,157 +391,32 @@ class Solver(SolverBase):
             tuple: loss values and local energies
         """
 
-        # determine if we need the grad of eloc
-        # no_grad_eloc = True
-        # if self.wf.kinetic_method == "auto":
-        #     no_grad_eloc = False
-
-        # if self.wf.jastrow.requires_autograd:
-        #     no_grad_eloc = False
-
-        if self.loss.method in ["energy", "weighted-energy"]:
-            # Get the gradient of the total energy
-            # dE/dk = < (dpsi/dk)/psi (E_L - <E_L >) >
-
-            # compute local energy
-            # with self.loss.get_grad_mode(no_grad_eloc):
-            with torch.no_grad():
-                eloc = self.wf.local_energy(lpos)            
-
-            # compute the wf values
-            psi = self.wf(lpos)
-            norm = 1.0 / len(psi)
-
-            # evaluate the prefactor of the grads
-            weight = eloc.clone()
-            weight -= torch.mean(eloc)
-            weight /= psi.clone()
-            weight *= 2.0 * norm
-
-            # clip the values
-            clip_mask = self.loss.get_clipping_mask(eloc)
-            psi = psi[clip_mask]
-            weight = weight[clip_mask]
-
-            # compute the gradients
-            psi.backward(weight)
-
-            return torch.mean(eloc), eloc
-
-        else:
+        if self.loss.method not in ["energy", "weighted-energy"]:
             raise ValueError("Manual gradient only for energy minimization")
         
-    def evaluate_grad_manual_2(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Evaluate the gradient using low variance expression
-        WARNING : This method is not valid to compute forces
-        as it does not include derivative of the hamiltonian 
-        wrt atomic positions
+        # compute local energy
+        with torch.no_grad():
+            eloc = self.wf.local_energy(lpos)            
 
-        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
+        # compute the wf values
+        psi = self.wf(lpos)
+        norm = 1.0 / len(psi)
 
-        Args:
-            lpos ([type]): [description]
+        # evaluate the prefactor of the grads
+        weight = eloc.clone()
+        weight -= torch.mean(eloc)
+        weight /= psi.clone()
+        weight *= 2.0 * norm
 
-        Args:
-            lpos (torch.tensor): sampling points
+        # clip the values
+        clip_mask = self.loss.get_clipping_mask(eloc)
+        psi = psi[clip_mask]
+        weight = weight[clip_mask]
 
-        Returns:
-            tuple: loss values and local energies
-        """
+        # compute the gradients
+        psi.backward(weight)
 
-        # determine if we need the grad of eloc
-        no_grad_eloc = True
-        if self.wf.kinetic_method == "auto":
-            no_grad_eloc = False
-
-        if self.wf.jastrow.requires_autograd:
-            no_grad_eloc = False
-
-        if self.loss.method in ["energy", "weighted-energy"]:
-            # Get the gradient of the total energy
-            # dE/dk = 2 [ < (dpsi/dk) E_L/psi >  - < (dpsi/dk) / psi > <E_L > ]
-            # https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
-
-            # compute local energy and wf values
-            eloc_mean, eloc = self.loss(lpos, no_grad=no_grad_eloc)
-            psi = self.wf(lpos)
-            norm = 2.0 / len(psi)
-
-            weight1 = norm * eloc/psi.detach().clone()
-            weight2 = -norm * eloc_mean/psi.detach().clone()
-
-            # clip the values
-            clip_mask = self.loss.get_clipping_mask(eloc)
-            psi = psi[clip_mask]
-            weight1 = weight1[clip_mask]
-            weight2 = weight2[clip_mask]
-
-
-            psi.backward(weight1,retain_graph=True) 
-            psi.backward(weight2)
-
-            return torch.mean(eloc), eloc
-
-        else:
-            raise ValueError("Manual gradient only for energy minimization")
-
-    def evaluate_grad_manual_3(self, lpos: torch.tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        """Evaluate the gradient using low variance expression
-        WARNING : This method is not valid to compute forces
-        as it does not include derivative of the hamiltonian 
-        wrt atomic positions 
- 
-        https://www.cond-mat.de/events/correl19/manuscripts/luechow.pdf eq. 17
-
-        Args:
-            lpos ([type]): [description]
-
-        Args:
-            lpos (torch.tensor): sampling points
-
-        Returns:
-            tuple: loss values and local energies
-        """
-
-        # determine if we need the grad of eloc
-        # no_grad_eloc = True
-        # if self.wf.kinetic_method == "auto":
-        #     no_grad_eloc = False
-
-        # if self.wf.jastrow.requires_autograd:
-        #     no_grad_eloc = False
-
-        if self.loss.method in ["energy", "weighted-energy"]:
-            # Get the gradient of the total energy
-            # dE/dk = <  (E_L - <E_L >) d[ln(abs(psi))] / dk) >
-
-            # compute local energy
-            # with self.loss.get_grad_mode(no_grad_eloc):
-            with torch.no_grad():
-                eloc = self.wf.local_energy(lpos)            
-
-            # compute the wf values
-            psi = torch.log(torch.abs(self.wf(lpos)))
-            norm = 1.0 / len(psi)
-
-            # evaluate the prefactor of the grads
-            weight = eloc.clone()
-            weight -= torch.mean(eloc)
-            weight *= 2.0 * norm
-
-            # clip the values
-            clip_mask = self.loss.get_clipping_mask(eloc)
-            psi = psi[clip_mask]
-            weight = weight[clip_mask]
-
-            # compute the gradients
-            psi.backward(weight)
-
-            return torch.mean(eloc), eloc
-
-        else:
-            raise ValueError("Manual gradient only for energy minimization")
-
+        return torch.mean(eloc), eloc
 
     def compute_forces(self, lpos: torch.tensor, batch_size: int = None, clip: int = None) -> torch.tensor:
         r"""
