@@ -41,8 +41,8 @@ setup(
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch', 'h5py',
-                      'pints', 'pyscf', 'mendeleev', 'twiggy',
-                      'plams', 'ase'],
+                      'pints', 'pyscf; platform_system != "Windows"', 
+                      'mendeleev', 'twiggy', 'plams', 'ase'],
 
     extras_require={
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme', 'nbsphinx','nbconvert','jupyter'],
