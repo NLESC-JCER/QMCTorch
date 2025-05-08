@@ -5,7 +5,8 @@ from mendeleev import element
 from types import SimpleNamespace
 import h5py
 
-from .calculator import CalculatorADF, CalculatorPySCF, CalculatorADF2019
+from .calculator import CalculatorADF, CalculatorADF2019
+from .calculator import CalculatorPySCF
 
 from ..utils import dump_to_hdf5, load_from_hdf5, bytes2str
 from ..utils.constants import ANGS2BOHR
