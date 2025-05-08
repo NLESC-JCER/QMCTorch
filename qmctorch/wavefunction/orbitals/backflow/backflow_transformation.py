@@ -1,6 +1,6 @@
 import torch
 from torch import nn
-from typing import Dict, Optional
+from typing import Dict, Optional, Callable, Tuple
 from ....scf import Molecule
 from .kernels.backflow_kernel_base import BackFlowKernelBase
 from ...jastrows.distance.electron_electron_distance import ElectronElectronDistance
@@ -242,6 +242,48 @@ class BackFlowTransformation(nn.Module):
 
         return out.unsqueeze(-1)
 
+    def fit_kernel(self, lambda_func: Callable, 
+                   xmin: float = 0.01, xmax: float = 1.0, npts: int = 100,
+                   lr: float = 0.001, num_epochs: int = 1000
+        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        
+        """
+        Fit the backflow kernel to a given function.
+
+        Args:
+            lambda_func (Callable): function to be fit
+            xmin (float): minimum x value
+            xmax (float): maximum x value
+            npts (int): number of points to sample in the interval [xmin, xmax]
+            lr (float): learning rate
+            num_epochs (int): number of epochs to run the optimization
+
+        Returns:
+            xpts (torch.tensor): x values used for fitting
+            ground_truth (torch.tensor): y values of the given function
+            fit_values (torch.tensor): y values of the fit function
+        """
+        xpts = torch.linspace(xmin, xmax, npts)
+        ground_truth = lambda_func(xpts)
+    
+        criterion = torch.nn.MSELoss()
+        optimizer = torch.optim.Adam(self.backflow_kernel.parameters(), lr=lr)
+
+        for epoch in range(num_epochs):
+            running_loss = 0.0
+            optimizer.zero_grad()
+            outputs = self.backflow_kernel(xpts.unsqueeze(1))
+            loss = criterion(outputs.squeeze(), ground_truth)
+            loss.backward()
+            optimizer.step()
+            running_loss += loss.item()
+
+            if epoch % 100 == 0:
+                print("Epoch {}: Loss = {}".format(epoch, loss.detach().numpy()))
+
+        fit_values = self.backflow_kernel(xpts.unsqueeze(1)).squeeze()
+        return xpts, ground_truth,  fit_values
+    
 
     def __repr__(self):
         """representation of the backflow transformation"""
