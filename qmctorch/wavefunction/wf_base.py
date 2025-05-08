@@ -142,6 +142,13 @@ class WaveFunction(torch.nn.Module):
         """Compute the kinetic energy through the 2nd derivative
         w.r.t the value of the pos.
 
+        Note: this could be replaced by
+        >>> compute_batch_hessian = vmap(hessian(self.forward), argnums=0), in_dims=0)
+        >>> batch_hess = compute_batch_hessian(pos).squeeze()
+        >>> batch_hess = torch.diagonal(batch_hess, dim1=-2, dim2=-1).view(-1,1)
+        >>> return 0.5 * batch_hess / self.forward(pos)
+        However this approach seems to requires 10x more memory
+        
         Args:
             pos (torch.tensor): positions of the walkers
 
@@ -161,7 +168,9 @@ class WaveFunction(torch.nn.Module):
 
         for idim in range(jacob.shape[1]):
             tmp = grad(
-                jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
+                jacob[:, idim], pos, 
+                grad_outputs=z, only_inputs=True, 
+                create_graph=False, retain_graph=True
             )[0]
 
             hess += tmp[:, idim]

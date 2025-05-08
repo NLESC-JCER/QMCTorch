@@ -389,6 +389,13 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         the diagonal elements of the Hessian matrix, which correspond to the second derivatives
         along each dimension.
 
+        Note: this could be replaced by
+        >>> compute_batch_hessian = vmap(hessian(self.forward), argnums=0), in_dims=0)
+        >>> batch_hess = compute_batch_hessian(pos).squeeze()
+        >>> batch_hess = torch.diagonal(batch_hess, dim1=-2, dim2=-1)
+        >>> return batch_hess.view(nbatch, self.nelec, 3).sum(2)
+        However this approach seems to requires 10x more memory
+        
         Args:
             pos (torch.Tensor): Positions of the electrons, with shape (Nbatch, Nelec * Ndim).
             jast (Union[None, torch.Tensor], optional): Precomputed Jastrow factor values.
@@ -416,7 +423,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                     pos,
                     grad_outputs=z,
                     only_inputs=True,
-                    create_graph=True,
+                    create_graph=False,
                     retain_graph=True
                 )[0]
 
