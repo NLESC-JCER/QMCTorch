@@ -428,4 +428,5 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         nbatch = pos.shape[0]
         jast = self.forward(pos)
-        return hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)
+        hvals = hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)
+        return torch.nan_to_num(hvals, nan=0.0) 
