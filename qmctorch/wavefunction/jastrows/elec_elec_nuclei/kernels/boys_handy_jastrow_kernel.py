@@ -40,7 +40,8 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
 
         self.weight_num = nn.Parameter(a0 * torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
         self.weight_denom = nn.Parameter(b0 * torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
-        self.exp = nn.Parameter(exp0 * torch.ones(2, self.nterm), requires_grad=False).to(self.device)
+        # self.exp = nn.Parameter(exp0 * torch.ones(2, self.nterm), requires_grad=False).to(self.device)
+        self.exp = exp0 * torch.ones(2, self.nterm, requires_grad=False).to(self.device)
         self.repeat_dim = torch.as_tensor([2, 1]).to(self.device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
