@@ -217,9 +217,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         elif derivative == 2:
             if self.auto_second_derivative:
-                return self.jastrow_factor_second_derivative_auto(
-                    pos, jast=jast.unsqueeze(-1)
-                )
+                return self.jastrow_factor_second_derivative_auto(pos)
 
             else:
                 dr = self.assemble_dist_deriv(pos, 1)
