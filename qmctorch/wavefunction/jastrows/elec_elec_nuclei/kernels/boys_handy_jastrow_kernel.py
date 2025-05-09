@@ -12,6 +12,9 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         ndown: int,
         atomic_pos: torch.Tensor,
         cuda: bool,
+        a0: float = 1E-6,
+        b0: float = 1.0,
+        exp0: float = 1.0,
         nterm: int = 5
         ) -> None:  # pylint: disable=too-many-arguments
         r"""Defines a Boys Handy jastrow factors.
@@ -35,9 +38,9 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         self.nterm = nterm
         self.fc = nn.Linear(self.nterm, 1, bias=False).to(self.device)
 
-        self.weight_num = nn.Parameter(torch.zeros(1, 2, self.nterm), requires_grad=True).to(self.device)
-        self.weight_denom = nn.Parameter(torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
-        self.exp = nn.Parameter(torch.ones(2, self.nterm), requires_grad=True).to(self.device)
+        self.weight_num = nn.Parameter(a0 * torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
+        self.weight_denom = nn.Parameter(b0 * torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
+        self.exp = nn.Parameter(exp0 * torch.ones(2, self.nterm), requires_grad=True).to(self.device)
         self.repeat_dim = torch.as_tensor([2, 1]).to(self.device)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
@@ -58,7 +61,7 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         out_shape = list(x.shape)[:-1] + [1]
 
         # reshape to [N, 3 ,1]
-        # here N is the
+        # here N is the batchsize * Natom * Nelec_pairs
         x = x.reshape(-1, 3, 1)
 
         # compute the different terms :

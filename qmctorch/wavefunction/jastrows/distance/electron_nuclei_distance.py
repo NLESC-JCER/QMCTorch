@@ -44,6 +44,12 @@ class ElectronNucleiDistance(nn.Module):
         self.scale: bool = scale
         self.kappa: float = scale_factor
 
+        _type_ = torch.get_default_dtype()
+        if _type_ == torch.float32:
+            self.eps = 1e-6
+        elif _type_ == torch.float64:
+            self.eps = 1e-16
+
     def forward(
         self, input: torch.Tensor, derivative: int = 0
     ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor]]:
@@ -109,7 +115,7 @@ class ElectronNucleiDistance(nn.Module):
         Returns:
             [type]: [description]
         """
-        invr = (1.0 / dist).unsqueeze(-1)
+        invr = (1.0 / (dist + self.eps)).unsqueeze(-1)
         diff_axis = (pos.unsqueeze(-1) - self.atoms.T).transpose(2, 3)
         return (diff_axis * invr).permute(0, 3, 1, 2)
 
@@ -128,7 +134,7 @@ class ElectronNucleiDistance(nn.Module):
         Returns:
             [type]: [description]
         """
-        invr3 = (1.0 / (dist**3)).unsqueeze(1)
+        invr3 = (1.0 / (dist**3 + self.eps)).unsqueeze(1)
         diff_axis = pos.transpose(1, 2).unsqueeze(3)
         diff_axis = (diff_axis - self.atoms.T.unsqueeze(1)) ** 2
 
