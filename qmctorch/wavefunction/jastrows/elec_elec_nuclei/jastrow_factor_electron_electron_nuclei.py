@@ -376,10 +376,10 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         out.index_add_(-1, self.index_col, djast[..., 1])
 
         return ((out.sum(2)) ** 2).sum(1)
-
+    
+    @torch.enable_grad()
     def jastrow_factor_second_derivative_auto(self, 
-                                              pos: torch.Tensor, 
-                                              jast: Union[None, torch.Tensor] = None
+                                              pos: torch.Tensor
                                               ) -> torch.Tensor:
         """
         Compute the second derivative of the Jastrow factor using automatic differentiation.
@@ -398,8 +398,6 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         
         Args:
             pos (torch.Tensor): Positions of the electrons, with shape (Nbatch, Nelec * Ndim).
-            jast (Union[None, torch.Tensor], optional): Precomputed Jastrow factor values.
-                If None, the Jastrow factor is computed within the function. Defaults to None.
 
         Returns:
             torch.Tensor: The summed diagonal elements of the Hessian matrix, with shape
@@ -407,7 +405,6 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                         factor for each electron.
         """
 
-        @torch.enable_grad()
         def hess(out, pos):
             # compute the jacobian
             z = Variable(torch.ones_like(out))
@@ -432,6 +429,5 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             return hess
 
         nbatch = pos.shape[0]
-        if jast is None:
-            jast = self.forward(pos)
+        jast = self.forward(pos)
         return hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)
