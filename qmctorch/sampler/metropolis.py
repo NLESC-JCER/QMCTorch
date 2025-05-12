@@ -134,7 +134,7 @@ class Metropolis(SamplerBase):
 
             for istep in rng:
                 for id_elec in self.fixed_id_elec_list:
-                    
+
                     # new positions
                     Xn = self.move(pdf, id_elec)
 

@@ -136,10 +136,10 @@ class Hamiltonian(SamplerBase):
         return torch.cat(pos).requires_grad_()
 
     @staticmethod
-    def _step(U: Callable[[torch.Tensor], torch.Tensor], 
-              get_grad: Callable[[Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor], 
-              epsilon: float, 
-              L: int, 
+    def _step(U: Callable[[torch.Tensor], torch.Tensor],
+              get_grad: Callable[[Callable[[torch.Tensor], torch.Tensor], torch.Tensor], torch.Tensor],
+              epsilon: float,
+              L: int,
               q_init: torch.Tensor) -> Tuple[torch.Tensor, float]:
         """Take one step of the sampler
 

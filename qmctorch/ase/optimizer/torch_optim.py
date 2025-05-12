@@ -1,4 +1,4 @@
-from typing import IO, Any, Callable, Dict, List, Optional, Union
+from typing import IO, Optional, Union
 from types import SimpleNamespace
 from torch.optim import SGD
 from torch.optim import Optimizer as torch_optimizer
@@ -8,11 +8,10 @@ from math import sqrt
 from copy import deepcopy
 from ase import Atoms
 from ase.optimize.optimize import Optimizer
-from ase.utils import deprecated
-from ...utils.constants import BOHR2ANGS 
+from ...utils.constants import BOHR2ANGS
 class TorchOptimizer(Optimizer):
 
-    def __init__(self, 
+    def __init__(self,
                  atoms:Atoms,
                  optimizer: Optional[torch_optimizer] = None,
                  nepoch_wf_init: Optional[int] = 100,
@@ -23,11 +22,11 @@ class TorchOptimizer(Optimizer):
                  logfile: Union[IO, str] = '-',
                  trajectory: Optional[str] = None,
                  master: Optional[bool] = None):
-        
+
 
         Optimizer.__init__(self, atoms, restart, logfile, trajectory,
                            master)
-        
+
         self.opt_geo = optimizer
         self.batchsize = batchsize
         self.tqdm = tqdm
@@ -70,7 +69,7 @@ class TorchOptimizer(Optimizer):
             self.logfile.write(msg)
             self.logfile.flush()
         return fmax
-    
+
     def run(self, fmax: float, steps: int = 10, hdf5_group: str = "geo_opt") -> SimpleNamespace:
         """
         Run a geometry optimization.
@@ -138,7 +137,7 @@ class TorchOptimizer(Optimizer):
             solver.freeze_parameters(solver.freeze_params_list)
             solver.opt = self.opt_wf
             solver.evaluate_gradient = self.eval_grad_wf
-            cumulative_loss = solver.run_epochs(self.nepoch_wf_update, 
+            cumulative_loss = solver.run_epochs(self.nepoch_wf_update,
                                                 with_tqdm=self.tqdm, verbose=False)
 
             # update the geometry

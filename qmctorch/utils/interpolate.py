@@ -258,8 +258,8 @@ def get_boundaries(
 
 
 def get_reg_grid(
-    atomic_positions: Union[torch.Tensor, np.ndarray, list], 
-    resolution: float = 0.1, 
+    atomic_positions: Union[torch.Tensor, np.ndarray, list],
+    resolution: float = 0.1,
     border_length: float = 2.0
 ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """Computes a regular grid points from the atomic positions

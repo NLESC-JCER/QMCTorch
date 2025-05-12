@@ -3,9 +3,9 @@ from typing import List, Tuple
 from ...scf import Molecule
 
 class OrbitalProjector:
-    def __init__(self, 
-                 configs: List[torch.tensor], 
-                 mol: Molecule, 
+    def __init__(self,
+                 configs: List[torch.tensor],
+                 mol: Molecule,
                  cuda: bool = False) -> None:
         """Project the MO matrix in Slater Matrices
 
@@ -20,7 +20,7 @@ class OrbitalProjector:
         self.nmo = mol.basis.nmo
         self.nup = mol.nup
         self.ndown = mol.ndown
-        
+
         self.device = torch.device("cpu")
         if cuda:
             self.device = torch.device("cuda")
@@ -29,7 +29,7 @@ class OrbitalProjector:
         """Get the unique configurations
 
         Returns:
-            Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]: 
+            Tuple[Tuple[torch.Tensor, torch.Tensor], Tuple[torch.Tensor, torch.Tensor]]:
                 configs_up (torch.Tensor): unique configurations of the spin up electrons
                 configs_down (torch.Tensor): unique configurations of the spin down electrons
                 index_unique_confs_up (torch.Tensor): index of the unique configurations of the spin up electrons
@@ -66,21 +66,21 @@ class OrbitalProjector:
             nop = mat.shape[0]
             out_up = torch.zeros(0, nop, nbatch, self.nup, self.nup, device=self.device)
             out_down = torch.zeros(0, nop, nbatch, self.ndown, self.ndown, device=self.device)
-        
+
         if unique_configs :
             configs_up, configs_down = self.unique_configs
-            
+
         else:
             configs_up, configs_down = self.configs
-            
+
         for _, (cup, cdown) in enumerate(zip(configs_up, configs_down)):
-        
+
             # cat the tensors
             out_up = torch.cat((out_up, mat[..., : self.nup, cup].unsqueeze(0)), dim=0)
             out_down = torch.cat((out_down, mat[..., self.nup :, cdown].unsqueeze(0)), dim=0)
 
         return out_up, out_down
-        
+
 class ExcitationMask:
     def __init__(
         self,

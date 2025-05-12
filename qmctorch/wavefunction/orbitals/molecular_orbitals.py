@@ -1,16 +1,16 @@
 import torch
 from torch import nn
-from torch.nn.utils.parametrizations import orthogonal 
+from torch.nn.utils.parametrizations import orthogonal
 from ...scf import Molecule
 class MolecularOrbitals(nn.Module):
-    def __init__(self, 
-                 mol: Molecule, 
-                 include_all_mo: bool, 
-                 highest_occ_mo: int, 
-                 mix_mo: bool, 
-                 orthogonalize_mo: bool, 
+    def __init__(self,
+                 mol: Molecule,
+                 include_all_mo: bool,
+                 highest_occ_mo: int,
+                 mix_mo: bool,
+                 orthogonalize_mo: bool,
                  cuda: bool):
-        
+
         super(MolecularOrbitals, self).__init__()
         dtype = torch.get_default_dtype()
 
@@ -48,7 +48,7 @@ class MolecularOrbitals(nn.Module):
         if not self.include_all_mo:
             mo_coeff = mo_coeff[:, : self.highest_occ_mo]
         return mo_coeff.requires_grad_(False)
-    
+
     def forward(self, ao: torch.tensor) -> torch.tensor:
         """
         Transforms atomic orbital values into molecular orbital values using

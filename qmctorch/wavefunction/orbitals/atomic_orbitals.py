@@ -128,11 +128,11 @@ class AtomicOrbitals(nn.Module):
             self.__dict__[at] = self.__dict__[at].to(self.device)
 
     def forward(
-        self, 
-        pos: torch.Tensor, 
-        derivative: Optional[List[int]] = [0], 
-        sum_grad: Optional[bool] = True, 
-        sum_hess: Optional[bool] = True, 
+        self,
+        pos: torch.Tensor,
+        derivative: Optional[List[int]] = [0],
+        sum_grad: Optional[bool] = True,
+        sum_hess: Optional[bool] = True,
         one_elec: Optional[bool] = False
     ) -> torch.Tensor:
         """Computes the values of the atomic orbitals.
@@ -284,10 +284,10 @@ class AtomicOrbitals(nn.Module):
 
         return self._sum_gradient_kernel(R, dR, Y, dY)
 
-    def _sum_gradient_kernel(self, 
-                             R: torch.Tensor, 
-                             dR: torch.Tensor, 
-                             Y: torch.Tensor, 
+    def _sum_gradient_kernel(self,
+                             R: torch.Tensor,
+                             dR: torch.Tensor,
+                             Y: torch.Tensor,
                              dY: torch.Tensor
                              ) -> torch.Tensor :
         """Kernel for the jacobian of the ao values
@@ -327,10 +327,10 @@ class AtomicOrbitals(nn.Module):
 
         return self._gradient_kernel(R, dR, Y, dY)
 
-    def _gradient_kernel(self, 
-                         R: torch.Tensor, 
-                         dR: torch.Tensor, 
-                         Y: torch.Tensor, 
+    def _gradient_kernel(self,
+                         R: torch.Tensor,
+                         dR: torch.Tensor,
+                         Y: torch.Tensor,
                          dY: torch.Tensor
                          ) -> torch.Tensor:
         """Kernel for the gradient of the ao values
@@ -395,12 +395,12 @@ class AtomicOrbitals(nn.Module):
         Y, dY, d2Y = self.harmonics(xyz, derivative=[0, 1, 2], sum_grad=False)
         return self._sum_diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
-    def _sum_diag_hessian_kernel(self, 
-                                 R: torch.Tensor, 
-                                 dR: torch.Tensor, 
-                                 d2R: torch.Tensor, 
-                                 Y: torch.Tensor, 
-                                 dY: torch.Tensor, 
+    def _sum_diag_hessian_kernel(self,
+                                 R: torch.Tensor,
+                                 dR: torch.Tensor,
+                                 d2R: torch.Tensor,
+                                 Y: torch.Tensor,
+                                 dY: torch.Tensor,
                                  d2Y: torch.Tensor
                                  ) -> torch.Tensor:
         """Kernel for the sum of the diag hessian of the ao values
@@ -452,12 +452,12 @@ class AtomicOrbitals(nn.Module):
 
         return self._diag_hessian_kernel(R, dR, d2R, Y, dY, d2Y)
 
-    def _diag_hessian_kernel(self, 
-                             R: torch.Tensor, 
-                             dR: torch.Tensor, 
-                             d2R: torch.Tensor, 
-                             Y: torch.Tensor, 
-                             dY: torch.Tensor, 
+    def _diag_hessian_kernel(self,
+                             R: torch.Tensor,
+                             dR: torch.Tensor,
+                             d2R: torch.Tensor,
+                             Y: torch.Tensor,
+                             dY: torch.Tensor,
                              d2Y: torch.Tensor
                              ) -> torch.Tensor:
         """Kernel for the diagonal hessian of the ao values

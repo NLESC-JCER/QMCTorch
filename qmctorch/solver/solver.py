@@ -1,8 +1,7 @@
-from copy import deepcopy
 from time import time
 from tqdm import tqdm
 from types import SimpleNamespace
-from typing import Optional, Dict, Union, List, Tuple, Any
+from typing import Optional, Dict, List, Tuple, Any
 import torch
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
@@ -106,8 +105,8 @@ class Solver(SolverBase):
         if self.ortho_mo is True:
             log.warning("Orthogonalization of the MO coeffs via loss penalty is deprecated")
 
-    def set_params_requires_grad(self, 
-                                 wf_params: Optional[bool] = True, 
+    def set_params_requires_grad(self,
+                                 wf_params: Optional[bool] = True,
                                  geo_params: Optional[bool] = False):
         """Configure parameters for wf opt."""
 
@@ -181,11 +180,11 @@ class Solver(SolverBase):
 
 
     def run(
-        self, 
-        nepoch: int, 
-        batchsize : Optional[int] = None, 
-        hdf5_group: Optional[str] = "wf_opt", 
-        chkpt_every: Optional[int] = None, 
+        self,
+        nepoch: int,
+        batchsize : Optional[int] = None,
+        hdf5_group: Optional[str] = "wf_opt",
+        chkpt_every: Optional[int] = None,
         tqdm: Optional[bool] = False
     ) -> SimpleNamespace:
         """Run a wave function optimization
@@ -258,8 +257,8 @@ class Solver(SolverBase):
 
         add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
-    def run_epochs(self, nepoch: int, 
-                   with_tqdm: Optional[bool] = False, 
+    def run_epochs(self, nepoch: int,
+                   with_tqdm: Optional[bool] = False,
                    verbose: Optional[bool] = True) -> float :
         """Run a certain number of epochs
 
@@ -273,8 +272,8 @@ class Solver(SolverBase):
         # init the loss in case we have nepoch=0
         cumulative_loss = 0
         min_loss = 0  # this is set at n=0
-        
-        # the range 
+
+        # the range
         rng = tqdm(
             range(nepoch),
             desc="INFO:QMCTorch|  Optimization",
@@ -362,8 +361,8 @@ class Solver(SolverBase):
     def evaluate_grad_manual(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
-        as it does not include derivative of the hamiltonian 
-        wrt atomic positions 
+        as it does not include derivative of the hamiltonian
+        wrt atomic positions
 
         The gradients are here evaluated following:
 
@@ -380,7 +379,7 @@ class Solver(SolverBase):
 
         .. math:
             dE/dk = <  (E_L - <E_L >) d[ln(abs(psi))] / dk) >
-        
+
         used in PauliNet
 
 
@@ -393,10 +392,10 @@ class Solver(SolverBase):
 
         if self.loss.method not in ["energy", "weighted-energy"]:
             raise ValueError("Manual gradient only for energy minimization")
-        
+
         # compute local energy
         with torch.no_grad():
-            eloc = self.wf.local_energy(lpos)            
+            eloc = self.wf.local_energy(lpos)
 
         # compute the wf values
         psi = self.wf(lpos)
@@ -456,13 +455,13 @@ class Solver(SolverBase):
             if clip is not None:
                 median = torch.median(values)
                 std = torch.std(values)
-                zscore = torch.abs((values - median) / std)    
+                zscore = torch.abs((values - median) / std)
                 mask = zscore < clip
             else:
                 mask = torch.ones_like(values).type(torch.bool)
 
             return mask
-    
+
         # save the grad status of the ao
         original_requires_grad = self.wf.ao.atom_coords.requires_grad
         if not original_requires_grad:
@@ -492,7 +491,7 @@ class Solver(SolverBase):
             proba = torch.log(wf_val)
             grad_outputs = ((local_energy-local_energy.mean()) * clip_mask).squeeze()
             grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_outputs)[0]
-        
+
             # accumulate in the force
             forces += 1./batch_size * (grad_eloc + grad_proba)
 

@@ -120,9 +120,9 @@ class JastrowFactorElectronElectron(nn.Module):
                 nbatch, 3, -1
             )
 
-    def forward(self, 
-                pos: torch.Tensor, 
-                derivative: int = 0, 
+    def forward(self,
+                pos: torch.Tensor,
+                derivative: int = 0,
                 sum_grad: bool = True
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """Compute the Jastrow factors.

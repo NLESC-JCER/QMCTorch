@@ -22,7 +22,7 @@ from .orbitals.atomic_orbitals_backflow import AtomicOrbitalsBackFlow
 from .pooling.slater_pooling import SlaterPooling
 from .pooling.orbital_configurations import OrbitalConfigurations
 from ..utils import register_extra_attributes
-from ..utils.constants import BOHR2ANGS 
+from ..utils.constants import BOHR2ANGS
 
 
 class SlaterJastrow(WaveFunction):
@@ -135,16 +135,16 @@ class SlaterJastrow(WaveFunction):
         self.include_all_mo = include_all_mo
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
 
-        self.mo = MolecularOrbitals(self.mol, 
-                                    include_all_mo, 
-                                    self.highest_occ_mo, 
+        self.mo = MolecularOrbitals(self.mol,
+                                    include_all_mo,
+                                    self.highest_occ_mo,
                                     mix_mo,
                                     orthogonalize_mo,
                                     self.cuda)
 
         if self.cuda:
             self.mo.to(self.device)
-            
+
 
     def init_config(self, configs: str)-> None:
         """Initialize the electronic configurations desired in the wave function."""
@@ -195,8 +195,8 @@ class SlaterJastrow(WaveFunction):
 
             # create a simple Pade Jastrow factor as default
             if jastrow == 'default':
-                self.jastrow = JastrowFactorElectronElectron(self.mol, 
-                                                             PadeJastrowKernel, 
+                self.jastrow = JastrowFactorElectronElectron(self.mol,
+                                                             PadeJastrowKernel,
                                                              cuda=self.cuda)
 
             elif isinstance(jastrow, list):
@@ -229,8 +229,8 @@ class SlaterJastrow(WaveFunction):
                 self.kinetic_energy_jacobi = self.kinetic_energy_jacobi_backflow
                 self.kinetic_energy = self.kinetic_energy_jacobi_backflow
 
-    def forward(self, 
-                x: torch.Tensor, 
+    def forward(self,
+                x: torch.Tensor,
                 ao: Optional[Union[torch.Tensor, None]] = None
                 ) -> torch.Tensor:
         """computes the value of the wave function for the sampling points
@@ -279,9 +279,9 @@ class SlaterJastrow(WaveFunction):
         """transforms AO values in to MO values."""
         return self.mo(ao)
 
-    def pos2mo(self, 
-               x: torch.Tensor, 
-               derivative: Optional[int] = 0, 
+    def pos2mo(self,
+               x: torch.Tensor,
+               derivative: Optional[int] = 0,
                sum_grad: Optional[bool] = True
                ) -> torch.Tensor:
         """Compute the MO vals from the pos
@@ -332,9 +332,9 @@ class SlaterJastrow(WaveFunction):
         out = self.fc(kin * psi) / self.fc(psi)
         return out
 
-    def gradients_jacobi(self, 
-                         x: torch.Tensor, 
-                         sum_grad: Optional[bool] = False, 
+    def gradients_jacobi(self,
+                         x: torch.Tensor,
+                         sum_grad: Optional[bool] = False,
                          pdf: Optional[bool] = False
                          ) -> torch.Tensor:
         """Compute the gradients of the wave function (or density) using the Jacobi Formula
@@ -434,11 +434,11 @@ class SlaterJastrow(WaveFunction):
 
         return out
 
-    def get_kinetic_operator(self, 
-                             x: torch.Tensor, 
-                             ao: torch.Tensor, 
-                             dao: torch.Tensor, 
-                             d2ao: torch.Tensor, 
+    def get_kinetic_operator(self,
+                             x: torch.Tensor,
+                             ao: torch.Tensor,
+                             dao: torch.Tensor,
+                             d2ao: torch.Tensor,
                              mo: torch.Tensor
                              ) -> torch.Tensor:
         """Compute the Bkin matrix
@@ -500,7 +500,7 @@ class SlaterJastrow(WaveFunction):
         Returns:
             torch.tensor: values of the kinetic energy at each sampling points
         """
-        
+
         # get ao values
         ao, dao, d2ao = self.ao(x, derivative=[0, 1, 2], sum_grad=False)
 
@@ -511,7 +511,7 @@ class SlaterJastrow(WaveFunction):
 
         # precompute the inverse of the MOs
         inv_mo = self.pool.compute_inverse_occupied_mo_matrix(mo)
-        
+
         # compute the value of the slater det
         slater_dets = self.pool(mo)
         sum_slater_dets = self.fc(slater_dets)
@@ -532,7 +532,7 @@ class SlaterJastrow(WaveFunction):
             - grad2.sum(0)
             + 2 * operator.mul(*grad).sum(0)
         )
-        
+
         hess = self.fc(hess * slater_dets) / sum_slater_dets
 
         if self.use_jastrow is False:
@@ -566,9 +566,9 @@ class SlaterJastrow(WaveFunction):
         out = d2jast.sum(-1) + 2 * (grad_val * djast).sum(0) + hess.squeeze(-1)
         return -0.5 * out.unsqueeze(-1)
 
-    def gradients_jacobi_backflow(self, 
-                                  x: torch.Tensor, 
-                                  sum_grad: Optional[bool] = True, 
+    def gradients_jacobi_backflow(self,
+                                  x: torch.Tensor,
+                                  sum_grad: Optional[bool] = True,
                                   pdf: Optional[bool] = False):
         """Computes the gradients of the wf using Jacobi's Formula
 
@@ -610,7 +610,7 @@ class SlaterJastrow(WaveFunction):
         self.mol.atom_coords = self.ao.atom_coords.detach().numpy().tolist()
         self.mo.weight = self.get_mo_coeffs()
 
-    def geometry(self, pos: torch.Tensor, 
+    def geometry(self, pos: torch.Tensor,
                  convert_to_angs: Optional[bool] = False) -> List:
         """Returns the gemoetry of the system in xyz format
 

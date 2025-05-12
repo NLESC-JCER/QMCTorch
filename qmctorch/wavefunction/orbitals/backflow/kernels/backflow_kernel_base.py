@@ -1,7 +1,5 @@
 import torch
 from torch import nn
-from torch.autograd import grad
-from typing import Tuple, List, Union
 from .....scf import Molecule
 from .....utils import gradients, hessian
 

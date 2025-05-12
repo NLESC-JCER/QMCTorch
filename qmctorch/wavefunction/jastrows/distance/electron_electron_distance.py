@@ -8,9 +8,9 @@ from .scaling import (
 
 
 class ElectronElectronDistance(nn.Module):
-    def __init__(self, 
-                 nelec: int, 
-                 ndim: int = 3, 
+    def __init__(self,
+                 nelec: int,
+                 ndim: int = 3,
                  scale: bool = False,
                  scale_factor: float = 0.6
                  ) -> None:
@@ -48,8 +48,8 @@ class ElectronElectronDistance(nn.Module):
             self.eps = 1e-16
 
     def forward(
-        self, 
-        input: torch.Tensor, 
+        self,
+        input: torch.Tensor,
         derivative: int = 0
     ) -> torch.Tensor:
         """Compute the pairwise distance between the electrons
@@ -66,14 +66,14 @@ class ElectronElectronDistance(nn.Module):
             \\frac{d r_{ij}}{dx_j} = -\\frac{dr_{ij}}{dx_i}
 
         Args:
-            input (torch.Tensor): position of the electron 
+            input (torch.Tensor): position of the electron
                                   size : Nbatch x [Nelec x Ndim]
-            derivative (int, optional): degre of the derivative. 
+            derivative (int, optional): degre of the derivative.
                                         Defaults to 0.
 
         Returns:
-            torch.Tensor: distance (or derivative) matrix 
-                          Nbatch x Nelec x Nelec if derivative = 0 
+            torch.Tensor: distance (or derivative) matrix
+                          Nbatch x Nelec x Nelec if derivative = 0
                           Nbatch x Ndim x  Nelec x Nelec if derivative = 1,2
 
         """

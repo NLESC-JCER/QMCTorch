@@ -5,9 +5,9 @@ from ...scf import Molecule
 from .backflow.backflow_transformation import BackFlowTransformation
 
 class AtomicOrbitalsBackFlow(AtomicOrbitals):
-    def __init__(self, 
-                 mol: Molecule, 
-                 backflow: BackFlowTransformation, 
+    def __init__(self,
+                 mol: Molecule,
+                 backflow: BackFlowTransformation,
                  cuda: Optional[bool] = False) -> None:
         """Computes the value of atomic orbitals
 
@@ -22,11 +22,11 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         self.backflow_trans = backflow
 
     def forward(
-        self, 
-        pos: torch.Tensor, 
-        derivative: Optional[List[int]]=[0], 
-        sum_grad: Optional[bool] = True, 
-        sum_hess: Optional[bool] = True, 
+        self,
+        pos: torch.Tensor,
+        derivative: Optional[List[int]]=[0],
+        sum_grad: Optional[bool] = True,
+        sum_hess: Optional[bool] = True,
         one_elec: Optional[bool] = False
     ) -> torch.Tensor:
         """Computes the values of the atomic orbitals.
@@ -134,8 +134,8 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad
 
-    def _compute_gradient_backflow_ao_values(self, 
-                                             pos: torch.Tensor, 
+    def _compute_gradient_backflow_ao_values(self,
+                                             pos: torch.Tensor,
                                              grad_ao: Optional[Union[None, torch.Tensor]] = None
                                              ) -> torch.Tensor:
         """Compute the jacobian of the backflow ao fromn xyz tensor
@@ -194,10 +194,10 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         return hess
 
     def _compute_diag_hessian_backflow_ao_values(
-        self, 
-        pos: torch.Tensor, 
-        hess_ao: Optional[Union[None, torch.Tensor]] = None, 
-        mixed_ao: Optional[Union[None, torch.Tensor]] = None, 
+        self,
+        pos: torch.Tensor,
+        hess_ao: Optional[Union[None, torch.Tensor]] = None,
+        mixed_ao: Optional[Union[None, torch.Tensor]] = None,
         grad_ao: Optional[Union[None, torch.Tensor]] = None
     ) -> torch.Tensor:
         """Compute the laplacian of the backflow ao fromn xyz tensor

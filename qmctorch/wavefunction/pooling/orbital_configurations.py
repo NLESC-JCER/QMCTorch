@@ -87,8 +87,8 @@ class OrbitalConfigurations:
         cup, cdown = [_gs_up], [_gs_down]
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_single_config(self, 
-                           nocc: Tuple[int, int], 
+    def _get_single_config(self,
+                           nocc: Tuple[int, int],
                            nvirt: Tuple[int, int]
                            ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """Get the confs of the singlet conformations
@@ -124,8 +124,8 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_single_double_config(self, 
-                           nocc: Tuple[int, int], 
+    def _get_single_double_config(self,
+                           nocc: Tuple[int, int],
                            nvirt: Tuple[int, int]
                            ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """Get the confs of the single + double
@@ -178,9 +178,9 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_cas_config(self, 
-                        nocc: Tuple[int, int], 
-                        nvirt: Tuple[int, int], 
+    def _get_cas_config(self,
+                        nocc: Tuple[int, int],
+                        nvirt: Tuple[int, int],
                         nelec: int
                         ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """get confs of the CAS

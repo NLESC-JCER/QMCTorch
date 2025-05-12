@@ -1,7 +1,6 @@
 import unittest
 
 from qmctorch.ase import QMCTorch
-from qmctorch.ase.optimizer import TorchOptimizer
 from ase import Atoms
 from ase.optimize import FIRE
 import torch

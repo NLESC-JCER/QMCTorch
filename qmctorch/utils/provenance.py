@@ -9,7 +9,7 @@ def get_git_tag() -> str:
 
     This function determines the directory of the current file, then executes
     a Git command to describe the current commit with the most recent tag.
-    
+
     Returns:
         str: The Git tag string representing the current state of the repository.
     """
