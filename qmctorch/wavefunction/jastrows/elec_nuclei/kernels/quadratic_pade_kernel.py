@@ -9,7 +9,7 @@ class QuadraticPadeJastrowKernel(JastrowKernelElectronNucleiBase):
 
     def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool,
                  a: float = 1.0, b: float = 1.0, c: float = 1.0) -> None:
-        
+
         """
         Initializes the Quadratic Pade-Jastrow kernel with the given parameters.
 

@@ -6,7 +6,7 @@ from functools import reduce
 
 class CombineJastrow(nn.Module):
     def __init__(self, jastrow: List[nn.Module]) -> None:
-        """Combine several Jastrow Factors 
+        """Combine several Jastrow Factors
 
         Args:
             jastrow (list) : list of jastrow factor
@@ -30,9 +30,9 @@ class CombineJastrow(nn.Module):
 
         return " + ".join(out)
 
-    def forward(self, 
-                pos: torch.Tensor, 
-                derivative: int = 0, 
+    def forward(self,
+                pos: torch.Tensor,
+                derivative: int = 0,
                 sum_grad: bool = True
                 ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute the Jastrow factors and/or its derivatives
@@ -116,7 +116,7 @@ class CombineJastrow(nn.Module):
 
     @staticmethod
     def get_derivative_combined_values(
-        jast_vals: List[torch.Tensor], 
+        jast_vals: List[torch.Tensor],
         djast_vals: List[torch.Tensor]
         ) -> torch.Tensor:
         """Compute the derivative of the product of Jastrow terms.
@@ -149,8 +149,8 @@ class CombineJastrow(nn.Module):
 
     @staticmethod
     def get_second_derivative_combined_values(
-        jast_vals: List[torch.Tensor], 
-        djast_vals: List[torch.Tensor], 
+        jast_vals: List[torch.Tensor],
+        djast_vals: List[torch.Tensor],
         d2jast_vals: List[torch.Tensor]
         ) -> torch.Tensor:
         """Compute the second derivative of the product of Jastrow terms.

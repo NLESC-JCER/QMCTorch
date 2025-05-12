@@ -113,8 +113,8 @@ class WaveFunction(torch.nn.Module):
                 vnn += Z0 * Z1 / rnn
         return vnn
 
-    def gradients_autograd(self, 
-                           pos: torch.Tensor, 
+    def gradients_autograd(self,
+                           pos: torch.Tensor,
                            pdf: Optional[bool] = False
                            ) -> torch.Tensor:
         """Computes the gradients of the wavefunction (or density)
@@ -148,7 +148,7 @@ class WaveFunction(torch.nn.Module):
         >>> batch_hess = torch.diagonal(batch_hess, dim1=-2, dim2=-1).view(-1,1)
         >>> return 0.5 * batch_hess / self.forward(pos)
         However this approach seems to requires 10x more memory
-        
+
         Args:
             pos (torch.tensor): positions of the walkers
 
@@ -168,8 +168,8 @@ class WaveFunction(torch.nn.Module):
 
         for idim in range(jacob.shape[1]):
             tmp = grad(
-                jacob[:, idim], pos, 
-                grad_outputs=z, only_inputs=True, 
+                jacob[:, idim], pos,
+                grad_outputs=z, only_inputs=True,
                 create_graph=False, retain_graph=True
             )[0]
 
@@ -248,9 +248,9 @@ class WaveFunction(torch.nn.Module):
                 nparam += param.data.numel()
         return nparam
 
-    def load(self, 
-             filename: str, 
-             group: Optional[str] = "wf_opt", 
+    def load(self,
+             filename: str,
+             group: Optional[str] = "wf_opt",
              model: Optional[str] = "best"):
         """Load trained parameters
 

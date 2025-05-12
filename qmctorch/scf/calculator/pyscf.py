@@ -11,7 +11,7 @@ except ModuleNotFoundError:
     if  sys.platform == "win32":
         raise Warning("pyscf is not supported on Windows'")
     else:
-        raise Warning("pyscf not found, install it with: pip install pyscf")    
+        raise Warning("pyscf not found, install it with: pip install pyscf")
 from .calculator_base import CalculatorBase
 from ... import log
 

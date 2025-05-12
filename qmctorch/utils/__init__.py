@@ -47,8 +47,9 @@ __all__ = [
     "bproj",
     "diagonal_hessian",
     "gradients",
-    "hessian"
+    "hessian",
     "blocking",
     "correlation_coefficient",
     "integrated_autocorrelation_time",
+    "get_git_tag",
 ]

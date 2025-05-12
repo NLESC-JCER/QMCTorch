@@ -35,8 +35,8 @@ class BackFlowTransformation(nn.Module):
         if self.cuda:
             self.device = torch.device("cuda")
 
-    def forward(self, 
-                pos: torch.Tensor, 
+    def forward(self,
+                pos: torch.Tensor,
                 derivative: Optional[int] = 0
                 ) -> torch.Tensor:
         if derivative == 0:
@@ -53,7 +53,7 @@ class BackFlowTransformation(nn.Module):
                 "derivative of the backflow transformation must be 0, 1 or 2"
             )
 
-    def _get_backflow(self, 
+    def _get_backflow(self,
                       pos: torch.Tensor
                       ) -> torch.Tensor:
         """Computes the backflow transformation
@@ -242,11 +242,11 @@ class BackFlowTransformation(nn.Module):
 
         return out.unsqueeze(-1)
 
-    def fit_kernel(self, lambda_func: Callable, 
+    def fit_kernel(self, lambda_func: Callable,
                    xmin: float = 0.01, xmax: float = 1.0, npts: int = 100,
                    lr: float = 0.001, num_epochs: int = 1000
         ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        
+
         """
         Fit the backflow kernel to a given function.
 
@@ -265,7 +265,7 @@ class BackFlowTransformation(nn.Module):
         """
         xpts = torch.linspace(xmin, xmax, npts)
         ground_truth = lambda_func(xpts)
-    
+
         criterion = torch.nn.MSELoss()
         optimizer = torch.optim.Adam(self.backflow_kernel.parameters(), lr=lr)
 
@@ -283,7 +283,7 @@ class BackFlowTransformation(nn.Module):
 
         fit_values = self.backflow_kernel(xpts.unsqueeze(1)).squeeze()
         return xpts, ground_truth,  fit_values
-    
+
 
     def __repr__(self):
         """representation of the backflow transformation"""

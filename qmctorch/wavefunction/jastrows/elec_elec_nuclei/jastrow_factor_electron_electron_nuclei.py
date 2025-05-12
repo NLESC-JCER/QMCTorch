@@ -1,17 +1,17 @@
 import torch
 from torch import nn
 from torch.autograd import Variable, grad
-from typing import Dict, Tuple, Optional, List, Union
+from typing import Dict, Tuple
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from ....scf import Molecule
 from .kernels.jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
 
 class JastrowFactorElectronElectronNuclei(nn.Module):
-    def __init__(self, 
-                 mol: Molecule, 
-                 jastrow_kernel: JastrowKernelElectronElectronNucleiBase, 
-                 kernel_kwargs: Dict = {}, 
+    def __init__(self,
+                 mol: Molecule,
+                 jastrow_kernel: JastrowKernelElectronElectronNucleiBase,
+                 kernel_kwargs: Dict = {},
                  cuda: bool = False
                  ) -> None:
         """Jastrow Factor of the elec-elec-nuc term:
@@ -303,10 +303,10 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return out
 
-    def jastrow_factor_second_derivative(self, 
-                                         r: torch.Tensor, 
-                                         dr: torch.Tensor, 
-                                         d2r: torch.Tensor, 
+    def jastrow_factor_second_derivative(self,
+                                         r: torch.Tensor,
+                                         dr: torch.Tensor,
+                                         d2r: torch.Tensor,
                                          jast: torch.Tensor
                                          ) -> torch.Tensor:
         """Compute the value of the pure 2nd derivative of the Jastrow factor
@@ -349,7 +349,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return hess_jast * jast.unsqueeze(-1)
 
-    def partial_derivative(self, djast: torch.Tensor) -> torch.Tensor:        
+    def partial_derivative(self, djast: torch.Tensor) -> torch.Tensor:
         """
         Compute the partial derivative of the jastrow factor
 
@@ -374,9 +374,9 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         out.index_add_(-1, self.index_col, djast[..., 1])
 
         return ((out.sum(2)) ** 2).sum(1)
-    
+
     @torch.enable_grad()
-    def jastrow_factor_second_derivative_auto(self, 
+    def jastrow_factor_second_derivative_auto(self,
                                               pos: torch.Tensor
                                               ) -> torch.Tensor:
         """
@@ -393,7 +393,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         >>> batch_hess = torch.diagonal(batch_hess, dim1=-2, dim2=-1)
         >>> return batch_hess.view(nbatch, self.nelec, 3).sum(2)
         However this approach seems to requires 10x more memory
-        
+
         Args:
             pos (torch.Tensor): Positions of the electrons, with shape (Nbatch, Nelec * Ndim).
 
@@ -429,4 +429,4 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         nbatch = pos.shape[0]
         jast = self.forward(pos)
         hvals = hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)
-        return torch.nan_to_num(hvals, nan=0.0) 
+        return torch.nan_to_num(hvals, nan=0.0)

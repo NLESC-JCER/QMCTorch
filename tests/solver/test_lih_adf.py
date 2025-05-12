@@ -29,10 +29,10 @@ class TestLiHCorrelated(unittest.TestCase):
 
         # wave function
         self.wf = SlaterJastrow(
-            self.mol, 
+            self.mol,
             kinetic="jacobi",
             jastrow=jastrow,
-            configs="cas(2,2)", 
+            configs="cas(2,2)",
             include_all_mo=True
         )
 

@@ -3,21 +3,17 @@ import unittest
 import numpy as np
 import torch
 import torch.optim as optim
-
 from .test_base_solver import BaseTestSolvers
-
 from qmctorch.sampler import Metropolis
 from qmctorch.solver import Solver
-
 from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
-
 from qmctorch.wavefunction.jastrows.elec_elec import (
-    JastrowFactor as JastrowFactorElecElec, 
+    JastrowFactor as JastrowFactorElecElec,
     DoubleFullyConnectedJastrowKernel as  ElecElecKernel
 )
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
-    JastrowFactor as JastrowFactorElecNuclei, 
+    JastrowFactor as JastrowFactorElecNuclei,
     PadeJastrowKernel as ElecNucleiKernel
 )
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
@@ -48,8 +44,8 @@ class TestH2SamplerHMC(BaseTestSolvers.BaseTestSolverMolecule):
 
         # wave function
         self.wf = SlaterJastrow(
-            self.mol, kinetic="jacobi", 
-            configs="single(2,2)", 
+            self.mol, kinetic="jacobi",
+            configs="single(2,2)",
             jastrow=[jastrow_ee, jastrow_en, jastrow_een]
         )
 

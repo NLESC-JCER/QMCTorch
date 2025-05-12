@@ -105,7 +105,7 @@ class SlaterPooling(nn.Module):
         """
         mo_up, mo_down = self.get_slater_matrices(input)
         det_up = torch.det(mo_up)
-        det_down = torch.det(mo_down) 
+        det_down = torch.det(mo_down)
         return (det_up[self.orb_proj.index_unique_configs[0], ...] * det_down[self.orb_proj.index_unique_configs[1], ...]).transpose(0, 1)
 
     def det_single_double(self, input: torch.Tensor) -> torch.Tensor:
@@ -301,10 +301,10 @@ class SlaterPooling(nn.Module):
             return op_vals
 
     def operator_ground_state(
-            self, 
-            mo: torch.Tensor, 
-            bop: torch.Tensor, 
-            op_squared: bool = False, 
+            self,
+            mo: torch.Tensor,
+            bop: torch.Tensor,
+            op_squared: bool = False,
             inv_mo: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the values of any operator on gs only
@@ -430,10 +430,10 @@ class SlaterPooling(nn.Module):
         )
 
     def operator_unique_single_double(
-            self, 
-            mo: torch.Tensor, 
-            bop: torch.Tensor, 
-            op_squared: bool, 
+            self,
+            mo: torch.Tensor,
+            bop: torch.Tensor,
+            op_squared: bool,
             inv_mo: Optional[Tuple[torch.Tensor, torch.Tensor]] = None
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Compute the operator value of the unique single/double conformation
@@ -459,12 +459,12 @@ class SlaterPooling(nn.Module):
         do_single = len(self.exc_mask.index_unique_single_up) != 0
         do_double = len(self.exc_mask.index_unique_double_up) != 0
 
-        # compute or retrieve the inverse of the up/down MO matrices 
+        # compute or retrieve the inverse of the up/down MO matrices
         if inv_mo is None:
             invAup, invAdown = self.compute_inverse_occupied_mo_matrix(mo)
         else:
             invAup, invAdown = inv_mo
-        
+
 
         # precompute invA @ B
         invAB_up = invAup @ bop[..., : self.nup, : self.nup]
@@ -506,7 +506,7 @@ class SlaterPooling(nn.Module):
             invAdown @ bop_virt_down - invAdown @ bop_occ_down @ invAdown @ Avirt_down
         )
 
-        
+
         # if we only want the normal value of the op and not its squared
         if not op_squared:
 
@@ -606,7 +606,7 @@ class SlaterPooling(nn.Module):
                 op_out_down = torch.cat((op_out_down, op_sin_down), dim=-1)
 
             if do_double:
-                
+
                 # spin up values
                 op_dbl_up = self.op_squared_multiexcitation(
                     op_ground_up,
@@ -674,11 +674,11 @@ class SlaterPooling(nn.Module):
 
     @staticmethod
     def op_multiexcitation(
-        baseterm: torch.Tensor, 
-        mat_exc: torch.Tensor, 
+        baseterm: torch.Tensor,
+        mat_exc: torch.Tensor,
         M: torch.Tensor,
-        index: List[int], 
-        size: int, 
+        index: List[int],
+        size: int,
         nbatch: int
     ) -> torch.Tensor:
         r"""Computes the operator values for single excitation
@@ -823,10 +823,10 @@ class SlaterPooling(nn.Module):
         op_vals += baseterm
 
         return op_vals
-    
 
-    def compute_inverse_occupied_mo_matrix( 
-            self, 
+
+    def compute_inverse_occupied_mo_matrix(
+            self,
             mo: torch.Tensor
             ) -> Union[Tuple[torch.Tensor, torch.Tensor], None]:
         """precompute the inverse of the occupied mo matrix
@@ -839,11 +839,11 @@ class SlaterPooling(nn.Module):
         """
         # return None if we use the explicit calculation of all dets
         if self.config_method.startswith("cas("):
-            return None 
-        
+            return None
+
         if self.use_explicit_operator:
             return None
-        
+
         # return inverse of the mo matrices
-        return (torch.inverse(mo[:, : self.nup, : self.nup]), 
+        return (torch.inverse(mo[:, : self.nup, : self.nup]),
                 torch.inverse(mo[:, self.nup :, : self.ndown]))

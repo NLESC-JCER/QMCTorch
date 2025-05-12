@@ -2,17 +2,17 @@ import unittest
 from types import SimpleNamespace
 import numpy as np
 import torch
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import grad, gradcheck
 
 from qmctorch.wavefunction.jastrows.combine_jastrow import (
     CombineJastrow,
 )
 from qmctorch.wavefunction.jastrows.elec_elec import (
-    JastrowFactor as JastrowFactorElecElec, 
+    JastrowFactor as JastrowFactorElecElec,
     PadeJastrowKernel as  ElecElecKernel)
 
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
-    JastrowFactor as JastrowFactorElecNuclei, 
+    JastrowFactor as JastrowFactorElecNuclei,
     PadeJastrowKernel as ElecNucleiKernel)
 
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
@@ -42,7 +42,7 @@ class TestJastrowCombinedTerms(unittest.TestCase):
 
         jastrow_en = JastrowFactorElecNuclei(
             self.mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
-        
+
         jastrow_een = JastrowFactorElecElecNuc(self.mol, ElecElecNucleiKernel)
 
         self.jastrow = CombineJastrow([jastrow_ee, jastrow_en, jastrow_een])

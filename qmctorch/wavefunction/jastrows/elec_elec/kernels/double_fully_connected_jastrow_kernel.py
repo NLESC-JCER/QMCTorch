@@ -77,7 +77,7 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
                     same_idx_pair.append(ipair)
                 else:
                     opp_idx_pair.append(ipair)
-                
+
                 ipair += 1
 
         self.same_idx_pair = torch.as_tensor(same_idx_pair).to(self.device)
@@ -118,7 +118,7 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         x = x.reshape(nbatch, npairs)
 
         return x
-    
+
     def _fopp(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the kernel values of opposite spin pairs
 
