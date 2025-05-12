@@ -30,8 +30,8 @@ class BaseTestCases:
     class TestBackFlowKernelBase(unittest.TestCase):
 
         def setUp(self):
-            pass 
-        
+            pass
+
         def test_derivative_backflow_kernel(self):
             """Test the derivative of the kernel function
             wrt the elec-elec distance."""

@@ -12,11 +12,11 @@ from qmctorch.wavefunction.jastrows.combine_jastrow import (
 )
 
 from qmctorch.wavefunction.jastrows.elec_elec import (
-    JastrowFactor as JastrowFactorElecElec, 
+    JastrowFactor as JastrowFactorElecElec,
     PadeJastrowKernel as  ElecElecKernel)
 
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
-    JastrowFactor as JastrowFactorElecNuclei, 
+    JastrowFactor as JastrowFactorElecNuclei,
     PadeJastrowKernel as ElecNucleiKernel)
 
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
@@ -57,7 +57,7 @@ class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
 
         jastrow_en = JastrowFactorElecNuclei(
             mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
-        
+
         jastrow_een = JastrowFactorElecElecNuc(mol, ElecElecNucleiKernel)
 
         jastrow = CombineJastrow([jastrow_ee, jastrow_en, jastrow_een])
