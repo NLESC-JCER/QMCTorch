@@ -3,7 +3,7 @@ from torch import nn
 from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 
-class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
+class SpinPairFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
     def __init__(
         self,
         nup: int,
@@ -11,9 +11,10 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         cuda: bool,
         size1: int = 16,
         size2: int = 8,
+        eps = 1E-6,
         activation: torch.nn.Module = torch.nn.Sigmoid(),
     ) -> None:
-        """Defines a fully connected jastrow factors.
+        """Defines a fully connected jastrow factors with a separate fully connected layers for same and opposite spin
 
         Args:
             nup (int): Number of spin up electrons.
@@ -21,6 +22,7 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
             cuda (bool): Whether to use the GPU or not.
             size1 (int, optional): Number of neurons in the first hidden layer. Defaults to 16.
             size2 (int, optional): Number of neurons in the second hidden layer. Defaults to 8.
+            eps (float, optional): Small value for initialization. Defaults to 1E-6.
             activation (torch.nn.Module, optional): Activation function. Defaults to torch.nn.Sigmoid.
         """
 
@@ -34,7 +36,6 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc2_opp = nn.Linear(size1, size2, bias=True)
         self.fc3_opp = nn.Linear(size2, 1, bias=True)
 
-        eps = 1e-3
         self.fc1_same.weight.data *= eps
         self.fc2_same.weight.data *= eps
         self.fc3_same.weight.data *= eps
@@ -44,7 +45,6 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc2_opp.weight.data *= eps
         self.fc3_opp.weight.data *= eps
 
-        eps = 1e-6
         self.fc1_same.bias.data *= eps
         self.fc2_same.bias.data *= eps
         self.fc3_same.bias.data *= eps
@@ -61,8 +61,23 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.requires_autograd = True
 
     def get_idx_pair(self) -> None:
-        """define the variational weight."""
+        """
+        Generate the indices of the same spin and opposite spin pairs.
 
+        The Jastrow factor is applied on all pair of electrons. To apply the
+        same spin Jastrow kernel or the opposite spin Jastrow kernel, it is
+        necessary to know the indices of the same spin and opposite spin pairs.
+        This function generate the indices of the same spin and opposite spin
+        pairs.
+
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        None
+        """
         nelec = self.nup + self.ndown
 
         same_idx_pair = []
@@ -85,6 +100,15 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Compute the values of the kernel for same spin and opposite spin pairs.
+
+        Args:
+            x (torch.tensor): e-e distance Nbatch, Nele_pairs
+
+        Returns:
+            torch.tensor: values of the kernel
+        """
         out = torch.zeros_like(x)
         if len(self.same_idx_pair) > 0:
             out[:, self.same_idx_pair] = self._fsame(x[:, self.same_idx_pair])
@@ -96,7 +120,7 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         """Compute the kernel values of same spin pairs
 
         Args:
-            x (torch.tensor): e-e distance Nbatch, Nele_pairs
+            x (torch.tensor): e-e distance Nbatch, Nelec_pairs
 
         Returns:
             torch.tensor: values of the f_ij
@@ -123,7 +147,7 @@ class DoubleFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         """Compute the kernel values of opposite spin pairs
 
         Args:
-            x (torch.tensor): e-e distance Nbatch, Nele_pairs
+            x (torch.tensor): e-e distance Nbatch, Nelec_pairs
 
         Returns:
             torch.tensor: values of the f_ij
