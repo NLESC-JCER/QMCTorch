@@ -8,7 +8,7 @@ import shutil
 try:
     from pyscf import gto, scf, dft
 except ModuleNotFoundError:
-    if  sys.platform == "win32":
+    if sys.platform == "win32":
         raise Warning("pyscf is not supported on Windows'")
     else:
         raise Warning("pyscf not found, install it with: pip install pyscf")

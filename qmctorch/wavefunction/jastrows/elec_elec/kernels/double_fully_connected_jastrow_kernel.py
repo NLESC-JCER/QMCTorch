@@ -11,7 +11,7 @@ class SpinPairFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         cuda: bool,
         size1: int = 16,
         size2: int = 8,
-        eps = 1E-6,
+        eps=1e-6,
         activation: torch.nn.Module = torch.nn.Sigmoid(),
     ) -> None:
         """Defines a fully connected jastrow factors with a separate fully connected layers for same and opposite spin
@@ -40,7 +40,6 @@ class SpinPairFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc2_same.weight.data *= eps
         self.fc3_same.weight.data *= eps
 
-
         self.fc1_opp.weight.data *= eps
         self.fc2_opp.weight.data *= eps
         self.fc3_opp.weight.data *= eps
@@ -48,7 +47,6 @@ class SpinPairFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         self.fc1_same.bias.data *= eps
         self.fc2_same.bias.data *= eps
         self.fc3_same.bias.data *= eps
-
 
         self.fc1_opp.bias.data *= eps
         self.fc2_opp.bias.data *= eps
@@ -97,7 +95,6 @@ class SpinPairFullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
 
         self.same_idx_pair = torch.as_tensor(same_idx_pair).to(self.device)
         self.opp_idx_pair = torch.as_tensor(opp_idx_pair).to(self.device)
-
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """

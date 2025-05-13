@@ -3,6 +3,7 @@ from torch.autograd import grad, gradcheck, Variable
 import torch
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
 
+
 class BaseTestJastrow:
     class ElecElecJastrowBaseTest(unittest.TestCase):
         def setUp(self) -> None:

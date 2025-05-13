@@ -35,10 +35,7 @@ class BackFlowTransformation(nn.Module):
         if self.cuda:
             self.device = torch.device("cuda")
 
-    def forward(self,
-                pos: torch.Tensor,
-                derivative: Optional[int] = 0
-                ) -> torch.Tensor:
+    def forward(self, pos: torch.Tensor, derivative: Optional[int] = 0) -> torch.Tensor:
         if derivative == 0:
             return self._get_backflow(pos)
 
@@ -53,9 +50,7 @@ class BackFlowTransformation(nn.Module):
                 "derivative of the backflow transformation must be 0, 1 or 2"
             )
 
-    def _get_backflow(self,
-                      pos: torch.Tensor
-                      ) -> torch.Tensor:
+    def _get_backflow(self, pos: torch.Tensor) -> torch.Tensor:
         """Computes the backflow transformation
 
         .. math:
@@ -242,11 +237,15 @@ class BackFlowTransformation(nn.Module):
 
         return out.unsqueeze(-1)
 
-    def fit_kernel(self, lambda_func: Callable,
-                   xmin: float = 0.01, xmax: float = 1.0, npts: int = 100,
-                   lr: float = 0.001, num_epochs: int = 1000
-        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-
+    def fit_kernel(
+        self,
+        lambda_func: Callable,
+        xmin: float = 0.01,
+        xmax: float = 1.0,
+        npts: int = 100,
+        lr: float = 0.001,
+        num_epochs: int = 1000,
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
         Fit the backflow kernel to a given function.
 
@@ -282,8 +281,7 @@ class BackFlowTransformation(nn.Module):
                 print("Epoch {}: Loss = {}".format(epoch, loss.detach().numpy()))
 
         fit_values = self.backflow_kernel(xpts.unsqueeze(1)).squeeze()
-        return xpts, ground_truth,  fit_values
-
+        return xpts, ground_truth, fit_values
 
     def __repr__(self):
         """representation of the backflow transformation"""

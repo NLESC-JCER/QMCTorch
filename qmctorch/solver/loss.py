@@ -3,12 +3,15 @@ import torch
 from torch import nn
 from ..wavefunction import WaveFunction
 
+
 class Loss(nn.Module):
-    def __init__(self,
-                 wf: WaveFunction,
-                 method: str = "energy",
-                 clip: bool = False,
-                 clip_threshold: int = 5):
+    def __init__(
+        self,
+        wf: WaveFunction,
+        method: str = "energy",
+        clip: bool = False,
+        clip_threshold: int = 5,
+    ):
         """Defines the loss to use during the optimization
 
         Arguments:
@@ -44,10 +47,7 @@ class Loss(nn.Module):
         self.weight = {"psi": None, "psi0": None}
 
     def forward(
-        self,
-        pos: torch.Tensor,
-        no_grad: bool = False,
-        deactivate_weight: bool = False
+        self, pos: torch.Tensor, no_grad: bool = False, deactivate_weight: bool = False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the loss
 

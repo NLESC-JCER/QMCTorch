@@ -3,6 +3,7 @@ from torch import nn
 from .....scf import Molecule
 from .....utils import gradients, hessian
 
+
 class BackFlowKernelBase(nn.Module):
     def __init__(self, mol: Molecule, cuda: bool):
         """Compute the back flow kernel, i.e. the function

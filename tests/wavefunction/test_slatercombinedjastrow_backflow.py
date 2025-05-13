@@ -13,15 +13,17 @@ from qmctorch.wavefunction.jastrows.combine_jastrow import (
 
 from qmctorch.wavefunction.jastrows.elec_elec import (
     JastrowFactor as JastrowFactorElecElec,
-    PadeJastrowKernel as  ElecElecKernel)
+    PadeJastrowKernel as ElecElecKernel,
+)
 
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
     JastrowFactor as JastrowFactorElecNuclei,
-    PadeJastrowKernel as ElecNucleiKernel)
+    PadeJastrowKernel as ElecNucleiKernel,
+)
 
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
     BoysHandyJastrowKernel as ElecElecNucleiKernel,
-    JastrowFactor as JastrowFactorElecElecNuc
+    JastrowFactor as JastrowFactorElecElecNuc,
 )
 
 from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
@@ -32,6 +34,7 @@ from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse imp
 )
 
 from qmctorch.utils import set_torch_double_precision
+
 set_torch_double_precision()
 
 
@@ -53,10 +56,12 @@ class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
 
         # define jastrow factor
         jastrow_ee = JastrowFactorElecElec(
-            mol, ElecElecKernel, kernel_kwargs={'w':1.})
+            mol, ElecElecKernel, kernel_kwargs={"w": 1.0}
+        )
 
         jastrow_en = JastrowFactorElecNuclei(
-            mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
+            mol, ElecNucleiKernel, kernel_kwargs={"w": 1.0}
+        )
 
         jastrow_een = JastrowFactorElecElecNuc(mol, ElecElecNucleiKernel)
 

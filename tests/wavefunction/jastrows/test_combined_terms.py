@@ -9,19 +9,23 @@ from qmctorch.wavefunction.jastrows.combine_jastrow import (
 )
 from qmctorch.wavefunction.jastrows.elec_elec import (
     JastrowFactor as JastrowFactorElecElec,
-    PadeJastrowKernel as  ElecElecKernel)
+    PadeJastrowKernel as ElecElecKernel,
+)
 
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
     JastrowFactor as JastrowFactorElecNuclei,
-    PadeJastrowKernel as ElecNucleiKernel)
+    PadeJastrowKernel as ElecNucleiKernel,
+)
 
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
     BoysHandyJastrowKernel as ElecElecNucleiKernel,
-    JastrowFactor as JastrowFactorElecElecNuc
+    JastrowFactor as JastrowFactorElecElecNuc,
 )
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
+
 set_torch_double_precision()
+
 
 class TestJastrowCombinedTerms(unittest.TestCase):
     def setUp(self):
@@ -37,11 +41,12 @@ class TestJastrowCombinedTerms(unittest.TestCase):
         )
 
         jastrow_ee = JastrowFactorElecElec(
-            self.mol, ElecElecKernel, kernel_kwargs={'w':1.}
-            )
+            self.mol, ElecElecKernel, kernel_kwargs={"w": 1.0}
+        )
 
         jastrow_en = JastrowFactorElecNuclei(
-            self.mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
+            self.mol, ElecNucleiKernel, kernel_kwargs={"w": 1.0}
+        )
 
         jastrow_een = JastrowFactorElecElecNuc(self.mol, ElecElecNucleiKernel)
 

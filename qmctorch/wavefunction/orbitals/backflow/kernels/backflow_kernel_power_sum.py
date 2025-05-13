@@ -3,6 +3,7 @@ from torch import nn
 from .backflow_kernel_base import BackFlowKernelBase
 from .....scf import Molecule
 
+
 class BackFlowKernelPowerSum(BackFlowKernelBase):
     def __init__(self, mol: Molecule, cuda: bool, order: int = 2):
         """Compute the back flow kernel, i.e. the function

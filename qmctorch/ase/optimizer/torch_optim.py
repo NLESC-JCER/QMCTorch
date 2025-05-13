@@ -9,23 +9,23 @@ from copy import deepcopy
 from ase import Atoms
 from ase.optimize.optimize import Optimizer
 from ...utils.constants import BOHR2ANGS
+
+
 class TorchOptimizer(Optimizer):
-
-    def __init__(self,
-                 atoms:Atoms,
-                 optimizer: Optional[torch_optimizer] = None,
-                 nepoch_wf_init: Optional[int] = 100,
-                 nepoch_wf_update: Optional[int] = 10,
-                 batchsize: Optional[int] = None,
-                 tqdm: Optional[bool] = False,
-                 restart: Optional[str] = None,
-                 logfile: Union[IO, str] = '-',
-                 trajectory: Optional[str] = None,
-                 master: Optional[bool] = None):
-
-
-        Optimizer.__init__(self, atoms, restart, logfile, trajectory,
-                           master)
+    def __init__(
+        self,
+        atoms: Atoms,
+        optimizer: Optional[torch_optimizer] = None,
+        nepoch_wf_init: Optional[int] = 100,
+        nepoch_wf_update: Optional[int] = 10,
+        batchsize: Optional[int] = None,
+        tqdm: Optional[bool] = False,
+        restart: Optional[str] = None,
+        logfile: Union[IO, str] = "-",
+        trajectory: Optional[str] = None,
+        master: Optional[bool] = None,
+    ):
+        Optimizer.__init__(self, atoms, restart, logfile, trajectory, master)
 
         self.opt_geo = optimizer
         self.batchsize = batchsize
@@ -55,7 +55,7 @@ class TorchOptimizer(Optimizer):
         This function is called by the optimizer at each step. It writes the
         energy, forces, and time to the log file.
         """
-        fmax = sqrt((forces ** 2).sum(axis=1).max())
+        fmax = sqrt((forces**2).sum(axis=1).max())
         T = time.localtime()
         if self.logfile is not None:
             name = self.__class__.__name__
@@ -70,7 +70,9 @@ class TorchOptimizer(Optimizer):
             self.logfile.flush()
         return fmax
 
-    def run(self, fmax: float, steps: int = 10, hdf5_group: str = "geo_opt") -> SimpleNamespace:
+    def run(
+        self, fmax: float, steps: int = 10, hdf5_group: str = "geo_opt"
+    ) -> SimpleNamespace:
         """
         Run a geometry optimization.
 
@@ -99,7 +101,7 @@ class TorchOptimizer(Optimizer):
         solver = self.atoms.calc.solver
 
         if self.opt_geo is None:
-            self.opt_geo = SGD(solver.wf.parameters(), lr=1E-2)
+            self.opt_geo = SGD(solver.wf.parameters(), lr=1e-2)
             self.opt_geo.lpos_needed = False
 
         # save the optimizer used for the wf params
@@ -122,26 +124,30 @@ class TorchOptimizer(Optimizer):
         solver.run_epochs(self.nepoch_wf_init)
 
         for n in range(steps):
-
             # one step of geo optim
             solver.set_params_requires_grad(wf_params=False, geo_params=True)
             solver.opt = self.opt_geo
-            solver.evaluate_gradient = solver.evaluate_grad_auto # evaluate_grad_manual not valid for forces
+            solver.evaluate_gradient = (
+                solver.evaluate_grad_auto
+            )  # evaluate_grad_manual not valid for forces
             solver.run_epochs(1, verbose=False)
             forces = solver.wf.forces()
-            print(solver.wf.geometry(None,convert_to_angs=True))
-            self.xyz_trajectory.append(solver.wf.geometry(None,convert_to_angs=True))
+            print(solver.wf.geometry(None, convert_to_angs=True))
+            self.xyz_trajectory.append(solver.wf.geometry(None, convert_to_angs=True))
 
             # make a few wf optim
             solver.set_params_requires_grad(wf_params=True, geo_params=False)
             solver.freeze_parameters(solver.freeze_params_list)
             solver.opt = self.opt_wf
             solver.evaluate_gradient = self.eval_grad_wf
-            cumulative_loss = solver.run_epochs(self.nepoch_wf_update,
-                                                with_tqdm=self.tqdm, verbose=False)
+            cumulative_loss = solver.run_epochs(
+                self.nepoch_wf_update, with_tqdm=self.tqdm, verbose=False
+            )
 
             # update the geometry
-            self.optimizable.set_positions(solver.wf.geometry(None,convert_to_angs=True))
+            self.optimizable.set_positions(
+                solver.wf.geometry(None, convert_to_angs=True)
+            )
             current_fmax = self.log(cumulative_loss, forces)
             self.call_observers()
 

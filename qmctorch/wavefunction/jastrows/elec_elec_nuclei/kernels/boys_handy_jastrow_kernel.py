@@ -12,11 +12,11 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         ndown: int,
         atomic_pos: torch.Tensor,
         cuda: bool,
-        a0: float = 1E-3,
+        a0: float = 1e-3,
         b0: float = 1.0,
         exp0: float = 1.0,
-        nterm: int = 5
-        ) -> None:  # pylint: disable=too-many-arguments
+        nterm: int = 5,
+    ) -> None:  # pylint: disable=too-many-arguments
         r"""Defines a Boys Handy jastrow factors.
 
         J.W. Moskowitz et. al
@@ -38,8 +38,12 @@ class BoysHandyJastrowKernel(JastrowKernelElectronElectronNucleiBase):
         self.nterm = nterm
         self.fc = nn.Linear(self.nterm, 1, bias=False).to(self.device)
 
-        self.weight_num = nn.Parameter(a0 * torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
-        self.weight_denom = nn.Parameter(b0 * torch.ones(1, 2, self.nterm), requires_grad=True).to(self.device)
+        self.weight_num = nn.Parameter(
+            a0 * torch.ones(1, 2, self.nterm), requires_grad=True
+        ).to(self.device)
+        self.weight_denom = nn.Parameter(
+            b0 * torch.ones(1, 2, self.nterm), requires_grad=True
+        ).to(self.device)
         self.exp = exp0 * torch.ones(2, self.nterm, requires_grad=False).to(self.device)
         self.repeat_dim = torch.as_tensor([2, 1]).to(self.device)
 

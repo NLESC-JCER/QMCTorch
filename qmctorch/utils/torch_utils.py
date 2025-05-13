@@ -9,7 +9,7 @@ def set_torch_double_precision() -> None:
     """Set the default precision to double for all torch tensors."""
     torch.set_default_dtype(torch.float64)
     torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32  = False
+    torch.backends.cudnn.allow_tf32 = False
     # torch.set_default_tensor_type(torch.DoubleTensor)
 
 
@@ -17,7 +17,7 @@ def set_torch_single_precision() -> None:
     """Set the default precision to single for all torch tensors."""
     torch.set_default_dtype(torch.float32)
     torch.backends.cuda.matmul.allow_tf32 = False
-    torch.backends.cudnn.allow_tf32  = False
+    torch.backends.cudnn.allow_tf32 = False
     # torch.set_default_tensor_type(torch.FloatTensor)
 
 
@@ -25,7 +25,7 @@ def fast_power(
     x: torch.Tensor,
     k: torch.Tensor,
     mask0: Optional[torch.Tensor] = None,
-    mask2: Optional[torch.Tensor] = None
+    mask2: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """
     Computes x**k when k have elements 0, 1, 2.
@@ -90,10 +90,11 @@ def hessian(out: torch.Tensor, inp: torch.Tensor) -> Tuple[torch.Tensor, torch.T
 
     return hval, gval.detach()
 
+
 def diagonal_hessian(
-        out: torch.Tensor,
-        inp: torch.Tensor,
-    ) -> torch.Tensor:
+    out: torch.Tensor,
+    inp: torch.Tensor,
+) -> torch.Tensor:
     """Return the diagonal Hessian of `out` with respect to `inp`.
 
     Args:
@@ -106,11 +107,9 @@ def diagonal_hessian(
         torch.Tensor (optional): Gradients of `out` with respect to `inp` if `return_grads` is True.
     """
     # compute the jacobian
-    jacob = grad(out,
-                 inp,
-                 grad_outputs=torch.ones_like(out),
-                 only_inputs=True,
-                 create_graph=True)[0]
+    jacob = grad(
+        out, inp, grad_outputs=torch.ones_like(out), only_inputs=True, create_graph=True
+    )[0]
 
     # compute the diagonal element of the Hessian
     z = Variable(torch.ones(jacob.shape[0]))
@@ -118,11 +117,7 @@ def diagonal_hessian(
 
     for idim in range(jacob.shape[1]):
         tmp = grad(
-            jacob[:, idim],
-            inp,
-            grad_outputs=z,
-            only_inputs=True,
-            create_graph=True
+            jacob[:, idim], inp, grad_outputs=z, only_inputs=True, create_graph=True
         )[0]
 
         hess[:, idim] = tmp[:, idim]
@@ -160,9 +155,7 @@ class DataSet(Dataset):
 
 class DataLoader:
     def __init__(
-        self, data: torch.Tensor,
-        batch_size: int,
-        pin_memory: bool = False
+        self, data: torch.Tensor, batch_size: int, pin_memory: bool = False
     ) -> None:
         """Simple DataLoader to replace torch data loader
 

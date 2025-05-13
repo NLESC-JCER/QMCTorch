@@ -26,7 +26,7 @@ from .torch_utils import (
     set_torch_single_precision,
     diagonal_hessian,
     gradients,
-    hessian
+    hessian,
 )
 
 __all__ = [

@@ -2,6 +2,7 @@ import torch
 from typing import Tuple, List
 from ...scf import Molecule
 
+
 class OrbitalConfigurations:
     def __init__(self, mol: Molecule) -> None:
         self.nup = mol.nup
@@ -87,10 +88,9 @@ class OrbitalConfigurations:
         cup, cdown = [_gs_up], [_gs_down]
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_single_config(self,
-                           nocc: Tuple[int, int],
-                           nvirt: Tuple[int, int]
-                           ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+    def _get_single_config(
+        self, nocc: Tuple[int, int], nvirt: Tuple[int, int]
+    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """Get the confs of the singlet conformations
 
         Args:
@@ -124,10 +124,9 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_single_double_config(self,
-                           nocc: Tuple[int, int],
-                           nvirt: Tuple[int, int]
-                           ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+    def _get_single_double_config(
+        self, nocc: Tuple[int, int], nvirt: Tuple[int, int]
+    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """Get the confs of the single + double
 
         Args:
@@ -178,11 +177,9 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_cas_config(self,
-                        nocc: Tuple[int, int],
-                        nvirt: Tuple[int, int],
-                        nelec: int
-                        ) -> Tuple[torch.LongTensor, torch.LongTensor]:
+    def _get_cas_config(
+        self, nocc: Tuple[int, int], nvirt: Tuple[int, int], nelec: int
+    ) -> Tuple[torch.LongTensor, torch.LongTensor]:
         """get confs of the CAS
 
         Args:
@@ -216,7 +213,9 @@ class OrbitalConfigurations:
 
         return (torch.LongTensor(cup), torch.LongTensor(cdown))
 
-    def _get_orb_number(self, nelec: int, norb: int) -> Tuple[Tuple[int, int], Tuple[int,int]]:
+    def _get_orb_number(
+        self, nelec: int, norb: int
+    ) -> Tuple[Tuple[int, int], Tuple[int, int]]:
         """compute the number of occupied and virtual orbital
         __ PER SPIN __
         __ ONLY VALID For spin up/down ___
@@ -291,7 +290,10 @@ class OrbitalConfigurations:
 
     @staticmethod
     def _append_excitations(
-        cup: List[List[int]], cdown: List[List[int]], new_cup: List[int], new_cdown: List[int]
+        cup: List[List[int]],
+        cdown: List[List[int]],
+        new_cup: List[int],
+        new_cdown: List[int],
     ) -> Tuple[List[List[int]], List[List[int]]]:
         """Append new excitations
 

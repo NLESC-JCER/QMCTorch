@@ -2,11 +2,16 @@ import unittest
 from types import SimpleNamespace
 import numpy as np
 import torch
-from torch.autograd import  grad
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import JastrowFactorElectronElectronNuclei
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.fully_connected_jastrow_kernel import FullyConnectedJastrowKernel
+from torch.autograd import grad
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei.jastrow_factor_electron_electron_nuclei import (
+    JastrowFactorElectronElectronNuclei,
+)
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels.fully_connected_jastrow_kernel import (
+    FullyConnectedJastrowKernel,
+)
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
+
 set_torch_double_precision()
 
 

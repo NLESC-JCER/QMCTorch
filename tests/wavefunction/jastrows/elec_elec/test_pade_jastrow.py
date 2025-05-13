@@ -4,8 +4,12 @@ import torch
 
 from .base_elec_elec_jastrow_test import BaseTestJastrow
 from types import SimpleNamespace
-from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import JastrowFactorElectronElectron
-from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron import (
+    JastrowFactorElectronElectron,
+)
+from qmctorch.wavefunction.jastrows.elec_elec.kernels.pade_jastrow_kernel import (
+    PadeJastrowKernel,
+)
 from qmctorch.utils import set_torch_double_precision
 
 set_torch_double_precision()

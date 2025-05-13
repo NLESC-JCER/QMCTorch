@@ -4,11 +4,14 @@ from .atomic_orbitals import AtomicOrbitals
 from ...scf import Molecule
 from .backflow.backflow_transformation import BackFlowTransformation
 
+
 class AtomicOrbitalsBackFlow(AtomicOrbitals):
-    def __init__(self,
-                 mol: Molecule,
-                 backflow: BackFlowTransformation,
-                 cuda: Optional[bool] = False) -> None:
+    def __init__(
+        self,
+        mol: Molecule,
+        backflow: BackFlowTransformation,
+        cuda: Optional[bool] = False,
+    ) -> None:
         """Computes the value of atomic orbitals
 
         Args:
@@ -24,10 +27,10 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
     def forward(
         self,
         pos: torch.Tensor,
-        derivative: Optional[List[int]]=[0],
+        derivative: Optional[List[int]] = [0],
         sum_grad: Optional[bool] = True,
         sum_hess: Optional[bool] = True,
-        one_elec: Optional[bool] = False
+        one_elec: Optional[bool] = False,
     ) -> torch.Tensor:
         """Computes the values of the atomic orbitals.
 
@@ -114,7 +117,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return ao
 
-    def _compute_first_derivative_ao_values(self, pos: torch.Tensor, sum_grad: bool) -> torch.Tensor:
+    def _compute_first_derivative_ao_values(
+        self, pos: torch.Tensor, sum_grad: bool
+    ) -> torch.Tensor:
         """Compute the value of the derivative of the ao from the xyx and r tensor
 
         Args:
@@ -134,10 +139,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad
 
-    def _compute_gradient_backflow_ao_values(self,
-                                             pos: torch.Tensor,
-                                             grad_ao: Optional[Union[None, torch.Tensor]] = None
-                                             ) -> torch.Tensor:
+    def _compute_gradient_backflow_ao_values(
+        self, pos: torch.Tensor, grad_ao: Optional[Union[None, torch.Tensor]] = None
+    ) -> torch.Tensor:
         """Compute the jacobian of the backflow ao fromn xyz tensor
 
         Args:
@@ -173,7 +177,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return grad_ao
 
-    def _compute_second_derivative_ao_values(self, pos: torch.Tensor, sum_hess: bool) -> torch.Tensor:
+    def _compute_second_derivative_ao_values(
+        self, pos: torch.Tensor, sum_hess: bool
+    ) -> torch.Tensor:
         """Compute the value of the 2nd derivative of the ao from the xyx and r tensor
 
         Args:
@@ -198,7 +204,7 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
         pos: torch.Tensor,
         hess_ao: Optional[Union[None, torch.Tensor]] = None,
         mixed_ao: Optional[Union[None, torch.Tensor]] = None,
-        grad_ao: Optional[Union[None, torch.Tensor]] = None
+        grad_ao: Optional[Union[None, torch.Tensor]] = None,
     ) -> torch.Tensor:
         """Compute the laplacian of the backflow ao fromn xyz tensor
 
@@ -256,8 +262,9 @@ class AtomicOrbitalsBackFlow(AtomicOrbitals):
 
         return hess_ao
 
-    def _compute_all_backflow_ao_values(self, pos: torch.Tensor
-                                        ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor] :
+    def _compute_all_backflow_ao_values(
+        self, pos: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Compute the ao, gradient, laplacian of the ao from the xyx and r tensor
 
         Args:

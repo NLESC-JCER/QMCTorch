@@ -3,6 +3,7 @@ from torch.autograd import grad, gradcheck
 import torch
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
 
+
 class BaseTestCases:
     class WaveFunctionBaseTest(unittest.TestCase):
         def setUp(self):
