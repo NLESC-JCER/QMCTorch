@@ -11,6 +11,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         cuda: bool,
         size1: int = 16,
         size2: int = 8,
+        eps: float = 1E-6,
         activation: torch.nn.Module = torch.nn.Sigmoid(),
         include_cusp_weight: bool = True,
     ) -> None:
@@ -22,40 +23,43 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
             cuda (bool): Whether to use the GPU or not.
             size1 (int, optional): Number of neurons in the first hidden layer. Defaults to 16.
             size2 (int, optional): Number of neurons in the second hidden layer. Defaults to 8.
+            eps (float, optional): Small value for initialization. Defaults to 1E-6.
             activation (torch.nn.Module, optional): Activation function. Defaults to torch.nn.Sigmoid.
             include_cusp_weight (bool, optional): Whether to include the cusp weights or not. Defaults to True.
         """
 
         super().__init__(nup, ndown, cuda)
 
-        self.cusp_weights = None
-
         self.fc1 = nn.Linear(1, size1, bias=False)
         self.fc2 = nn.Linear(size1, size2, bias=False)
         self.fc3 = nn.Linear(size2, 1, bias=False)
-
-        eps = 1e-6
+        self.var_cusp_weight = nn.Parameter(torch.as_tensor([0.0, 0.0]))
         self.fc1.weight.data *= eps
         self.fc2.weight.data *= eps
         self.fc3.weight.data *= eps
 
         self.nl_func = activation
-        # self.nl_func = lambda x:  x
 
-        self.prefac = torch.rand(1)
-
-        self.cusp_weights = self.get_static_weight()
-        self.requires_autograd = True
-        self.get_var_weight()
-
+        self.get_idx_pair()
         self.include_cusp_weight = include_cusp_weight
 
-    def get_var_weight(self) -> None:
-        """define the variational weight."""
+        self.requires_autograd = True
 
+    def get_idx_pair(self) -> None:
+        """
+        Generate the indices of the same spin and opposite spin pairs.
+
+        The Jastrow factor is applied on all pair of electrons. To apply the
+        same spin Jastrow kernel or the opposite spin Jastrow kernel, it is
+        necessary to know the indices of the same spin and opposite spin pairs.
+        This function generate the indices of the same spin and opposite spin
+        pairs.
+
+        Returns
+        -------
+        None
+        """
         nelec = self.nup + self.ndown
-
-        self.var_cusp_weight = nn.Parameter(torch.as_tensor([0.0, 0.0]))
 
         idx_pair = []
         for i in range(nelec - 1):
@@ -69,40 +73,6 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
                     idx_pair.append(1)
         self.idx_pair = torch.as_tensor(idx_pair).to(self.device)
 
-    def get_static_weight(self) -> torch.Tensor:
-        """Get the matrix of static weights
-
-        Returns:
-            torch.tensor: static weight (0.5 (0.25) for parallel(anti) spins
-        """
-
-        bup = torch.cat(
-            (
-                0.25 * torch.ones(self.nup, self.nup),
-                0.5 * torch.ones(self.nup, self.ndown),
-            ),
-            dim=1,
-        )
-
-        bdown = torch.cat(
-            (
-                0.5 * torch.ones(self.ndown, self.nup),
-                0.25 * torch.ones(self.ndown, self.ndown),
-            ),
-            dim=1,
-        )
-
-        static_weight = torch.cat((bup, bdown), dim=0).to(self.device)
-
-        mask_tri_up = (
-            torch.triu(torch.ones_like(static_weight), diagonal=1)
-            .type(torch.BoolTensor)
-            .to(self.device)
-        )
-        static_weight = static_weight.masked_select(mask_tri_up)
-
-        return static_weight
-
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """Compute the kernel values
 
@@ -113,7 +83,6 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
             torch.tensor: values of the f_ij
         """
         nbatch, npairs = x.shape
-        # w = (x*self.cusp_weights)
 
         # reshape the input so that all elements are considered
         # independently of each other

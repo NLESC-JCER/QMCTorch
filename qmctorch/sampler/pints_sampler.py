@@ -13,7 +13,7 @@ class torch_model(pints.LogPDF):
             pdf: wf.pdf function
             ndim: number of dimensions
         """
-        self.pdf = pdf 
+        self.pdf = pdf
         self.ndim = ndim
 
     def __call__(self, x: numpy.ndarray) -> numpy.ndarray:

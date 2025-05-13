@@ -1,7 +1,6 @@
 import torch
 from torch import nn
-from torch.autograd import grad
-from typing import Tuple
+from .....utils import gradients, hessian
 
 class JastrowKernelElectronNucleiBase(nn.Module):
     def __init__(self, nup: int, ndown: int, atomic_pos: torch.Tensor, cuda: bool, **kwargs) -> None:
@@ -73,7 +72,7 @@ class JastrowKernelElectronNucleiBase(nn.Module):
 
         with torch.enable_grad():
             kernel = self.forward(r)
-            ker_grad = self._grads(kernel, r)
+            ker_grad = gradients(kernel, r)
 
         return ker_grad.unsqueeze(1) * dr
 
@@ -107,39 +106,8 @@ class JastrowKernelElectronNucleiBase(nn.Module):
 
         with torch.enable_grad():
             kernel = self.forward(r)
-
-            ker_hess, ker_grad = self._hess(kernel, r)
-
+            ker_hess, ker_grad = hessian(kernel, r)
             jhess = (ker_hess).unsqueeze(1) * dr2 + ker_grad.unsqueeze(1) * d2r
 
         return jhess
 
-    @staticmethod
-    def _grads(val: torch.Tensor, pos: torch.Tensor) -> torch.Tensor:
-        """Get the gradients of the jastrow values
-        of a given orbital terms
-
-        Args:
-            pos ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        return grad(val, pos, grad_outputs=torch.ones_like(val))[0]
-
-    @staticmethod
-    def _hess(val: torch.Tensor, pos: torch.Tensor) -> Tuple[torch.Tensor,torch.Tensor]:
-        """get the hessian of the jastrow values.
-        of a given orbital terms
-        Warning thos work only because the orbital term are dependent
-        of a single rij term, i.e. fij = f(rij)
-
-        Args:
-            pos ([type]): [description]
-        """
-
-        gval = grad(val, pos, grad_outputs=torch.ones_like(val), create_graph=True)[0]
-
-        hval = grad(gval, pos, grad_outputs=torch.ones_like(gval))[0]
-
-        return hval, gval

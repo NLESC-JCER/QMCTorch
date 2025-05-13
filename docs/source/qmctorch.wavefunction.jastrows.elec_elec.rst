@@ -12,11 +12,13 @@ Subpackages
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.wavefunction.jastrows.elec\_elec.jastrow\_factor\_electron\_electron module
+------------------------------------------------------------------------------------
 
-   qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron
-   qmctorch.wavefunction.jastrows.elec_elec.orbital_dependent_jastrow_kernel
+.. automodule:: qmctorch.wavefunction.jastrows.elec_elec.jastrow_factor_electron_electron
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

@@ -4,29 +4,11 @@ import torch
 from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.utils import set_torch_double_precision
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 set_torch_double_precision()
 
 torch.manual_seed(101)
 np.random.seed(101)
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
 
 
 def hess_single_element(out, inp):
@@ -48,8 +30,8 @@ class BaseTestCases:
     class TestBackFlowKernelBase(unittest.TestCase):
 
         def setUp(self):
-            pass 
-        
+            pass
+
         def test_derivative_backflow_kernel(self):
             """Test the derivative of the kernel function
             wrt the elec-elec distance."""
@@ -160,7 +142,7 @@ class BaseTestCases:
             )
 
             # computes the the derivative of the kernal values with autograd
-            d2bf_kernel_auto = hess(bf_kernel, self.pos)
+            d2bf_kernel_auto, _ = hess(bf_kernel, self.pos)
 
             # checksum
             assert torch.allclose(d2bf_kernel.sum(), d2bf_kernel_auto.sum())
@@ -210,7 +192,7 @@ class BaseTestCases:
 
             # compute der of the backflow pos wrt the
             # original pos using autograd
-            d2q_auto = hess(q, self.pos)
+            d2q_auto, _ = hess(q, self.pos)
 
             # checksum
             assert torch.allclose(d2q.sum(), d2q_auto.sum())
@@ -219,79 +201,5 @@ class BaseTestCases:
             d2q = d2q.sum([1, 3])
             d2q = d2q.permute(0, 2, 1)
             d2q_auto = d2q_auto.reshape(self.npts, self.mol.nelec, 3)
-
-            assert torch.allclose(d2q, d2q_auto)
-
-    class TestOrbitalDependentBackFlowTransformationBase(unittest.TestCase):
-        def setUp(self):
-            pass
-
-        def test_backflow_derivative(self):
-            """Test the derivative of the bf coordinate wrt the initial positions."""
-
-            # compute backflow pos
-            q = self.backflow_trans(self.pos)
-            nao = q.shape[1]
-
-            # compute der of the backflow pos wrt the
-            # original pos
-            dq = self.backflow_trans(self.pos, derivative=1)
-
-            # compute der of the backflow pos wrt the
-            # original pos using autograd
-            dq_grad = None
-            for iq in range(nao):
-                qao = q[:, iq, ...]
-                dqao = grad(
-                    qao, self.pos, grad_outputs=torch.ones_like(self.pos), retain_graph=True
-                )[0]
-                if dq_grad is None:
-                    dq_grad = dqao
-                else:
-                    dq_grad = torch.cat(
-                        (dq_grad, dqao), axis=self.backflow_trans.backflow_kernel.stack_axis
-                    )
-            # checksum
-            assert torch.allclose(dq.sum(), dq_grad.sum())
-
-            # permute and check elements
-            dq = dq.sum([1, 3])
-            dq = dq.permute(0, 3, 2, 1)
-            dq_grad = dq_grad.reshape(self.npts, nao, self.mol.nelec, 3)
-
-            assert torch.allclose(dq, dq_grad)
-
-        def test_backflow_second_derivative(self):
-            """Test the derivative of the bf coordinate wrt the initial positions."""
-
-            # compute backflow pos
-            q = self.backflow_trans(self.pos)
-            nao = q.shape[1]
-
-            # compute der of the backflow pos wrt the
-            # original pos
-            d2q = self.backflow_trans(self.pos, derivative=2)
-
-            # compute der of the backflow pos wrt the
-            # original pos using autograd
-            d2q_auto = None
-            for iq in range(nao):
-                qao = q[:, iq, ...]
-                d2qao = hess(qao, self.pos)
-                if d2q_auto is None:
-                    d2q_auto = d2qao
-                else:
-                    d2q_auto = torch.cat(
-                        (d2q_auto, d2qao),
-                        axis=self.backflow_trans.backflow_kernel.stack_axis,
-                    )
-
-            # checksum
-            assert torch.allclose(d2q.sum(), d2q_auto.sum())
-
-            # permute and check elements
-            d2q = d2q.sum([1, 3])
-            d2q = d2q.permute(0, 3, 2, 1)
-            d2q_auto = d2q_auto.reshape(self.npts, nao, self.mol.nelec, 3)
 
             assert torch.allclose(d2q, d2q_auto)

@@ -4,9 +4,9 @@ from torch import nn
 from ..wavefunction import WaveFunction
 
 class Loss(nn.Module):
-    def __init__(self, 
-                 wf: WaveFunction, 
-                 method: str = "energy", 
+    def __init__(self,
+                 wf: WaveFunction,
+                 method: str = "energy",
                  clip: bool = False,
                  clip_threshold: int = 5):
         """Defines the loss to use during the optimization
@@ -44,8 +44,8 @@ class Loss(nn.Module):
         self.weight = {"psi": None, "psi0": None}
 
     def forward(
-        self, 
-        pos: torch.Tensor, 
+        self,
+        pos: torch.Tensor,
         no_grad: bool = False,
         deactivate_weight: bool = False
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -53,9 +53,9 @@ class Loss(nn.Module):
 
         Args:
             pos (torch.Tensor): Positions of the walkers in that batch
-            no_grad (bool, optional): Computes the gradient of the loss 
+            no_grad (bool, optional): Computes the gradient of the loss
                                       (default: {False})
-            deactivate_weight (bool, optional): Deactivates the weight computation 
+            deactivate_weight (bool, optional): Deactivates the weight computation
                                                (default: {False})
 
         Returns:

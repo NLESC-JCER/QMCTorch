@@ -58,8 +58,8 @@ class QMCTorch(Calculator):
                                            basis='dzp',
                                            scf='hf')
         self.recognized_scf_options = list(self.scf_options.__dict__.keys())
-        
-        
+
+
         # default options for the WF
         self.wf = None
         self.wf_options = SimpleNamespace(kinetic='jacobi',
@@ -78,20 +78,20 @@ class QMCTorch(Calculator):
                                           ),
                                           gto2sto=False)
 
-        self.recognized_wf_options = list(self.wf_options.__dict__.keys())  
+        self.recognized_wf_options = list(self.wf_options.__dict__.keys())
         self.recognized_jastrow_options = list(self.wf_options.jastrow.__dict__.keys())
         self.recognized_backflow_options = list(self.wf_options.backflow.__dict__.keys())
         self.wf_options.backflow = None
 
         # default option for the sampler
         self.sampler = None
-        self.sampler_options = SimpleNamespace(nwalkers=4000, nstep=2000, 
+        self.sampler_options = SimpleNamespace(nwalkers=4000, nstep=2000,
                                                ntherm=-1, ndecor=1, step_size=0.05,
                                                symmetry=None)
         self.recognized_sampler_options = list(self.sampler_options.__dict__.keys())
-        
-        
-        # optimizer .... 
+
+
+        # optimizer ....
         self.optimizer = None
 
         # default option for the solver
@@ -99,14 +99,14 @@ class QMCTorch(Calculator):
         self.solver_options = SimpleNamespace(track=['local_energy', 'parameters'], freeze=[],
                                               loss='energy', grad='manual',
                                               ortho_mo=False, clip_loss=False,
-                                              resampling=SimpleNamespace(mode='update', 
-                                                                         resample_every=1, 
-                                                                         nstep_update=50, 
+                                              resampling=SimpleNamespace(mode='update',
+                                                                         resample_every=1,
+                                                                         nstep_update=50,
                                                                          ntherm_update=-1),
                                               niter=100, tqdm=False)
         self.recognized_solver_options = list(self.solver_options.__dict__.keys())
         self.recognized_resampling_options = list(self.solver_options.resampling.__dict__.keys())
-        
+
         # default symmetry
         self.symmetry = C1()
 
@@ -161,11 +161,11 @@ class QMCTorch(Calculator):
         if self.atoms is None:
             raise ValueError("Atoms object is not set")
         filename = self.atoms.get_chemical_formula() + '.xyz'
-        self.atoms.write(filename) 
-        self.molecule = SCF(atom=filename, 
-                                 unit='angs', 
+        self.atoms.write(filename)
+        self.molecule = SCF(atom=filename,
+                                 unit='angs',
                                  scf=self.scf_options.scf,
-                                 calculator=self.scf_options.calculator, 
+                                 calculator=self.scf_options.calculator,
                                  basis=self.scf_options.basis, redo_scf=True)
 
     def set_wf(self) -> None:
@@ -183,11 +183,11 @@ class QMCTorch(Calculator):
         # check if molecuyle is set
         if self.molecule is None:
             raise ValueError("Molecule object is not set")
-        
+
         # check jastrow and set it
         if self.wf_options.jastrow is not None:
             self.validate_options(self.wf_options.jastrow, self.recognized_jastrow_options, 'Jastrow')
-            jastrow = JastrowFactor(self.molecule, self.wf_options.jastrow.kernel, 
+            jastrow = JastrowFactor(self.molecule, self.wf_options.jastrow.kernel,
                                     self.wf_options.jastrow.kernel_kwargs, cuda=self.use_cuda)
         else:
             jastrow = None
@@ -195,7 +195,7 @@ class QMCTorch(Calculator):
         # check backflow and set it
         if self.wf_options.backflow is not None:
             self.validate_options(self.wf_options.backflow, self.recognized_backflow_options, 'Backflow')
-            backflow = BackFlowTransformation(self.molecule, self.wf_options.backflow.kernel, 
+            backflow = BackFlowTransformation(self.molecule, self.wf_options.backflow.kernel,
                                               self.wf_options.backflow.kernel_kwargs, cuda=self.use_cuda)
         else:
             backflow = None
@@ -211,7 +211,7 @@ class QMCTorch(Calculator):
                                 orthogonalize_mo=self.wf_options.orthogonalize_mo,
                                 include_all_mo=self.wf_options.include_all_mo,
                                 cuda=self.use_cuda)
-        
+
         # in case we want a sto transform
         if self.wf_options.gto2sto:
             if self.scf_options.calculator != 'pyscf':
@@ -236,11 +236,11 @@ class QMCTorch(Calculator):
         if self.wf is None:
             raise ValueError("Wave function object is not set")
         self.validate_options(self.sampler_options, self.recognized_sampler_options, 'Sampler')
-        self.sampler = Metropolis(nwalkers=self.sampler_options.nwalkers, nstep=self.sampler_options.nstep, 
+        self.sampler = Metropolis(nwalkers=self.sampler_options.nwalkers, nstep=self.sampler_options.nstep,
                                   nelec=self.wf.nelec, ntherm=self.sampler_options.ntherm, ndecor=self.sampler_options.ndecor,
                                   step_size=self.sampler_options.step_size, init=self.molecule.domain('atomic'),
                                   symmetry=self.sampler_options.symmetry, cuda=self.use_cuda)
-        
+
     def set_default_optimizer(self) -> None:
         if self.wf is None:
             raise ValueError("Wave function object is not set")
@@ -255,16 +255,16 @@ class QMCTorch(Calculator):
         """
         Configure the resampling options for the solver.
 
-        This method sets the number of Monte Carlo steps (`nstep_update`) to be used 
-        during the resampling process based on the current sampler and solver options. 
-        It calculates the number of sampling steps after thermalization and updates 
+        This method sets the number of Monte Carlo steps (`nstep_update`) to be used
+        during the resampling process based on the current sampler and solver options.
+        It calculates the number of sampling steps after thermalization and updates
         the `nstep_update` value if the resampling mode is 'update'.
 
         Notes
         -----
-        - The method will adjust `nstep_update` only if the `ntherm` value is not -1 
+        - The method will adjust `nstep_update` only if the `ntherm` value is not -1
         and the resampling mode is set to 'update'.
-        - The calculation for `nstep_update` considers the difference between `nstep` 
+        - The calculation for `nstep_update` considers the difference between `nstep`
         and `ntherm`, added to `ntherm_update`.
 
         """
@@ -302,16 +302,16 @@ class QMCTorch(Calculator):
 
         if self.wf is None:
             self.set_wf()
-        
+
         if self.sampler is None:
             self.set_sampler()
 
         if self.optimizer is None:
             self.set_default_optimizer()
-        
+
         self.validate_options(self.solver_options, self.recognized_solver_options, 'Solver')
         self.validate_options(self.solver_options.resampling, self.recognized_resampling_options, 'Resampling')
-        
+
         self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.optimizer, scheduler=None)
         self.set_resampling_options()
 
@@ -356,8 +356,8 @@ class QMCTorch(Calculator):
         Reset the results dictionary.
 
         This method clears the current results stored in the calculator by
-        setting the results dictionary to an empty state. It is typically 
-        used when reinitializing the calculator or after a calculation to 
+        setting the results dictionary to an empty state. It is typically
+        used when reinitializing the calculator or after a calculation to
         ensure that previous results do not affect future computations.
         """
         self.results = {}
@@ -395,23 +395,23 @@ class QMCTorch(Calculator):
             if self.solver is None:
                 self.initialize()
 
-    def calculate(self, atoms: Atoms = None, properties: 
+    def calculate(self, atoms: Atoms = None, properties:
                   list = ['energy'], system_changes: any = None) -> float:
         """
         Calculate specified properties for the given atomic configuration.
 
-        This method computes the requested properties, such as energy or forces, 
-        for the provided Atoms object. It ensures the solver is reset if the atomic 
+        This method computes the requested properties, such as energy or forces,
+        for the provided Atoms object. It ensures the solver is reset if the atomic
         configuration changes and checks that all requested properties are implemented.
 
         Parameters
         ----------
         atoms : ASE Atoms object, optional
-            The atomic configuration for which the properties should be calculated. 
-            If not provided, the current atoms object associated with the calculator 
+            The atomic configuration for which the properties should be calculated.
+            If not provided, the current atoms object associated with the calculator
             is used.
         properties : list of str, optional
-            A list of properties to calculate. Supported properties are 'energy' 
+            A list of properties to calculate. Supported properties are 'energy'
             and 'forces'. Default is ['energy'].
         system_changes : any, optional
             Information about the changes in the atomic system. Default is None.
@@ -428,7 +428,7 @@ class QMCTorch(Calculator):
 
         Notes
         -----
-        The method first resets the solver if needed, checks the validity of the 
+        The method first resets the solver if needed, checks the validity of the
         requested properties, and then computes each property one-by-one.
         """
 
@@ -438,7 +438,7 @@ class QMCTorch(Calculator):
         # check properties that are needed
         if any([p not in self.implemented_properties for p in properties]):
             raise ValueError('property not recognized')
-        
+
         # compute
         for p in properties:
             if p == 'forces':
@@ -448,14 +448,14 @@ class QMCTorch(Calculator):
                 return self._calculate_energy(atoms=atoms)
 
     def _calculate_energy(self, atoms: Atoms =None) -> float:
-        # check if reset is necessary 
+        # check if reset is necessary
         """
         Compute the energy using the wave function and the atomic positions.
 
         Parameters
         ----------
         atoms : ASE Atoms object, optional
-            The atoms object to be used for the computation. If not provided, the calculator 
+            The atoms object to be used for the computation. If not provided, the calculator
             will use the atoms object that was set when the calculator was created.
 
         Returns
@@ -477,7 +477,7 @@ class QMCTorch(Calculator):
             self.solver.freeze_parameters(self.solver_options.freeze)
             self.solver.run(self.solver_options.niter, tqdm=self.solver_options.tqdm)
 
-        # compute the energy 
+        # compute the energy
         observable = self.solver.single_point()
 
         # store and output
@@ -493,7 +493,7 @@ class QMCTorch(Calculator):
         Parameters
         ----------
         atoms : ASE Atoms object, optional
-            The atoms object to be used for the computation. If not provided, the calculator 
+            The atoms object to be used for the computation. If not provided, the calculator
             will use the atoms object that was set when the calculator was created.
 
         Returns
@@ -515,7 +515,7 @@ class QMCTorch(Calculator):
         # resample
         observable = self.solver.single_point()
 
-        # compute the forces 
+        # compute the forces
         forces = self.solver.compute_forces(self.symmetry(observable.pos)).detach().cpu().numpy()
 
         # store and output
@@ -539,7 +539,7 @@ class QMCTorch(Calculator):
             return True
         self.has_forces = False
         return False
-    
+
     def get_forces(self, atoms: Atoms = None) -> np.ndarray:
         """
         Return the total forces.
@@ -554,13 +554,13 @@ class QMCTorch(Calculator):
         forces : array
             The total forces on the atoms.
         """
-        
+
         self.reset_solver(atoms=atoms)
         if self.check_forces():
             return self.results['forces']
         else:
             return self._calculate_forces(atoms=atoms)
-    
+
     def get_total_energy(self, atoms: Atoms=None) -> float:
         """
         Return the total energy.

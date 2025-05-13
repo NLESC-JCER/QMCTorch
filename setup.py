@@ -35,19 +35,16 @@ setup(
         'Intended Audience :: Science/Research',
         'License :: OSI Approved :: Apache Software License',
         'Natural Language :: English',
-        'Programming Language :: Python :: 3',
-        'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
         'Topic :: Scientific/Engineering :: Chemistry'
     ],
     test_suite='tests',
     install_requires=['matplotlib', 'numpy', 'argparse',
                       'scipy', 'tqdm', 'torch', 'h5py',
-                      'plams', 'pints', 'linetimer',
-                      'pyscf', 'mendeleev', 'twiggy',
-                      'plams', 'ase', 'rdkit', 'dgllife', 'dgl'],
+                      'pints', 'pyscf; platform_system != "Windows"', 
+                      'mendeleev', 'twiggy', 'plams', 'ase'],
 
     extras_require={
-        'hpc': ['horovod'],
         'doc': ['recommonmark', 'sphinx', 'sphinx_rtd_theme', 'nbsphinx','nbconvert','jupyter'],
         'test': ['pytest', 'pytest-runner',
                  'coverage', 'coveralls', 'pycodestyle'],

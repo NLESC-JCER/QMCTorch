@@ -145,7 +145,7 @@ class SolverBase:
         # reset the Namesapce
         self.observable = SimpleNamespace()
         self.observable.qmctorch_version = self.qmctorch_version
-        
+
         # add the energy of the sytem
         if "energy" not in obs_name:
             obs_name += ["energy"]
@@ -172,9 +172,9 @@ class SolverBase:
 
         self.observable.models = SimpleNamespace()
 
-    def store_observable(self, pos: torch.tensor, 
-                         local_energy: Optional[torch.tensor] = None, 
-                         ibatch: Optional[int] = None, 
+    def store_observable(self, pos: torch.tensor,
+                         local_energy: Optional[torch.tensor] = None,
+                         ibatch: Optional[int] = None,
                          **kwargs):
         """store observale in the dictionary
 
@@ -310,8 +310,8 @@ class SolverBase:
 
         return pos
 
-    def single_point(self, with_tqdm: Optional[bool] = True, 
-                     batchsize: Optional[int] = None, 
+    def single_point(self, with_tqdm: Optional[bool] = True,
+                     batchsize: Optional[int] = None,
                      hdf5_group: str = "single_point"):
         """Performs a single point calculation
 
@@ -426,8 +426,8 @@ class SolverBase:
             self.obs_dict[key] = []
         self.obs_dict[key].append(data)
 
-    def sampling_traj(self, pos: Optional[torch.tensor] = None, 
-                      with_tqdm: Optional[bool] = True, 
+    def sampling_traj(self, pos: Optional[torch.tensor] = None,
+                      with_tqdm: Optional[bool] = True,
                       hdf5_group: Optional[str] = "sampling_trajectory"
                       ) -> torch.tensor:
         """Compute the local energy along a sampling trajectory
@@ -447,7 +447,7 @@ class SolverBase:
 
         ndim = pos.shape[-1]
         p = pos.view(-1, self.sampler.walkers.nwalkers, ndim)
-        
+
         el = []
         rng = tqdm(p, desc="INFO:QMCTorch|  Energy  ", disable=not with_tqdm)
         for ip in rng:

@@ -34,7 +34,7 @@ class TestLiHBackFlowADF(BaseTestSolvers.BaseTestSolverMolecule):
 
         # backflow
         backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse, orbital_dependent=False
+            self.mol, BackFlowKernelInverse
         )
 
         # wave function

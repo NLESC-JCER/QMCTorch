@@ -1,12 +1,12 @@
 import torch
 from torch import nn
-from typing import Union, Optional
+from typing import Union
 from .....utils import register_extra_attributes
 from .jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
 
 
 class PadeJastrowPolynomialKernel(JastrowKernelElectronElectronBase):
-    def __init__(self, nup: int, ndown: int, cuda: bool, order: int = 2, 
+    def __init__(self, nup: int, ndown: int, cuda: bool, order: int = 2,
                  weight_a: Union[torch.Tensor, None] = None, weight_b: Union[torch.Tensor, None]=None) -> None:
         """Computes a polynomial Pade-Jastrow factor
 

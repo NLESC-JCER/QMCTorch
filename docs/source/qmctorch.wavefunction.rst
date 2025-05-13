@@ -14,15 +14,21 @@ Subpackages
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.wavefunction.slater\_jastrow module
+--------------------------------------------
 
-   qmctorch.wavefunction.slater_combined_jastrow
-   qmctorch.wavefunction.slater_jastrow
-   qmctorch.wavefunction.slater_jastrow_backflow
-   qmctorch.wavefunction.slater_jastrow_base
-   qmctorch.wavefunction.slater_orbital_dependent_jastrow
-   qmctorch.wavefunction.wf_base
+.. automodule:: qmctorch.wavefunction.slater_jastrow
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.wavefunction.wf\_base module
+-------------------------------------
+
+.. automodule:: qmctorch.wavefunction.wf_base
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

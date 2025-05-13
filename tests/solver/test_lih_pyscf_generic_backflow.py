@@ -37,7 +37,7 @@ class TestLiHBackFlowPySCF(BaseTestSolvers.BaseTestSolverMolecule):
 
         # backflow
         backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelPowerSum, orbital_dependent=False
+            self.mol, BackFlowKernelPowerSum
         )
 
         # wave function

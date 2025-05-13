@@ -1,17 +1,17 @@
 import torch
 from torch import nn
 from torch.autograd import Variable, grad
-from typing import Dict, Tuple, Optional, List, Union
+from typing import Dict, Tuple
 from ..distance.electron_electron_distance import ElectronElectronDistance
 from ..distance.electron_nuclei_distance import ElectronNucleiDistance
 from ....scf import Molecule
 from .kernels.jastrow_kernel_electron_electron_nuclei_base import JastrowKernelElectronElectronNucleiBase
 
 class JastrowFactorElectronElectronNuclei(nn.Module):
-    def __init__(self, 
-                 mol: Molecule, 
-                 jastrow_kernel: JastrowKernelElectronElectronNucleiBase, 
-                 kernel_kwargs: Dict = {}, 
+    def __init__(self,
+                 mol: Molecule,
+                 jastrow_kernel: JastrowKernelElectronElectronNucleiBase,
+                 kernel_kwargs: Dict = {},
                  cuda: bool = False
                  ) -> None:
         """Jastrow Factor of the elec-elec-nuc term:
@@ -217,9 +217,7 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         elif derivative == 2:
             if self.auto_second_derivative:
-                return self.jastrow_factor_second_derivative_auto(
-                    pos, jast=jast.unsqueeze(-1)
-                )
+                return self.jastrow_factor_second_derivative_auto(pos)
 
             else:
                 dr = self.assemble_dist_deriv(pos, 1)
@@ -305,10 +303,10 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return out
 
-    def jastrow_factor_second_derivative(self, 
-                                         r: torch.Tensor, 
-                                         dr: torch.Tensor, 
-                                         d2r: torch.Tensor, 
+    def jastrow_factor_second_derivative(self,
+                                         r: torch.Tensor,
+                                         dr: torch.Tensor,
+                                         d2r: torch.Tensor,
                                          jast: torch.Tensor
                                          ) -> torch.Tensor:
         """Compute the value of the pure 2nd derivative of the Jastrow factor
@@ -352,12 +350,17 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
         return hess_jast * jast.unsqueeze(-1)
 
     def partial_derivative(self, djast: torch.Tensor) -> torch.Tensor:
-        """[summary]
+        """
+        Compute the partial derivative of the jastrow factor
 
         Args:
-            djast ([type]): [description]
-        """
+            djast (torch.tensor): derivative of the jastrow elements
+                                  Nbatch x Ndim x Nelec x Nelec x 3
 
+        Returns:
+            torch.tensor: diagonal hessian of the jastrow factors
+                          Nbatch x Nelec x Ndim
+        """
         # create the output vector with size nbatch x nelec
         out_shape = list(djast.shape[:-2]) + [self.nelec]
         out = torch.zeros(out_shape).to(self.device)
@@ -372,24 +375,38 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
 
         return ((out.sum(2)) ** 2).sum(1)
 
-    def jastrow_factor_second_derivative_auto(self, 
-                                              pos: torch.Tensor, 
-                                              jast: Union[None, torch.Tensor] = None
+    @torch.enable_grad()
+    def jastrow_factor_second_derivative_auto(self,
+                                              pos: torch.Tensor
                                               ) -> torch.Tensor:
-        """Compute the second derivative of the jastrow factor automatically.
-        This is needed for complicate kernels where the partial derivatives of
-        the kernels are difficult to organize in a total derivaitve e.e Boys-Handy
+        """
+        Compute the second derivative of the Jastrow factor using automatic differentiation.
+
+        This function utilizes PyTorch's automatic differentiation capabilities to compute
+        the Hessian of the Jastrow factor with respect to the electron positions. It calculates
+        the diagonal elements of the Hessian matrix, which correspond to the second derivatives
+        along each dimension.
+
+        Note: this could be replaced by
+        >>> compute_batch_hessian = vmap(hessian(self.forward), argnums=0), in_dims=0)
+        >>> batch_hess = compute_batch_hessian(pos).squeeze()
+        >>> batch_hess = torch.diagonal(batch_hess, dim1=-2, dim2=-1)
+        >>> return batch_hess.view(nbatch, self.nelec, 3).sum(2)
+        However this approach seems to requires 10x more memory
 
         Args:
-            pos ([type]): [description]
+            pos (torch.Tensor): Positions of the electrons, with shape (Nbatch, Nelec * Ndim).
+
+        Returns:
+            torch.Tensor: The summed diagonal elements of the Hessian matrix, with shape
+                        (Nbatch, Nelec), representing the second derivative of the Jastrow
+                        factor for each electron.
         """
 
         def hess(out, pos):
             # compute the jacobian
             z = Variable(torch.ones_like(out))
-            jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[
-                0
-            ]
+            jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
 
             # compute the diagonal element of the Hessian
             z = Variable(torch.ones(jacob.shape[0])).to(self.device)
@@ -401,7 +418,8 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
                     pos,
                     grad_outputs=z,
                     only_inputs=True,
-                    create_graph=True,
+                    create_graph=False,
+                    retain_graph=True
                 )[0]
 
                 hess[:, idim] = tmp[:, idim]
@@ -409,6 +427,6 @@ class JastrowFactorElectronElectronNuclei(nn.Module):
             return hess
 
         nbatch = pos.shape[0]
-        if jast is None:
-            jast = self.forward(pos)
-        return hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)
+        jast = self.forward(pos)
+        hvals = hess(jast, pos).view(nbatch, self.nelec, 3).sum(2)
+        return torch.nan_to_num(hvals, nan=0.0)

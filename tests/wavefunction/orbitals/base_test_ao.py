@@ -1,25 +1,7 @@
 import unittest
 import torch
 from torch.autograd import Variable, grad, gradcheck
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 
 
 def hess_mixed_terms(out, pos):
@@ -83,7 +65,7 @@ class BaseTestAO:
         def test_ao_hess(self):
             ao = self.ao(self.pos)
             d2ao = self.ao(self.pos, derivative=2)
-            d2ao_grad = hess(ao, self.pos)
+            d2ao_grad, _ = hess(ao, self.pos)
             assert torch.allclose(d2ao.sum(), d2ao_grad.sum())
 
         def test_ao_hess_sum(self):

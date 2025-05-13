@@ -1,6 +1,6 @@
 import unittest
 from qmctorch.sampler import MetropolisHasting
-from qmctorch.sampler.proposal_kernels import (
+from qmctorch.sampler.metropolis_hasting import (
     ConstantVarianceKernel,
     CenterVarianceKernel,
 )

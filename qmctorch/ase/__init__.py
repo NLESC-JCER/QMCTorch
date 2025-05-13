@@ -1,1 +1,3 @@
-from .ase import QMCTorch 
+from .ase import QMCTorch
+
+__all__ = ['QMCTorch']

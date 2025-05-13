@@ -15,10 +15,21 @@ Subpackages
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.wavefunction.jastrows.combine\_jastrow module
+------------------------------------------------------
 
-   qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms
+.. automodule:: qmctorch.wavefunction.jastrows.combine_jastrow
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+qmctorch.wavefunction.jastrows.jastrow\_factor\_combined\_terms module
+----------------------------------------------------------------------
+
+.. automodule:: qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

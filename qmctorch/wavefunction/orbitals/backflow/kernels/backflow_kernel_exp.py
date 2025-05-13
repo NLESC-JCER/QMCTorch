@@ -17,11 +17,11 @@ class BackFlowKernelExp(BackFlowKernelBase):
         with here :
 
         .. math:
-            f(r_{ij) = \\frac{w} exp^{-\\alpha r_{ij}
+            f(r_{ij) = \\omega exp^{-\\alpha r_{ij}
         """
         super().__init__(mol, cuda)
         self.weight = nn.Parameter(torch.as_tensor([weight]))  # .to(self.device)
-        self.alpha = nn.Parameter(torch.as_tensor([alpha])) 
+        self.alpha = nn.Parameter(torch.as_tensor([alpha]))
 
     def _backflow_kernel(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the backflow kernel:

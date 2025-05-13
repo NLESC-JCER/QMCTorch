@@ -3,7 +3,6 @@ from torch import nn
 from torch.nn import functional as F
 
 from .....scf import Molecule
-from .....utils import register_extra_attributes
 from .backflow_kernel_base import BackFlowKernelBase
 
 class BackFlowKernelRBF(BackFlowKernelBase):
@@ -41,7 +40,7 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         self.centers = nn.Parameter(torch.linspace(0, 10, num_rbf))
         self.centers.requires_grad = True
 
-        self.sigma = nn.Parameter(torch.ones(num_rbf))
+        self.sigma = nn.Parameter(0.25*torch.ones(num_rbf))
         self.sigma.requires_grad = True
 
         self.weight = nn.Parameter(torch.Tensor(num_rbf, 1))
@@ -49,39 +48,39 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         self.weight.requires_grad = False
 
         self.fc = nn.Linear(num_rbf, 1, bias=False)
-        self.fc.weight.data.fill_(0.0)
+        self.fc.weight.data = 1E-6 * torch.linspace(1,0,num_rbf)
+        self.bias=None
 
-        self.register_parameter('bias', None)
 
     def _gaussian_kernel(self, ree: torch.Tensor) -> torch.Tensor:
-        
+
         '''Compute the RBF kernel
-        
+
         Args:
             ree (torch.tensor): Nbatch x [Nelec * Nelec]
-        
+
         Returns:
             torch.tensor: Nbatch x [Nelec * Nelec]
         '''
         return torch.exp(-(ree-self.centers)**2 / self.sigma)
-    
+
     def _gaussian_kernel_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         '''Compute the derivative of the RBF kernel
-        
+
         Args:
             ree (torch.tensor): Nbatch x [Nelec * Nelec]
-        
+
         Returns:
             torch.tensor: Nbatch x [Nelec * Nelec]
         '''
         return -2*(ree-self.centers)/self.sigma * self._gaussian_kernel(ree)
-    
+
     def _gaussian_kernel_second_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         '''Compute the second derivative of the RBF kernel
-        
+
         Args:
             ree (torch.tensor): Nbatch x [Nelec * Nelec]
-        
+
         Returns:
             torch.tensor: Nbatch x [Nelec * Nelec]
         '''
@@ -91,7 +90,7 @@ class BackFlowKernelRBF(BackFlowKernelBase):
 
     def _backflow_kernel(self, ree: torch.Tensor) -> torch.Tensor:
         '''Compute the kernel
-        
+
         Args:
             ree (torch.tensor): Nbatch x Nelec x Nelec
 
@@ -105,7 +104,7 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         x = self.fc(x)
         x = x.reshape(*original_shape)
         return x
-    
+
     def _backflow_kernel_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Compute the derivative of the kernel
 
@@ -119,7 +118,7 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         x = self.fc(x)
         x = x.reshape(*original_shape)
         return x
-    
+
     def _backflow_kernel_second_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Compute the second derivative of the kernel
 
@@ -133,5 +132,5 @@ class BackFlowKernelRBF(BackFlowKernelBase):
         x = self.fc(x)
         x = x.reshape(*original_shape)
         return x
-    
-    
+
+

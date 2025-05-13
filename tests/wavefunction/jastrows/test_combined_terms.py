@@ -2,43 +2,26 @@ import unittest
 from types import SimpleNamespace
 import numpy as np
 import torch
-from torch.autograd import Variable, grad, gradcheck
+from torch.autograd import grad, gradcheck
 
-from qmctorch.wavefunction.jastrows.jastrow_factor_combined_terms import (
-    JastrowFactorCombinedTerms,
+from qmctorch.wavefunction.jastrows.combine_jastrow import (
+    CombineJastrow,
 )
-from qmctorch.wavefunction.jastrows.elec_elec.kernels import (
-    PadeJastrowKernel as PadeJastrowKernelElecElec,
-)
-from qmctorch.wavefunction.jastrows.elec_nuclei.kernels import (
-    PadeJastrowKernel as PadeJastrowKernelElecNuc,
-)
-from qmctorch.wavefunction.jastrows.elec_elec_nuclei.kernels import (
-    BoysHandyJastrowKernel,
+from qmctorch.wavefunction.jastrows.elec_elec import (
+    JastrowFactor as JastrowFactorElecElec,
+    PadeJastrowKernel as  ElecElecKernel)
+
+from qmctorch.wavefunction.jastrows.elec_nuclei import (
+    JastrowFactor as JastrowFactorElecNuclei,
+    PadeJastrowKernel as ElecNucleiKernel)
+
+from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
+    BoysHandyJastrowKernel as ElecElecNucleiKernel,
+    JastrowFactor as JastrowFactorElecElecNuc
 )
 from qmctorch.utils import set_torch_double_precision
-
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 set_torch_double_precision()
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
-
 
 class TestJastrowCombinedTerms(unittest.TestCase):
     def setUp(self):
@@ -53,15 +36,16 @@ class TestJastrowCombinedTerms(unittest.TestCase):
             nup=self.nup, ndown=self.ndown, atom_coords=self.atoms
         )
 
-        self.jastrow = JastrowFactorCombinedTerms(
-            self.mol,
-            jastrow_kernel={
-                "ee": PadeJastrowKernelElecElec,
-                "en": PadeJastrowKernelElecNuc,
-                "een": BoysHandyJastrowKernel,
-            },
-            jastrow_kernel_kwargs={"ee": {"w": 1.0}, "en": {"w": 1.0}, "een": {}},
-        )
+        jastrow_ee = JastrowFactorElecElec(
+            self.mol, ElecElecKernel, kernel_kwargs={'w':1.}
+            )
+
+        jastrow_en = JastrowFactorElecNuclei(
+            self.mol, ElecNucleiKernel, kernel_kwargs={'w':1.})
+
+        jastrow_een = JastrowFactorElecElecNuc(self.mol, ElecElecNucleiKernel)
+
+        self.jastrow = CombineJastrow([jastrow_ee, jastrow_en, jastrow_een])
 
         self.nbatch = 5
 
@@ -84,7 +68,7 @@ class TestJastrowCombinedTerms(unittest.TestCase):
 
     def test_hess_jastrow(self):
         val = self.jastrow(self.pos)
-        d2val_grad = hess(val, self.pos)
+        d2val_grad, _ = hess(val, self.pos)
         d2val = self.jastrow(self.pos, derivative=2)
 
         assert torch.allclose(d2val.sum(), d2val_grad.sum())

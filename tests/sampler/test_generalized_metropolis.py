@@ -1,5 +1,4 @@
 import unittest
-
 from qmctorch.sampler import GeneralizedMetropolis
 from .test_sampler_base import TestSamplerBase
 

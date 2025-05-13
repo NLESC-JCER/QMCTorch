@@ -26,6 +26,7 @@ from .torch_utils import (
     set_torch_single_precision,
     diagonal_hessian,
     gradients,
+    hessian
 )
 
 __all__ = [
@@ -46,7 +47,9 @@ __all__ = [
     "bproj",
     "diagonal_hessian",
     "gradients",
+    "hessian",
     "blocking",
     "correlation_coefficient",
     "integrated_autocorrelation_time",
+    "get_git_tag",
 ]

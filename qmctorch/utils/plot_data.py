@@ -12,10 +12,10 @@ from .stat_utils import (
 
 
 def plot_energy(
-    local_energy: np.ndarray, 
-    e0: Optional[float] = None, 
-    show_variance: bool = False, 
-    clip: bool = False, 
+    local_energy: np.ndarray,
+    e0: Optional[float] = None,
+    show_variance: bool = False,
+    clip: bool = False,
     q: float = 0.15,
 ) -> None:
     """Plot the evolution of the energy.
@@ -73,7 +73,7 @@ def plot_energy(
 
 
 def plot_data(
-    observable: SimpleNamespace, 
+    observable: SimpleNamespace,
     obsname: str
 ) -> None:
     """Plot the evolution of a given data

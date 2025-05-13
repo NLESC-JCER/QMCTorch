@@ -1,8 +1,7 @@
 import torch
 from torch import nn
-from torch.autograd import grad
-from typing import Tuple, List, Union
 from .....scf import Molecule
+from .....utils import gradients, hessian
 
 class BackFlowKernelBase(nn.Module):
     def __init__(self, mol: Molecule, cuda: bool):
@@ -67,7 +66,7 @@ class BackFlowKernelBase(nn.Module):
         with torch.enable_grad():
             kernel_val = self._backflow_kernel(ree)
 
-        return self._grad(kernel_val, ree)
+        return gradients(kernel_val, ree)
 
     def _backflow_kernel_second_derivative(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the second derivative of the kernel via autodiff
@@ -83,38 +82,10 @@ class BackFlowKernelBase(nn.Module):
 
         with torch.enable_grad():
             kernel_val = self._backflow_kernel(ree)
-            hess_val, _ = self._hess(kernel_val, ree)
+            hess_val, _ = hessian(kernel_val, ree)
+
+        # if the kernel is linear, hval is None
+        if hess_val is None:
+            hess_val = torch.zeros_like(ree)
 
         return hess_val
-
-    @staticmethod
-    def _grad(val, ree: torch.Tensor) -> torch.Tensor:
-        """Get the gradients of the kernel.
-
-        Args:
-            ree ([type]): [description]
-
-        Returns:
-            [type]: [description]
-        """
-        return grad(val, ree, grad_outputs=torch.ones_like(val), allow_unused=False)[0]
-
-    @staticmethod
-    def _hess(val, ree: torch.Tensor) -> Union[torch.Tensor, Tuple[torch.Tensor,torch.Tensor]]:
-        """get the hessian of thekernel.
-
-        Warning thos work only because the kernel term are dependent
-        of a single rij term, i.e. fij = f(rij)
-
-        Args:
-            pos ([type]): [description]
-        """
-
-        gval = grad(val, ree, grad_outputs=torch.ones_like(val), create_graph=True, allow_unused=False)[0]
-        hval = grad(gval, ree, grad_outputs=torch.ones_like(gval), allow_unused=True)[0]
-        
-        # if the kernel is linear, hval is None
-        if hval is None:
-            hval = torch.zeros_like(ree)
-
-        return hval, gval

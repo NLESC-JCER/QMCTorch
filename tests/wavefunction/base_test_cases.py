@@ -1,27 +1,7 @@
 import unittest
-from torch.autograd import grad, gradcheck, Variable
-
+from torch.autograd import grad, gradcheck
 import torch
-
-
-def hess(out, pos):
-    # compute the jacobian
-    z = Variable(torch.ones(out.shape))
-    jacob = grad(out, pos, grad_outputs=z, only_inputs=True, create_graph=True)[0]
-
-    # compute the diagonal element of the Hessian
-    z = Variable(torch.ones(jacob.shape[0]))
-    hess = torch.zeros(jacob.shape)
-
-    for idim in range(jacob.shape[1]):
-        tmp = grad(
-            jacob[:, idim], pos, grad_outputs=z, only_inputs=True, create_graph=True
-        )[0]
-
-        hess[:, idim] = tmp[:, idim]
-
-    return hess
-
+from qmctorch.utils.torch_utils import diagonal_hessian as hess
 
 class BaseTestCases:
     class WaveFunctionBaseTest(unittest.TestCase):
@@ -94,7 +74,7 @@ class BaseTestCases:
             """Hessian of the MOs."""
             val = self.wf.pos2mo(self.pos)
 
-            d2val_grad = hess(val, self.pos)
+            d2val_grad, _ = hess(val, self.pos)
             d2val = self.wf.pos2mo(self.pos, derivative=2)
 
             assert torch.allclose(d2val.sum(), d2val_grad.sum())
@@ -174,7 +154,7 @@ class BaseTestCases:
             """Hessian of the MOs."""
             val = self.wf.pos2mo(self.pos)
 
-            d2val_grad = hess(val, self.pos)
+            d2val_grad, _ = hess(val, self.pos)
             d2ao = self.wf.ao(self.pos, derivative=2, sum_hess=False)
             d2val = self.wf.ao2mo(d2ao)
 

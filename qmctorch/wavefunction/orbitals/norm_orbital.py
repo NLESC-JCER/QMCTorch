@@ -90,10 +90,10 @@ def norm_gaussian_spherical(bas_n: torch.Tensor, bas_exp: torch.Tensor) -> torch
     return torch.sqrt(B / C) * A
 
 
-def norm_slater_cartesian(a: torch.Tensor, 
-                          b: torch.Tensor, 
-                          c: torch.Tensor, 
-                          n: torch.Tensor, 
+def norm_slater_cartesian(a: torch.Tensor,
+                          b: torch.Tensor,
+                          c: torch.Tensor,
+                          n: torch.Tensor,
                           exp: torch.Tensor
                           ) -> torch.Tensor:
     """Normaliation of STos with cartesian harmonics. \n
@@ -129,9 +129,9 @@ def norm_slater_cartesian(a: torch.Tensor,
     return torch.sqrt(1.0 / (prefact * num / denom))
 
 
-def norm_gaussian_cartesian(a: torch.Tensor, 
-                            b: torch.Tensor, 
-                            c: torch.Tensor, 
+def norm_gaussian_cartesian(a: torch.Tensor,
+                            b: torch.Tensor,
+                            c: torch.Tensor,
                             exp: torch.Tensor
                             ) -> torch.Tensor:
     """Normaliation of GTOs with cartesian harmonics. \n

@@ -1,5 +1,4 @@
-__all__ = ["SolverBase", "Solver", "SolverMPI"]
+__all__ = ["SolverBase", "Solver"]
 
 from .solver_base import SolverBase
 from .solver import Solver
-from .solver_mpi import SolverMPI

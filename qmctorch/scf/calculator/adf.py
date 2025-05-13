@@ -64,7 +64,7 @@ class CalculatorADF(CalculatorBase):
 
         if charge != 0:
             raise ValueError("ADF calculator does not support charge yet, open an issue in the repo :)")
-        
+
         if spin != 0:
             raise ValueError("ADF calculator does not support spin polarization yet, open an issue in the repo :)")
 

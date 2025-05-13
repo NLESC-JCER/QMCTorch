@@ -2,8 +2,16 @@ from types import SimpleNamespace
 from typing import List
 import itertools
 import numpy as np
-from pyscf import gto, scf, dft
+import sys
 import shutil
+
+try:
+    from pyscf import gto, scf, dft
+except ModuleNotFoundError:
+    if  sys.platform == "win32":
+        raise Warning("pyscf is not supported on Windows'")
+    else:
+        raise Warning("pyscf not found, install it with: pip install pyscf")
 from .calculator_base import CalculatorBase
 from ... import log
 
@@ -38,6 +46,9 @@ class CalculatorPySCF(CalculatorBase):
         Returns:
             None
         """
+
+        if sys.platform == "win32":
+            raise RuntimeError("pyscf is not supported on Windows'")
         CalculatorBase.__init__(
             self,
             atoms,

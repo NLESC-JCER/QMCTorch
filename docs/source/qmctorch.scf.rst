@@ -12,10 +12,13 @@ Subpackages
 Submodules
 ----------
 
-.. toctree::
-   :maxdepth: 4
+qmctorch.scf.molecule module
+----------------------------
 
-   qmctorch.scf.molecule
+.. automodule:: qmctorch.scf.molecule
+   :members:
+   :undoc-members:
+   :show-inheritance:
 
 Module contents
 ---------------

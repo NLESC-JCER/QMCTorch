@@ -6,10 +6,10 @@ from ....scf import Molecule
 from .kernels.jastrow_kernel_electron_nuclei_base import JastrowKernelElectronNucleiBase
 
 class JastrowFactorElectronNuclei(nn.Module):
-    def __init__(self, 
-                 mol: Molecule, 
-                 jastrow_kernel: JastrowKernelElectronNucleiBase, 
-                 kernel_kwargs: Dict = {}, 
+    def __init__(self,
+                 mol: Molecule,
+                 jastrow_kernel: JastrowKernelElectronNucleiBase,
+                 kernel_kwargs: Dict = {},
                  cuda: bool = False
                  ) -> None:
         r"""Base class for two el-nuc jastrow of the form:
@@ -55,9 +55,9 @@ class JastrowFactorElectronNuclei(nn.Module):
         """representation of the jastrow factor"""
         return "en -> " + self.jastrow_kernel.__class__.__name__
 
-    def forward(self, 
-                pos: torch.Tensor, 
-                derivative: Union[int, Tuple[int]] = 0 , 
+    def forward(self,
+                pos: torch.Tensor,
+                derivative: Union[int, Tuple[int]] = 0 ,
                 sum_grad: bool = True
                 ) -> Union[torch.Tensor, Tuple[torch.Tensor]]:
         """Compute the Jastrow factors.
@@ -129,10 +129,10 @@ class JastrowFactorElectronNuclei(nn.Module):
             djast = self.jastrow_kernel.compute_derivative(r, dr).sum(3)
             return djast * jast.unsqueeze(-1)
 
-    def jastrow_factor_second_derivative(self, 
-                                         r: torch.Tensor, 
-                                         dr: torch.Tensor, 
-                                         d2r: torch.Tensor, 
+    def jastrow_factor_second_derivative(self,
+                                         r: torch.Tensor,
+                                         dr: torch.Tensor,
+                                         d2r: torch.Tensor,
                                          jast: torch.Tensor
                                          ) -> torch.Tensor:
         """Compute the value of the pure 2nd derivative of the Jastrow factor
