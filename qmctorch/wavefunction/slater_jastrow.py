@@ -131,6 +131,12 @@ class SlaterJastrow(WaveFunction):
     def init_molecular_orb(self, include_all_mo, mix_mo, orthogonalize_mo):
         """initialize the molecular orbital layers"""
 
+        if orthogonalize_mo and (not mix_mo):
+            raise Warning("orthogonalize_mo=True has no effect as mix_mo=False")
+
+        if orthogonalize_mo:
+            raise Warning("Option orthogonalize_mo will be dprecated in 0.5.0")
+
         # # determine which orbs to include in the transformation
         self.include_all_mo = include_all_mo
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
@@ -590,6 +596,7 @@ class SlaterJastrow(WaveFunction):
         if self.use_jastrow:
             log.info("  Jastrow kernel      : {0}", self.jastrow_type)
         log.info("  Highest MO included : {0}", self.nmo_opt)
+        log.info("  Orthogonalize MOs   : {0}", self.mo.orthogonalize_mo)
         log.info("  Configurations      : {0}", self.configs_method)
         log.info("  Number of confs     : {0}", self.nci)
 
