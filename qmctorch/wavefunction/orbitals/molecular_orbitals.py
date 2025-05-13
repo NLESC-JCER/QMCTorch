@@ -50,12 +50,6 @@ class MolecularOrbitals(nn.Module):
             if self.orthogonalize_mo:
                 self.mo_mixer = orthogonal(self.mo_mixer)
 
-        if orthogonalize_mo and (not mix_mo):
-            raise Warning("orthogonalize_mo=True has no effect as mix_mo=False")
-
-        if orthogonalize_mo:
-            raise Warning("Option orthogonalize_mo will be dprecated in 0.5.0")
-
         if self.cuda:
             self.mo_scf = self.mo_scf.to(self.device)
             self.mo_modifier.to(self.device)
