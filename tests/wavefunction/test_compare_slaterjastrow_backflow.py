@@ -55,6 +55,8 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
             jastrow=jastrow,
             backflow=backflow,
         )
+        # needed to use the same tests base case for all wave function
+        self.wf.kinetic_energy_jacobi = self.wf.kinetic_energy_jacobi_backflow
 
         self.wf.ao.backflow_trans.backflow_kernel.weight.data *= 0.0
 
@@ -99,7 +101,7 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
         assert torch.allclose(d2val_ref, d2val.sum(0))
 
     def test_local_energy(self):
-        self.wf.kinetic_energy = self.wf.kinetic_energy_jacobi
+        self.wf.kinetic_energy = self.wf.kinetic_energy_jacobi_backflow
         eloc_jac = self.wf.local_energy(self.pos)
 
         self.wf_ref.kinetic_energy = self.wf_ref.kinetic_energy_jacobi
