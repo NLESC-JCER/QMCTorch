@@ -133,7 +133,7 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
     def test_0_wavefunction(self):
         # compute the kinetic energy using bf orb
         reset_generator()
-        e_bf = self.wf.kinetic_energy_jacobi(self.pos)
+        e_bf = self.wf.kinetic_energy_jacobi_backflow(self.pos)
 
         # compute the kinetic energy
         reset_generator()

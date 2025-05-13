@@ -233,11 +233,11 @@ class SlaterJastrow(WaveFunction):
         self.kinetic_method = kinetic
         if kinetic == "jacobi":
             if backflow is None:
+                self.gradients = self.gradients_jacobi
                 self.kinetic_energy = self.kinetic_energy_jacobi
 
             else:
-                self.gradients_jacobi = self.gradients_jacobi_backflow
-                self.kinetic_energy_jacobi = self.kinetic_energy_jacobi_backflow
+                self.gradients = self.gradients_jacobi_backflow
                 self.kinetic_energy = self.kinetic_energy_jacobi_backflow
 
     def forward(

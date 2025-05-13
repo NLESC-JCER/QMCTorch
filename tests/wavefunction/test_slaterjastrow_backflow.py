@@ -49,6 +49,9 @@ class TestSlaterJastrowBackFlow(BaseTestCases.BackFlowWaveFunctionBaseTest):
             backflow=backflow,
         )
 
+        # needed to use the same tests base case for all wave function
+        self.wf.kinetic_energy_jacobi = self.wf.kinetic_energy_jacobi_backflow
+
         self.random_fc_weight = torch.rand(self.wf.fc.weight.shape)
         self.wf.fc.weight.data = self.random_fc_weight
 
