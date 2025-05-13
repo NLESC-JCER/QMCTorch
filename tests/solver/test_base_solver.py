@@ -1,6 +1,7 @@
 import unittest
 import numpy as np
 
+
 class BaseTestSolvers:
     class BaseTestSolverMolecule(unittest.TestCase):
         def setUp(self):
@@ -20,7 +21,7 @@ class BaseTestSolvers:
             second time with half of the walkers.
             """
             self.solver.single_point()
-            batchsize = int(self.solver.sampler.walkers.nwalkers/2)
+            batchsize = int(self.solver.sampler.walkers.nwalkers / 2)
             self.solver.single_point(batchsize=batchsize)
 
         def test2_wf_opt_grad_auto(self):
@@ -33,7 +34,7 @@ class BaseTestSolvers:
                 track=["local_energy", "parameters"], loss="energy", grad="auto"
             )
             _ = self.solver.run(5)
-            batchsize = int(self.solver.sampler.walkers.nwalkers/2)
+            batchsize = int(self.solver.sampler.walkers.nwalkers / 2)
             _ = self.solver.run(5, batchsize=batchsize)
 
         def test3_wf_opt_grad_manual(self):
@@ -46,5 +47,5 @@ class BaseTestSolvers:
                 track=["local_energy", "parameters"], loss="energy", grad="manual"
             )
             _ = self.solver.run(5)
-            batchsize = int(self.solver.sampler.walkers.nwalkers/2)
+            batchsize = int(self.solver.sampler.walkers.nwalkers / 2)
             _ = self.solver.run(5, batchsize=batchsize)

@@ -5,12 +5,13 @@ from typing import Optional, Dict, List, Tuple, Any
 import torch
 from ..wavefunction import WaveFunction
 from ..sampler import SamplerBase
-from ..utils import  add_group_attr, dump_to_hdf5, DataLoader
+from ..utils import add_group_attr, dump_to_hdf5, DataLoader
 from qmctorch.utils import add_group_attr, dump_to_hdf5, DataLoader
 
 from .. import log
 from .solver_base import SolverBase
 from .loss import Loss
+
 
 class Solver(SolverBase):
     def __init__(  # pylint: disable=too-many-arguments
@@ -97,17 +98,21 @@ class Solver(SolverBase):
 
         # get the loss
         if loss is not None:
-            self.loss = Loss(self.wf, method=loss, clip=clip_loss, clip_threshold=clip_threshold)
+            self.loss = Loss(
+                self.wf, method=loss, clip=clip_loss, clip_threshold=clip_threshold
+            )
             self.loss.use_weight = self.resampling_options.resample_every > 1
 
         # orthogonalization penalty for the MO coeffs
         self.ortho_mo = ortho_mo
         if self.ortho_mo is True:
-            log.warning("Orthogonalization of the MO coeffs via loss penalty is deprecated")
+            log.warning(
+                "Orthogonalization of the MO coeffs via loss penalty is deprecated"
+            )
 
-    def set_params_requires_grad(self,
-                                 wf_params: Optional[bool] = True,
-                                 geo_params: Optional[bool] = False):
+    def set_params_requires_grad(
+        self, wf_params: Optional[bool] = True, geo_params: Optional[bool] = False
+    ):
         """Configure parameters for wf opt."""
 
         # opt all wf parameters
@@ -178,14 +183,13 @@ class Solver(SolverBase):
         self.sampler.ntherm = self.sampler._ntherm_save
         # self.sampler.walkers.nwalkers = self.sampler._nwalker_save
 
-
     def run(
         self,
         nepoch: int,
-        batchsize : Optional[int] = None,
+        batchsize: Optional[int] = None,
         hdf5_group: Optional[str] = "wf_opt",
         chkpt_every: Optional[int] = None,
-        tqdm: Optional[bool] = False
+        tqdm: Optional[bool] = False,
     ) -> SimpleNamespace:
         """Run a wave function optimization
 
@@ -214,7 +218,9 @@ class Solver(SolverBase):
 
         return self.observable
 
-    def prepare_optimization(self, batchsize: int, chkpt_every: int , tqdm: Optional[bool] = False):
+    def prepare_optimization(
+        self, batchsize: int, chkpt_every: int, tqdm: Optional[bool] = False
+    ):
         """Prepare the optimization process
 
         Args:
@@ -257,9 +263,12 @@ class Solver(SolverBase):
 
         add_group_attr(self.hdf5file, hdf5_group, {"type": "opt"})
 
-    def run_epochs(self, nepoch: int,
-                   with_tqdm: Optional[bool] = False,
-                   verbose: Optional[bool] = True) -> float :
+    def run_epochs(
+        self,
+        nepoch: int,
+        with_tqdm: Optional[bool] = False,
+        verbose: Optional[bool] = True,
+    ) -> float:
         """Run a certain number of epochs
 
         Args:
@@ -282,12 +291,12 @@ class Solver(SolverBase):
 
         # loop over the epoch
         for n in rng:
-
             if verbose:
                 tstart = time()
                 log.info("")
                 log.info(
-                    "  epoch %d | %d sampling points" % (n, len(self.dataloader.dataset))
+                    "  epoch %d | %d sampling points"
+                    % (n, len(self.dataloader.dataset))
                 )
 
             # reset the gradients and loss
@@ -340,7 +349,9 @@ class Solver(SolverBase):
 
         return cumulative_loss
 
-    def evaluate_grad_auto(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def evaluate_grad_auto(
+        self, lpos: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using automatic differentiation
 
         Args:
@@ -358,7 +369,9 @@ class Solver(SolverBase):
 
         return loss, eloc
 
-    def evaluate_grad_manual(self, lpos: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    def evaluate_grad_manual(
+        self, lpos: torch.Tensor
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Evaluate the gradient using low variance expression
         WARNING : This method is not valid to compute forces
         as it does not include derivative of the hamiltonian
@@ -417,7 +430,9 @@ class Solver(SolverBase):
 
         return torch.mean(eloc), eloc
 
-    def compute_forces(self, lpos: torch.tensor, batch_size: int = None, clip: int = None) -> torch.tensor:
+    def compute_forces(
+        self, lpos: torch.tensor, batch_size: int = None, clip: int = None
+    ) -> torch.tensor:
         r"""
         Compute the forces using automatic differentation and stable estimator
 
@@ -469,14 +484,13 @@ class Solver(SolverBase):
 
         if batch_size is None:
             batch_size = lpos.shape[0]
-        nbatch = lpos.shape[0]//batch_size
+        nbatch = lpos.shape[0] // batch_size
 
         forces = torch.zeros_like(self.wf.ao.atom_coords).requires_grad_(False)
         for ibatch in range(nbatch):
-
             # get the batch
-            idx_start = ibatch*batch_size
-            idx_end = (ibatch+1)*batch_size
+            idx_start = ibatch * batch_size
+            idx_end = (ibatch + 1) * batch_size
             if idx_end > lpos.shape[0]:
                 idx_end = lpos.shape[0]
             lpos_batch = lpos[idx_start:idx_end]
@@ -484,22 +498,25 @@ class Solver(SolverBase):
             # compute the local energy and its gradient
             local_energy = self.wf.local_energy(lpos_batch)
             clip_mask = get_clipping_mask(local_energy, clip)
-            grad_eloc =  torch.autograd.grad(local_energy, self.wf.ao.atom_coords, grad_outputs=clip_mask)[0]
+            grad_eloc = torch.autograd.grad(
+                local_energy, self.wf.ao.atom_coords, grad_outputs=clip_mask
+            )[0]
 
             # compute the log density and its gradient
             wf_val = self.wf.pdf(lpos_batch)
             proba = torch.log(wf_val)
-            grad_outputs = ((local_energy-local_energy.mean()) * clip_mask).squeeze()
-            grad_proba = torch.autograd.grad(proba, self.wf.ao.atom_coords, grad_outputs=grad_outputs)[0]
+            grad_outputs = ((local_energy - local_energy.mean()) * clip_mask).squeeze()
+            grad_proba = torch.autograd.grad(
+                proba, self.wf.ao.atom_coords, grad_outputs=grad_outputs
+            )[0]
 
             # accumulate in the force
-            forces += 1./batch_size * (grad_eloc + grad_proba)
+            forces += 1.0 / batch_size * (grad_eloc + grad_proba)
 
         if not original_requires_grad:
             self.wf.ao.atom_coords.requires_grad = False
 
         return forces
-
 
     def log_data_opt(self, nepoch, task):
         """Log data for the optimization."""

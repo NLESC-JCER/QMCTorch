@@ -18,7 +18,9 @@ from qmctorch.wavefunction.orbitals.backflow.kernels.backflow_kernel_inverse imp
 )
 
 from qmctorch.utils import set_torch_double_precision
+
 set_torch_double_precision()
+
 
 class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
     def setUp(self):
@@ -43,9 +45,7 @@ class TestCompareSlaterJastrowBackFlow(unittest.TestCase):
         )
 
         # define backflow trans
-        backflow = BackFlowTransformation(
-            mol, BackFlowKernelInverse
-        )
+        backflow = BackFlowTransformation(mol, BackFlowKernelInverse)
 
         self.wf = SlaterJastrow(
             mol,

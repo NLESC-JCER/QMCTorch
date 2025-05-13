@@ -7,7 +7,6 @@ from .sampler_base import SamplerBase
 from .. import log
 
 
-
 class StateDependentNormalProposal(object):
     def __init__(
         self,
@@ -46,13 +45,13 @@ class StateDependentNormalProposal(object):
         """
         nwalkers = x.shape[0]
         scale = self.kernel(x)  # shape (nwalkers, nelec*ndim)
-        displacement = self.multiVariate.sample((nwalkers, self.nelec))  # shape (nwalkers, nelec, ndim)
+        displacement = self.multiVariate.sample(
+            (nwalkers, self.nelec)
+        )  # shape (nwalkers, nelec, ndim)
         displacement *= scale  # shape (nwalkers, nelec, ndim)
         return displacement.view(nwalkers, self.nelec * self.ndim)
 
-    def get_transition_ratio(
-        self, x: torch.Tensor, y: torch.Tensor
-    ) -> torch.Tensor:
+    def get_transition_ratio(self, x: torch.Tensor, y: torch.Tensor) -> torch.Tensor:
         """
         Compute the transition ratio for the Metropolis-Hastings acceptance probability.
 
@@ -74,9 +73,11 @@ class StateDependentNormalProposal(object):
 
         return tratio.squeeze().prod(-1)
 
+
 class BaseProposalKernel(object):
     def __call__(self, x):
         raise NotImplementedError
+
 
 class DensityVarianceKernel(BaseProposalKernel):
     def __init__(self, atomic_pos, sigma=1.0, scale_factor=1.0):
@@ -187,8 +188,9 @@ class MetropolisHasting(SamplerBase):
         # log.info('  Move type           : {0}', 'all-elec')
 
     @staticmethod
-    def log_func(func: Callable[[torch.Tensor], torch.Tensor]
-                 ) -> Callable[[torch.Tensor], torch.Tensor]:
+    def log_func(
+        func: Callable[[torch.Tensor], torch.Tensor]
+    ) -> Callable[[torch.Tensor], torch.Tensor]:
         """Compute the negative log of  a function
 
         Args:
@@ -293,4 +295,3 @@ class MetropolisHasting(SamplerBase):
         tau = torch.rand_like(proba)
         index = (proba - tau >= 0).reshape(-1)
         return index.type(torch.bool)
-

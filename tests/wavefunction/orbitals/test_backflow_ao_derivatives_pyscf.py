@@ -13,6 +13,7 @@ from qmctorch.wavefunction.orbitals.backflow.backflow_transformation import (
 from qmctorch.wavefunction.orbitals.backflow.kernels import BackFlowKernelInverse
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
+
 set_torch_double_precision()
 
 torch.manual_seed(101)
@@ -42,9 +43,7 @@ class TestBFAOderivativesPyscf(unittest.TestCase):
         basis = "dzp"
         self.mol = Molecule(atom=at, calculator="pyscf", basis=basis, unit="bohr")
 
-        backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse
-        )
+        backflow = BackFlowTransformation(self.mol, BackFlowKernelInverse)
 
         # define the wave function
         self.ao = AtomicOrbitalsBackFlow(self.mol, backflow)

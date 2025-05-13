@@ -36,9 +36,7 @@ class TestLiHBackFlowPySCF(BaseTestSolvers.BaseTestSolverMolecule):
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # backflow
-        backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelPowerSum
-        )
+        backflow = BackFlowTransformation(self.mol, BackFlowKernelPowerSum)
 
         # wave function
         self.wf = SlaterJastrow(

@@ -30,11 +30,9 @@ class CombineJastrow(nn.Module):
 
         return " + ".join(out)
 
-    def forward(self,
-                pos: torch.Tensor,
-                derivative: int = 0,
-                sum_grad: bool = True
-                ) -> Union[torch.Tensor, List[torch.Tensor]]:
+    def forward(
+        self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True
+    ) -> Union[torch.Tensor, List[torch.Tensor]]:
         """Compute the Jastrow factors and/or its derivatives
 
         Args:
@@ -116,9 +114,8 @@ class CombineJastrow(nn.Module):
 
     @staticmethod
     def get_derivative_combined_values(
-        jast_vals: List[torch.Tensor],
-        djast_vals: List[torch.Tensor]
-        ) -> torch.Tensor:
+        jast_vals: List[torch.Tensor], djast_vals: List[torch.Tensor]
+    ) -> torch.Tensor:
         """Compute the derivative of the product of Jastrow terms.
 
         This function calculates the first derivative of a product of Jastrow
@@ -151,8 +148,8 @@ class CombineJastrow(nn.Module):
     def get_second_derivative_combined_values(
         jast_vals: List[torch.Tensor],
         djast_vals: List[torch.Tensor],
-        d2jast_vals: List[torch.Tensor]
-        ) -> torch.Tensor:
+        d2jast_vals: List[torch.Tensor],
+    ) -> torch.Tensor:
         """Compute the second derivative of the product of Jastrow terms.
 
         This function calculates the second derivative of a product of Jastrow

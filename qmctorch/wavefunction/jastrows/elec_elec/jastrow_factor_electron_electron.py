@@ -2,8 +2,11 @@ import torch
 from torch import nn
 from typing import Optional, Dict, Union, Tuple
 from ..distance.electron_electron_distance import ElectronElectronDistance
-from .kernels.jastrow_kernel_electron_electron_base import JastrowKernelElectronElectronBase
+from .kernels.jastrow_kernel_electron_electron_base import (
+    JastrowKernelElectronElectronBase,
+)
 from ....scf import Molecule
+
 
 class JastrowFactorElectronElectron(nn.Module):
     def __init__(
@@ -11,9 +14,9 @@ class JastrowFactorElectronElectron(nn.Module):
         mol: Molecule,
         jastrow_kernel: JastrowKernelElectronElectronBase,
         kernel_kwargs: Optional[Dict] = {},
-        scale: Optional[bool]=False,
-        scale_factor: Optional[float]=0.6,
-        cuda: Optional[bool]=False,
+        scale: Optional[bool] = False,
+        scale_factor: Optional[float] = 0.6,
+        cuda: Optional[bool] = False,
     ) -> None:
         """Electron-Electron Jastrow factor.
 
@@ -45,9 +48,7 @@ class JastrowFactorElectronElectron(nn.Module):
         self.requires_autograd = True
 
         # kernel function
-        self.jastrow_kernel = jastrow_kernel(
-            mol.nup, mol.ndown, cuda, **kernel_kwargs
-        )
+        self.jastrow_kernel = jastrow_kernel(mol.nup, mol.ndown, cuda, **kernel_kwargs)
         self.requires_autograd = self.jastrow_kernel.requires_autograd
 
         # mask to extract the upper diag of the matrices
@@ -120,11 +121,9 @@ class JastrowFactorElectronElectron(nn.Module):
                 nbatch, 3, -1
             )
 
-    def forward(self,
-                pos: torch.Tensor,
-                derivative: int = 0,
-                sum_grad: bool = True
-                ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
+    def forward(
+        self, pos: torch.Tensor, derivative: int = 0, sum_grad: bool = True
+    ) -> Union[torch.Tensor, Tuple[torch.Tensor, torch.Tensor, torch.Tensor]]:
         """Compute the Jastrow factors.
 
         Args:
@@ -175,7 +174,9 @@ class JastrowFactorElectronElectron(nn.Module):
                 self.jastrow_factor_second_derivative(r, dr, d2r, jast),
             )
 
-    def jastrow_factor_derivative(self, r: torch.Tensor, dr: torch.Tensor, jast: torch.Tensor, sum_grad: bool) -> torch.Tensor:
+    def jastrow_factor_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, jast: torch.Tensor, sum_grad: bool
+    ) -> torch.Tensor:
         """Compute the value of the derivative of the Jastrow factor
 
         Args:
@@ -212,7 +213,9 @@ class JastrowFactorElectronElectron(nn.Module):
 
         return out
 
-    def jastrow_factor_second_derivative(self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor, jast: torch.Tensor) -> torch.Tensor:
+    def jastrow_factor_second_derivative(
+        self, r: torch.Tensor, dr: torch.Tensor, d2r: torch.Tensor, jast: torch.Tensor
+    ) -> torch.Tensor:
         """Compute the value of the pure 2nd derivative of the Jastrow factor
 
         Args:

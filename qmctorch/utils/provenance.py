@@ -15,7 +15,11 @@ def get_git_tag() -> str:
     """
     try:
         cwd = os.path.dirname(os.path.abspath(__file__))
-        gittag = subprocess.check_output(["git", "describe", "--always"], cwd=cwd).decode("utf-8").strip("\n")
+        gittag = (
+            subprocess.check_output(["git", "describe", "--always"], cwd=cwd)
+            .decode("utf-8")
+            .strip("\n")
+        )
         return __version__ + " - " + gittag
     except:
         return __version__ + " - hash commit not found"

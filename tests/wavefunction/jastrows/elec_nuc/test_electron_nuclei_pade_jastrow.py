@@ -3,13 +3,16 @@ from types import SimpleNamespace
 import numpy as np
 import torch
 from torch.autograd import grad, gradcheck
-from qmctorch.wavefunction.jastrows.elec_nuclei.jastrow_factor_electron_nuclei import JastrowFactorElectronNuclei
-from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import PadeJastrowKernel
+from qmctorch.wavefunction.jastrows.elec_nuclei.jastrow_factor_electron_nuclei import (
+    JastrowFactorElectronNuclei,
+)
+from qmctorch.wavefunction.jastrows.elec_nuclei.kernels.pade_jastrow_kernel import (
+    PadeJastrowKernel,
+)
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
+
 set_torch_double_precision()
-
-
 
 
 class TestElectronNucleiPadeJastrow(unittest.TestCase):

@@ -3,6 +3,7 @@ from torch import nn
 from .backflow_kernel_base import BackFlowKernelBase
 from .....scf import Molecule
 
+
 class BackFlowKernelSquare(BackFlowKernelBase):
     def __init__(self, mol: Molecule, cuda: bool = False):
         """Define a generic kernel to test the auto diff features."""

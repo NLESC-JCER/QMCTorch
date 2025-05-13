@@ -1,9 +1,10 @@
-
 from abc import ABC
 import torch
 
 
-def planar_symmetry(pos: torch.tensor, plane: str, nelec: int, ndim: int, inplace=False):
+def planar_symmetry(
+    pos: torch.tensor, plane: str, nelec: int, ndim: int, inplace=False
+):
     """
     Apply a planar symmetry operation to a set of positions.
 
@@ -19,7 +20,7 @@ def planar_symmetry(pos: torch.tensor, plane: str, nelec: int, ndim: int, inplac
     Returns:
         torch.tensor: A tensor with the planar symmetry operation applied.
     """
-    if  inplace:
+    if inplace:
         out = pos
     else:
         out = torch.clone(pos)
@@ -28,9 +29,10 @@ def planar_symmetry(pos: torch.tensor, plane: str, nelec: int, ndim: int, inplac
         plane = [plane]
 
     for p in plane:
-        offset = {'xy':2, 'xz':1, 'yz':0}[p]
-        out[:, [ndim*ielec + offset for ielec in range(nelec)]] *= -1.0
+        offset = {"xy": 2, "xz": 1, "yz": 0}[p]
+        out[:, [ndim * ielec + offset for ielec in range(nelec)]] *= -1.0
     return out
+
 
 class BaseSymmetry(ABC):
     def __init__(self, label: str):
@@ -53,7 +55,7 @@ class C1(BaseSymmetry):
             The name of the symmetry.
 
         """
-        super().__init__('C1')
+        super().__init__("C1")
 
     def __call__(self, pos: torch.tensor) -> torch.tensor:
         """
@@ -71,6 +73,7 @@ class C1(BaseSymmetry):
         """
         return pos
 
+
 class Cinfv(BaseSymmetry):
     def __init__(self, axis: str):
         """
@@ -84,13 +87,15 @@ class Cinfv(BaseSymmetry):
             The axis of symmetry. Can be 'x', 'y', or 'z'.
 
         """
-        super().__init__('Cinfv')
-        if axis not in ['x', 'y', 'z']:
+        super().__init__("Cinfv")
+        if axis not in ["x", "y", "z"]:
             raise ValueError(f"Axis {axis} is not valid. Must be 'x', 'y', or 'z'.")
         self.axis = axis
-        self.symmetry_planes = {'x':['xy','xz'],
-                                'y':['xy','yz'],
-                                'z':['xz','yz']}[self.axis]
+        self.symmetry_planes = {
+            "x": ["xy", "xz"],
+            "y": ["xy", "yz"],
+            "z": ["xz", "yz"],
+        }[self.axis]
 
     def __call__(self, pos: torch.tensor) -> torch.tensor:
         """
@@ -112,9 +117,16 @@ class Cinfv(BaseSymmetry):
         symmetry_pos = []
         symmetry_pos.append(pos)
         for plane in self.symmetry_planes:
-            symmetry_pos.append(planar_symmetry(pos, plane, self.nelec, self.ndim, inplace=False))
-        symmetry_pos.append(planar_symmetry(pos, self.symmetry_planes, self.nelec, self.ndim, inplace=False))
+            symmetry_pos.append(
+                planar_symmetry(pos, plane, self.nelec, self.ndim, inplace=False)
+            )
+        symmetry_pos.append(
+            planar_symmetry(
+                pos, self.symmetry_planes, self.nelec, self.ndim, inplace=False
+            )
+        )
         return torch.cat(symmetry_pos, dim=0).requires_grad_(pos.requires_grad)
+
 
 class Dinfh(BaseSymmetry):
     def __init__(self, axis: str):
@@ -129,15 +141,16 @@ class Dinfh(BaseSymmetry):
             The axis of symmetry. Can be 'x', 'y', or 'z'.
         """
 
-        super().__init__('Dinfv')
-        if axis not in ['x', 'y', 'z']:
+        super().__init__("Dinfv")
+        if axis not in ["x", "y", "z"]:
             raise ValueError(f"Axis {axis} is not valid. Must be 'x', 'y', or 'z'.")
         self.axis = axis
-        self.symmetry_planes = {'x':['xy','xz'],
-                                'y':['xy','yz'],
-                                'z':['xz','yz']}[self.axis]
-        self.last_symmetry = {'x':'yz', 'y':'xz', 'z':'xy'}[self.axis]
-
+        self.symmetry_planes = {
+            "x": ["xy", "xz"],
+            "y": ["xy", "yz"],
+            "z": ["xz", "yz"],
+        }[self.axis]
+        self.last_symmetry = {"x": "yz", "y": "xz", "z": "xy"}[self.axis]
 
     def __call__(self, pos: torch.tensor) -> torch.tensor:
         """
@@ -158,7 +171,21 @@ class Dinfh(BaseSymmetry):
         symmetry_pos = []
         symmetry_pos.append(pos)
         for plane in self.symmetry_planes:
-            symmetry_pos.append(planar_symmetry(pos, plane, self.nelec, self.ndim, inplace=False))
-        symmetry_pos.append(planar_symmetry(pos, self.symmetry_planes, self.nelec, self.ndim, inplace=False))
-        symmetry_pos.append(planar_symmetry(torch.cat(symmetry_pos, dim=0), self.last_symmetry, self.nelec, self.ndim, inplace=False))
+            symmetry_pos.append(
+                planar_symmetry(pos, plane, self.nelec, self.ndim, inplace=False)
+            )
+        symmetry_pos.append(
+            planar_symmetry(
+                pos, self.symmetry_planes, self.nelec, self.ndim, inplace=False
+            )
+        )
+        symmetry_pos.append(
+            planar_symmetry(
+                torch.cat(symmetry_pos, dim=0),
+                self.last_symmetry,
+                self.nelec,
+                self.ndim,
+                inplace=False,
+            )
+        )
         return torch.cat(symmetry_pos, dim=0).requires_grad_(pos.requires_grad)

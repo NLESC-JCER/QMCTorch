@@ -3,6 +3,7 @@ from torch import nn
 from .backflow_kernel_base import BackFlowKernelBase
 from .....scf import Molecule
 
+
 class BackFlowKernelAutoInverse(BackFlowKernelBase):
     def __init__(self, mol: Molecule, cuda: bool, weight: float = 0.0) -> None:
         """Compute the back flow kernel, i.e. the function
@@ -14,7 +15,7 @@ class BackFlowKernelAutoInverse(BackFlowKernelBase):
         super().__init__(mol, cuda)
         self.weight = nn.Parameter(torch.as_tensor([weight]))
 
-    def _backflow_kernel(self, ree:torch.Tensor) -> torch.Tensor:
+    def _backflow_kernel(self, ree: torch.Tensor) -> torch.Tensor:
         """Computes the kernel via autodiff
 
         Args:

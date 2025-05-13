@@ -2,14 +2,18 @@ import torch
 from torch import nn
 from torch.nn.utils.parametrizations import orthogonal
 from ...scf import Molecule
+
+
 class MolecularOrbitals(nn.Module):
-    def __init__(self,
-                 mol: Molecule,
-                 include_all_mo: bool,
-                 highest_occ_mo: int,
-                 mix_mo: bool,
-                 orthogonalize_mo: bool,
-                 cuda: bool):
+    def __init__(
+        self,
+        mol: Molecule,
+        include_all_mo: bool,
+        highest_occ_mo: int,
+        mix_mo: bool,
+        orthogonalize_mo: bool,
+        cuda: bool,
+    ):
         """
         Args:
             mol (Molecule): molecule object
@@ -36,7 +40,9 @@ class MolecularOrbitals(nn.Module):
         self.nmo_opt = self.mol.basis.nmo if include_all_mo else self.highest_occ_mo
 
         self.mo_scf = self.get_mo_coeffs()
-        self.mo_modifier = nn.Parameter(torch.ones_like(self.mo_scf, requires_grad=True)).type(dtype)
+        self.mo_modifier = nn.Parameter(
+            torch.ones_like(self.mo_scf, requires_grad=True)
+        ).type(dtype)
 
         self.mo_mixer = None
         if self.mix_mo:
@@ -83,7 +89,7 @@ class MolecularOrbitals(nn.Module):
         """
 
         weight = self.mo_scf * self.mo_modifier
-        out = ao @ weight.reshape(1,*weight.shape)
+        out = ao @ weight.reshape(1, *weight.shape)
         if self.mix_mo:
             out = self.mo_mixer(out)
         return out

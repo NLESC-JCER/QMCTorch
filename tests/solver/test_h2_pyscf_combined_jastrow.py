@@ -10,15 +10,15 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import (
     JastrowFactor as JastrowFactorElecElec,
-    SpinPairFullyConnectedJastrowKernel as  ElecElecKernel
+    SpinPairFullyConnectedJastrowKernel as ElecElecKernel,
 )
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
     JastrowFactor as JastrowFactorElecNuclei,
-    PadeJastrowKernel as ElecNucleiKernel
+    PadeJastrowKernel as ElecNucleiKernel,
 )
 from qmctorch.wavefunction.jastrows.elec_elec_nuclei import (
     BoysHandyJastrowKernel as ElecElecNucleiKernel,
-    JastrowFactor as JastrowFactorElecElecNuc
+    JastrowFactor as JastrowFactorElecElecNuc,
 )
 
 __PLOT__ = True
@@ -44,9 +44,10 @@ class TestH2SamplerHMC(BaseTestSolvers.BaseTestSolverMolecule):
 
         # wave function
         self.wf = SlaterJastrow(
-            self.mol, kinetic="jacobi",
+            self.mol,
+            kinetic="jacobi",
             configs="single(2,2)",
-            jastrow=[jastrow_ee, jastrow_en, jastrow_een]
+            jastrow=[jastrow_ee, jastrow_en, jastrow_een],
         )
 
         self.sampler = Metropolis(

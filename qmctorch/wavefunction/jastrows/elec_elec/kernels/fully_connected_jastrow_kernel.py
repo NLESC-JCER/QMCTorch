@@ -11,7 +11,7 @@ class FullyConnectedJastrowKernel(JastrowKernelElectronElectronBase):
         cuda: bool,
         size1: int = 16,
         size2: int = 8,
-        eps: float = 1E-6,
+        eps: float = 1e-6,
         activation: torch.nn.Module = torch.nn.Sigmoid(),
         include_cusp_weight: bool = True,
     ) -> None:

@@ -5,7 +5,9 @@ from torch.autograd import Variable, grad
 
 
 class WaveFunction(torch.nn.Module):
-    def __init__(self, nelec: int, ndim: int, kinetic: str = "auto", cuda: bool = False):
+    def __init__(
+        self, nelec: int, ndim: int, kinetic: str = "auto", cuda: bool = False
+    ):
         """
         Base class for wave functions.
 
@@ -113,10 +115,9 @@ class WaveFunction(torch.nn.Module):
                 vnn += Z0 * Z1 / rnn
         return vnn
 
-    def gradients_autograd(self,
-                           pos: torch.Tensor,
-                           pdf: Optional[bool] = False
-                           ) -> torch.Tensor:
+    def gradients_autograd(
+        self, pos: torch.Tensor, pdf: Optional[bool] = False
+    ) -> torch.Tensor:
         """Computes the gradients of the wavefunction (or density)
         w.r.t the values of the pos.
 
@@ -168,9 +169,12 @@ class WaveFunction(torch.nn.Module):
 
         for idim in range(jacob.shape[1]):
             tmp = grad(
-                jacob[:, idim], pos,
-                grad_outputs=z, only_inputs=True,
-                create_graph=False, retain_graph=True
+                jacob[:, idim],
+                pos,
+                grad_outputs=z,
+                only_inputs=True,
+                create_graph=False,
+                retain_graph=True,
             )[0]
 
             hess += tmp[:, idim]
@@ -210,7 +214,7 @@ class WaveFunction(torch.nn.Module):
             + self.nuclear_repulsion()
         )
 
-    def energy(self, pos:torch.Tensor) -> torch.Tensor:
+    def energy(self, pos: torch.Tensor) -> torch.Tensor:
         """Total energy for the sampling points."""
         return torch.mean(self.local_energy(pos))
 
@@ -234,7 +238,9 @@ class WaveFunction(torch.nn.Module):
         el = self.local_energy(pos)
         return torch.mean(el), torch.var(el), self.sampling_error(el)
 
-    def pdf(self, pos: torch.Tensor, return_grad: Optional[bool]=False) -> torch.Tensor:
+    def pdf(
+        self, pos: torch.Tensor, return_grad: Optional[bool] = False
+    ) -> torch.Tensor:
         """density of the wave function."""
         if return_grad:
             return self.gradients(pos, pdf=True)
@@ -248,10 +254,12 @@ class WaveFunction(torch.nn.Module):
                 nparam += param.data.numel()
         return nparam
 
-    def load(self,
-             filename: str,
-             group: Optional[str] = "wf_opt",
-             model: Optional[str] = "best"):
+    def load(
+        self,
+        filename: str,
+        group: Optional[str] = "wf_opt",
+        model: Optional[str] = "best",
+    ):
         """Load trained parameters
 
         Args:

@@ -33,7 +33,7 @@ class TestLiHCorrelated(unittest.TestCase):
             kinetic="jacobi",
             jastrow=jastrow,
             configs="cas(2,2)",
-            include_all_mo=True
+            include_all_mo=True,
         )
 
         # fc weights

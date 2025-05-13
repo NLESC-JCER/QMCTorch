@@ -20,7 +20,7 @@ class Metropolis(SamplerBase):
         init: Dict = {"min": -5, "max": 5},
         move: Dict = {"type": "all-elec", "proba": "normal"},
         logspace: bool = False,
-        symmetry = None,
+        symmetry=None,
         cuda: bool = False,
     ) -> None:
         """Metropolis Hasting generator
@@ -116,7 +116,6 @@ class Metropolis(SamplerBase):
             # init the walkers
             self.walkers.initialize(pos=pos)
 
-
             if self.logspace:
                 fx = self.log_func(pdf)(self.walkers.pos)
             else:
@@ -134,7 +133,6 @@ class Metropolis(SamplerBase):
 
             for istep in rng:
                 for id_elec in self.fixed_id_elec_list:
-
                     # new positions
                     Xn = self.move(pdf, id_elec)
 

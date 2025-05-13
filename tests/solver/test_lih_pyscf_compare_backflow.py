@@ -46,9 +46,7 @@ class TestCompareLiHBackFlowPySCF(unittest.TestCase):
         jastrow = JastrowFactor(self.mol, PadeJastrowKernel)
 
         # backflow
-        backflow = BackFlowTransformation(
-            self.mol, BackFlowKernelInverse
-        )
+        backflow = BackFlowTransformation(self.mol, BackFlowKernelInverse)
 
         # backflow wave function
         self.wf = SlaterJastrow(

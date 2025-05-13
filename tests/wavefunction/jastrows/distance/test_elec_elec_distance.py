@@ -3,8 +3,8 @@ from torch.autograd import Variable, grad
 from qmctorch.wavefunction.jastrows.distance import ElectronElectronDistance
 import unittest
 from qmctorch.utils import set_torch_double_precision
-set_torch_double_precision()
 
+set_torch_double_precision()
 
 
 class TestElecElecDistance(unittest.TestCase):

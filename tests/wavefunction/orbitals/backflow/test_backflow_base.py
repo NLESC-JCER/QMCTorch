@@ -5,6 +5,7 @@ from torch.autograd import Variable, grad
 import numpy as np
 from qmctorch.utils import set_torch_double_precision
 from qmctorch.utils.torch_utils import diagonal_hessian as hess
+
 set_torch_double_precision()
 
 torch.manual_seed(101)
@@ -26,9 +27,9 @@ def hess_single_element(out, inp):
 
     return hess.reshape(*shape)
 
+
 class BaseTestCases:
     class TestBackFlowKernelBase(unittest.TestCase):
-
         def setUp(self):
             pass
 
@@ -38,9 +39,9 @@ class BaseTestCases:
 
             ree = self.edist(self.pos)
             bf_kernel = self.kernel(ree)
-            dbf_kernel_auto = grad(bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel))[
-                0
-            ]
+            dbf_kernel_auto = grad(
+                bf_kernel, ree, grad_outputs=torch.ones_like(bf_kernel)
+            )[0]
             dbf_kernel = self.kernel(ree, derivative=1)
 
             assert torch.allclose(dbf_kernel.sum(), dbf_kernel_auto.sum())

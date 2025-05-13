@@ -10,22 +10,27 @@ from ..utils.constants import ANGS2BOHR
 from ..scf.molecule import Molecule as SCF
 from ..wavefunction.slater_jastrow import SlaterJastrow
 from ..wavefunction.jastrows.elec_elec import JastrowFactor, PadeJastrowKernel
-from ..wavefunction.orbitals.backflow import BackFlowTransformation, BackFlowKernelInverse
+from ..wavefunction.orbitals.backflow import (
+    BackFlowTransformation,
+    BackFlowKernelInverse,
+)
 from ..solver import Solver
 from ..sampler import Metropolis
 from ..sampler.symmetry import C1
 from .. import log
 
-class QMCTorch(Calculator):
 
+class QMCTorch(Calculator):
     implemented_properties = ["energy", "forces"]
 
-    def __init__(self,
-                 restart: str = None,
-                 *,
-                 labels: list = None,
-                 atoms: Atoms = None,
-                 **kwargs: dict) -> None:
+    def __init__(
+        self,
+        restart: str = None,
+        *,
+        labels: list = None,
+        atoms: Atoms = None,
+        **kwargs: dict
+    ) -> None:
         """
         Initialize a QMCTorchCalculator object.
 
@@ -54,64 +59,78 @@ class QMCTorch(Calculator):
 
         # default options for the SCF
         self.molecule = None
-        self.scf_options = SimpleNamespace(calculator='pyscf',
-                                           basis='dzp',
-                                           scf='hf')
+        self.scf_options = SimpleNamespace(calculator="pyscf", basis="dzp", scf="hf")
         self.recognized_scf_options = list(self.scf_options.__dict__.keys())
-
 
         # default options for the WF
         self.wf = None
-        self.wf_options = SimpleNamespace(kinetic='jacobi',
-                                          configs='single_double(2,2)',
-                                          orthogonalize_mo=True,
-                                          mix_mo = False,
-                                          include_all_mo=True,
-                                          cuda=self.use_cuda,
-                                          jastrow=SimpleNamespace(
-                                              kernel=PadeJastrowKernel,
-                                              kernel_kwargs={'w':1.00},
-                                          ),
-                                          backflow=SimpleNamespace(
-                                              kernel=BackFlowKernelInverse,
-                                              kernel_kwargs={'weight':1.00},
-                                          ),
-                                          gto2sto=False)
+        self.wf_options = SimpleNamespace(
+            kinetic="jacobi",
+            configs="single_double(2,2)",
+            orthogonalize_mo=True,
+            mix_mo=False,
+            include_all_mo=True,
+            cuda=self.use_cuda,
+            jastrow=SimpleNamespace(
+                kernel=PadeJastrowKernel,
+                kernel_kwargs={"w": 1.00},
+            ),
+            backflow=SimpleNamespace(
+                kernel=BackFlowKernelInverse,
+                kernel_kwargs={"weight": 1.00},
+            ),
+            gto2sto=False,
+        )
 
         self.recognized_wf_options = list(self.wf_options.__dict__.keys())
         self.recognized_jastrow_options = list(self.wf_options.jastrow.__dict__.keys())
-        self.recognized_backflow_options = list(self.wf_options.backflow.__dict__.keys())
+        self.recognized_backflow_options = list(
+            self.wf_options.backflow.__dict__.keys()
+        )
         self.wf_options.backflow = None
 
         # default option for the sampler
         self.sampler = None
-        self.sampler_options = SimpleNamespace(nwalkers=4000, nstep=2000,
-                                               ntherm=-1, ndecor=1, step_size=0.05,
-                                               symmetry=None)
+        self.sampler_options = SimpleNamespace(
+            nwalkers=4000,
+            nstep=2000,
+            ntherm=-1,
+            ndecor=1,
+            step_size=0.05,
+            symmetry=None,
+        )
         self.recognized_sampler_options = list(self.sampler_options.__dict__.keys())
-
 
         # optimizer ....
         self.optimizer = None
 
         # default option for the solver
         self.solver = None
-        self.solver_options = SimpleNamespace(track=['local_energy', 'parameters'], freeze=[],
-                                              loss='energy', grad='manual',
-                                              ortho_mo=False, clip_loss=False,
-                                              resampling=SimpleNamespace(mode='update',
-                                                                         resample_every=1,
-                                                                         nstep_update=50,
-                                                                         ntherm_update=-1),
-                                              niter=100, tqdm=False)
+        self.solver_options = SimpleNamespace(
+            track=["local_energy", "parameters"],
+            freeze=[],
+            loss="energy",
+            grad="manual",
+            ortho_mo=False,
+            clip_loss=False,
+            resampling=SimpleNamespace(
+                mode="update", resample_every=1, nstep_update=50, ntherm_update=-1
+            ),
+            niter=100,
+            tqdm=False,
+        )
         self.recognized_solver_options = list(self.solver_options.__dict__.keys())
-        self.recognized_resampling_options = list(self.solver_options.resampling.__dict__.keys())
+        self.recognized_resampling_options = list(
+            self.solver_options.resampling.__dict__.keys()
+        )
 
         # default symmetry
         self.symmetry = C1()
 
     @staticmethod
-    def validate_options(options: SimpleNamespace, recognized_options: list, name: str = "") -> None:
+    def validate_options(
+        options: SimpleNamespace, recognized_options: list, name: str = ""
+    ) -> None:
         """
         Validate that the options provided are valid.
 
@@ -136,7 +155,8 @@ class QMCTorch(Calculator):
         for opt in list(options.__dict__.keys()):
             if opt not in recognized_options:
                 raise ValueError(
-                    "Invalid %s options: %s. Recognized options are %s" % (name, opt, recognized_options)
+                    "Invalid %s options: %s. Recognized options are %s"
+                    % (name, opt, recognized_options)
                 )
 
     def run_scf(self) -> None:
@@ -156,17 +176,20 @@ class QMCTorch(Calculator):
         -------
         None
         """
-        self.validate_options(self.scf_options, self.recognized_scf_options, 'SCF')
+        self.validate_options(self.scf_options, self.recognized_scf_options, "SCF")
 
         if self.atoms is None:
             raise ValueError("Atoms object is not set")
-        filename = self.atoms.get_chemical_formula() + '.xyz'
+        filename = self.atoms.get_chemical_formula() + ".xyz"
         self.atoms.write(filename)
-        self.molecule = SCF(atom=filename,
-                                 unit='angs',
-                                 scf=self.scf_options.scf,
-                                 calculator=self.scf_options.calculator,
-                                 basis=self.scf_options.basis, redo_scf=True)
+        self.molecule = SCF(
+            atom=filename,
+            unit="angs",
+            scf=self.scf_options.scf,
+            calculator=self.scf_options.calculator,
+            basis=self.scf_options.basis,
+            redo_scf=True,
+        )
 
     def set_wf(self) -> None:
         """
@@ -186,35 +209,49 @@ class QMCTorch(Calculator):
 
         # check jastrow and set it
         if self.wf_options.jastrow is not None:
-            self.validate_options(self.wf_options.jastrow, self.recognized_jastrow_options, 'Jastrow')
-            jastrow = JastrowFactor(self.molecule, self.wf_options.jastrow.kernel,
-                                    self.wf_options.jastrow.kernel_kwargs, cuda=self.use_cuda)
+            self.validate_options(
+                self.wf_options.jastrow, self.recognized_jastrow_options, "Jastrow"
+            )
+            jastrow = JastrowFactor(
+                self.molecule,
+                self.wf_options.jastrow.kernel,
+                self.wf_options.jastrow.kernel_kwargs,
+                cuda=self.use_cuda,
+            )
         else:
             jastrow = None
 
         # check backflow and set it
         if self.wf_options.backflow is not None:
-            self.validate_options(self.wf_options.backflow, self.recognized_backflow_options, 'Backflow')
-            backflow = BackFlowTransformation(self.molecule, self.wf_options.backflow.kernel,
-                                              self.wf_options.backflow.kernel_kwargs, cuda=self.use_cuda)
+            self.validate_options(
+                self.wf_options.backflow, self.recognized_backflow_options, "Backflow"
+            )
+            backflow = BackFlowTransformation(
+                self.molecule,
+                self.wf_options.backflow.kernel,
+                self.wf_options.backflow.kernel_kwargs,
+                cuda=self.use_cuda,
+            )
         else:
             backflow = None
 
-        #checlk wf options and set wf
-        self.validate_options(self.wf_options, self.recognized_wf_options, 'WF')
-        self.wf = SlaterJastrow(mol=self.molecule,
-                                kinetic=self.wf_options.kinetic,
-                                configs=self.wf_options.configs,
-                                backflow=backflow,
-                                jastrow=jastrow,
-                                mix_mo=self.wf_options.mix_mo,
-                                orthogonalize_mo=self.wf_options.orthogonalize_mo,
-                                include_all_mo=self.wf_options.include_all_mo,
-                                cuda=self.use_cuda)
+        # checlk wf options and set wf
+        self.validate_options(self.wf_options, self.recognized_wf_options, "WF")
+        self.wf = SlaterJastrow(
+            mol=self.molecule,
+            kinetic=self.wf_options.kinetic,
+            configs=self.wf_options.configs,
+            backflow=backflow,
+            jastrow=jastrow,
+            mix_mo=self.wf_options.mix_mo,
+            orthogonalize_mo=self.wf_options.orthogonalize_mo,
+            include_all_mo=self.wf_options.include_all_mo,
+            cuda=self.use_cuda,
+        )
 
         # in case we want a sto transform
         if self.wf_options.gto2sto:
-            if self.scf_options.calculator != 'pyscf':
+            if self.scf_options.calculator != "pyscf":
                 raise ValueError("gto2sto is only supported for pyscf")
             self.wf = self.wf.gto2sto()
 
@@ -235,21 +272,31 @@ class QMCTorch(Calculator):
         """
         if self.wf is None:
             raise ValueError("Wave function object is not set")
-        self.validate_options(self.sampler_options, self.recognized_sampler_options, 'Sampler')
-        self.sampler = Metropolis(nwalkers=self.sampler_options.nwalkers, nstep=self.sampler_options.nstep,
-                                  nelec=self.wf.nelec, ntherm=self.sampler_options.ntherm, ndecor=self.sampler_options.ndecor,
-                                  step_size=self.sampler_options.step_size, init=self.molecule.domain('atomic'),
-                                  symmetry=self.sampler_options.symmetry, cuda=self.use_cuda)
+        self.validate_options(
+            self.sampler_options, self.recognized_sampler_options, "Sampler"
+        )
+        self.sampler = Metropolis(
+            nwalkers=self.sampler_options.nwalkers,
+            nstep=self.sampler_options.nstep,
+            nelec=self.wf.nelec,
+            ntherm=self.sampler_options.ntherm,
+            ndecor=self.sampler_options.ndecor,
+            step_size=self.sampler_options.step_size,
+            init=self.molecule.domain("atomic"),
+            symmetry=self.sampler_options.symmetry,
+            cuda=self.use_cuda,
+        )
 
     def set_default_optimizer(self) -> None:
         if self.wf is None:
             raise ValueError("Wave function object is not set")
-        lr_dict = [{'params': self.wf.jastrow.parameters(), 'lr': 1E-2},
-                {'params': self.wf.ao.parameters(), 'lr': 1E-2},
-                {'params': self.wf.mo.parameters(), 'lr': 1E-2},
-                {'params': self.wf.fc.parameters(), 'lr': 1E-2}]
-        self.optimizer = optim.Adam(lr_dict, lr=1E-2)
-
+        lr_dict = [
+            {"params": self.wf.jastrow.parameters(), "lr": 1e-2},
+            {"params": self.wf.ao.parameters(), "lr": 1e-2},
+            {"params": self.wf.mo.parameters(), "lr": 1e-2},
+            {"params": self.wf.fc.parameters(), "lr": 1e-2},
+        ]
+        self.optimizer = optim.Adam(lr_dict, lr=1e-2)
 
     def set_resampling_options(self) -> None:
         """
@@ -269,11 +316,17 @@ class QMCTorch(Calculator):
 
         """
 
-        if (self.sampler_options.ntherm != -1) and (self.solver_options.resampling.mode == 'update'):
+        if (self.sampler_options.ntherm != -1) and (
+            self.solver_options.resampling.mode == "update"
+        ):
             nsample = self.sampler_options.nstep - self.sampler_options.ntherm
-            self.solver_options.resampling.nstep_update = self.solver_options.resampling.ntherm_update + nsample
+            self.solver_options.resampling.nstep_update = (
+                self.solver_options.resampling.ntherm_update + nsample
+            )
 
-        elif (self.sampler_options.ntherm == -1) and (self.solver_options.resampling.mode == 'update'):
+        elif (self.sampler_options.ntherm == -1) and (
+            self.solver_options.resampling.mode == "update"
+        ):
             if self.solver_options.resampling.ntherm_update != -1:
                 self.solver_options.resampling.ntherm_update = -1
 
@@ -309,17 +362,29 @@ class QMCTorch(Calculator):
         if self.optimizer is None:
             self.set_default_optimizer()
 
-        self.validate_options(self.solver_options, self.recognized_solver_options, 'Solver')
-        self.validate_options(self.solver_options.resampling, self.recognized_resampling_options, 'Resampling')
+        self.validate_options(
+            self.solver_options, self.recognized_solver_options, "Solver"
+        )
+        self.validate_options(
+            self.solver_options.resampling,
+            self.recognized_resampling_options,
+            "Resampling",
+        )
 
-        self.solver = Solver(wf=self.wf, sampler=self.sampler, optimizer=self.optimizer, scheduler=None)
+        self.solver = Solver(
+            wf=self.wf, sampler=self.sampler, optimizer=self.optimizer, scheduler=None
+        )
         self.set_resampling_options()
 
-        self.solver.configure(track=self.solver_options.track, freeze=self.solver_options.freeze,
-                loss=self.solver_options.loss, grad=self.solver_options.grad,
-                ortho_mo=self.solver_options.ortho_mo, clip_loss=self.solver_options.clip_loss,
-                resampling=self.solver_options.resampling.__dict__
-                )
+        self.solver.configure(
+            track=self.solver_options.track,
+            freeze=self.solver_options.freeze,
+            loss=self.solver_options.loss,
+            grad=self.solver_options.grad,
+            ortho_mo=self.solver_options.ortho_mo,
+            clip_loss=self.solver_options.clip_loss,
+            resampling=self.solver_options.resampling.__dict__,
+        )
 
     def set_atoms(self, atoms: Atoms) -> None:
         """
@@ -331,7 +396,6 @@ class QMCTorch(Calculator):
             The atoms object to be set.
         """
         self.atoms = atoms
-
 
     def reset(self) -> None:
         """
@@ -387,7 +451,10 @@ class QMCTorch(Calculator):
         This method is typically called before calculating a quantity.
         """
         if atoms is not None:
-            if not np.allclose(self.atoms.get_positions() * ANGS2BOHR, np.array(self.molecule.atom_coords)):
+            if not np.allclose(
+                self.atoms.get_positions() * ANGS2BOHR,
+                np.array(self.molecule.atom_coords),
+            ):
                 self.reset()
                 self.set_atoms(atoms)
                 self.initialize()
@@ -395,8 +462,12 @@ class QMCTorch(Calculator):
             if self.solver is None:
                 self.initialize()
 
-    def calculate(self, atoms: Atoms = None, properties:
-                  list = ['energy'], system_changes: any = None) -> float:
+    def calculate(
+        self,
+        atoms: Atoms = None,
+        properties: list = ["energy"],
+        system_changes: any = None,
+    ) -> float:
         """
         Calculate specified properties for the given atomic configuration.
 
@@ -437,17 +508,17 @@ class QMCTorch(Calculator):
 
         # check properties that are needed
         if any([p not in self.implemented_properties for p in properties]):
-            raise ValueError('property not recognized')
+            raise ValueError("property not recognized")
 
         # compute
         for p in properties:
-            if p == 'forces':
+            if p == "forces":
                 return self._calculate_forces(atoms=atoms)
 
-            elif p == 'energy':
+            elif p == "energy":
                 return self._calculate_energy(atoms=atoms)
 
-    def _calculate_energy(self, atoms: Atoms =None) -> float:
+    def _calculate_energy(self, atoms: Atoms = None) -> float:
         # check if reset is necessary
         """
         Compute the energy using the wave function and the atomic positions.
@@ -481,11 +552,10 @@ class QMCTorch(Calculator):
         observable = self.solver.single_point()
 
         # store and output
-        self.results['energy'] = observable.energy
-        return self.results['energy']
+        self.results["energy"] = observable.energy
+        return self.results["energy"]
 
     def _calculate_forces(self, atoms: Atoms = None) -> float:
-
         # check if reset is necessary
         """
         Compute the forces using the wave function and the atomic positions.
@@ -516,15 +586,20 @@ class QMCTorch(Calculator):
         observable = self.solver.single_point()
 
         # compute the forces
-        forces = self.solver.compute_forces(self.symmetry(observable.pos)).detach().cpu().numpy()
+        forces = (
+            self.solver.compute_forces(self.symmetry(observable.pos))
+            .detach()
+            .cpu()
+            .numpy()
+        )
 
         # store and output
-        self.results['energy'] = observable.energy.cpu().numpy()
-        self.results['forces'] = forces
+        self.results["energy"] = observable.energy.cpu().numpy()
+        self.results["forces"] = forces
         self.solver.wf.zero_grad()
 
         self.has_forces = True
-        return self.results['forces']
+        return self.results["forces"]
 
     def check_forces(self) -> bool:
         """
@@ -535,7 +610,7 @@ class QMCTorch(Calculator):
         bool
             True if the forces have been computed, False otherwise.
         """
-        if (self.has_forces) and ('forces' in self.results):
+        if (self.has_forces) and ("forces" in self.results):
             return True
         self.has_forces = False
         return False
@@ -557,11 +632,11 @@ class QMCTorch(Calculator):
 
         self.reset_solver(atoms=atoms)
         if self.check_forces():
-            return self.results['forces']
+            return self.results["forces"]
         else:
             return self._calculate_forces(atoms=atoms)
 
-    def get_total_energy(self, atoms: Atoms=None) -> float:
+    def get_total_energy(self, atoms: Atoms = None) -> float:
         """
         Return the total energy.
 
@@ -576,7 +651,7 @@ class QMCTorch(Calculator):
             The total energy of the system.
         """
         self.reset_solver(atoms=atoms)
-        if 'energy' in self.results:
-            return self.results['energy']
+        if "energy" in self.results:
+            return self.results["energy"]
         else:
             return self._calculate_energy(atoms=atoms)
