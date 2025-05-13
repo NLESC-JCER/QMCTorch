@@ -10,7 +10,7 @@ from qmctorch.scf import Molecule
 from qmctorch.wavefunction.slater_jastrow import SlaterJastrow
 from qmctorch.wavefunction.jastrows.elec_elec import (
     JastrowFactor as JastrowFactorElecElec,
-    DoubleFullyConnectedJastrowKernel as  ElecElecKernel
+    SpinPairFullyConnectedJastrowKernel as  ElecElecKernel
 )
 from qmctorch.wavefunction.jastrows.elec_nuclei import (
     JastrowFactor as JastrowFactorElecNuclei,
